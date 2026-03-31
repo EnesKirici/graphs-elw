@@ -21,3 +21,5 @@ frontend/out/
 
 # Logs
 *.log
+
+RIOT_API_ENDPOINTS.md
