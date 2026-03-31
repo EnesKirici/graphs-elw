@@ -124,7 +124,14 @@ export default async function SummonerPage({ params }) {
                 {profile.gameName}
                 <span className="text-gray-400 text-base font-normal ml-1">#{profile.tagLine}</span>
               </h1>
-              <p className="text-sm text-blue-400">Level {profile.summonerLevel}</p>
+              <div className="flex items-center gap-3 mt-0.5">
+                <p className="text-sm text-blue-400">Level {profile.summonerLevel}</p>
+                {recentStats?.mainRole && (
+                  <span className="text-[11px] bg-white/10 backdrop-blur-sm text-gray-300 px-2 py-0.5 rounded-full">
+                    {recentStats.mainRole}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -299,8 +306,8 @@ function RankCard({ title, data }) {
         <img
           src={rankBadgeUrl(data.tier)}
           alt={data.tier}
-          width={56}
-          height={56}
+          width={72}
+          height={72}
           className="flex-shrink-0"
         />
         <div className="min-w-0">

@@ -68,9 +68,10 @@ class MatchService
         $version = $this->ddragon->getCurrentVersion();
         $ddragonBase = config('riot.ddragon_url');
 
-        // Rün ve spell map'lerini bir kere çek (tüm maçlar için ortak)
+        // Statik verileri bir kere çek (tüm maçlar için ortak)
         $runeMap = $this->ddragon->getRuneMap();
         $spellMap = $this->ddragon->getSpellMap();
+        $allItems = $this->ddragon->getItems();
 
         $matches = [];
         foreach ($matchIds as $matchId) {
@@ -89,13 +90,17 @@ class MatchService
 
                 if (!$player) continue;
 
-                // Item'ler
+                // Item'ler (isim + açıklama dahil)
                 $items = [];
                 for ($i = 0; $i <= 6; $i++) {
                     $itemId = $player["item{$i}"] ?? 0;
                     if ($itemId > 0) {
+                        $itemData = $allItems[(string) $itemId] ?? null;
                         $items[] = [
-                            'id' => $itemId,
+                            'id'    => $itemId,
+                            'name'  => $itemData['name'] ?? '',
+                            'desc'  => $this->parseItemDescription($itemData['description'] ?? ''),
+                            'gold'  => $itemData['gold']['total'] ?? 0,
                             'image' => "{$ddragonBase}/cdn/{$version}/img/item/{$itemId}.png",
                         ];
                     }
@@ -113,15 +118,20 @@ class MatchService
                 $perks = $player['perks'] ?? null;
                 $runes = $this->extractRunes($perks, $runeMap);
 
-                // Karşı takım şampiyonları
+                // Takımlar
                 $playerTeam = $player['teamId'];
+                $allies = [];
                 $enemies = [];
                 foreach ($info['participants'] as $p) {
-                    if ($p['teamId'] !== $playerTeam) {
-                        $enemies[] = [
-                            'name'  => $p['championName'],
-                            'image' => $this->ddragon->championIconUrl($p['championName']),
-                        ];
+                    $entry = [
+                        'name'  => $p['championName'],
+                        'image' => $this->ddragon->championIconUrl($p['championName']),
+                        'isMe'  => $p['puuid'] === $puuid,
+                    ];
+                    if ($p['teamId'] === $playerTeam) {
+                        $allies[] = $entry;
+                    } else {
+                        $enemies[] = $entry;
                     }
                 }
 
@@ -144,6 +154,7 @@ class MatchService
                     'items'        => $items,
                     'spells'       => $spells,
                     'runes'        => $runes,
+                    'allies'       => $allies,
                     'enemies'      => $enemies,
                     'win'          => $player['win'],
                     'duration'     => $info['gameDuration'],
@@ -165,6 +176,45 @@ class MatchService
     }
 
     /**
+     * Item description HTML'ini yapılandırılmış veriye çevir.
+     * Stats ve pasif açıklamaları ayrı ayrı döner.
+     */
+    private function parseItemDescription(string $html): array
+    {
+        $result = ['stats' => [], 'passives' => []];
+
+        // Stats çıkar: <stats>...</stats> içindeki satırlar
+        if (preg_match('/<stats>(.*?)<\/stats>/s', $html, $m)) {
+            $statsHtml = $m[1];
+            $statsHtml = preg_replace('/<attention>(.*?)<\/attention>/', '+$1', $statsHtml);
+            // <br> ile böl
+            $lines = explode('<br>', $statsHtml);
+            foreach ($lines as $line) {
+                $line = trim(strip_tags($line));
+                if ($line) $result['stats'][] = $line;
+            }
+        }
+
+        // Pasifler çıkar: <passive>İsim</passive> ve sonraki açıklama
+        $descPart = preg_replace('/<stats>.*?<\/stats>/s', '', $html);
+        $descPart = preg_replace('/<mainText>|<\/mainText>/', '', $descPart);
+
+        if (preg_match_all('/<passive>(.*?)<\/passive>/s', $descPart, $passiveNames)) {
+            $parts = preg_split('/<passive>.*?<\/passive>/s', $descPart);
+            foreach ($passiveNames[1] as $i => $name) {
+                $desc = isset($parts[$i + 1]) ? trim(strip_tags($parts[$i + 1])) : '';
+                $desc = preg_replace('/^\s*<br\s*\/?>\s*/', '', $desc);
+                $desc = trim(preg_replace('/\s+/', ' ', $desc));
+                if ($name) {
+                    $result['passives'][] = ['name' => $name, 'desc' => $desc];
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Perks verisinden rün bilgilerini çıkar.
      */
     private function extractRunes(?array $perks, array $runeMap): array
@@ -176,34 +226,56 @@ class MatchService
         $keystone = null;
         $primaryTree = null;
         $subTree = null;
-        $allPerks = [];
+        $primaryPerks = [];
+        $secondaryPerks = [];
 
         foreach ($perks['styles'] as $style) {
             $treeInfo = $runeMap[$style['style']] ?? null;
 
             if ($style['description'] === 'primaryStyle') {
                 $primaryTree = $treeInfo;
-                // İlk selection = keystone
                 if (!empty($style['selections'])) {
                     $keystoneId = $style['selections'][0]['perk'];
                     $keystone = $runeMap[$keystoneId] ?? null;
                 }
                 foreach ($style['selections'] as $sel) {
-                    $allPerks[] = $runeMap[$sel['perk']] ?? ['name' => 'Unknown', 'icon' => ''];
+                    $primaryPerks[] = $runeMap[$sel['perk']] ?? ['name' => 'Unknown', 'icon' => ''];
                 }
             } elseif ($style['description'] === 'subStyle') {
                 $subTree = $treeInfo;
                 foreach ($style['selections'] as $sel) {
-                    $allPerks[] = $runeMap[$sel['perk']] ?? ['name' => 'Unknown', 'icon' => ''];
+                    $secondaryPerks[] = $runeMap[$sel['perk']] ?? ['name' => 'Unknown', 'icon' => ''];
                 }
             }
         }
 
+        // Stat shards
+        $statShardNames = [
+            5001 => '+10-180 Can (seviyeye göre)',
+            5002 => '+6 Zırh',
+            5003 => '+8 Büyü Direnci',
+            5005 => '+10% Saldırı Hızı',
+            5007 => '+8 Yetenek İvmesi',
+            5008 => '+9 Uyarlanır Güç',
+            5010 => '+%1-10 CDR (seviyeye göre)',
+            5011 => '+65 Can',
+            5013 => '+10% Tenas',
+        ];
+        $statShards = [];
+        if (isset($perks['statPerks'])) {
+            foreach (['offense', 'flex', 'defense'] as $slot) {
+                $id = $perks['statPerks'][$slot] ?? 0;
+                $statShards[] = $statShardNames[$id] ?? "Shard #{$id}";
+            }
+        }
+
         return [
-            'keystone'    => $keystone,
-            'primaryTree' => $primaryTree,
-            'subTree'     => $subTree,
-            'allPerks'    => $allPerks,
+            'keystone'       => $keystone,
+            'primaryTree'    => $primaryTree,
+            'subTree'        => $subTree,
+            'primaryPerks'   => $primaryPerks,
+            'secondaryPerks' => $secondaryPerks,
+            'statShards'     => $statShards,
         ];
     }
 
@@ -236,6 +308,39 @@ class MatchService
         arsort($champCounts);
         $topChampName = array_key_first($champCounts);
 
+        // Rol analizi — en çok hangi koridor
+        $roleNames = ['TOP' => 'Top', 'JUNGLE' => 'Jungle', 'MIDDLE' => 'Mid', 'BOTTOM' => 'ADC', 'UTILITY' => 'Support'];
+        $roleCounts = [];
+        foreach ($matches as $m) {
+            $role = $m['role'] ?? '';
+            if ($role) $roleCounts[$role] = ($roleCounts[$role] ?? 0) + 1;
+        }
+        arsort($roleCounts);
+
+        // Main role tespiti
+        $mainRole = null;
+        $roleKeys = array_keys($roleCounts);
+        if (count($roleKeys) >= 2) {
+            $first = $roleCounts[$roleKeys[0]];
+            $second = $roleCounts[$roleKeys[1]];
+            // İlk iki rol yakınsa "Top/Mid Main" gibi göster
+            if ($second >= $first * 0.6) {
+                $mainRole = ($roleNames[$roleKeys[0]] ?? $roleKeys[0]) . '/' . ($roleNames[$roleKeys[1]] ?? $roleKeys[1]) . ' Main';
+            } else {
+                $mainRole = ($roleNames[$roleKeys[0]] ?? $roleKeys[0]) . ' Main';
+            }
+        } elseif (count($roleKeys) === 1) {
+            $mainRole = ($roleNames[$roleKeys[0]] ?? $roleKeys[0]) . ' Main';
+        }
+
+        // Eşit dağılım kontrolü
+        if (count($roleCounts) >= 4) {
+            $vals = array_values($roleCounts);
+            if ($vals[0] - end($vals) <= 1) {
+                $mainRole = 'Fill';
+            }
+        }
+
         return [
             'mostPlayedChampion' => [
                 'id'    => $topChampName,
@@ -253,6 +358,7 @@ class MatchService
             ],
             'winRate'    => round($wins / $totalGames * 100, 1),
             'totalGames' => $totalGames,
+            'mainRole'   => $mainRole,
         ];
     }
 }
