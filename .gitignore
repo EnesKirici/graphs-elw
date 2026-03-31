@@ -1,0 +1,23 @@
+# Dependencies
+backend/vendor/
+frontend/node_modules/
+
+# Environment files (API key gibi hassas bilgiler)
+backend/.env
+frontend/.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+frontend/.next/
+frontend/out/
+
+# Logs
+*.log
