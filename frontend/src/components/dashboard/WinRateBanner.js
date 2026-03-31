@@ -1,142 +1,121 @@
 "use client";
 
-/*
-  WinRateBanner - Otomatik kayan slider (carousel).
-
-  "use client" çünkü:
-  - useState: Hangi slide'da olduğumuzu tutuyoruz
-  - useEffect: Otomatik geçiş zamanlayıcısı (setInterval)
-
-  Laravel'deki karşılığı:
-  - Livewire'da $currentSlide property + wire:click
-  - Alpine.js'te x-data="{ current: 0 }" + setInterval
-
-  React'te state (durum) yönetimi:
-  - const [slide, setSlide] = useState(0)
-  - slide = şu anki değer (okuma)
-  - setSlide = değeri değiştirme fonksiyonu (yazma)
-  - useState(0) = başlangıç değeri 0
-*/
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-export default function WinRateBanner({ champions }) {
+export default function WinRateBanner({ champions, version }) {
   const top5 = champions.slice(0, 5);
   const [current, setCurrent] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Otomatik geçiş - her 4 saniyede bir sonraki slide'a geç
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % top5.length);
-    }, 4000);
-
-    // Cleanup: component kaldırılınca timer'ı temizle
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrent((prev) => (prev + 1) % top5.length);
+        setIsTransitioning(false);
+      }, 400);
+    }, 5000);
     return () => clearInterval(timer);
   }, [top5.length]);
+
+  function goTo(index) {
+    if (index === current) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrent(index);
+      setIsTransitioning(false);
+    }, 300);
+  }
 
   const champ = top5[current];
 
   return (
-    <div className="relative w-full h-56 md:h-72 rounded-2xl overflow-hidden animate-fade-in-up">
-      {/* Arka plan splash art - geçiş animasyonlu */}
+    <div className="relative w-full h-[240px] md:h-[280px] rounded-xl overflow-hidden">
+      {/* Son kostüm splash art — her şampiyon için en yeni skin */}
       {top5.map((c, i) => (
         <div
           key={c.id}
-          className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
-          style={{ opacity: i === current ? 1 : 0 }}
+          className="absolute inset-0 transition-opacity duration-700"
+          style={{ opacity: i === current && !isTransitioning ? 1 : 0 }}
         >
           <img
-            src={c.splash}
+            src={c.latestSkinSplash || c.splash}
             alt={c.name}
-            className="w-full h-full object-cover object-top"
+            className="w-full h-full object-cover object-[center_20%]"
           />
         </div>
       ))}
 
-      {/* Gradient overlay'ler */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#060a10] via-[#060a10]/30 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#060a10]/70 via-transparent to-[#060a10]/70" />
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-transparent to-[#0a0e14]/40" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0e14]/70 via-transparent to-transparent" />
 
-      {/* Sol üst: Etiket */}
-      <div className="absolute top-5 left-6">
-        <span className="text-[10px] uppercase tracking-[0.2em] text-blue-400/80 font-medium bg-blue-500/10 backdrop-blur-sm px-3 py-1 rounded-full border border-blue-500/20">
-          En Yüksek Win Rate
+      {/* Oklar */}
+      <button
+        onClick={() => goTo((current - 1 + top5.length) % top5.length)}
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/60 hover:text-white hover:bg-black/60 transition-all z-10"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <button
+        onClick={() => goTo((current + 1) % top5.length)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/60 hover:text-white hover:bg-black/60 transition-all z-10"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      {/* Sol üst: Sadece patch bilgisi */}
+      <div className="absolute top-4 left-5">
+        <span className="text-[10px] text-white/50 bg-black/30 backdrop-blur-sm px-2.5 py-1 rounded-full">
+          Patch {version}
         </span>
       </div>
 
-      {/* Sağ üst: Slide sayacı */}
-      <div className="absolute top-5 right-6 flex items-center gap-1.5">
+      {/* Sağ üst: Dots */}
+      <div className="absolute top-4 right-5 flex items-center gap-1.5">
         {top5.map((_, i) => (
           <button
             key={i}
-            onClick={() => setCurrent(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
+            onClick={() => goTo(i)}
+            className={`rounded-full transition-all duration-300 ${
               i === current
-                ? "w-6 bg-blue-400"
-                : "w-1.5 bg-white/20 hover:bg-white/40"
+                ? "w-5 h-1.5 bg-white"
+                : "w-1.5 h-1.5 bg-white/30 hover:bg-white/60"
             }`}
           />
         ))}
       </div>
 
       {/* Alt: Şampiyon bilgisi */}
-      <div className="absolute bottom-0 left-0 right-0 p-6">
+      <div className="absolute bottom-0 left-0 right-0 p-5">
         <div className="flex items-end justify-between">
-          <Link
-            href={`/champions/${champ.id}`}
-            className="flex items-end gap-4 group"
-          >
+          <Link href={`/champions/${champ.id}`} className="group flex items-end gap-3">
             <img
               src={champ.image}
               alt={champ.name}
-              width={56}
-              height={56}
-              className="rounded-xl border-2 border-white/10 group-hover:border-blue-400/50 transition-all duration-300 shadow-lg"
+              width={52}
+              height={52}
+              className="rounded-xl border-2 border-white/20 shadow-xl group-hover:border-blue-400/60 transition-all"
             />
             <div>
-              <p className="text-2xl md:text-3xl font-extrabold text-white group-hover:text-blue-200 transition-colors">
+              <p className="text-2xl font-extrabold text-white drop-shadow-lg">
                 {champ.name}
               </p>
-              <p className="text-sm text-gray-400">{champ.title}</p>
+              <p className="text-xs text-white/50">{champ.title}</p>
             </div>
           </Link>
 
-          {/* Win rate badge */}
           <div className="text-right">
-            <p className="text-3xl font-extrabold text-emerald-400 font-mono">
+            <p className="text-3xl font-black text-emerald-400 font-mono drop-shadow-lg">
               {champ.winRate}%
             </p>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">
-              Win Rate
-            </p>
+            <p className="text-[10px] text-white/40 uppercase tracking-wider">Win Rate</p>
           </div>
-        </div>
-
-        {/* Alt sıra: Diğer şampiyonlar küçük ikonlarla */}
-        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/5">
-          {top5.map((c, i) => (
-            <button
-              key={c.id}
-              onClick={() => setCurrent(i)}
-              className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-all duration-300 ${
-                i === current
-                  ? "bg-white/10"
-                  : "opacity-50 hover:opacity-80"
-              }`}
-            >
-              <img
-                src={c.image}
-                alt={c.name}
-                width={20}
-                height={20}
-                className="rounded-sm"
-              />
-              <span className="text-[11px] text-gray-300 font-mono hidden sm:inline">
-                {c.winRate}%
-              </span>
-            </button>
-          ))}
         </div>
       </div>
     </div>

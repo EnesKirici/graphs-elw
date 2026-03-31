@@ -1,8 +1,7 @@
 import { fetchApi } from "@/lib/api";
-import HeroSection from "@/components/dashboard/HeroSection";
 import WinRateBanner from "@/components/dashboard/WinRateBanner";
-import ChampionTable from "@/components/dashboard/ChampionTable";
-import FreeRotation from "@/components/dashboard/FreeRotation";
+import RankingCard from "@/components/dashboard/RankingCard";
+import WinRateChanges from "@/components/dashboard/WinRateChanges";
 import TopBanned from "@/components/dashboard/TopBanned";
 import TopPicked from "@/components/dashboard/TopPicked";
 import BackgroundAnimation from "@/components/dashboard/BackgroundAnimation";
@@ -11,9 +10,7 @@ export default async function Home() {
   let data = null;
   try {
     data = await fetchApi("/meta/dashboard");
-  } catch (error) {
-    // API çalışmıyorsa
-  }
+  } catch (error) {}
 
   if (!data) {
     return (
@@ -31,37 +28,46 @@ export default async function Home() {
 
   return (
     <div className="relative">
-      {/* Arka plan parçacık animasyonu */}
       <BackgroundAnimation />
 
-      {/* Tüm içerik z-10'da (animasyonun üzerinde) */}
-      <div className="relative z-10">
-        {/* Hero */}
-        <HeroSection version={data.version} championCount={data.count} />
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-6 space-y-5">
+        {/* Slider — centered splash, sıra numarası, patch bilgisi */}
+        <WinRateBanner champions={data.topWinRate} version={data.version} />
 
-        <div className="max-w-7xl mx-auto px-6 pb-16 space-y-6">
-          {/* Top Win Rate Banner */}
-          <WinRateBanner champions={data.topWinRate} />
+        {/* 3'lü ranking grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <RankingCard
+            title="Popüler Şampiyonlar"
+            champions={data.topPickRate}
+            valueKey="pickRate"
+            color="blue"
+          />
+          <RankingCard
+            title="En Yüksek Win Rate"
+            champions={data.topWinRate}
+            valueKey="winRate"
+            color="green"
+          />
+          <RankingCard
+            title="En Çok Banlanan"
+            champions={data.topBanRate}
+            valueKey="banRate"
+            color="red"
+          />
+        </div>
 
-          {/* Ücretsiz Rotasyon */}
-          <FreeRotation champions={data.freeRotation} />
+        {/* WR değişimleri + Splash kartlar */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Sol: WR değişimleri */}
+          <WinRateChanges
+            risers={data.risers}
+            fallers={data.fallers}
+            version={data.version}
+          />
 
-          {/* Ana içerik grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Sol: Win Rate tablosu */}
-            <div className="lg:col-span-2">
-              <ChampionTable
-                title="En Yüksek Win Rate"
-                champions={data.topWinRate}
-              />
-            </div>
-
-            {/* Sağ: Kartlar */}
-            <div className="space-y-6">
-              <TopPicked champions={data.topPickRate} />
-              <TopBanned champions={data.topBanRate} />
-            </div>
-          </div>
+          {/* Orta ve sağ: Splash kartlar */}
+          <TopPicked champions={data.topPickRate} />
+          <TopBanned champions={data.topBanRate} />
         </div>
       </div>
     </div>
