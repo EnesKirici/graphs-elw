@@ -89,6 +89,75 @@ class DataDragonService
     }
 
     /**
+     * Rün verileri (runesReforged).
+     * Tüm rün ağaçları, keystoneler ve görselleri.
+     */
+    public function getRunes(): array
+    {
+        $version = $this->getCurrentVersion();
+
+        return Cache::remember('ddragon:runes', config('riot.cache_ttl.ddragon'), function () use ($version) {
+            return Http::get("{$this->baseUrl}/cdn/{$version}/data/{$this->lang}/runesReforged.json")->json();
+        });
+    }
+
+    /**
+     * Rün ID → bilgi map'i oluştur (hızlı lookup için).
+     * [perkId => ['name' => '...', 'icon' => '...', 'tree' => '...']]
+     */
+    public function getRuneMap(): array
+    {
+        return Cache::remember('ddragon:rune_map', config('riot.cache_ttl.ddragon'), function () {
+            $runes = $this->getRunes();
+            $map = [];
+
+            foreach ($runes as $tree) {
+                // Ağaç bilgisi
+                $map[$tree['id']] = [
+                    'name' => $tree['name'],
+                    'icon' => "{$this->baseUrl}/cdn/img/{$tree['icon']}",
+                    'isTree' => true,
+                ];
+
+                foreach ($tree['slots'] as $slot) {
+                    foreach ($slot['runes'] as $rune) {
+                        $map[$rune['id']] = [
+                            'name' => $rune['name'],
+                            'icon' => "{$this->baseUrl}/cdn/img/{$rune['icon']}",
+                            'tree' => $tree['name'],
+                        ];
+                    }
+                }
+            }
+
+            return $map;
+        });
+    }
+
+    /**
+     * Spell ID → bilgi map'i (summoner1Id/2Id için).
+     * [spellKey => ['name' => '...', 'image' => '...']]
+     */
+    public function getSpellMap(): array
+    {
+        $version = $this->getCurrentVersion();
+
+        return Cache::remember('ddragon:spell_map', config('riot.cache_ttl.ddragon'), function () use ($version) {
+            $spells = $this->getSummonerSpells();
+            $map = [];
+
+            foreach ($spells as $spell) {
+                $map[(int) $spell['key']] = [
+                    'name' => $spell['name'],
+                    'image' => "{$this->baseUrl}/cdn/{$version}/img/spell/{$spell['image']['full']}",
+                ];
+            }
+
+            return $map;
+        });
+    }
+
+    /**
      * Görsel URL'leri oluşturmak için helper method'lar.
      */
     public function championIconUrl(string $championName): string

@@ -51,16 +51,26 @@ export default function MatchCard({ match }) {
   const kdaText = `${m.kills}/${m.deaths}/${m.assists}`;
   const kdaRatio = typeof m.kda === "number" ? m.kda.toFixed(2) : m.kda;
 
+  // Remake tespiti: 5 dakikadan kısa süren maçlar
+  const isRemake = m.duration < 300;
+
+  // Renk belirle: win=yeşil, loss=kırmızı, remake=mavi
+  const borderColor = isRemake
+    ? "border-l-blue-400"
+    : m.win ? "border-l-emerald-500" : "border-l-red-500";
+  const bgTint = isRemake
+    ? "bg-blue-500/[0.03]"
+    : m.win ? "bg-emerald-500/[0.03]" : "bg-red-500/[0.03]";
+  const resultText = isRemake ? "R" : m.win ? "W" : "L";
+  const resultColor = isRemake
+    ? "text-blue-400"
+    : m.win ? "text-emerald-400" : "text-red-400";
+
   return (
     <div
-      className={`flex items-center gap-3 rounded-lg overflow-hidden transition-colors hover:bg-white/[0.02] ${
-        m.win ? "border-l-[3px] border-l-blue-500" : "border-l-[3px] border-l-red-500"
-      }`}
+      className={`flex items-center gap-3 rounded-lg overflow-hidden transition-colors hover:bg-white/[0.02] border-l-[3px] ${borderColor}`}
     >
-      {/* Win/Loss arka plan tint */}
-      <div className={`flex items-center gap-3 flex-1 px-3 py-2.5 ${
-        m.win ? "bg-blue-500/[0.03]" : "bg-red-500/[0.03]"
-      }`}>
+      <div className={`flex items-center gap-3 flex-1 px-3 py-2.5 ${bgTint}`}>
         {/* Şampiyon ikonu */}
         <div className="relative flex-shrink-0">
           <img
@@ -147,10 +157,10 @@ export default function MatchCard({ match }) {
           <p className="text-[10px] text-gray-600">{timeAgo(m.gameCreation)}</p>
         </div>
 
-        {/* Win/Loss yazısı */}
+        {/* Win/Loss/Remake yazısı */}
         <div className="w-10 flex-shrink-0 text-right">
-          <span className={`text-xs font-bold ${m.win ? "text-blue-400" : "text-red-400"}`}>
-            {m.win ? "W" : "L"}
+          <span className={`text-xs font-bold ${resultColor}`}>
+            {resultText}
           </span>
         </div>
       </div>

@@ -37,7 +37,7 @@ class MatchService
     {
         $cacheKey = "match:ids:{$puuid}:{$count}";
 
-        return Cache::remember($cacheKey, config('riot.cache_ttl.matches'), function () use ($puuid, $count) {
+        return Cache::remember($cacheKey, config('riot.cache_ttl.match_ids'), function () use ($puuid, $count) {
             return $this->api->regionRequest(
                 "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
                 ['count' => $count]
@@ -51,7 +51,7 @@ class MatchService
      */
     public function getMatchDetail(string $matchId): array
     {
-        return Cache::remember("match:detail:{$matchId}", 86400, function () use ($matchId) {
+        return Cache::remember("match:detail:{$matchId}", config('riot.cache_ttl.match_detail'), function () use ($matchId) {
             return $this->api->regionRequest(
                 "/lol/match/v5/matches/{$matchId}"
             );
@@ -67,6 +67,10 @@ class MatchService
         $matchIds = $this->getMatchIds($puuid, $count);
         $version = $this->ddragon->getCurrentVersion();
         $ddragonBase = config('riot.ddragon_url');
+
+        // Rün ve spell map'lerini bir kere çek (tüm maçlar için ortak)
+        $runeMap = $this->ddragon->getRuneMap();
+        $spellMap = $this->ddragon->getSpellMap();
 
         $matches = [];
         foreach ($matchIds as $matchId) {
@@ -85,7 +89,7 @@ class MatchService
 
                 if (!$player) continue;
 
-                // Item ID'lerini topla (0 = boş slot)
+                // Item'ler
                 $items = [];
                 for ($i = 0; $i <= 6; $i++) {
                     $itemId = $player["item{$i}"] ?? 0;
@@ -93,6 +97,30 @@ class MatchService
                         $items[] = [
                             'id' => $itemId,
                             'image' => "{$ddragonBase}/cdn/{$version}/img/item/{$itemId}.png",
+                        ];
+                    }
+                }
+
+                // Summoner spell'ler
+                $spell1Id = $player['summoner1Id'] ?? 0;
+                $spell2Id = $player['summoner2Id'] ?? 0;
+                $spells = [
+                    $spellMap[$spell1Id] ?? ['name' => '?', 'image' => ''],
+                    $spellMap[$spell2Id] ?? ['name' => '?', 'image' => ''],
+                ];
+
+                // Rünler — keystone + sub tree
+                $perks = $player['perks'] ?? null;
+                $runes = $this->extractRunes($perks, $runeMap);
+
+                // Karşı takım şampiyonları
+                $playerTeam = $player['teamId'];
+                $enemies = [];
+                foreach ($info['participants'] as $p) {
+                    if ($p['teamId'] !== $playerTeam) {
+                        $enemies[] = [
+                            'name'  => $p['championName'],
+                            'image' => $this->ddragon->championIconUrl($p['championName']),
                         ];
                     }
                 }
@@ -114,26 +142,69 @@ class MatchService
                     'gold'         => $player['goldEarned'],
                     'damage'       => $player['totalDamageDealtToChampions'],
                     'items'        => $items,
+                    'spells'       => $spells,
+                    'runes'        => $runes,
+                    'enemies'      => $enemies,
                     'win'          => $player['win'],
                     'duration'     => $info['gameDuration'],
                     'queueType'    => self::QUEUE_NAMES[$info['queueId'] ?? 0] ?? 'Diğer',
                     'role'         => $player['teamPosition'] ?: $player['individualPosition'] ?: '',
                     'gameCreation' => $info['gameCreation'],
                     'champLevel'   => $player['champLevel'],
-                    'summoner1'    => $player['summoner1Id'],
-                    'summoner2'    => $player['summoner2Id'],
                     'doubleKills'  => $player['doubleKills'] ?? 0,
                     'tripleKills'  => $player['tripleKills'] ?? 0,
                     'quadraKills'  => $player['quadraKills'] ?? 0,
                     'pentaKills'   => $player['pentaKills'] ?? 0,
                 ];
             } catch (\Exception $e) {
-                // Tek maç hatası tüm listeyi bozmasın
                 continue;
             }
         }
 
         return $matches;
+    }
+
+    /**
+     * Perks verisinden rün bilgilerini çıkar.
+     */
+    private function extractRunes(?array $perks, array $runeMap): array
+    {
+        if (!$perks || !isset($perks['styles'])) {
+            return ['keystone' => null, 'primaryTree' => null, 'subTree' => null, 'allPerks' => []];
+        }
+
+        $keystone = null;
+        $primaryTree = null;
+        $subTree = null;
+        $allPerks = [];
+
+        foreach ($perks['styles'] as $style) {
+            $treeInfo = $runeMap[$style['style']] ?? null;
+
+            if ($style['description'] === 'primaryStyle') {
+                $primaryTree = $treeInfo;
+                // İlk selection = keystone
+                if (!empty($style['selections'])) {
+                    $keystoneId = $style['selections'][0]['perk'];
+                    $keystone = $runeMap[$keystoneId] ?? null;
+                }
+                foreach ($style['selections'] as $sel) {
+                    $allPerks[] = $runeMap[$sel['perk']] ?? ['name' => 'Unknown', 'icon' => ''];
+                }
+            } elseif ($style['description'] === 'subStyle') {
+                $subTree = $treeInfo;
+                foreach ($style['selections'] as $sel) {
+                    $allPerks[] = $runeMap[$sel['perk']] ?? ['name' => 'Unknown', 'icon' => ''];
+                }
+            }
+        }
+
+        return [
+            'keystone'    => $keystone,
+            'primaryTree' => $primaryTree,
+            'subTree'     => $subTree,
+            'allPerks'    => $allPerks,
+        ];
     }
 
     /**

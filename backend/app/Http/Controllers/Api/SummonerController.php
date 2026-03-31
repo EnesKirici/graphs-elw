@@ -69,7 +69,7 @@ class SummonerController extends Controller
         $recentStats = null;
         $bannerSplash = null;
         try {
-            $recentMatches = $this->match->getRecentMatches($puuid, 15);
+            $recentMatches = $this->match->getRecentMatches($puuid, 10);
             $recentStats = $this->match->calculateRecentStats($recentMatches, $puuid);
 
             if ($recentStats['mostPlayedChampion'] ?? null) {

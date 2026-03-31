@@ -37,11 +37,12 @@ return [
 
     // Cache süreleri (saniye cinsinden)
     'cache_ttl' => [
-        'ddragon'    => 86400,  // 24 saat - şampiyon verileri patch ile değişir
-        'meta_stats' => 3600,   // 1 saat - meta istatistikleri
-        'summoner'   => 600,    // 10 dakika - oyuncu bilgileri
-        'matches'    => 300,    // 5 dakika - maç geçmişi listesi
-        'live_game'  => 30,     // 30 saniye - canlı oyun verisi
+        'ddragon'      => 86400,   // 24 saat - şampiyon verileri patch ile değişir
+        'meta_stats'   => 3600,    // 1 saat - meta istatistikleri
+        'summoner'     => 1800,    // 30 dakika - oyuncu profil bilgileri
+        'match_ids'    => 600,     // 10 dakika - maç ID listesi (yeni maç oynanabilir)
+        'match_detail' => 604800,  // 7 gün - maç detayı (maçlar asla değişmez)
+        'live_game'    => 30,      // 30 saniye - canlı oyun verisi
     ],
 
 ];
