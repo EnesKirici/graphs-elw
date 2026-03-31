@@ -63,12 +63,49 @@ class MetaService
 
             usort($stats, fn($a, $b) => $b['winRate'] <=> $a['winRate']);
 
-            // Top 5 win rate için son kostüm splash'ini bul
             $topWinRate = array_slice($stats, 0, 10);
-            foreach (array_slice($topWinRate, 0, 5) as $i => $champ) {
-                $detail = $this->ddragon->getChampionDetail($champ['id']);
-                $lastRealSkin = $this->getLastRealSkin($detail['skins']);
-                $topWinRate[$i]['latestSkinSplash'] = "{$ddragonBase}/cdn/img/champion/splash/{$champ['id']}_{$lastRealSkin}.jpg";
+            $topPickRate = array_slice(
+                collect($stats)->sortByDesc('pickRate')->values()->all(), 0, 10
+            );
+            $topBanRate = array_slice(
+                collect($stats)->sortByDesc('banRate')->values()->all(), 0, 10
+            );
+
+            // Slider havuzu: her kategoriden top 7'ye skin datası ekle
+            // Frontend bu havuzdan her refresh'te rastgele seçecek
+            $sliderPool = [];
+            $seen = [];
+
+            $categories = [
+                ['list' => $topWinRate, 'category' => 'En Yüksek Win Rate', 'valueKey' => 'winRate', 'suffix' => '%'],
+                ['list' => $topPickRate, 'category' => 'En Popüler', 'valueKey' => 'pickRate', 'suffix' => '%'],
+                ['list' => $topBanRate, 'category' => 'En Çok Banlanan', 'valueKey' => 'banRate', 'suffix' => '%'],
+            ];
+
+            foreach ($categories as $cat) {
+                $rank = 0;
+                $catCount = 0;
+                foreach ($cat['list'] as $champ) {
+                    $rank++;
+                    if (in_array($champ['id'], $seen)) continue;
+                    if ($catCount >= 5) break;
+
+                    $detail = $this->ddragon->getChampionDetail($champ['id']);
+                    $lastRealSkin = $this->getLastRealSkin($detail['skins']);
+                    $skinName = collect($detail['skins'])->firstWhere('num', $lastRealSkin)['name'] ?? $champ['name'];
+                    if ($skinName === 'default') $skinName = $champ['name'];
+
+                    $entry = $champ;
+                    $entry['latestSkinSplash'] = "{$ddragonBase}/cdn/img/champion/splash/{$champ['id']}_{$lastRealSkin}.jpg";
+                    $entry['latestSkinName'] = $skinName;
+                    $entry['sliderCategory'] = $cat['category'];
+                    $entry['sliderRank'] = $rank;
+                    $entry['sliderValue'] = $champ[$cat['valueKey']] . $cat['suffix'];
+
+                    $sliderPool[] = $entry;
+                    $seen[] = $champ['id'];
+                    $catCount++;
+                }
             }
 
             $risers = collect($stats)->where('wrChange', '>', 0)
@@ -80,13 +117,10 @@ class MetaService
                 'version'     => $version,
                 'count'       => count($stats),
                 'champions'   => $stats,
+                'sliderPool'  => $sliderPool,
                 'topWinRate'  => $topWinRate,
-                'topPickRate' => array_slice(
-                    collect($stats)->sortByDesc('pickRate')->values()->all(), 0, 10
-                ),
-                'topBanRate'  => array_slice(
-                    collect($stats)->sortByDesc('banRate')->values()->all(), 0, 10
-                ),
+                'topPickRate' => $topPickRate,
+                'topBanRate'  => $topBanRate,
                 'risers'      => array_values($risers),
                 'fallers'     => array_values($fallers),
             ];

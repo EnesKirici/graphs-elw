@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ChampionController;
 use App\Http\Controllers\Api\MetaController;
+use App\Http\Controllers\Api\SummonerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +31,10 @@ Route::prefix('v1')->group(function () {
     // Meta / Dashboard endpoint'leri
     Route::get('/meta/dashboard', [MetaController::class, 'dashboard']);
     Route::get('/meta/rotation', [MetaController::class, 'rotation']);
+
+    // Oyuncu endpoint'leri
+    Route::get('/summoner/search', [SummonerController::class, 'search']);
+    Route::get('/summoner/{puuid}', [SummonerController::class, 'show']);
 
     // Şampiyon endpoint'leri
     Route::get('/champions', [ChampionController::class, 'index']);

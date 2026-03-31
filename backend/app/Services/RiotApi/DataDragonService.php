@@ -113,4 +113,9 @@ class DataDragonService
     {
         return "{$this->baseUrl}/cdn/img/champion/splash/{$championName}_{$skinNum}.jpg";
     }
+
+    public function loadingScreenUrl(string $championName, int $skinNum = 0): string
+    {
+        return "{$this->baseUrl}/cdn/img/champion/loading/{$championName}_{$skinNum}.jpg";
+    }
 }

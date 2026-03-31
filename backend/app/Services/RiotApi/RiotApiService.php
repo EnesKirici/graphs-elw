@@ -20,7 +20,7 @@ class RiotApiService
      * Platform bazlı istek (tr1.api.riotgames.com)
      * Summoner-V4, League-V4, Champion-Mastery-V4, Spectator-V5 gibi endpoint'ler için.
      */
-    public function platformRequest(string $endpoint, array $query = []): array
+    public function platformRequest(string $endpoint, array $query = []): mixed
     {
         return $this->request(config('riot.platform_url') . $endpoint, $query);
     }
@@ -29,7 +29,7 @@ class RiotApiService
      * Region bazlı istek (europe.api.riotgames.com)
      * Account-V1, Match-V5 gibi endpoint'ler için.
      */
-    public function regionRequest(string $endpoint, array $query = []): array
+    public function regionRequest(string $endpoint, array $query = []): mixed
     {
         return $this->request(config('riot.region_url') . $endpoint, $query);
     }
@@ -50,7 +50,7 @@ class RiotApiService
     /**
      * Temel HTTP isteği.
      */
-    private function request(string $url, array $query = []): array
+    private function request(string $url, array $query = []): mixed
     {
         $response = Http::timeout(10)
             ->withHeaders([
