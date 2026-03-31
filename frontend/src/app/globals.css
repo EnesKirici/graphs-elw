@@ -1,26 +1,107 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist);
+  --color-lol-dark: #060a10;
+  --color-lol-card: #0d1117;
+  --color-lol-border: #1b2230;
+  --color-lol-gold: #c4a44a;
+  --color-lol-blue: #0397ab;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* =============== ANIMASYONLAR =============== */
+
+/* Yukarıdan kayarak belirme */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Soldan kayarak belirme */
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Yavaşça parlama efekti */
+@keyframes glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Gradient arka plan hareket animasyonu */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Yüzen parçacık efekti */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Progress bar dolma animasyonu */
+@keyframes fillBar {
+  from { width: 0%; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft 0.5s ease-out forwards;
+}
+
+.animate-glow {
+  animation: glow 3s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-fill-bar {
+  animation: fillBar 1s ease-out forwards;
+}
+
+/* Stagger delay - sırayla belirme için */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
+/* =============== GLASS MORPHISM =============== */
+.glass {
+  background: rgba(13, 17, 23, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(27, 34, 48, 0.6);
+}
+
+/* =============== TIER BADGE RENKLERİ =============== */
+.tier-s-plus { color: #ff4444; text-shadow: 0 0 8px rgba(255, 68, 68, 0.5); }
+.tier-s { color: #ff8800; text-shadow: 0 0 8px rgba(255, 136, 0, 0.5); }
+.tier-a { color: #c4a44a; text-shadow: 0 0 6px rgba(196, 164, 74, 0.4); }
+.tier-b { color: #3b82f6; }
+.tier-c { color: #6b7280; }
+.tier-d { color: #4b5563; }
+
+/* =============== SCROLLBAR =============== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #060a10; }
+::-webkit-scrollbar-thumb { background: #1b2230; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2a3444; }
+
+/* =============== GENEL =============== */
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: white;
 }

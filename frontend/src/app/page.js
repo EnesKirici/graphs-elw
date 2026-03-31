@@ -1,65 +1,69 @@
-import Image from "next/image";
+import { fetchApi } from "@/lib/api";
+import HeroSection from "@/components/dashboard/HeroSection";
+import WinRateBanner from "@/components/dashboard/WinRateBanner";
+import ChampionTable from "@/components/dashboard/ChampionTable";
+import FreeRotation from "@/components/dashboard/FreeRotation";
+import TopBanned from "@/components/dashboard/TopBanned";
+import TopPicked from "@/components/dashboard/TopPicked";
+import BackgroundAnimation from "@/components/dashboard/BackgroundAnimation";
 
-export default function Home() {
+export default async function Home() {
+  let data = null;
+  try {
+    data = await fetchApi("/meta/dashboard");
+  } catch (error) {
+    // API çalışmıyorsa
+  }
+
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+          <span className="text-red-400 text-xl">!</span>
+        </div>
+        <p className="text-gray-400">API bağlantısı kurulamadı</p>
+        <code className="text-xs text-gray-600 bg-[#0d1117] px-3 py-2 rounded-lg">
+          php artisan serve --port=8000
+        </code>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="relative">
+      {/* Arka plan parçacık animasyonu */}
+      <BackgroundAnimation />
+
+      {/* Tüm içerik z-10'da (animasyonun üzerinde) */}
+      <div className="relative z-10">
+        {/* Hero */}
+        <HeroSection version={data.version} championCount={data.count} />
+
+        <div className="max-w-7xl mx-auto px-6 pb-16 space-y-6">
+          {/* Top Win Rate Banner */}
+          <WinRateBanner champions={data.topWinRate} />
+
+          {/* Ücretsiz Rotasyon */}
+          <FreeRotation champions={data.freeRotation} />
+
+          {/* Ana içerik grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Sol: Win Rate tablosu */}
+            <div className="lg:col-span-2">
+              <ChampionTable
+                title="En Yüksek Win Rate"
+                champions={data.topWinRate}
+              />
+            </div>
+
+            {/* Sağ: Kartlar */}
+            <div className="space-y-6">
+              <TopPicked champions={data.topPickRate} />
+              <TopBanned champions={data.topBanRate} />
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

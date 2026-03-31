@@ -1,28 +1,38 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\ChampionController;
+use App\Http\Controllers\Api\MetaController;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
 |
-| Laravel'de normalde routes/web.php kullanırsın (Blade sayfaları için).
-| Ama biz Next.js kullandığımız için Laravel sadece JSON API sunacak.
-| Bu dosyadaki tüm route'lar otomatik olarak /api/ prefix'i alır.
-|
+| Tüm route'lar /api/ prefix'i ile gelir.
 | Örnek: Route::get('/v1/champions', ...) → http://localhost:8000/api/v1/champions
 |
 */
 
 Route::prefix('v1')->group(function () {
 
-    // Test endpoint - her şeyin çalıştığını doğrulamak için
+    // Test endpoint
     Route::get('/ping', function () {
         return response()->json([
             'status' => 'ok',
             'message' => 'Graphs API is running!',
         ]);
     });
+
+    // DDragon versiyon bilgisi
+    Route::get('/version', [ChampionController::class, 'version']);
+
+    // Meta / Dashboard endpoint'leri
+    Route::get('/meta/dashboard', [MetaController::class, 'dashboard']);
+    Route::get('/meta/rotation', [MetaController::class, 'rotation']);
+
+    // Şampiyon endpoint'leri
+    Route::get('/champions', [ChampionController::class, 'index']);
+    Route::get('/champions/{id}', [ChampionController::class, 'show']);
 
 });
