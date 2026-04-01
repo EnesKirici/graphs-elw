@@ -1,6 +1,7 @@
 import { fetchApi } from "@/lib/api";
 import Link from "next/link";
-import MatchCard from "@/components/summoner/MatchCard";
+import MatchList from "@/components/summoner/MatchList";
+import RoleStats from "@/components/summoner/RoleStats";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
@@ -28,33 +29,30 @@ function getKdaColor(kda) {
 }
 
 // SVG circular progress — analytics gösterge
-function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 90 }) {
-  const radius = 36;
+function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 110 }) {
+  const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.min(value / max, 1);
   const strokeDash = circumference * progress;
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <svg width={size} height={size} viewBox="0 0 80 80">
-        {/* Arka plan daire */}
-        <circle cx="40" cy="40" r={radius} fill="none" stroke="#1b2230" strokeWidth="5" />
-        {/* İlerleme */}
+    <div className="flex flex-col items-center gap-2">
+      <svg width={size} height={size} viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r={radius} fill="none" stroke="#1b2230" strokeWidth="5" />
         <circle
-          cx="40" cy="40" r={radius}
+          cx="48" cy="48" r={radius}
           fill="none" stroke={color} strokeWidth="5"
           strokeLinecap="round"
           strokeDasharray={`${strokeDash} ${circumference}`}
-          transform="rotate(-90 40 40)"
+          transform="rotate(-90 48 48)"
           className="transition-all duration-1000"
         />
-        {/* Ortadaki değer */}
-        <text x="40" y="42" textAnchor="middle" dominantBaseline="middle"
-          className="fill-white text-sm font-bold" style={{ fontSize: '14px' }}>
+        <text x="48" y="50" textAnchor="middle" dominantBaseline="middle"
+          className="fill-white font-bold" style={{ fontSize: '16px' }}>
           {display}
         </text>
       </svg>
-      <span className="text-[11px] text-gray-500">{label}</span>
+      <span className="text-xs text-gray-500">{label}</span>
     </div>
   );
 }
@@ -180,103 +178,149 @@ export default async function SummonerPage({ params }) {
                 ))}
               </div>
             </div>
+
+            {/* Koridor İstatistikleri — filtreli */}
+            <RoleStats seasonRoles={data.seasonRoles} />
           </div>
 
           {/* ===== SAĞ KOLON (8 birim) — Analytics + Son Maçlar ===== */}
           <div className="lg:col-span-8 space-y-4">
 
-            {/* Analytics panel */}
-            <div className="glass rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-gray-200 mb-4">İstatistikler</h3>
-
-              <div className="flex items-center justify-around">
-                {/* Toplam maç */}
-                {solo && (
-                  <CircleProgress
-                    value={solo.games}
-                    max={Math.max(solo.games, 100)}
-                    label="Toplam Maç"
-                    display={solo.games}
-                    color="#3b82f6"
-                  />
-                )}
-
-                {/* Win Rate (Ranked) */}
-                {solo && (
-                  <CircleProgress
-                    value={solo.winRate}
-                    max={100}
-                    label="Kazanma Oranı"
-                    display={`${solo.winRate}%`}
-                    color={solo.winRate >= 50 ? "#10b981" : "#ef4444"}
-                  />
-                )}
-
-                {/* Ort KDA (Son maçlar) */}
-                {recentStats?.avgKDA && (
-                  <CircleProgress
-                    value={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio : 10}
-                    max={6}
-                    label="Ort. KDA"
-                    display={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio.toFixed(1) : '∞'}
-                    color={
-                      (recentStats.avgKDA.ratio >= 3) ? "#10b981" :
-                      (recentStats.avgKDA.ratio >= 2) ? "#3b82f6" : "#ef4444"
-                    }
-                  />
-                )}
-
-                {/* Son maç WR */}
-                {recentStats?.winRate !== undefined && (
-                  <CircleProgress
-                    value={recentStats.winRate}
-                    max={100}
-                    label={`Son ${recentStats.totalGames || 0} Maç`}
-                    display={`${recentStats.winRate || 0}%`}
-                    color={recentStats.winRate >= 50 ? "#06b6d4" : "#f59e0b"}
-                  />
-                )}
+            {/* ===== İSTATİSTİKLER — eski tasarım (4 daire) ===== */}
+            <div className="glass rounded-xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+                <h3 className="text-sm font-semibold text-gray-200">İstatistikler</h3>
               </div>
 
-              {/* Alt satır: KDA detay + W/L */}
-              {solo && (
-                <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[#1b2230]/30">
-                  <div className="text-center">
-                    <span className="text-xs text-blue-400 font-medium">{solo.wins}W</span>
-                    <span className="text-xs text-gray-600 mx-1">/</span>
-                    <span className="text-xs text-red-400 font-medium">{solo.losses}L</span>
-                  </div>
-                  {recentStats?.avgKDA && (
-                    <div className="text-center">
-                      <span className="text-xs text-gray-400">
-                        {recentStats.avgKDA.kills} / {recentStats.avgKDA.deaths} / {recentStats.avgKDA.assists}
-                      </span>
-                      <span className="text-[10px] text-gray-600 ml-1">ort.</span>
-                    </div>
+              <div className="p-5">
+                {/* 4 daire — Toplam Maç, Kazanma Oranı, Ort KDA, Son 10 WR */}
+                <div className="flex items-center justify-around">
+                  {solo && (
+                    <CircleProgress value={solo.games} max={Math.max(solo.games, 100)}
+                      label="Toplam Maç" display={solo.games} color="#3b82f6" />
                   )}
-                  {solo.hotStreak && (
-                    <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
-                      Galibiyet Serisi
-                    </span>
+                  {solo && (
+                    <CircleProgress value={solo.winRate} max={100}
+                      label="Kazanma Oranı" display={`${solo.winRate}%`}
+                      color={solo.winRate >= 50 ? "#10b981" : "#ef4444"} />
+                  )}
+                  {recentStats?.avgKDA && (
+                    <CircleProgress
+                      value={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio : 10}
+                      max={6} label="Ort. KDA"
+                      display={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio.toFixed(1) : '∞'}
+                      color={(recentStats.avgKDA.ratio >= 3) ? "#10b981" : (recentStats.avgKDA.ratio >= 2) ? "#3b82f6" : "#ef4444"} />
+                  )}
+                  {recentStats?.winRate !== undefined && (
+                    <CircleProgress value={recentStats.winRate || 0} max={100}
+                      label={`Son ${recentStats.totalGames || 0} Maç`}
+                      display={`${recentStats.winRate || 0}%`}
+                      color={(recentStats.winRate || 0) >= 50 ? "#06b6d4" : "#f59e0b"} />
                   )}
                 </div>
-              )}
+
+                {/* W/L + KDA alt satır */}
+                {solo && (
+                  <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[#1b2230]/30">
+                    <div className="text-center">
+                      <span className="text-xs text-emerald-400 font-medium">{solo.wins}W</span>
+                      <span className="text-xs text-gray-600 mx-1">/</span>
+                      <span className="text-xs text-red-400 font-medium">{solo.losses}L</span>
+                    </div>
+                    {recentStats?.avgKDA && (
+                      <div className="text-center">
+                        <span className="text-xs text-gray-300">
+                          {recentStats.avgKDA.kills} / <span className="text-red-400">{recentStats.avgKDA.deaths}</span> / {recentStats.avgKDA.assists}
+                        </span>
+                        <span className="text-[10px] text-gray-500 ml-1">ort.</span>
+                      </div>
+                    )}
+                    {solo.hotStreak && (
+                      <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
+                        Galibiyet Serisi
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Son Maçlar — geniş alan */}
-            {recentMatches.length > 0 && (
-              <div className="glass rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-[#1b2230]/50 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-200">Son Maçlar</h3>
-                  <span className="text-[11px] text-gray-500">{recentMatches.length} maç</span>
+            {/* ===== SON OYNANAN + KORİDOR — ayrı kart ===== */}
+            <div className="glass rounded-xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+                <h3 className="text-sm font-semibold text-gray-200">Son Maçlar Özeti</h3>
+              </div>
+              <div className="p-5 grid grid-cols-2 gap-6">
+                {/* Son oynanan şampiyonlar */}
+                <div>
+                  <p className="text-xs text-gray-400 font-medium mb-3">Son Oynanan Şampiyonlar</p>
+                  <div className="space-y-2.5">
+                    {(() => {
+                      const cs = {};
+                      recentMatches.forEach(m => {
+                        const n = m.champion.name;
+                        if (!cs[n]) cs[n] = { name: n, image: m.champion.image, wins: 0, losses: 0, kda: [] };
+                        m.win ? cs[n].wins++ : cs[n].losses++;
+                        if (typeof m.kda === 'number') cs[n].kda.push(m.kda);
+                      });
+                      return Object.values(cs)
+                        .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
+                        .slice(0, 4)
+                        .map(c => {
+                          const t = c.wins + c.losses;
+                          const wr = Math.round(c.wins / t * 100);
+                          const ak = c.kda.length > 0 ? (c.kda.reduce((a,b) => a+b, 0) / c.kda.length).toFixed(1) : '0';
+                          return (
+                            <div key={c.name} className="flex items-center gap-3">
+                              <img src={c.image} alt={c.name} width={32} height={32} className="rounded-md" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-gray-200">{c.name}</p>
+                                <p className="text-[10px] text-gray-500">
+                                  <span className="text-emerald-400">{c.wins}W</span>
+                                  {" "}<span className="text-red-400">{c.losses}L</span>
+                                  {" · "}{ak} KDA
+                                </p>
+                              </div>
+                              <span className={`text-xs font-bold font-mono ${wr >= 50 ? "text-emerald-400" : "text-red-400"}`}>
+                                {wr}%
+                              </span>
+                            </div>
+                          );
+                        });
+                    })()}
+                  </div>
                 </div>
-                <div className="divide-y divide-[#1b2230]/20">
-                  {recentMatches.map((match) => (
-                    <MatchCard key={match.matchId} match={match} />
-                  ))}
+
+                {/* Koridor dağılımı */}
+                <div>
+                  <p className="text-xs text-gray-400 font-medium mb-3">Koridor Dağılımı</p>
+                  {recentStats?.roleStats?.length > 0 && (
+                    <div className="space-y-2.5">
+                      {recentStats.roleStats.map(r => {
+                        const pct = (recentStats?.totalGames || 1) > 0 ? Math.round(r.games / recentStats.totalGames * 100) : 0;
+                        return (
+                          <div key={r.role} className="flex items-center gap-2.5">
+                            <img src={r.icon} alt={r.label} width={22} height={22} className="flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-xs text-gray-300">{r.label}</span>
+                                <span className="text-[11px] text-gray-400">{r.games} · <span className={r.winRate >= 50 ? "text-emerald-400" : "text-red-400"}>{r.winRate}%</span></span>
+                              </div>
+                              <div className="h-1.5 bg-[#1b2230] rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Son Maçlar — sayfalı */}
+            <MatchList initialMatches={recentMatches} puuid={profile.puuid} />
           </div>
         </div>
       </div>
@@ -314,16 +358,16 @@ function RankCard({ title, data }) {
           <p className="text-base font-bold text-white">{tierName} {data.rank}</p>
           <p className="text-xs text-gray-400">{data.lp} LP</p>
           <div className="flex items-center gap-1.5 mt-1">
-            <span className="text-[11px] text-blue-400">{data.wins}W</span>
+            <span className="text-[11px] text-emerald-400">{data.wins}W</span>
             <span className="text-[11px] text-red-400">{data.losses}L</span>
             <span className={`text-[11px] font-medium ${getWrColor(data.winRate)}`}>{data.winRate}%</span>
           </div>
         </div>
       </div>
 
-      {/* W/L bar */}
-      <div className="mt-2.5 h-1 rounded-full overflow-hidden flex">
-        <div className="h-full bg-blue-500" style={{ width: `${data.winRate}%` }} />
+      {/* W/L bar — yeşil win, kırmızı loss */}
+      <div className="mt-2.5 h-1.5 rounded-full overflow-hidden flex">
+        <div className="h-full bg-emerald-500" style={{ width: `${data.winRate}%` }} />
         <div className="h-full bg-red-500" style={{ width: `${100 - data.winRate}%` }} />
       </div>
     </div>

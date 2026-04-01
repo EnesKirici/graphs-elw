@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ChampionController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\SummonerController;
+use App\Http\Controllers\Api\LeaderboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,7 +35,11 @@ Route::prefix('v1')->group(function () {
 
     // Oyuncu endpoint'leri
     Route::get('/summoner/search', [SummonerController::class, 'search']);
+    Route::get('/summoner/{puuid}/matches', [SummonerController::class, 'matches']);
     Route::get('/summoner/{puuid}', [SummonerController::class, 'show']);
+
+    // Leaderboard
+    Route::get('/leaderboard', [LeaderboardController::class, 'index']);
 
     // Şampiyon endpoint'leri
     Route::get('/champions', [ChampionController::class, 'index']);

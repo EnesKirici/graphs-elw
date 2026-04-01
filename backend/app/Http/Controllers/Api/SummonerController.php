@@ -56,6 +56,31 @@ class SummonerController extends Controller
         }
     }
 
+    /**
+     * Sayfalı maç geçmişi.
+     * GET /api/v1/summoner/{puuid}/matches?page=1
+     */
+    public function matches(string $puuid, Request $request): JsonResponse
+    {
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 10;
+        $start = ($page - 1) * $perPage;
+
+        try {
+            $matches = $this->match->getRecentMatchesPaginated($puuid, $perPage, $start);
+            $stats = $this->match->calculateRecentStats($matches, $puuid);
+
+            return response()->json([
+                'matches' => $matches,
+                'stats'   => $stats,
+                'page'    => $page,
+                'hasMore' => count($matches) === $perPage,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['matches' => [], 'stats' => null, 'page' => $page, 'hasMore' => false]);
+        }
+    }
+
     private function buildFullResponse(array $profile): JsonResponse
     {
         $puuid = $profile['puuid'];
@@ -64,20 +89,20 @@ class SummonerController extends Controller
         $masteries = $this->mastery->getTopMasteries($puuid, 10);
         $totalScore = $this->mastery->getTotalScore($puuid);
 
-        // Maç geçmişi — rate limit'e takılırsa boş dön
+        // Maç geçmişi + sezon koridor verisi
         $recentMatches = [];
         $recentStats = null;
+        $seasonRoles = null;
         $bannerSplash = null;
         try {
             $recentMatches = $this->match->getRecentMatches($puuid, 10);
             $recentStats = $this->match->calculateRecentStats($recentMatches, $puuid);
+            $seasonRoles = $this->match->getSeasonRoleStats($puuid);
 
             if ($recentStats['mostPlayedChampion'] ?? null) {
                 $bannerSplash = $this->ddragon->splashArtUrl($recentStats['mostPlayedChampion']['id']);
             }
-        } catch (\Exception $e) {
-            // Rate limit veya match API hatası — profil yine de gösterilsin
-        }
+        } catch (\Exception $e) {}
 
         return response()->json([
             'profile'       => $profile,
@@ -86,6 +111,7 @@ class SummonerController extends Controller
             'totalScore'    => $totalScore,
             'recentMatches' => $recentMatches,
             'recentStats'   => $recentStats,
+            'seasonRoles'   => $seasonRoles,
             'bannerSplash'  => $bannerSplash,
         ]);
     }

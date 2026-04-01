@@ -33,14 +33,14 @@ class MatchService
     /**
      * Son N maçın ID'lerini getir.
      */
-    public function getMatchIds(string $puuid, int $count = 20): array
+    public function getMatchIds(string $puuid, int $count = 20, int $start = 0): array
     {
-        $cacheKey = "match:ids:{$puuid}:{$count}";
+        $cacheKey = "match:ids:{$puuid}:{$count}:{$start}";
 
-        return Cache::remember($cacheKey, config('riot.cache_ttl.match_ids'), function () use ($puuid, $count) {
+        return Cache::remember($cacheKey, config('riot.cache_ttl.match_ids'), function () use ($puuid, $count, $start) {
             return $this->api->regionRequest(
                 "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
-                ['count' => $count]
+                ['count' => $count, 'start' => $start]
             );
         });
     }
@@ -62,9 +62,14 @@ class MatchService
      * Son N maçın özet bilgilerini getir.
      * Her maçtan sadece aranan oyuncunun verilerini çıkarır.
      */
-    public function getRecentMatches(string $puuid, int $count = 20): array
+    public function getRecentMatchesPaginated(string $puuid, int $count = 10, int $start = 0): array
     {
-        $matchIds = $this->getMatchIds($puuid, $count);
+        return $this->getRecentMatches($puuid, $count, $start);
+    }
+
+    public function getRecentMatches(string $puuid, int $count = 20, int $start = 0): array
+    {
+        $matchIds = $this->getMatchIds($puuid, $count, $start);
         $version = $this->ddragon->getCurrentVersion();
         $ddragonBase = config('riot.ddragon_url');
 
@@ -173,6 +178,90 @@ class MatchService
         }
 
         return $matches;
+    }
+
+    /**
+     * Sezon boyunca oynanmış ranked maçlardan koridor istatistikleri.
+     * SoloQ (420) ve Flex (440) ayrı ayrı + birleşik "all".
+     */
+    public function getSeasonRoleStats(string $puuid): array
+    {
+        $cacheKey = "season_roles:{$puuid}";
+
+        return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
+            $roleLabels = ['TOP' => 'Top', 'JUNGLE' => 'Jungle', 'MIDDLE' => 'Mid', 'BOTTOM' => 'ADC', 'UTILITY' => 'Support'];
+
+            // Sezon başlangıcı: Ocak 2025
+            $seasonStart = strtotime('2025-01-08');
+
+            $result = ['all' => [], 'solo' => [], 'flex' => []];
+
+            foreach ([420 => 'solo', 440 => 'flex'] as $queueId => $queueKey) {
+                try {
+                    $matchIds = $this->api->regionRequest(
+                        "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
+                        ['startTime' => $seasonStart, 'queue' => $queueId, 'count' => 100]
+                    );
+                } catch (\Exception $e) {
+                    continue;
+                }
+
+                $roleData = [];
+                foreach ($matchIds as $matchId) {
+                    try {
+                        $detail = $this->getMatchDetail($matchId);
+                        foreach ($detail['info']['participants'] as $p) {
+                            if ($p['puuid'] === $puuid) {
+                                $role = $p['teamPosition'] ?: $p['individualPosition'] ?: '';
+                                if (!$role) break;
+                                if (!isset($roleData[$role])) $roleData[$role] = ['games' => 0, 'wins' => 0];
+                                $roleData[$role]['games']++;
+                                if ($p['win']) $roleData[$role]['wins']++;
+                                break;
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        continue;
+                    }
+                }
+
+                // Sıralı dizi oluştur
+                $sorted = [];
+                arsort($roleData);
+                foreach ($roleData as $key => $rd) {
+                    $sorted[] = [
+                        'role'    => $key,
+                        'label'   => $roleLabels[$key] ?? $key,
+                        'icon'    => '/roles/' . strtolower($roleLabels[$key] ?? $key) . '.png',
+                        'games'   => $rd['games'],
+                        'wins'    => $rd['wins'],
+                        'losses'  => $rd['games'] - $rd['wins'],
+                        'winRate' => $rd['games'] > 0 ? round($rd['wins'] / $rd['games'] * 100, 1) : 0,
+                    ];
+                }
+
+                $result[$queueKey] = $sorted;
+            }
+
+            // "all" = solo + flex birleşik
+            $allData = [];
+            foreach (['solo', 'flex'] as $q) {
+                foreach ($result[$q] as $r) {
+                    $key = $r['role'];
+                    if (!isset($allData[$key])) $allData[$key] = ['games' => 0, 'wins' => 0, 'role' => $key, 'label' => $r['label'], 'icon' => $r['icon']];
+                    $allData[$key]['games'] += $r['games'];
+                    $allData[$key]['wins'] += $r['wins'];
+                }
+            }
+            usort($allData, fn($a, $b) => $b['games'] <=> $a['games']);
+            $result['all'] = array_map(fn($r) => [
+                ...$r,
+                'losses'  => $r['games'] - $r['wins'],
+                'winRate' => $r['games'] > 0 ? round($r['wins'] / $r['games'] * 100, 1) : 0,
+            ], array_values($allData));
+
+            return $result;
+        });
     }
 
     /**
@@ -308,34 +397,56 @@ class MatchService
         arsort($champCounts);
         $topChampName = array_key_first($champCounts);
 
-        // Rol analizi — en çok hangi koridor
-        $roleNames = ['TOP' => 'Top', 'JUNGLE' => 'Jungle', 'MIDDLE' => 'Mid', 'BOTTOM' => 'ADC', 'UTILITY' => 'Support'];
-        $roleCounts = [];
+        // Rol analizi — her koridor için oyun + win
+        $roleLabels = ['TOP' => 'Top', 'JUNGLE' => 'Jungle', 'MIDDLE' => 'Mid', 'BOTTOM' => 'ADC', 'UTILITY' => 'Support'];
+        $roleData = [];
         foreach ($matches as $m) {
             $role = $m['role'] ?? '';
-            if ($role) $roleCounts[$role] = ($roleCounts[$role] ?? 0) + 1;
+            if (!$role) continue;
+            if (!isset($roleData[$role])) $roleData[$role] = ['games' => 0, 'wins' => 0];
+            $roleData[$role]['games']++;
+            if ($m['win']) $roleData[$role]['wins']++;
         }
-        arsort($roleCounts);
+
+        // Rol istatistikleri — oyun sayısına göre sıralı
+        $roleStats = [];
+        arsort($roleData);
+        foreach ($roleData as $key => $rd) {
+            $roleStats[] = [
+                'role'    => $key,
+                'label'   => $roleLabels[$key] ?? $key,
+                'icon'    => '/roles/' . strtolower($roleLabels[$key] ?? $key) . '.png',
+                'games'   => $rd['games'],
+                'wins'    => $rd['wins'],
+                'losses'  => $rd['games'] - $rd['wins'],
+                'winRate' => $rd['games'] > 0 ? round($rd['wins'] / $rd['games'] * 100, 1) : 0,
+            ];
+        }
+
+        // Main role tespiti
+        $roleCounts = array_column($roleData, 'games', null);
+        // roleData key'leri ile
+        $sortedRoles = [];
+        foreach ($roleData as $k => $v) $sortedRoles[$k] = $v['games'];
+        arsort($sortedRoles);
+        $roleKeys = array_keys($sortedRoles);
 
         // Main role tespiti
         $mainRole = null;
-        $roleKeys = array_keys($roleCounts);
         if (count($roleKeys) >= 2) {
-            $first = $roleCounts[$roleKeys[0]];
-            $second = $roleCounts[$roleKeys[1]];
-            // İlk iki rol yakınsa "Top/Mid Main" gibi göster
+            $first = $sortedRoles[$roleKeys[0]];
+            $second = $sortedRoles[$roleKeys[1]];
             if ($second >= $first * 0.6) {
-                $mainRole = ($roleNames[$roleKeys[0]] ?? $roleKeys[0]) . '/' . ($roleNames[$roleKeys[1]] ?? $roleKeys[1]) . ' Main';
+                $mainRole = ($roleLabels[$roleKeys[0]] ?? $roleKeys[0]) . '/' . ($roleLabels[$roleKeys[1]] ?? $roleKeys[1]) . ' Main';
             } else {
-                $mainRole = ($roleNames[$roleKeys[0]] ?? $roleKeys[0]) . ' Main';
+                $mainRole = ($roleLabels[$roleKeys[0]] ?? $roleKeys[0]) . ' Main';
             }
         } elseif (count($roleKeys) === 1) {
-            $mainRole = ($roleNames[$roleKeys[0]] ?? $roleKeys[0]) . ' Main';
+            $mainRole = ($roleLabels[$roleKeys[0]] ?? $roleKeys[0]) . ' Main';
         }
 
-        // Eşit dağılım kontrolü
-        if (count($roleCounts) >= 4) {
-            $vals = array_values($roleCounts);
+        if (count($sortedRoles) >= 4) {
+            $vals = array_values($sortedRoles);
             if ($vals[0] - end($vals) <= 1) {
                 $mainRole = 'Fill';
             }
@@ -359,6 +470,7 @@ class MatchService
             'winRate'    => round($wins / $totalGames * 100, 1),
             'totalGames' => $totalGames,
             'mainRole'   => $mainRole,
+            'roleStats'  => $roleStats,
         ];
     }
 }
