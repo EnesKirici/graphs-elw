@@ -5,11 +5,12 @@ import { createContext, useContext, useState, useEffect } from "react";
 const SidebarContext = createContext(null);
 
 export function SidebarProvider({ children }) {
-  const [collapsed, setCollapsed] = useState(false);
+  // null = henüz okunmadı (SSR veya hydration öncesi)
+  const [collapsed, setCollapsed] = useState(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
-    if (saved === "true") setCollapsed(true);
+    setCollapsed(saved === "true");
   }, []);
 
   function toggle() {
@@ -20,7 +21,7 @@ export function SidebarProvider({ children }) {
   }
 
   return (
-    <SidebarContext.Provider value={{ collapsed, toggle }}>
+    <SidebarContext.Provider value={{ collapsed, toggle, ready: collapsed !== null }}>
       {children}
     </SidebarContext.Provider>
   );

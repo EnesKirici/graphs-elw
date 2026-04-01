@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, createPortal } from "react";
+import { useState, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 
 function fmtDur(s) {
@@ -26,32 +26,19 @@ function kdaColor(k) {
 
 const roles = { TOP: "Top", JUNGLE: "JG", MIDDLE: "Mid", BOTTOM: "Bot", UTILITY: "Sup" };
 
-/*
-  Portal Tooltip — body'ye render edilir, hiçbir container'a sıkışmaz.
-  Hover edilen elementin pozisyonuna göre konumlanır.
-*/
-function PortalTooltip({ anchorRef, show, children }) {
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
-
-  useEffect(() => {
-    if (show && anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      setPos({
-        top: rect.top + window.scrollY - 8,
-        left: rect.left + rect.width / 2,
-      });
-    }
-  }, [show, anchorRef]);
-
-  if (!show || !mounted) return null;
+/* Fixed tooltip — element pozisyonuna göre ekrana sabitlenir */
+function Tooltip({ anchorEl, children }) {
+  if (!anchorEl || typeof window === "undefined") return null;
+  const rect = anchorEl.getBoundingClientRect();
 
   return ReactDOM.createPortal(
     <div
       className="fixed z-[9999] pointer-events-none"
-      style={{ top: `${pos.top}px`, left: `${pos.left}px`, transform: 'translate(-50%, -100%)' }}
+      style={{
+        top: `${rect.top - 8}px`,
+        left: `${rect.left + rect.width / 2}px`,
+        transform: "translate(-50%, -100%)",
+      }}
     >
       {children}
     </div>,
@@ -60,10 +47,10 @@ function PortalTooltip({ anchorRef, show, children }) {
 }
 
 export default function MatchCard({ match: m }) {
-  const [showRunes, setShowRunes] = useState(false);
   const [hovItem, setHovItem] = useState(null);
-  const itemRefs = useRef([]);
-  const runeRef = useRef(null);
+  const [hovRune, setHovRune] = useState(false);
+  const [itemAnchor, setItemAnchor] = useState(null);
+  const [runeAnchor, setRuneAnchor] = useState(null);
 
   const remake = m.duration < 300;
   const bdr = remake ? "border-l-blue-400" : m.win ? "border-l-emerald-500" : "border-l-red-500";
@@ -85,11 +72,12 @@ export default function MatchCard({ match: m }) {
             {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={20} height={20} className="rounded-sm" title={m.spells[0].name} />}
             {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={20} height={20} className="rounded-sm" title={m.spells[1].name} />}
             {m.runes?.keystone?.icon && (
-              <div ref={runeRef}
-                onMouseEnter={() => setShowRunes(true)}
-                onMouseLeave={() => setShowRunes(false)}>
-                <img src={m.runes.keystone.icon} alt="" width={20} height={20}
-                  className="rounded-sm cursor-help hover:ring-1 ring-blue-500/50" />
+              <div
+                ref={(el) => { if (el && !runeAnchor) setRuneAnchor(el); }}
+                onMouseEnter={() => setHovRune(true)}
+                onMouseLeave={() => setHovRune(false)}
+              >
+                <img src={m.runes.keystone.icon} alt="" width={20} height={20} className="rounded-sm cursor-help hover:ring-1 ring-blue-500/50" />
               </div>
             )}
             {m.runes?.subTree?.icon && <img src={m.runes.subTree.icon} alt="" width={20} height={20} className="rounded-sm opacity-60" />}
@@ -115,40 +103,14 @@ export default function MatchCard({ match: m }) {
           <p className="text-[9px] text-gray-600">CS</p>
         </div>
 
-        {/* ITEMS — portal tooltip */}
+        {/* ITEMS */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
           {m.items.slice(0, 6).map((item, i) => (
             <div key={i}
-              ref={el => itemRefs.current[i] = el}
-              onMouseEnter={() => setHovItem(i)}
-              onMouseLeave={() => setHovItem(null)}>
+              onMouseEnter={(e) => { setHovItem(i); setItemAnchor(e.currentTarget); }}
+              onMouseLeave={() => { setHovItem(null); setItemAnchor(null); }}
+            >
               <img src={item.image} alt="" width={24} height={24} className="rounded-sm" />
-
-              <PortalTooltip anchorRef={{ current: itemRefs.current[i] }} show={hovItem === i}>
-                <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg p-3 shadow-2xl shadow-black/90 w-60">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <p className="text-sm font-bold text-white leading-tight">{item.name}</p>
-                    {item.gold > 0 && <span className="text-[11px] text-yellow-500 font-mono whitespace-nowrap">{item.gold} altın</span>}
-                  </div>
-                  {item.desc?.stats?.length > 0 && (
-                    <div className="mb-2">
-                      {item.desc.stats.map((s, j) => (
-                        <p key={j} className="text-[11px] text-blue-300 leading-relaxed">{s}</p>
-                      ))}
-                    </div>
-                  )}
-                  {item.desc?.passives?.length > 0 && (
-                    <div className="space-y-1.5 border-t border-[#1b2230] pt-2">
-                      {item.desc.passives.map((p, j) => (
-                        <div key={j}>
-                          <p className="text-[11px] font-semibold text-yellow-400">{p.name}</p>
-                          <p className="text-[10px] text-gray-400 leading-relaxed">{p.desc}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </PortalTooltip>
             </div>
           ))}
           {Array.from({ length: Math.max(0, 6 - m.items.length) }).map((_, i) => (
@@ -173,19 +135,46 @@ export default function MatchCard({ match: m }) {
           </div>
           <div className="flex gap-0.5">
             {m.enemies?.map((e, i) => (
-              <img key={i} src={e.image} alt={e.name} width={20} height={20}
-                className="rounded-sm" title={e.name} />
+              <img key={i} src={e.image} alt={e.name} width={20} height={20} className="rounded-sm" title={e.name} />
             ))}
           </div>
         </div>
       </div>
 
-      {/* RUNE TOOLTIP — portal ile body'ye, hover ile */}
-      <PortalTooltip anchorRef={runeRef} show={showRunes}>
-        {m.runes && (
+      {/* ITEM TOOLTIP — Portal */}
+      {hovItem !== null && m.items[hovItem]?.name && itemAnchor && (
+        <Tooltip anchorEl={itemAnchor}>
+          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg p-3 shadow-2xl shadow-black/90 w-60">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className="text-sm font-bold text-white">{m.items[hovItem].name}</p>
+              {m.items[hovItem].gold > 0 && <span className="text-[11px] text-yellow-500 font-mono whitespace-nowrap">{m.items[hovItem].gold}g</span>}
+            </div>
+            {m.items[hovItem].desc?.stats?.length > 0 && (
+              <div className="mb-2">
+                {m.items[hovItem].desc.stats.map((s, j) => (
+                  <p key={j} className="text-[11px] text-blue-300">{s}</p>
+                ))}
+              </div>
+            )}
+            {m.items[hovItem].desc?.passives?.length > 0 && (
+              <div className="space-y-1.5 border-t border-[#1b2230] pt-2">
+                {m.items[hovItem].desc.passives.map((p, j) => (
+                  <div key={j}>
+                    <p className="text-[11px] font-semibold text-yellow-400">{p.name}</p>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">{p.desc}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Tooltip>
+      )}
+
+      {/* RUNE TOOLTIP — Portal, hover ile */}
+      {hovRune && m.runes && runeAnchor && (
+        <Tooltip anchorEl={runeAnchor}>
           <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg p-4 shadow-2xl shadow-black/90 w-72">
             <div className="grid grid-cols-2 gap-5">
-              {/* Primary */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   {m.runes.primaryTree?.icon && <img src={m.runes.primaryTree.icon} alt="" width={18} height={18} />}
@@ -201,7 +190,6 @@ export default function MatchCard({ match: m }) {
                   ))}
                 </div>
               </div>
-              {/* Secondary + Shards */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   {m.runes.subTree?.icon && <img src={m.runes.subTree.icon} alt="" width={18} height={18} />}
@@ -228,8 +216,8 @@ export default function MatchCard({ match: m }) {
               </div>
             </div>
           </div>
-        )}
-      </PortalTooltip>
+        </Tooltip>
+      )}
     </div>
   );
 }

@@ -14,10 +14,13 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { collapsed, toggle } = useSidebar();
+  const { collapsed, toggle, ready } = useSidebar();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
+
+  // Hydration öncesi gizle
+  if (!ready) return null;
 
   return (
     <>

@@ -34,6 +34,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/meta/rotation', [MetaController::class, 'rotation']);
 
     // Oyuncu endpoint'leri
+    Route::get('/summoner/autocomplete', [SummonerController::class, 'autocomplete']);
     Route::get('/summoner/search', [SummonerController::class, 'search']);
     Route::get('/summoner/{puuid}/matches', [SummonerController::class, 'matches']);
     Route::get('/summoner/{puuid}', [SummonerController::class, 'show']);

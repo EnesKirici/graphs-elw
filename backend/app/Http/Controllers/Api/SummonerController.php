@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CachedPlayer;
 use App\Services\RiotApi\SummonerService;
 use App\Services\RiotApi\LeagueService;
 use App\Services\RiotApi\ChampionMasteryService;
@@ -104,6 +105,31 @@ class SummonerController extends Controller
             }
         } catch (\Exception $e) {}
 
+        // DB'ye kaydet — autocomplete için
+        try {
+            $topChamps = array_map(fn($m) => [
+                'name' => $m['championName'], 'image' => $m['championImage'],
+            ], array_slice($masteries, 0, 5));
+
+            CachedPlayer::updateOrCreate(
+                ['puuid' => $puuid],
+                [
+                    'game_name'      => $profile['gameName'],
+                    'tag_line'       => $profile['tagLine'],
+                    'tier'           => $ranked['solo']['tier'] ?? null,
+                    'rank'           => $ranked['solo']['rank'] ?? null,
+                    'queue'          => 'RANKED_SOLO_5x5',
+                    'lp'             => $ranked['solo']['lp'] ?? 0,
+                    'wins'           => $ranked['solo']['wins'] ?? 0,
+                    'losses'         => $ranked['solo']['losses'] ?? 0,
+                    'top_champions'  => $topChamps,
+                    'top_roles'      => $recentStats['roleStats'] ?? null,
+                    'profile_icon_id' => $profile['profileIconId'],
+                    'summoner_level' => $profile['summonerLevel'],
+                ]
+            );
+        } catch (\Exception $e) {}
+
         return response()->json([
             'profile'       => $profile,
             'ranked'        => $ranked,
@@ -114,5 +140,42 @@ class SummonerController extends Controller
             'seasonRoles'   => $seasonRoles,
             'bannerSplash'  => $bannerSplash,
         ]);
+    }
+
+    /**
+     * Autocomplete — DB'den oyuncu önerisi.
+     * GET /api/v1/summoner/autocomplete?q=elw
+     */
+    public function autocomplete(Request $request): JsonResponse
+    {
+        $q = $request->query('q', '');
+        $tag = $request->query('tag', '');
+
+        if (strlen($q) < 1) {
+            return response()->json([]);
+        }
+
+        $query = CachedPlayer::where('game_name', 'LIKE', "{$q}%");
+
+        // Tag varsa filtrele
+        if ($tag) {
+            $query->where('tag_line', 'LIKE', "{$tag}%");
+        }
+
+        $players = $query
+            ->limit(5)
+            ->get()
+            ->map(fn($p) => [
+                'puuid'       => $p->puuid,
+                'gameName'    => $p->game_name,
+                'tagLine'     => $p->tag_line,
+                'profileIcon' => $p->profile_icon_id
+                    ? $this->ddragon->profileIconUrl($p->profile_icon_id)
+                    : null,
+                'tier'        => $p->tier,
+                'topRoles'    => $p->top_roles ? array_slice($p->top_roles, 0, 2) : null,
+            ]);
+
+        return response()->json($players);
     }
 }

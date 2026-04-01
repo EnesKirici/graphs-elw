@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Flame, Sparkles, Star } from "lucide-react";
+import { Flame, Sparkles, Star, Shield, Award, Zap } from "lucide-react";
 
 const TIERS = [
   { key: "challenger", label: "Challenger", color: "text-yellow-300", badge: "/ranks/badges/challenger.png" },
@@ -21,6 +21,32 @@ const ROLE_ICONS = {
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
+// Rozet bilgileri — hover tooltip için
+const BADGES = {
+  hotStreak: { icon: Flame, color: "text-orange-400", bg: "bg-orange-500/15", label: "Galibiyet Serisi", desc: "Son 3+ maçı üst üste kazanmış" },
+  freshBlood: { icon: Zap, color: "text-emerald-400", bg: "bg-emerald-500/15", label: "Yeni Giriş", desc: "Bu lig'e yeni yükselmiş" },
+  veteran: { icon: Shield, color: "text-blue-400", bg: "bg-blue-500/15", label: "Veteran", desc: "Bu lig'de 100+ maç oynamış" },
+};
+
+function BadgeIcon({ type, active }) {
+  if (!active) return null;
+  const badge = BADGES[type];
+  const Icon = badge.icon;
+
+  return (
+    <span className={`relative group/badge p-1 rounded ${badge.bg} cursor-default`}>
+      <Icon size={15} className={badge.color} />
+      {/* Hover tooltip */}
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/badge:block z-[9999] pointer-events-none">
+        <span className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-3 py-2 shadow-xl shadow-black/80 whitespace-nowrap block">
+          <span className={`text-xs font-medium ${badge.color} block`}>{badge.label}</span>
+          <span className="text-[10px] text-gray-500 block mt-0.5">{badge.desc}</span>
+        </span>
+      </span>
+    </span>
+  );
+}
 
 export default function LeaderboardPage() {
   const [tier, setTier] = useState("challenger");
@@ -75,10 +101,10 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      {/* Tablo */}
-      <div className="glass rounded-xl overflow-hidden">
+      {/* Tablo — overflow-visible for tooltips */}
+      <div className="glass rounded-xl overflow-visible">
         {/* Header */}
-        <div className="grid grid-cols-[50px_1fr_100px_70px_90px_70px_110px_60px_70px] gap-2 px-6 py-3.5 text-[11px] text-gray-500 uppercase tracking-wider border-b border-[#1b2230]/50 font-medium">
+        <div className="grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 px-6 py-3.5 text-[11px] text-gray-500 uppercase tracking-wider border-b border-[#1b2230]/50 font-medium">
           <span>#</span>
           <span>Oyuncu</span>
           <span className="text-center">Şampiyonlar</span>
@@ -87,7 +113,7 @@ export default function LeaderboardPage() {
           <span className="text-center">Oyun</span>
           <span className="text-center">Zafer / Yenilgi</span>
           <span className="text-center">WR</span>
-          <span className="text-center">Durum</span>
+          <span className="text-center">Rozetler</span>
         </div>
 
         {loading && (
@@ -100,7 +126,7 @@ export default function LeaderboardPage() {
         {!loading && data?.entries?.map((entry, i) => (
           <div
             key={entry.puuid || i}
-            className={`grid grid-cols-[50px_1fr_100px_70px_90px_70px_110px_60px_70px] gap-2 items-center px-6 py-3 hover:bg-white/[0.03] transition-colors border-b border-[#1b2230]/15 ${
+            className={`grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 items-center px-6 py-3 hover:bg-white/[0.03] transition-colors border-b border-[#1b2230]/15 ${
               i < 3 ? "bg-white/[0.015]" : ""
             }`}
           >
@@ -114,26 +140,25 @@ export default function LeaderboardPage() {
             {/* Oyuncu */}
             <div className="flex items-center gap-3">
               <img src={tierInfo?.badge} alt={tier} width={36} height={36} />
-              <div>
-                {entry.name?.gameName ? (
-                  <Link
-                    href={`/summoner/${encodeURIComponent(entry.name.gameName)}/${encodeURIComponent(entry.name.tagLine)}`}
-                    className="text-sm text-gray-200 font-medium hover:text-blue-400 transition-colors"
-                  >
-                    {entry.name.gameName}
-                    <span className="text-gray-500 text-xs ml-0.5">#{entry.name.tagLine}</span>
-                  </Link>
-                ) : (
-                  <span className="text-sm text-gray-600 italic">Oyuncu #{entry.rank}</span>
-                )}
-              </div>
+              {entry.name?.gameName ? (
+                <Link
+                  href={`/summoner/${encodeURIComponent(entry.name.gameName)}/${encodeURIComponent(entry.name.tagLine)}`}
+                  className="text-sm text-gray-200 font-medium hover:text-blue-400 transition-colors truncate"
+                >
+                  {entry.name.gameName}
+                  <span className="text-gray-500 text-xs ml-0.5">#{entry.name.tagLine}</span>
+                </Link>
+              ) : (
+                <span className="text-sm text-gray-600 italic">Oyuncu #{entry.rank}</span>
+              )}
             </div>
 
-            {/* Şampiyonlar */}
-            <div className="flex items-center justify-center gap-0.5">
+            {/* Şampiyonlar — 5 tane, büyük */}
+            <div className="flex items-center justify-center gap-1">
               {entry.topChamps ? (
-                entry.topChamps.slice(0, 3).map((c, ci) => (
-                  <img key={ci} src={c.image} alt={c.name} width={24} height={24} className="rounded-md" title={`${c.name} (Lvl ${c.level})`} />
+                entry.topChamps.slice(0, 5).map((c, ci) => (
+                  <img key={ci} src={c.image} alt={c.name} width={28} height={28}
+                    className="rounded-md" title={`${c.name} (Lvl ${c.level})`} />
                 ))
               ) : (
                 <span className="text-[10px] text-gray-600">—</span>
@@ -141,10 +166,11 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Koridor */}
-            <div className="flex items-center justify-center gap-1">
+            <div className="flex items-center justify-center gap-1.5">
               {entry.topRoles ? (
                 entry.topRoles.map((r, ri) => (
-                  <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role} width={20} height={20} title={r.role} />
+                  <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role}
+                    width={22} height={22} title={r.role} />
                 ))
               ) : (
                 <span className="text-[10px] text-gray-600">—</span>
@@ -173,23 +199,11 @@ export default function LeaderboardPage() {
               {entry.winRate}%
             </span>
 
-            {/* Durum */}
+            {/* Rozetler — hover tooltip */}
             <div className="flex items-center justify-center gap-1">
-              {entry.hotStreak && (
-                <span className="p-1 rounded bg-orange-500/15" title="Galibiyet Serisi">
-                  <Flame size={14} className="text-orange-400" />
-                </span>
-              )}
-              {entry.freshBlood && (
-                <span className="p-1 rounded bg-green-500/15" title="Yeni Giriş">
-                  <Sparkles size={14} className="text-green-400" />
-                </span>
-              )}
-              {entry.veteran && (
-                <span className="p-1 rounded bg-purple-500/15" title="Veteran (100+ maç)">
-                  <Star size={14} className="text-purple-400" />
-                </span>
-              )}
+              <BadgeIcon type="hotStreak" active={entry.hotStreak} />
+              <BadgeIcon type="freshBlood" active={entry.freshBlood} />
+              <BadgeIcon type="veteran" active={entry.veteran} />
               {!entry.hotStreak && !entry.freshBlood && !entry.veteran && (
                 <span className="text-[10px] text-gray-600">—</span>
               )}
