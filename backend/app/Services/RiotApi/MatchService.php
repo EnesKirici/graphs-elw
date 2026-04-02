@@ -344,7 +344,7 @@ class MatchService
      */
     public function getSeasonRoleStats(string $puuid): array
     {
-        $cacheKey = "season_roles:{$puuid}";
+        $cacheKey = "season_roles:v2:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $roleLabels = ['TOP' => 'Top', 'JUNGLE' => 'Jungle', 'MIDDLE' => 'Mid', 'BOTTOM' => 'ADC', 'UTILITY' => 'Support'];
@@ -353,9 +353,19 @@ class MatchService
             // Sezon başlangıcı: Ocak 2025
             $seasonStart = strtotime('2025-01-08');
 
-            $result = ['all' => [], 'solo' => [], 'flex' => []];
+            // Ranked + Normal kuyruklar
+            $queues = [
+                420 => 'solo',
+                440 => 'flex',
+                400 => 'normal',
+                430 => 'normal',
+                490 => 'normal',
+            ];
 
-            foreach ([420 => 'solo', 440 => 'flex'] as $queueId => $queueKey) {
+            $result = ['all' => [], 'solo' => [], 'flex' => [], 'normal' => []];
+            $rawByKey = ['solo' => [], 'flex' => [], 'normal' => []];
+
+            foreach ($queues as $queueId => $queueKey) {
                 try {
                     $matchIds = $this->api->regionRequest(
                         "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
@@ -365,7 +375,6 @@ class MatchService
                     continue;
                 }
 
-                $roleData = [];
                 foreach ($matchIds as $matchId) {
                     try {
                         $detail = $this->getMatchDetail($matchId);
@@ -373,9 +382,9 @@ class MatchService
                             if ($p['puuid'] === $puuid) {
                                 $role = $p['teamPosition'] ?: $p['individualPosition'] ?: '';
                                 if (!$role) break;
-                                if (!isset($roleData[$role])) $roleData[$role] = ['games' => 0, 'wins' => 0];
-                                $roleData[$role]['games']++;
-                                if ($p['win']) $roleData[$role]['wins']++;
+                                if (!isset($rawByKey[$queueKey][$role])) $rawByKey[$queueKey][$role] = ['games' => 0, 'wins' => 0];
+                                $rawByKey[$queueKey][$role]['games']++;
+                                if ($p['win']) $rawByKey[$queueKey][$role]['wins']++;
                                 break;
                             }
                         }
@@ -383,10 +392,13 @@ class MatchService
                         continue;
                     }
                 }
+            }
 
-                // Sıralı dizi oluştur
-                $sorted = [];
+            // Her kuyruk tipi için sıralı dizi oluştur
+            foreach (['solo', 'flex', 'normal'] as $queueKey) {
+                $roleData = $rawByKey[$queueKey];
                 arsort($roleData);
+                $sorted = [];
                 foreach ($roleData as $key => $rd) {
                     $sorted[] = [
                         'role'    => $key,
@@ -398,13 +410,12 @@ class MatchService
                         'winRate' => $rd['games'] > 0 ? round($rd['wins'] / $rd['games'] * 100, 1) : 0,
                     ];
                 }
-
                 $result[$queueKey] = $sorted;
             }
 
-            // "all" = solo + flex birleşik
+            // "all" = solo + flex + normal birleşik
             $allData = [];
-            foreach (['solo', 'flex'] as $q) {
+            foreach (['solo', 'flex', 'normal'] as $q) {
                 foreach ($result[$q] as $r) {
                     $key = $r['role'];
                     if (!isset($allData[$key])) $allData[$key] = ['games' => 0, 'wins' => 0, 'role' => $key, 'label' => $r['label'], 'icon' => $r['icon']];
@@ -419,7 +430,7 @@ class MatchService
                 'winRate' => $r['games'] > 0 ? round($r['wins'] / $r['games'] * 100, 1) : 0,
             ], array_values($allData));
 
-            // Main role tespiti — sezon verisinden
+            // Main role tespiti — tüm veriden
             $mainRole = null;
             $sorted = $result['all'];
             if (count($sorted) >= 2) {
@@ -451,13 +462,22 @@ class MatchService
      */
     public function getSeasonChampionStats(string $puuid): array
     {
-        $cacheKey = "season_champs:{$puuid}";
+        $cacheKey = "season_champs:v2:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $seasonStart = strtotime('2025-01-08');
-            $champData = [];
 
-            foreach ([420, 440] as $queueId) {
+            $queues = [
+                420 => 'ranked',
+                440 => 'ranked',
+                400 => 'normal',
+                430 => 'normal',
+                490 => 'normal',
+            ];
+
+            $rawByType = ['ranked' => [], 'normal' => []];
+
+            foreach ($queues as $queueId => $type) {
                 try {
                     $matchIds = $this->api->regionRequest(
                         "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
@@ -473,14 +493,14 @@ class MatchService
                         foreach ($detail['info']['participants'] as $p) {
                             if ($p['puuid'] === $puuid) {
                                 $name = $p['championName'];
-                                if (!isset($champData[$name])) {
-                                    $champData[$name] = ['games' => 0, 'wins' => 0, 'kills' => 0, 'deaths' => 0, 'assists' => 0];
+                                if (!isset($rawByType[$type][$name])) {
+                                    $rawByType[$type][$name] = ['games' => 0, 'wins' => 0, 'kills' => 0, 'deaths' => 0, 'assists' => 0];
                                 }
-                                $champData[$name]['games']++;
-                                if ($p['win']) $champData[$name]['wins']++;
-                                $champData[$name]['kills']   += $p['kills'];
-                                $champData[$name]['deaths']  += $p['deaths'];
-                                $champData[$name]['assists'] += $p['assists'];
+                                $rawByType[$type][$name]['games']++;
+                                if ($p['win']) $rawByType[$type][$name]['wins']++;
+                                $rawByType[$type][$name]['kills']   += $p['kills'];
+                                $rawByType[$type][$name]['deaths']  += $p['deaths'];
+                                $rawByType[$type][$name]['assists'] += $p['assists'];
                                 break;
                             }
                         }
@@ -490,27 +510,45 @@ class MatchService
                 }
             }
 
-            uasort($champData, fn($a, $b) => $b['games'] <=> $a['games']);
+            // "all" = ranked + normal birleşik
+            $allData = [];
+            foreach (['ranked', 'normal'] as $type) {
+                foreach ($rawByType[$type] as $name => $d) {
+                    if (!isset($allData[$name])) {
+                        $allData[$name] = ['games' => 0, 'wins' => 0, 'kills' => 0, 'deaths' => 0, 'assists' => 0];
+                    }
+                    $allData[$name]['games']   += $d['games'];
+                    $allData[$name]['wins']    += $d['wins'];
+                    $allData[$name]['kills']   += $d['kills'];
+                    $allData[$name]['deaths']  += $d['deaths'];
+                    $allData[$name]['assists'] += $d['assists'];
+                }
+            }
 
             $result = [];
-            foreach ($champData as $name => $d) {
-                $g = $d['games'];
-                $result[] = [
-                    'championName'  => $name,
-                    'championImage' => $this->ddragon->championIconUrl($name),
-                    'games'         => $g,
-                    'wins'          => $d['wins'],
-                    'losses'        => $g - $d['wins'],
-                    'winRate'       => $g > 0 ? round($d['wins'] / $g * 100, 1) : 0,
-                    'avgKda'        => [
-                        'kills'   => round($d['kills'] / $g, 1),
-                        'deaths'  => round($d['deaths'] / $g, 1),
-                        'assists' => round($d['assists'] / $g, 1),
-                        'ratio'   => $d['deaths'] > 0
-                            ? round(($d['kills'] + $d['assists']) / $d['deaths'], 2)
-                            : 'Perfect',
-                    ],
-                ];
+            foreach (['all' => $allData, 'ranked' => $rawByType['ranked'], 'normal' => $rawByType['normal']] as $key => $champData) {
+                uasort($champData, fn($a, $b) => $b['games'] <=> $a['games']);
+                $list = [];
+                foreach ($champData as $name => $d) {
+                    $g = $d['games'];
+                    $list[] = [
+                        'championName'  => $name,
+                        'championImage' => $this->ddragon->championIconUrl($name),
+                        'games'         => $g,
+                        'wins'          => $d['wins'],
+                        'losses'        => $g - $d['wins'],
+                        'winRate'       => $g > 0 ? round($d['wins'] / $g * 100, 1) : 0,
+                        'avgKda'        => [
+                            'kills'   => round($d['kills'] / $g, 1),
+                            'deaths'  => round($d['deaths'] / $g, 1),
+                            'assists' => round($d['assists'] / $g, 1),
+                            'ratio'   => $d['deaths'] > 0
+                                ? round(($d['kills'] + $d['assists']) / $d['deaths'], 2)
+                                : 'Perfect',
+                        ],
+                    ];
+                }
+                $result[$key] = $list;
             }
 
             return $result;

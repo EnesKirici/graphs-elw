@@ -128,12 +128,15 @@ class SummonerController extends Controller
                     'points' => $m['championPoints'],
                 ];
             }
-            foreach ($seasonChampions as &$sc) {
-                $info = $masteryMap[$sc['championName']] ?? null;
-                $sc['masteryLevel']  = $info['level'] ?? 0;
-                $sc['masteryPoints'] = $info['points'] ?? 0;
+            foreach (['all', 'ranked', 'normal'] as $champKey) {
+                if (!isset($seasonChampions[$champKey])) continue;
+                foreach ($seasonChampions[$champKey] as &$sc) {
+                    $info = $masteryMap[$sc['championName']] ?? null;
+                    $sc['masteryLevel']  = $info['level'] ?? 0;
+                    $sc['masteryPoints'] = $info['points'] ?? 0;
+                }
+                unset($sc);
             }
-            unset($sc);
 
             if ($recentStats['mostPlayedChampion'] ?? null) {
                 $bannerSplash = $this->ddragon->splashArtUrl($recentStats['mostPlayedChampion']['id']);

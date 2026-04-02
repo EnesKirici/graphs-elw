@@ -9,6 +9,12 @@ const VIEWS = [
   { key: "mastery", label: "Ustalık Puanı" },
 ];
 
+const GAME_TYPES = [
+  { key: "all", label: "Tümü" },
+  { key: "ranked", label: "Dereceli" },
+  { key: "normal", label: "Normal" },
+];
+
 function formatPoints(p) {
   if (p >= 1000000) return (p / 1000000).toFixed(1) + "M";
   if (p >= 1000) return (p / 1000).toFixed(1) + "K";
@@ -62,16 +68,22 @@ function getKdaColor(ratio) {
 export default function ChampionPool({ seasonChampions, masteries, totalScore }) {
   const [view, setView] = useState("played");
   const [open, setOpen] = useState(false);
+  const [gameType, setGameType] = useState("all");
+  const [gameTypeOpen, setGameTypeOpen] = useState(false);
 
   const currentLabel = VIEWS.find((v) => v.key === view)?.label;
+  const currentGameTypeLabel = GAME_TYPES.find((g) => g.key === gameType)?.label;
+
+  // seasonChampions artık { all: [], ranked: [], normal: [] } yapısında
+  const champList = seasonChampions?.[gameType] || seasonChampions?.all || [];
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      {/* Başlık + Dropdown */}
+      {/* Başlık + Dropdown'lar */}
       <div className="px-4 py-3 border-b border-[#1b2230]/50 flex items-center justify-between">
         <div className="relative">
           <button
-            onClick={() => setOpen(!open)}
+            onClick={() => { setOpen(!open); setGameTypeOpen(false); }}
             className="flex items-center gap-1.5 text-sm font-semibold text-gray-200 hover:text-white transition-colors cursor-pointer"
           >
             {currentLabel}
@@ -103,17 +115,53 @@ export default function ChampionPool({ seasonChampions, masteries, totalScore })
           )}
         </div>
 
-        {view === "mastery" && (
-          <span className="text-[11px] text-gray-500">{totalScore} puan</span>
-        )}
-        {view === "played" && seasonChampions?.length > 0 && (
-          <span className="text-[11px] text-gray-500">Sezon 2025</span>
-        )}
+        <div className="flex items-center gap-2">
+          {view === "mastery" && (
+            <span className="text-[11px] text-gray-500">{totalScore} puan</span>
+          )}
+
+          {/* Oyun tipi dropdown — sadece "En Çok Oynanan" görünümünde */}
+          {view === "played" && (
+            <div className="relative">
+              <button
+                onClick={() => { setGameTypeOpen(!gameTypeOpen); setOpen(false); }}
+                className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-white/5 text-gray-400 hover:text-gray-200 transition-colors cursor-pointer"
+              >
+                {currentGameTypeLabel}
+                <ChevronDown
+                  size={12}
+                  className={`text-gray-500 transition-transform ${gameTypeOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {gameTypeOpen && (
+                <div className="absolute top-full right-0 mt-1 w-32 bg-[#1b2230] border border-[#2a3441] rounded-lg shadow-xl z-20 overflow-hidden">
+                  {GAME_TYPES.map((g) => (
+                    <button
+                      key={g.key}
+                      onClick={() => {
+                        setGameType(g.key);
+                        setGameTypeOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer ${
+                        gameType === g.key
+                          ? "bg-blue-500/15 text-blue-400"
+                          : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                      }`}
+                    >
+                      {g.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* İçerik */}
       {view === "played" ? (
-        <PlayedView champions={seasonChampions} />
+        <PlayedView champions={champList} />
       ) : (
         <MasteryView masteries={masteries} />
       )}
@@ -126,7 +174,7 @@ function PlayedView({ champions }) {
   if (!champions || champions.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
-        <p className="text-xs text-gray-600">Bu sezon ranked verisi bulunamadı</p>
+        <p className="text-xs text-gray-600">Bu filtrede veri bulunamadı</p>
       </div>
     );
   }

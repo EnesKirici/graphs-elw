@@ -7,6 +7,7 @@ const QUEUE_FILTERS = [
   { key: "all", label: "Tümü" },
   { key: "solo", label: "SoloQ" },
   { key: "flex", label: "Flex" },
+  { key: "normal", label: "Normal" },
 ];
 
 // Sıralama: Top (üst), Mid (sağ), ADC (sağ alt), Support (sol alt), Jungle (sol)

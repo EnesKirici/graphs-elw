@@ -163,62 +163,78 @@ export default async function SummonerPage({ params }) {
           {/* ===== SAĞ KOLON (8 birim) — Analytics + Son Maçlar ===== */}
           <div className="lg:col-span-8 space-y-4">
 
-            {/* ===== İSTATİSTİKLER — eski tasarım (4 daire) ===== */}
+            {/* ===== İSTATİSTİKLER ===== */}
             <div className="glass rounded-xl overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+              <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-200">İstatistikler</h3>
+                {solo ? (
+                  <span className="text-[11px] text-gray-500">Dereceli</span>
+                ) : (
+                  <span className="text-[11px] text-gray-500">Tüm Maçlar</span>
+                )}
               </div>
 
               <div className="p-5">
-                {/* 4 daire — Toplam Maç, Kazanma Oranı, Ort KDA, Son 10 WR */}
-                <div className="flex items-center justify-around">
-                  {solo && (
-                    <CircleProgress value={solo.games} max={Math.max(solo.games, 100)}
-                      label="Toplam Maç" display={solo.games} color="#3b82f6" />
-                  )}
-                  {solo && (
-                    <CircleProgress value={solo.winRate} max={100}
-                      label="Kazanma Oranı" display={`${solo.winRate}%`}
-                      color={solo.winRate >= 50 ? "#10b981" : "#ef4444"} />
-                  )}
-                  {recentStats?.avgKDA && (
-                    <CircleProgress
-                      value={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio : 10}
-                      max={6} label="Ort. KDA"
-                      display={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio.toFixed(1) : '∞'}
-                      color={(recentStats.avgKDA.ratio >= 3) ? "#10b981" : (recentStats.avgKDA.ratio >= 2) ? "#3b82f6" : "#ef4444"} />
-                  )}
-                  {recentStats?.winRate !== undefined && (
-                    <CircleProgress value={recentStats.winRate || 0} max={100}
-                      label={`Son ${recentStats.totalGames || 0} Maç`}
-                      display={`${recentStats.winRate || 0}%`}
-                      color={(recentStats.winRate || 0) >= 50 ? "#06b6d4" : "#f59e0b"} />
-                  )}
-                </div>
+                {/* 4 daire — Toplam Maç, Kazanma Oranı, Ort KDA, Son N WR */}
+                {(() => {
+                  const totalGames = solo?.games || recentStats?.totalGames || 0;
+                  const winRate = solo?.winRate ?? recentStats?.winRate ?? 0;
+                  const wins = solo?.wins ?? recentStats?.wins ?? 0;
+                  const losses = solo?.losses ?? (totalGames - wins);
 
-                {/* W/L + KDA alt satır */}
-                {solo && (
-                  <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[#1b2230]/30">
-                    <div className="text-center">
-                      <span className="text-xs text-emerald-400 font-medium">{solo.wins}W</span>
-                      <span className="text-xs text-gray-600 mx-1">/</span>
-                      <span className="text-xs text-red-400 font-medium">{solo.losses}L</span>
-                    </div>
-                    {recentStats?.avgKDA && (
-                      <div className="text-center">
-                        <span className="text-xs text-gray-300">
-                          {recentStats.avgKDA.kills} / <span className="text-red-400">{recentStats.avgKDA.deaths}</span> / {recentStats.avgKDA.assists}
-                        </span>
-                        <span className="text-[10px] text-gray-500 ml-1">ort.</span>
+                  return (
+                    <>
+                      <div className="flex items-center justify-around">
+                        {totalGames > 0 && (
+                          <CircleProgress value={totalGames} max={Math.max(totalGames, 100)}
+                            label="Toplam Maç" display={totalGames} color="#3b82f6" />
+                        )}
+                        {totalGames > 0 && (
+                          <CircleProgress value={winRate} max={100}
+                            label="Kazanma Oranı" display={`${winRate}%`}
+                            color={winRate >= 50 ? "#10b981" : "#ef4444"} />
+                        )}
+                        {recentStats?.avgKDA && (
+                          <CircleProgress
+                            value={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio : 10}
+                            max={6} label="Ort. KDA"
+                            display={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio.toFixed(1) : '∞'}
+                            color={(recentStats.avgKDA.ratio >= 3) ? "#10b981" : (recentStats.avgKDA.ratio >= 2) ? "#3b82f6" : "#ef4444"} />
+                        )}
+                        {recentStats?.winRate !== undefined && (
+                          <CircleProgress value={recentStats.winRate || 0} max={100}
+                            label={`Son ${recentStats.totalGames || 0} Maç`}
+                            display={`${recentStats.winRate || 0}%`}
+                            color={(recentStats.winRate || 0) >= 50 ? "#06b6d4" : "#f59e0b"} />
+                        )}
                       </div>
-                    )}
-                    {solo.hotStreak && (
-                      <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
-                        Galibiyet Serisi
-                      </span>
-                    )}
-                  </div>
-                )}
+
+                      {/* W/L + KDA alt satır */}
+                      {totalGames > 0 && (
+                        <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[#1b2230]/30">
+                          <div className="text-center">
+                            <span className="text-xs text-emerald-400 font-medium">{wins}W</span>
+                            <span className="text-xs text-gray-600 mx-1">/</span>
+                            <span className="text-xs text-red-400 font-medium">{losses}L</span>
+                          </div>
+                          {recentStats?.avgKDA && (
+                            <div className="text-center">
+                              <span className="text-xs text-gray-300">
+                                {recentStats.avgKDA.kills} / <span className="text-red-400">{recentStats.avgKDA.deaths}</span> / {recentStats.avgKDA.assists}
+                              </span>
+                              <span className="text-[10px] text-gray-500 ml-1">ort.</span>
+                            </div>
+                          )}
+                          {solo?.hotStreak && (
+                            <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
+                              Galibiyet Serisi
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
