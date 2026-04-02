@@ -2,17 +2,19 @@
 
 /*
   MatchList — Sayfalı maç listesi.
-  İlk 10 maç server'dan gelir, "Devam Et" butonu ile 10'ar daha yüklenir.
+  Maça tıklanınca detay görünümüne geçer, geri butonuyla listeye döner.
 */
 
 import { useState } from "react";
 import MatchCard from "./MatchCard";
+import MatchDetail from "./MatchDetail";
 
 export default function MatchList({ initialMatches, puuid }) {
   const [matches, setMatches] = useState(initialMatches || []);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState((initialMatches || []).length >= 10);
+  const [selectedMatchId, setSelectedMatchId] = useState(null);
 
   async function loadMore() {
     setLoading(true);
@@ -37,6 +39,12 @@ export default function MatchList({ initialMatches, puuid }) {
 
   if (matches.length === 0) return null;
 
+  // Detay görünümü
+  if (selectedMatchId) {
+    return <MatchDetail matchId={selectedMatchId} onBack={() => setSelectedMatchId(null)} />;
+  }
+
+  // Liste görünümü
   return (
     <div className="glass rounded-xl overflow-hidden">
       <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
@@ -46,7 +54,13 @@ export default function MatchList({ initialMatches, puuid }) {
 
       <div className="divide-y divide-[#1b2230]/20">
         {matches.map((match) => (
-          <MatchCard key={match.matchId} match={match} />
+          <div
+            key={match.matchId}
+            onClick={() => setSelectedMatchId(match.matchId)}
+            className="cursor-pointer"
+          >
+            <MatchCard match={match} />
+          </div>
         ))}
       </div>
 

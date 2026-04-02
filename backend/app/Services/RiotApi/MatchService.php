@@ -28,6 +28,7 @@ class MatchService
     public function __construct(
         private RiotApiService $api,
         private DataDragonService $ddragon,
+        private LeagueService $league,
     ) {}
 
     /**
@@ -56,6 +57,163 @@ class MatchService
                 "/lol/match/v5/matches/{$matchId}"
             );
         });
+    }
+
+    /**
+     * Tek bir maçın tüm detayını frontend-friendly formatta döner.
+     * 10 oyuncunun tam istatistikleri, takım verileri, hasar, gözcüler vb.
+     */
+    public function getMatchDetailFull(string $matchId): array
+    {
+        $detail = $this->getMatchDetail($matchId);
+        $info = $detail['info'];
+        $version = $this->ddragon->getCurrentVersion();
+        $ddragonBase = config('riot.ddragon_url');
+
+        $runeMap = $this->ddragon->getRuneMap();
+        $spellMap = $this->ddragon->getSpellMap();
+        $allItems = $this->ddragon->getItems();
+
+        $teams = [];
+        foreach ($info['teams'] as $team) {
+            $teamId = $team['teamId'];
+            $teams[$teamId] = [
+                'teamId'  => $teamId,
+                'win'     => $team['win'],
+                'bans'    => array_map(fn($b) => [
+                    'championId' => $b['championId'],
+                    'image'      => $b['championId'] > 0
+                        ? $this->getChampImageById($b['championId'])
+                        : null,
+                ], $team['bans'] ?? []),
+                'objectives' => $team['objectives'] ?? [],
+                'totalKills' => 0,
+                'totalGold'  => 0,
+            ];
+        }
+
+        $players = [];
+        foreach ($info['participants'] as $p) {
+            $tid = $p['teamId'];
+
+            // Items
+            $items = [];
+            for ($i = 0; $i <= 6; $i++) {
+                $itemId = $p["item{$i}"] ?? 0;
+                $itemData = $itemId > 0 ? ($allItems[(string) $itemId] ?? null) : null;
+                $items[] = $itemId > 0 ? [
+                    'id'    => $itemId,
+                    'name'  => $itemData['name'] ?? '',
+                    'desc'  => $this->parseItemDescription($itemData['description'] ?? ''),
+                    'gold'  => $itemData['gold']['total'] ?? 0,
+                    'image' => "{$ddragonBase}/cdn/{$version}/img/item/{$itemId}.png",
+                ] : null;
+            }
+
+            // Spells
+            $spell1 = $spellMap[$p['summoner1Id'] ?? 0] ?? ['name' => '?', 'image' => ''];
+            $spell2 = $spellMap[$p['summoner2Id'] ?? 0] ?? ['name' => '?', 'image' => ''];
+
+            // Runes
+            $runes = $this->extractRunes($p['perks'] ?? null, $runeMap);
+
+            $deaths = max($p['deaths'], 1);
+            $kda = round(($p['kills'] + $p['assists']) / $deaths, 2);
+            $cs = $p['totalMinionsKilled'] + ($p['neutralMinionsKilled'] ?? 0);
+            $csPerMin = $info['gameDuration'] > 0
+                ? round($cs / ($info['gameDuration'] / 60), 1)
+                : 0;
+
+            $teams[$tid]['totalKills'] += $p['kills'];
+            $teams[$tid]['totalGold']  += $p['goldEarned'];
+
+            $players[] = [
+                'puuid'          => $p['puuid'],
+                'summonerName'   => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
+                'tagLine'        => $p['riotIdTagline'] ?? '',
+                'champion'       => [
+                    'name'  => $p['championName'],
+                    'image' => $this->ddragon->championIconUrl($p['championName']),
+                ],
+                'champLevel'     => $p['champLevel'],
+                'teamId'         => $tid,
+                'win'            => $p['win'],
+                'kills'          => $p['kills'],
+                'deaths'         => $p['deaths'],
+                'assists'        => $p['assists'],
+                'kda'            => $p['deaths'] > 0 ? $kda : 'Perfect',
+                'killParticipation' => 0, // hesaplanacak
+                'cs'             => $cs,
+                'csPerMin'       => $csPerMin,
+                'gold'           => $p['goldEarned'],
+                'damage'         => $p['totalDamageDealtToChampions'],
+                'damageTaken'    => $p['totalDamageTaken'],
+                'healing'        => $p['totalHeal'] ?? 0,
+                'visionScore'    => $p['visionScore'] ?? 0,
+                'wardsPlaced'    => $p['wardsPlaced'] ?? 0,
+                'wardsKilled'    => $p['wardsKilled'] ?? 0,
+                'items'          => $items,
+                'spells'         => [$spell1, $spell2],
+                'runes'          => $runes,
+                'role'           => $p['teamPosition'] ?: $p['individualPosition'] ?: '',
+                'doubleKills'    => $p['doubleKills'] ?? 0,
+                'tripleKills'    => $p['tripleKills'] ?? 0,
+                'quadraKills'    => $p['quadraKills'] ?? 0,
+                'pentaKills'     => $p['pentaKills'] ?? 0,
+                'tier'           => null,
+                'rankDivision'   => null,
+            ];
+        }
+
+        // Rank bilgisi çek (her oyuncu için)
+        foreach ($players as &$pl) {
+            try {
+                $ranked = $this->league->getRankedInfo($pl['puuid']);
+                if ($ranked['solo'] ?? null) {
+                    $pl['tier'] = $ranked['solo']['tier'];
+                    $pl['rankDivision'] = $ranked['solo']['rank'];
+                }
+            } catch (\Exception $e) {}
+        }
+        unset($pl);
+
+        // Kill participation hesapla
+        foreach ($players as &$pl) {
+            $teamKills = $teams[$pl['teamId']]['totalKills'];
+            $pl['killParticipation'] = $teamKills > 0
+                ? round(($pl['kills'] + $pl['assists']) / $teamKills * 100)
+                : 0;
+        }
+        unset($pl);
+
+        // Takımlara ayır
+        $team100 = array_values(array_filter($players, fn($p) => $p['teamId'] === 100));
+        $team200 = array_values(array_filter($players, fn($p) => $p['teamId'] === 200));
+
+        return [
+            'matchId'      => $matchId,
+            'queueType'    => self::QUEUE_NAMES[$info['queueId'] ?? 0] ?? 'Diğer',
+            'duration'     => $info['gameDuration'],
+            'gameCreation' => $info['gameCreation'],
+            'teams'        => [
+                ['info' => $teams[100] ?? null, 'players' => $team100],
+                ['info' => $teams[200] ?? null, 'players' => $team200],
+            ],
+        ];
+    }
+
+    /**
+     * Champion ID'den görsel URL'i bul.
+     */
+    private function getChampImageById(int $championId): ?string
+    {
+        $champions = $this->ddragon->getChampions();
+        foreach ($champions as $champ) {
+            if ((int) $champ['key'] === $championId) {
+                return $this->ddragon->championIconUrl($champ['id']);
+            }
+        }
+        return null;
     }
 
     /**

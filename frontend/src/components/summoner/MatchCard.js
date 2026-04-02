@@ -62,25 +62,31 @@ export default function MatchCard({ match: m }) {
     <div className={`border-l-[3px] ${bdr} ${bg} hover:bg-white/[0.03] transition-colors`}>
       <div className="flex items-center gap-3 px-3 py-2.5">
 
-        {/* CHAMP + SPELL + RUNE */}
-        <div className="flex items-start gap-1.5 flex-shrink-0">
-          <div className="relative">
-            <img src={m.champion.image} alt="" width={44} height={44} className="rounded-lg" />
-            <span className="absolute -bottom-1 -right-1 text-[8px] bg-[#0d1117] text-gray-400 px-0.5 rounded border border-[#1b2230] font-mono">{m.champLevel}</span>
+        {/* CHAMP + SPELL (altında) + RUNE (yanında) */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Şampiyon + altında spell'ler */}
+          <div className="flex flex-col items-center gap-0.5">
+            <div className="relative">
+              <img src={m.champion.image} alt="" width={44} height={44} className="rounded-lg" />
+              <span className="absolute -bottom-1 -right-1 text-[8px] bg-[#0d1117] text-gray-400 px-0.5 rounded border border-[#1b2230] font-mono">{m.champLevel}</span>
+            </div>
+            <div className="flex gap-0.5">
+              {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={18} height={18} className="rounded-sm" title={m.spells[0].name} />}
+              {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={18} height={18} className="rounded-sm" title={m.spells[1].name} />}
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-0.5">
-            {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={20} height={20} className="rounded-sm" title={m.spells[0].name} />}
-            {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={20} height={20} className="rounded-sm" title={m.spells[1].name} />}
+          {/* Rünler — ana rün büyük, yan rün küçük */}
+          <div className="flex flex-col items-center gap-0.5">
             {m.runes?.keystone?.icon && (
               <div
                 ref={(el) => { if (el && !runeAnchor) setRuneAnchor(el); }}
                 onMouseEnter={() => setHovRune(true)}
                 onMouseLeave={() => setHovRune(false)}
               >
-                <img src={m.runes.keystone.icon} alt="" width={20} height={20} className="rounded-sm cursor-help hover:ring-1 ring-blue-500/50" />
+                <img src={m.runes.keystone.icon} alt="" width={22} height={22} className="rounded-full cursor-help hover:ring-1 ring-blue-500/50" />
               </div>
             )}
-            {m.runes?.subTree?.icon && <img src={m.runes.subTree.icon} alt="" width={20} height={20} className="rounded-sm opacity-60" />}
+            {m.runes?.subTree?.icon && <img src={m.runes.subTree.icon} alt="" width={16} height={16} className="rounded-full opacity-60" />}
           </div>
         </div>
 

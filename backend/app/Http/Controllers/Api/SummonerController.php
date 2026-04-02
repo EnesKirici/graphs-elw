@@ -82,6 +82,24 @@ class SummonerController extends Controller
         }
     }
 
+    /**
+     * Tek maç detayı — 10 oyuncunun tüm istatistikleri.
+     * GET /api/v1/matches/{matchId}
+     */
+    public function matchDetail(string $matchId): JsonResponse
+    {
+        try {
+            $data = $this->match->getMatchDetailFull($matchId);
+            return response()->json($data);
+        } catch (\Exception $e) {
+            $code = $e->getCode() ?: 500;
+            return response()->json(
+                ['error' => 'Maç detayı alınamadı.'],
+                $code >= 100 && $code < 600 ? $code : 500
+            );
+        }
+    }
+
     private function buildFullResponse(array $profile): JsonResponse
     {
         $puuid = $profile['puuid'];

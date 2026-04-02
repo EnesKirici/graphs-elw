@@ -39,6 +39,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/summoner/{puuid}/matches', [SummonerController::class, 'matches']);
     Route::get('/summoner/{puuid}', [SummonerController::class, 'show']);
 
+    // Maç detay
+    Route::get('/matches/{matchId}', [SummonerController::class, 'matchDetail']);
+
     // Leaderboard
     Route::get('/leaderboard', [LeaderboardController::class, 'index']);
 
