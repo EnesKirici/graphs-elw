@@ -102,13 +102,18 @@ class SummonerController extends Controller
             $seasonRoles = $this->match->getSeasonRoleStats($puuid);
             $seasonChampions = $this->match->getSeasonChampionStats($puuid);
 
-            // Mastery level bilgisini sezon şampiyon verisine ekle
+            // Mastery bilgisini sezon şampiyon verisine ekle
             $masteryMap = [];
             foreach ($masteries as $m) {
-                $masteryMap[$m['championName']] = $m['championLevel'];
+                $masteryMap[$m['championName']] = [
+                    'level'  => $m['championLevel'],
+                    'points' => $m['championPoints'],
+                ];
             }
             foreach ($seasonChampions as &$sc) {
-                $sc['masteryLevel'] = $masteryMap[$sc['championName']] ?? 0;
+                $info = $masteryMap[$sc['championName']] ?? null;
+                $sc['masteryLevel']  = $info['level'] ?? 0;
+                $sc['masteryPoints'] = $info['points'] ?? 0;
             }
             unset($sc);
 
@@ -186,6 +191,8 @@ class SummonerController extends Controller
                     ? $this->ddragon->profileIconUrl($p->profile_icon_id)
                     : null,
                 'tier'        => $p->tier,
+                'rank'        => $p->rank,
+                'lp'          => $p->lp,
                 'topRoles'    => $p->top_roles ? array_slice($p->top_roles, 0, 2) : null,
             ]);
 

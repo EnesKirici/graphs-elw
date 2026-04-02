@@ -108,40 +108,51 @@ export default function Navbar() {
           <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#0d1117] border border-[#1b2230] rounded-lg overflow-hidden shadow-xl shadow-black/60 z-50">
             {/* DB sonuçları */}
             {suggestions.length > 0 && (
-              suggestions.map((p) => (
-                <button
-                  key={p.puuid}
-                  onClick={() => selectPlayer(p)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors cursor-pointer text-left"
-                >
-                  {/* Profil ikonu */}
-                  {p.profileIcon ? (
-                    <img src={p.profileIcon} alt="" width={32} height={32} className="rounded-lg" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-lg bg-[#1b2230]" />
-                  )}
-
-                  {/* İsim + Tier */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-200 font-medium truncate">
-                      {p.gameName}
-                      <span className="text-gray-500 text-xs ml-0.5">#{p.tagLine}</span>
-                    </p>
-                    {p.tier && (
-                      <p className="text-[10px] text-gray-500">{p.tier}</p>
+              suggestions.map((p) => {
+                const tierName = p.tier ? p.tier.charAt(0) + p.tier.slice(1).toLowerCase() : null;
+                const rankText = tierName
+                  ? `${tierName}${p.rank ? " " + p.rank : ""}${p.lp != null ? " · " + p.lp + " LP" : ""}`
+                  : null;
+                return (
+                  <button
+                    key={p.puuid}
+                    onClick={() => selectPlayer(p)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer text-left"
+                  >
+                    {/* Profil ikonu */}
+                    {p.profileIcon ? (
+                      <img src={p.profileIcon} alt="" width={40} height={40} className="rounded-lg" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-[#1b2230]" />
                     )}
-                  </div>
 
-                  {/* Koridor ikonları */}
-                  {p.topRoles && (
-                    <div className="flex items-center gap-1">
-                      {p.topRoles.map((r, i) => (
-                        <img key={i} src={ROLE_ICONS[r.role] || ROLE_ICONS[r.label] || ""} alt="" width={18} height={18} className="opacity-70" />
-                      ))}
+                    {/* İsim + Rank detay */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-200 font-medium truncate">
+                        {p.gameName}
+                        <span className="text-gray-500 text-xs ml-0.5">#{p.tagLine}</span>
+                      </p>
+                      {rankText ? (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <img src={`/ranks/badges/${p.tier.toLowerCase()}.png`} alt="" width={16} height={16} />
+                          <p className="text-[11px] text-gray-400">{rankText}</p>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-gray-500 mt-0.5">Unranked</p>
+                      )}
                     </div>
-                  )}
-                </button>
-              ))
+
+                    {/* Koridor ikonları */}
+                    {p.topRoles && (
+                      <div className="flex items-center gap-1.5">
+                        {p.topRoles.map((r, i) => (
+                          <img key={i} src={ROLE_ICONS[r.role] || ROLE_ICONS[r.label] || ""} alt="" width={20} height={20} className="opacity-70" />
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                );
+              })
             )}
 
             {/* # ile arama ipucu */}

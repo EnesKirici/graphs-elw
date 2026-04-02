@@ -261,6 +261,28 @@ class MatchService
                 'winRate' => $r['games'] > 0 ? round($r['wins'] / $r['games'] * 100, 1) : 0,
             ], array_values($allData));
 
+            // Main role tespiti — sezon verisinden
+            $mainRole = null;
+            $sorted = $result['all'];
+            if (count($sorted) >= 2) {
+                $first  = $sorted[0]['games'];
+                $second = $sorted[1]['games'];
+                if ($second >= $first * 0.6) {
+                    $mainRole = $sorted[0]['label'] . '/' . $sorted[1]['label'] . ' Main';
+                } else {
+                    $mainRole = $sorted[0]['label'] . ' Main';
+                }
+            } elseif (count($sorted) === 1) {
+                $mainRole = $sorted[0]['label'] . ' Main';
+            }
+            if (count($sorted) >= 4) {
+                $vals = array_column($sorted, 'games');
+                if ($vals[0] - end($vals) <= 1) {
+                    $mainRole = 'Fill';
+                }
+            }
+            $result['mainRole'] = $mainRole;
+
             return $result;
         });
     }

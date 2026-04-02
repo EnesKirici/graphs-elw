@@ -1,7 +1,7 @@
 import { fetchApi } from "@/lib/api";
 import Link from "next/link";
 import MatchList from "@/components/summoner/MatchList";
-import RoleStats from "@/components/summoner/RoleStats";
+import RoleRadar from "@/components/summoner/RoleRadar";
 import ChampionPool from "@/components/summoner/ChampionPool";
 
 export async function generateMetadata({ params }) {
@@ -119,9 +119,9 @@ export default async function SummonerPage({ params }) {
               </h1>
               <div className="flex items-center gap-3 mt-0.5">
                 <p className="text-sm text-blue-400">Level {profile.summonerLevel}</p>
-                {recentStats?.mainRole && (
+                {(data.seasonRoles?.mainRole || recentStats?.mainRole) && (
                   <span className="text-[11px] bg-white/10 backdrop-blur-sm text-gray-300 px-2 py-0.5 rounded-full">
-                    {recentStats.mainRole}
+                    {data.seasonRoles?.mainRole || recentStats.mainRole}
                   </span>
                 )}
               </div>
@@ -156,8 +156,8 @@ export default async function SummonerPage({ params }) {
               totalScore={totalScore}
             />
 
-            {/* Koridor İstatistikleri — filtreli */}
-            <RoleStats seasonRoles={data.seasonRoles} />
+            {/* Koridor İstatistikleri — radar chart + filtreli */}
+            <RoleRadar seasonRoles={data.seasonRoles} />
           </div>
 
           {/* ===== SAĞ KOLON (8 birim) — Analytics + Son Maçlar ===== */}
@@ -222,76 +222,46 @@ export default async function SummonerPage({ params }) {
               </div>
             </div>
 
-            {/* ===== SON OYNANAN + KORİDOR — ayrı kart ===== */}
+            {/* ===== SON OYNANAN ŞAMPIYONLAR ===== */}
             <div className="glass rounded-xl overflow-hidden">
               <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
                 <h3 className="text-sm font-semibold text-gray-200">Son Maçlar Özeti</h3>
               </div>
-              <div className="p-5 grid grid-cols-2 gap-6">
-                {/* Son oynanan şampiyonlar */}
-                <div>
-                  <p className="text-xs text-gray-400 font-medium mb-3">Son Oynanan Şampiyonlar</p>
-                  <div className="space-y-2.5">
-                    {(() => {
-                      const cs = {};
-                      recentMatches.forEach(m => {
-                        const n = m.champion.name;
-                        if (!cs[n]) cs[n] = { name: n, image: m.champion.image, wins: 0, losses: 0, kda: [] };
-                        m.win ? cs[n].wins++ : cs[n].losses++;
-                        if (typeof m.kda === 'number') cs[n].kda.push(m.kda);
-                      });
-                      return Object.values(cs)
-                        .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
-                        .slice(0, 4)
-                        .map(c => {
-                          const t = c.wins + c.losses;
-                          const wr = Math.round(c.wins / t * 100);
-                          const ak = c.kda.length > 0 ? (c.kda.reduce((a,b) => a+b, 0) / c.kda.length).toFixed(1) : '0';
-                          return (
-                            <div key={c.name} className="flex items-center gap-3">
-                              <img src={c.image} alt={c.name} width={32} height={32} className="rounded-md" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-gray-200">{c.name}</p>
-                                <p className="text-[10px] text-gray-500">
-                                  <span className="text-emerald-400">{c.wins}W</span>
-                                  {" "}<span className="text-red-400">{c.losses}L</span>
-                                  {" · "}{ak} KDA
-                                </p>
-                              </div>
-                              <span className={`text-xs font-bold font-mono ${wr >= 50 ? "text-emerald-400" : "text-red-400"}`}>
-                                {wr}%
-                              </span>
-                            </div>
-                          );
-                        });
-                    })()}
-                  </div>
-                </div>
-
-                {/* Koridor dağılımı */}
-                <div>
-                  <p className="text-xs text-gray-400 font-medium mb-3">Koridor Dağılımı</p>
-                  {recentStats?.roleStats?.length > 0 && (
-                    <div className="space-y-2.5">
-                      {recentStats.roleStats.map(r => {
-                        const pct = (recentStats?.totalGames || 1) > 0 ? Math.round(r.games / recentStats.totalGames * 100) : 0;
+              <div className="p-5">
+                <div className="grid grid-cols-2 gap-3">
+                  {(() => {
+                    const cs = {};
+                    recentMatches.forEach(m => {
+                      const n = m.champion.name;
+                      if (!cs[n]) cs[n] = { name: n, image: m.champion.image, wins: 0, losses: 0, kda: [] };
+                      m.win ? cs[n].wins++ : cs[n].losses++;
+                      if (typeof m.kda === 'number') cs[n].kda.push(m.kda);
+                    });
+                    return Object.values(cs)
+                      .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
+                      .slice(0, 6)
+                      .map(c => {
+                        const t = c.wins + c.losses;
+                        const wr = Math.round(c.wins / t * 100);
+                        const ak = c.kda.length > 0 ? (c.kda.reduce((a,b) => a+b, 0) / c.kda.length).toFixed(1) : '0';
                         return (
-                          <div key={r.role} className="flex items-center gap-2.5">
-                            <img src={r.icon} alt={r.label} width={22} height={22} className="flex-shrink-0" />
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-0.5">
-                                <span className="text-xs text-gray-300">{r.label}</span>
-                                <span className="text-[11px] text-gray-400">{r.games} · <span className={r.winRate >= 50 ? "text-emerald-400" : "text-red-400"}>{r.winRate}%</span></span>
-                              </div>
-                              <div className="h-1.5 bg-[#1b2230] rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${pct}%` }} />
-                              </div>
+                          <div key={c.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.03] transition-colors">
+                            <img src={c.image} alt={c.name} width={36} height={36} className="rounded-lg" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-gray-200">{c.name}</p>
+                              <p className="text-[10px] text-gray-500">
+                                <span className="text-emerald-400">{c.wins}W</span>
+                                {" "}<span className="text-red-400">{c.losses}L</span>
+                                {" · "}{ak} KDA
+                              </p>
                             </div>
+                            <span className={`text-xs font-bold font-mono ${wr >= 50 ? "text-emerald-400" : "text-red-400"}`}>
+                              {wr}%
+                            </span>
                           </div>
                         );
-                      })}
-                    </div>
-                  )}
+                      });
+                  })()}
                 </div>
               </div>
             </div>
@@ -350,3 +320,4 @@ function RankCard({ title, data }) {
     </div>
   );
 }
+

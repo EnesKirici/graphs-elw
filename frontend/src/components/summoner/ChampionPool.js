@@ -22,15 +22,26 @@ function getMasteryCrestUrl(level) {
   return `/masteries/level${level}.png`;
 }
 
-function MasteryBadge({ level }) {
+function MasteryBadge({ level, points, size = 28 }) {
   const url = getMasteryCrestUrl(level);
   if (!url) return null;
   return (
-    <img
-      src={url}
-      alt={`Mastery ${level}`}
-      className="absolute -top-1.5 -left-1.5 w-[26px] h-auto pointer-events-none drop-shadow-lg"
-    />
+    <div className="group/mastery absolute -top-2 -left-2" style={{ width: size }}>
+      <img
+        src={url}
+        alt={`Mastery ${level}`}
+        className="w-full h-auto drop-shadow-lg"
+      />
+      {/* Tooltip */}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover/mastery:opacity-100 transition-opacity pointer-events-none z-30">
+        <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-2.5 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap">
+          <p className="text-[11px] text-gray-200 font-medium">Mastery {level}</p>
+          {points > 0 && (
+            <p className="text-[10px] text-gray-500">{formatPoints(points)} puan</p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -144,7 +155,7 @@ function PlayedView({ champions }) {
             <Link
               key={c.championName}
               href={`/champions/${c.championName.replace(/[^a-zA-Z]/g, "") || c.championName}`}
-              className="flex items-center gap-2 px-4 py-2 hover:bg-white/[0.02] transition-colors group"
+              className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors group"
             >
               <span className="text-[11px] text-gray-600 font-mono w-4 text-right">
                 {i + 1}
@@ -155,11 +166,11 @@ function PlayedView({ champions }) {
                 <img
                   src={c.championImage}
                   alt={c.championName}
-                  width={36}
-                  height={36}
+                  width={44}
+                  height={44}
                   className="rounded-lg"
                 />
-                <MasteryBadge level={c.masteryLevel} />
+                <MasteryBadge level={c.masteryLevel} points={c.masteryPoints} size={32} />
               </div>
 
               {/* İsim */}
@@ -173,15 +184,15 @@ function PlayedView({ champions }) {
               <span className="w-10 text-center text-sm font-bold text-white">{c.games}</span>
 
               {/* KDA */}
-              <div className="w-20 text-center">
-                <p className="text-[11px] text-gray-400">{kdaDisplay}</p>
-                <p className={`text-[10px] font-semibold ${getKdaColor(kdaRatio)}`}>
+              <div className="w-24 text-center">
+                <p className="text-xs text-gray-400">{kdaDisplay}</p>
+                <p className={`text-[11px] font-semibold ${getKdaColor(kdaRatio)}`}>
                   {kdaRatio === "Perfect" ? "∞" : kdaRatio.toFixed(2)}
                 </p>
               </div>
 
               {/* Winrate bar */}
-              <div className="w-12 text-right">
+              <div className="w-14 text-right">
                 <span className={`text-xs font-bold font-mono ${getWrColor(c.winRate)}`}>
                   {c.winRate}%
                 </span>
@@ -230,7 +241,7 @@ function MasteryView({ masteries }) {
 
           <div className="relative flex-shrink-0">
             <img src={m.championImage} alt={m.championName} width={32} height={32} className="rounded-md" />
-            <MasteryBadge level={m.championLevel} />
+            <MasteryBadge level={m.championLevel} points={m.championPoints} />
           </div>
 
           <div className="flex-1 min-w-0">
