@@ -90,15 +90,27 @@ class SummonerController extends Controller
         $masteries = $this->mastery->getTopMasteries($puuid, 10);
         $totalScore = $this->mastery->getTotalScore($puuid);
 
-        // Maç geçmişi + sezon koridor verisi
+        // Maç geçmişi + sezon koridor verisi + sezon şampiyon istatistikleri
         $recentMatches = [];
         $recentStats = null;
         $seasonRoles = null;
+        $seasonChampions = [];
         $bannerSplash = null;
         try {
             $recentMatches = $this->match->getRecentMatches($puuid, 10);
             $recentStats = $this->match->calculateRecentStats($recentMatches, $puuid);
             $seasonRoles = $this->match->getSeasonRoleStats($puuid);
+            $seasonChampions = $this->match->getSeasonChampionStats($puuid);
+
+            // Mastery level bilgisini sezon şampiyon verisine ekle
+            $masteryMap = [];
+            foreach ($masteries as $m) {
+                $masteryMap[$m['championName']] = $m['championLevel'];
+            }
+            foreach ($seasonChampions as &$sc) {
+                $sc['masteryLevel'] = $masteryMap[$sc['championName']] ?? 0;
+            }
+            unset($sc);
 
             if ($recentStats['mostPlayedChampion'] ?? null) {
                 $bannerSplash = $this->ddragon->splashArtUrl($recentStats['mostPlayedChampion']['id']);
@@ -131,14 +143,15 @@ class SummonerController extends Controller
         } catch (\Exception $e) {}
 
         return response()->json([
-            'profile'       => $profile,
-            'ranked'        => $ranked,
-            'masteries'     => $masteries,
-            'totalScore'    => $totalScore,
-            'recentMatches' => $recentMatches,
-            'recentStats'   => $recentStats,
-            'seasonRoles'   => $seasonRoles,
-            'bannerSplash'  => $bannerSplash,
+            'profile'          => $profile,
+            'ranked'           => $ranked,
+            'masteries'        => $masteries,
+            'totalScore'       => $totalScore,
+            'recentMatches'    => $recentMatches,
+            'recentStats'      => $recentStats,
+            'seasonRoles'      => $seasonRoles,
+            'seasonChampions'  => $seasonChampions,
+            'bannerSplash'     => $bannerSplash,
         ]);
     }
 

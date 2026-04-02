@@ -2,16 +2,11 @@ import { fetchApi } from "@/lib/api";
 import Link from "next/link";
 import MatchList from "@/components/summoner/MatchList";
 import RoleStats from "@/components/summoner/RoleStats";
+import ChampionPool from "@/components/summoner/ChampionPool";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
   return { title: `${decodeURIComponent(name)}#${decodeURIComponent(tag)} - GRAPHS` };
-}
-
-function formatPoints(p) {
-  if (p >= 1000000) return (p / 1000000).toFixed(1) + "M";
-  if (p >= 1000) return (p / 1000).toFixed(1) + "K";
-  return p.toString();
 }
 
 function getWrColor(wr) {
@@ -154,30 +149,12 @@ export default async function SummonerPage({ params }) {
             <RankCard title="Solo/Duo" data={solo} />
             <RankCard title="Flex" data={flex} />
 
-            {/* En çok oynanan şampiyonlar */}
-            <div className="glass rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#1b2230]/50 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-200">En Çok Oynanan</h3>
-                <span className="text-[11px] text-gray-500">{totalScore} puan</span>
-              </div>
-              <div className="divide-y divide-[#1b2230]/20">
-                {masteries.slice(0, 7).map((m, i) => (
-                  <Link
-                    key={m.championId}
-                    href={`/champions/${m.championName.replace(/[^a-zA-Z]/g, '') || m.championId}`}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors group"
-                  >
-                    <span className="text-[11px] text-gray-600 font-mono w-4 text-right">{i + 1}</span>
-                    <img src={m.championImage} alt={m.championName} width={32} height={32} className="rounded-md" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-200 font-medium group-hover:text-white transition-colors">{m.championName}</p>
-                      <p className="text-[10px] text-gray-500">Level {m.championLevel}</p>
-                    </div>
-                    <span className="text-xs text-gray-400 font-mono">{formatPoints(m.championPoints)}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
+            {/* Şampiyon havuzu — dropdown ile görünüm değiştir */}
+            <ChampionPool
+              seasonChampions={data.seasonChampions || []}
+              masteries={masteries}
+              totalScore={totalScore}
+            />
 
             {/* Koridor İstatistikleri — filtreli */}
             <RoleStats seasonRoles={data.seasonRoles} />
