@@ -457,6 +457,68 @@ class MatchService
     }
 
     /**
+     * Sezon boyunca ranked winrate geçmişi — kronolojik sırada.
+     * Her maç sonrası kümülatif winrate hesaplar.
+     * Ek API maliyeti yok — match detail'ler önceki metodlar tarafından zaten cache'li.
+     */
+    public function getWinrateTimeline(string $puuid): array
+    {
+        $cacheKey = "winrate_timeline:{$puuid}";
+
+        return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
+            $seasonStart = strtotime('2025-01-08');
+            $matches = [];
+
+            foreach ([420, 440] as $queueId) {
+                try {
+                    $matchIds = $this->api->regionRequest(
+                        "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
+                        ['startTime' => $seasonStart, 'queue' => $queueId, 'count' => 100]
+                    );
+                } catch (\Exception $e) {
+                    continue;
+                }
+
+                foreach ($matchIds as $matchId) {
+                    try {
+                        $detail = $this->getMatchDetail($matchId);
+                        foreach ($detail['info']['participants'] as $p) {
+                            if ($p['puuid'] === $puuid) {
+                                $matches[] = [
+                                    'time' => $detail['info']['gameCreation'],
+                                    'win'  => $p['win'],
+                                ];
+                                break;
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        continue;
+                    }
+                }
+            }
+
+            // Kronolojik sırala
+            usort($matches, fn($a, $b) => $a['time'] <=> $b['time']);
+
+            // Kümülatif winrate hesapla
+            $wins = 0;
+            $total = 0;
+            $timeline = [];
+
+            foreach ($matches as $m) {
+                $total++;
+                if ($m['win']) $wins++;
+                $timeline[] = [
+                    'game'    => $total,
+                    'winRate' => round($wins / $total * 100, 1),
+                ];
+            }
+
+            return $timeline;
+        });
+    }
+
+    /**
      * Sezon boyunca oynanmış ranked maçlardan şampiyon istatistikleri.
      * Her şampiyon için: oyun, galibiyet, mağlubiyet, winRate, ortalama KDA.
      */

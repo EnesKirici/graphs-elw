@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ArrowDownUp } from "lucide-react";
+import ReactDOM from "react-dom";
 
 const VIEWS = [
   { key: "played", label: "En Çok Oynanan" },
@@ -28,29 +29,6 @@ function getMasteryCrestUrl(level) {
   return `/masteries/level${level}.png`;
 }
 
-function MasteryBadge({ level, points, size = 28 }) {
-  const url = getMasteryCrestUrl(level);
-  if (!url) return null;
-  return (
-    <div className="group/mastery absolute -top-2 -left-2" style={{ width: size }}>
-      <img
-        src={url}
-        alt={`Mastery ${level}`}
-        className="w-full h-auto drop-shadow-lg"
-      />
-      {/* Tooltip */}
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover/mastery:opacity-100 transition-opacity pointer-events-none z-30">
-        <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-2.5 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap">
-          <p className="text-[11px] text-gray-200 font-medium">Mastery {level}</p>
-          {points > 0 && (
-            <p className="text-[10px] text-gray-500">{formatPoints(points)} puan</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function getWrColor(wr) {
   if (wr >= 60) return "text-emerald-400";
   if (wr >= 50) return "text-blue-400";
@@ -65,32 +43,93 @@ function getKdaColor(ratio) {
   return "text-gray-400";
 }
 
-export default function ChampionPool({ seasonChampions, masteries, totalScore }) {
+/* ===== Portal Tooltip ===== */
+function Tooltip({ anchorEl, children }) {
+  if (!anchorEl || typeof window === "undefined") return null;
+  const rect = anchorEl.getBoundingClientRect();
+  return ReactDOM.createPortal(
+    <div
+      className="fixed z-[9999] pointer-events-none"
+      style={{
+        top: `${rect.top - 8}px`,
+        left: `${rect.left + rect.width / 2}px`,
+        transform: "translate(-50%, -100%)",
+      }}
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
+
+/* ===== Mastery Badge + Tooltip ===== */
+function MasteryBadge({ level, points, size = 28 }) {
+  const [anchor, setAnchor] = useState(null);
+  const url = getMasteryCrestUrl(level);
+  if (!url) return null;
+
+  return (
+    <>
+      <div
+        className="absolute -top-2.5 -left-2.5"
+        style={{ width: size }}
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+      >
+        <img src={url} alt={`Mastery ${level}`} className="w-full h-auto drop-shadow-lg" />
+      </div>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
+            <div className="flex items-center gap-2 mb-1">
+              <img src={url} alt="" width={40} height={40} />
+              <p className="text-sm text-white font-bold">Mastery Level {level}</p>
+            </div>
+            {points > 0 && (
+              <p className="text-xs text-gray-300">Points: {points.toLocaleString()}</p>
+            )}
+          </div>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+
+export default function ChampionPool({ seasonChampions, masteries }) {
   const [view, setView] = useState("played");
   const [open, setOpen] = useState(false);
   const [gameType, setGameType] = useState("all");
-  const [gameTypeOpen, setGameTypeOpen] = useState(false);
+  const [sortKey, setSortKey] = useState("games");
+  const [sortAsc, setSortAsc] = useState(false);
 
   const currentLabel = VIEWS.find((v) => v.key === view)?.label;
-  const currentGameTypeLabel = GAME_TYPES.find((g) => g.key === gameType)?.label;
 
-  // seasonChampions artık { all: [], ranked: [], normal: [] } yapısında
-  const champList = seasonChampions?.[gameType] || seasonChampions?.all || [];
+  const rawList = Array.isArray(seasonChampions)
+    ? seasonChampions
+    : (seasonChampions?.[gameType] || seasonChampions?.all || []);
+
+  const champList = [...rawList].sort((a, b) => {
+    const va = a[sortKey] ?? 0;
+    const vb = b[sortKey] ?? 0;
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  function toggleSort(key) {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else { setSortKey(key); setSortAsc(false); }
+  }
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      {/* Başlık + Dropdown'lar */}
+      {/* Başlık + Filtreler */}
       <div className="px-4 py-3 border-b border-[#1b2230]/50 flex items-center justify-between">
         <div className="relative">
           <button
-            onClick={() => { setOpen(!open); setGameTypeOpen(false); }}
+            onClick={() => setOpen(!open)}
             className="flex items-center gap-1.5 text-sm font-semibold text-gray-200 hover:text-white transition-colors cursor-pointer"
           >
             {currentLabel}
-            <ChevronDown
-              size={14}
-              className={`text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
-            />
+            <ChevronDown size={14} className={`text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
           </button>
 
           {open && (
@@ -98,14 +137,9 @@ export default function ChampionPool({ seasonChampions, masteries, totalScore })
               {VIEWS.map((v) => (
                 <button
                   key={v.key}
-                  onClick={() => {
-                    setView(v.key);
-                    setOpen(false);
-                  }}
+                  onClick={() => { setView(v.key); setOpen(false); }}
                   className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer ${
-                    view === v.key
-                      ? "bg-blue-500/15 text-blue-400"
-                      : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    view === v.key ? "bg-blue-500/15 text-blue-400" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
                   }`}
                 >
                   {v.label}
@@ -115,141 +149,172 @@ export default function ChampionPool({ seasonChampions, masteries, totalScore })
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {view === "mastery" && (
-            <span className="text-[11px] text-gray-500">{totalScore} puan</span>
-          )}
-
-          {/* Oyun tipi dropdown — sadece "En Çok Oynanan" görünümünde */}
-          {view === "played" && (
-            <div className="relative">
+        {/* Filtre butonları — her iki görünümde de göster */}
+        {view === "played" && (
+          <div className="flex items-center gap-1">
+            {GAME_TYPES.map((g) => (
               <button
-                onClick={() => { setGameTypeOpen(!gameTypeOpen); setOpen(false); }}
-                className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-white/5 text-gray-400 hover:text-gray-200 transition-colors cursor-pointer"
+                key={g.key}
+                onClick={() => setGameType(g.key)}
+                className={`text-[11px] px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                  gameType === g.key ? "bg-blue-500/15 text-blue-400" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                }`}
               >
-                {currentGameTypeLabel}
-                <ChevronDown
-                  size={12}
-                  className={`text-gray-500 transition-transform ${gameTypeOpen ? "rotate-180" : ""}`}
-                />
+                {g.label}
               </button>
-
-              {gameTypeOpen && (
-                <div className="absolute top-full right-0 mt-1 w-32 bg-[#1b2230] border border-[#2a3441] rounded-lg shadow-xl z-20 overflow-hidden">
-                  {GAME_TYPES.map((g) => (
-                    <button
-                      key={g.key}
-                      onClick={() => {
-                        setGameType(g.key);
-                        setGameTypeOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer ${
-                        gameType === g.key
-                          ? "bg-blue-500/15 text-blue-400"
-                          : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
-                      }`}
-                    >
-                      {g.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* İçerik */}
       {view === "played" ? (
-        <PlayedView champions={champList} />
+        <ChampionList champions={champList} sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort} />
       ) : (
-        <MasteryView masteries={masteries} />
+        <ChampionList champions={masteriesToChampList(masteries, seasonChampions)} sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort} isMastery />
       )}
     </div>
   );
 }
 
-/* ===== EN ÇOK OYNANAN (SEZON) ===== */
-function PlayedView({ champions }) {
+/* Mastery verisini aynı formata çevir — sezon verisiyle merge et */
+function masteriesToChampList(masteries, seasonChampions) {
+  if (!masteries) return [];
+
+  // seasonChampions.all'dan lookup oluştur
+  const seasonMap = {};
+  const allChamps = Array.isArray(seasonChampions) ? seasonChampions : (seasonChampions?.all || []);
+  allChamps.forEach((c) => {
+    // Normalize: hem DDragon name hem match API name eşleşsin
+    seasonMap[c.championName] = c;
+    seasonMap[c.championName.replace(/[^a-zA-Z]/g, "")] = c;
+  });
+
+  return masteries.map((m) => {
+    const key = m.championName.replace(/[^a-zA-Z]/g, "");
+    const season = seasonMap[m.championName] || seasonMap[key];
+    return {
+      championName: m.championName,
+      championImage: m.championImage,
+      masteryLevel: m.championLevel,
+      masteryPoints: m.championPoints,
+      games: season?.games || 0,
+      wins: season?.wins || 0,
+      losses: season?.losses || 0,
+      winRate: season?.winRate || 0,
+      avgKda: season?.avgKda || { kills: 0, deaths: 0, assists: 0, ratio: 0 },
+      _isMasteryOnly: !season,
+    };
+  });
+}
+
+/* ===== ORTAK LİSTE ===== */
+function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery }) {
   if (!champions || champions.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
-        <p className="text-xs text-gray-600">Bu filtrede veri bulunamadı</p>
+        <p className="text-sm text-gray-500">Veri bulunamadı</p>
       </div>
     );
   }
 
+  const SortBtn = ({ label, field, width, align }) => {
+    const active = sortKey === field;
+    return (
+      <button
+        onClick={(e) => { e.preventDefault(); onSort(field); }}
+        className={`${width} text-[11px] font-medium flex items-center gap-1 cursor-pointer transition-colors ${
+          align === "right" ? "justify-end" : align === "center" ? "justify-center" : ""
+        } ${active ? "text-blue-400" : "text-gray-400 hover:text-gray-200"}`}
+      >
+        {label}
+        <ArrowDownUp size={10} className={active ? "text-blue-400" : "text-gray-600"} />
+        {active && <span className="text-[8px]">{sortAsc ? "▲" : "▼"}</span>}
+      </button>
+    );
+  };
+
   return (
     <>
       {/* Kolon başlıkları */}
-      <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
-        <span className="w-4" />
-        <span className="w-10" />
-        <span className="flex-1 text-[10px] text-gray-500 font-medium">Şampiyon</span>
-        <span className="w-10 text-[10px] text-gray-500 font-medium text-center">Oyun</span>
-        <span className="w-20 text-[10px] text-gray-500 font-medium text-center">KDA</span>
-        <span className="w-12 text-[10px] text-gray-500 font-medium text-right">WR</span>
+      <div className="flex items-center px-4 pt-3 pb-2 gap-2">
+        <span className="w-[40px]" />
+        <span className="flex-1 text-[11px] text-gray-400 font-medium">Şampiyon</span>
+        <SortBtn label="Oyun" field="games" width="w-12" align="center" />
+        <SortBtn label="KDA" field="avgKda" width="w-[72px]" align="center" />
+        <SortBtn label="WR" field="winRate" width="w-14" align="right" />
       </div>
 
       <div className="divide-y divide-[#1b2230]/20">
         {champions.slice(0, 8).map((c, i) => {
-          const kdaRatio = c.avgKda.ratio;
-          const kdaDisplay =
-            kdaRatio === "Perfect"
+          const kdaRatio = c.avgKda?.ratio ?? 0;
+          const noGames = !c.games || c.games === 0;
+          const kdaDisplay = noGames
+            ? "—"
+            : kdaRatio === "Perfect"
               ? "Perfect"
               : `${c.avgKda.kills}/${c.avgKda.deaths}/${c.avgKda.assists}`;
 
           return (
             <Link
-              key={c.championName}
+              key={c.championName + i}
               href={`/champions/${c.championName.replace(/[^a-zA-Z]/g, "") || c.championName}`}
-              className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors group"
+              className="flex items-center gap-2 px-4 py-2.5 hover:bg-white/[0.03] transition-colors group"
             >
-              <span className="text-[11px] text-gray-600 font-mono w-4 text-right">
-                {i + 1}
-              </span>
+              <span className="text-xs text-gray-500 font-mono w-5 text-right">{i + 1}</span>
 
               {/* Şampiyon resmi + mastery badge */}
-              <div className="relative flex-shrink-0">
-                <img
-                  src={c.championImage}
-                  alt={c.championName}
-                  width={44}
-                  height={44}
-                  className="rounded-lg"
-                />
-                <MasteryBadge level={c.masteryLevel} points={c.masteryPoints} size={32} />
+              <div className="relative flex-shrink-0 w-[52px]">
+                <img src={c.championImage} alt={c.championName} width={48} height={48} className="rounded-lg" />
+                <MasteryBadge level={c.masteryLevel} points={c.masteryPoints} size={34} />
               </div>
 
               {/* İsim */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-200 font-medium group-hover:text-white transition-colors truncate">
+                <p className="text-sm text-gray-100 font-medium group-hover:text-white transition-colors truncate">
                   {c.championName}
                 </p>
+                {isMastery && (
+                  <p className="text-[10px] text-gray-500">{formatPoints(c.masteryPoints)} puan</p>
+                )}
               </div>
 
-              {/* Oyun sayısı */}
-              <span className="w-10 text-center text-sm font-bold text-white">{c.games}</span>
+              {/* Oyun */}
+              <span className={`w-12 text-center text-sm font-bold ${noGames ? "text-gray-600" : "text-white"}`}>
+                {noGames ? "—" : c.games}
+              </span>
 
               {/* KDA */}
-              <div className="w-24 text-center">
-                <p className="text-xs text-gray-400">{kdaDisplay}</p>
-                <p className={`text-[11px] font-semibold ${getKdaColor(kdaRatio)}`}>
-                  {kdaRatio === "Perfect" ? "∞" : kdaRatio.toFixed(2)}
-                </p>
+              <div className="w-[72px] text-center">
+                {noGames ? (
+                  <p className="text-xs text-gray-600">—</p>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-300">{kdaDisplay}</p>
+                    <p className={`text-[11px] font-semibold ${getKdaColor(kdaRatio)}`}>
+                      {kdaRatio === "Perfect" ? "∞" : typeof kdaRatio === "number" ? kdaRatio.toFixed(2) : "0"}
+                    </p>
+                  </>
+                )}
               </div>
 
-              {/* Winrate bar */}
+              {/* WR */}
               <div className="w-14 text-right">
-                <span className={`text-xs font-bold font-mono ${getWrColor(c.winRate)}`}>
-                  {c.winRate}%
-                </span>
-                <div className="mt-0.5 h-1 bg-[#1b2230] rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${c.winRate >= 50 ? "bg-emerald-500" : "bg-red-500"}`}
-                    style={{ width: `${c.winRate}%` }}
-                  />
-                </div>
+                {noGames ? (
+                  <span className="text-xs text-gray-600">—</span>
+                ) : (
+                  <>
+                    <span className={`text-xs font-bold font-mono ${getWrColor(c.winRate)}`}>
+                      {c.winRate}%
+                    </span>
+                    <div className="mt-0.5 h-1 bg-[#1b2230] rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${c.winRate >= 50 ? "bg-emerald-500" : "bg-red-500"}`}
+                        style={{ width: `${c.winRate}%` }}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </Link>
           );
@@ -258,50 +323,9 @@ function PlayedView({ champions }) {
 
       {champions.length > 8 && (
         <div className="px-4 py-2 text-center border-t border-[#1b2230]/20">
-          <span className="text-[11px] text-gray-500">
-            +{champions.length - 8} şampiyon daha
-          </span>
+          <span className="text-xs text-gray-500">+{champions.length - 8} şampiyon daha</span>
         </div>
       )}
     </>
-  );
-}
-
-/* ===== USTALLIK PUANI ===== */
-function MasteryView({ masteries }) {
-  if (!masteries || masteries.length === 0) {
-    return (
-      <div className="px-4 py-8 text-center">
-        <p className="text-xs text-gray-600">Ustalık verisi bulunamadı</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="divide-y divide-[#1b2230]/20">
-      {masteries.slice(0, 7).map((m, i) => (
-        <Link
-          key={m.championId}
-          href={`/champions/${m.championName.replace(/[^a-zA-Z]/g, "") || m.championId}`}
-          className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors group"
-        >
-          <span className="text-[11px] text-gray-600 font-mono w-4 text-right">{i + 1}</span>
-
-          <div className="relative flex-shrink-0">
-            <img src={m.championImage} alt={m.championName} width={32} height={32} className="rounded-md" />
-            <MasteryBadge level={m.championLevel} points={m.championPoints} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-gray-200 font-medium group-hover:text-white transition-colors">
-              {m.championName}
-            </p>
-            <p className="text-[10px] text-gray-500">Level {m.championLevel}</p>
-          </div>
-
-          <span className="text-xs text-gray-400 font-mono">{formatPoints(m.championPoints)}</span>
-        </Link>
-      ))}
-    </div>
   );
 }

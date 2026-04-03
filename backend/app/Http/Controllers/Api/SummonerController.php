@@ -119,6 +119,7 @@ class SummonerController extends Controller
             $recentStats = $this->match->calculateRecentStats($recentMatches, $puuid);
             $seasonRoles = $this->match->getSeasonRoleStats($puuid);
             $seasonChampions = $this->match->getSeasonChampionStats($puuid);
+            $winrateTimeline = $this->match->getWinrateTimeline($puuid);
 
             // Mastery bilgisini sezon şampiyon verisine ekle
             $masteryMap = [];
@@ -176,8 +177,9 @@ class SummonerController extends Controller
             'recentMatches'    => $recentMatches,
             'recentStats'      => $recentStats,
             'seasonRoles'      => $seasonRoles,
-            'seasonChampions'  => $seasonChampions,
-            'bannerSplash'     => $bannerSplash,
+            'seasonChampions'   => $seasonChampions,
+            'winrateTimeline'   => $winrateTimeline ?? [],
+            'bannerSplash'      => $bannerSplash,
         ]);
     }
 

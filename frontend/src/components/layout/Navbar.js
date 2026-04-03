@@ -19,6 +19,7 @@ export default function Navbar() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(-1);
   const ref = useRef(null);
   const debounceRef = useRef(null);
 
@@ -34,6 +35,7 @@ export default function Navbar() {
   // Autocomplete — yazarken DB'den öneri
   function handleChange(value) {
     setQuery(value);
+    setSelectedIdx(-1);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -63,7 +65,15 @@ export default function Navbar() {
   }
 
   function handleSubmit(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
+
+    // Seçili öneri varsa onu aç
+    if (selectedIdx >= 0 && selectedIdx < suggestions.length) {
+      selectPlayer(suggestions[selectedIdx]);
+      return;
+    }
+
+    // # ile yazılmışsa direkt ara
     if (query.includes("#")) {
       const [n, t] = query.split("#");
       if (n && t) {
@@ -71,6 +81,27 @@ export default function Navbar() {
         setQuery("");
         setShowDropdown(false);
       }
+      return;
+    }
+
+    // Öneri varsa ve Enter basıldıysa ilk öneriyi seç
+    if (suggestions.length > 0) {
+      selectPlayer(suggestions[0]);
+    }
+  }
+
+  function handleKeyDown(e) {
+    if (!showDropdown || suggestions.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIdx((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIdx((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+      setSelectedIdx(-1);
     }
   }
 
@@ -79,6 +110,7 @@ export default function Navbar() {
     setQuery("");
     setShowDropdown(false);
     setSuggestions([]);
+    setSelectedIdx(-1);
   }
 
   return (
@@ -97,6 +129,7 @@ export default function Navbar() {
               value={query}
               onChange={(e) => handleChange(e.target.value)}
               onFocus={() => (suggestions.length > 0 || query.includes("#")) && setShowDropdown(true)}
+              onKeyDown={handleKeyDown}
               placeholder="Oyuncu ara... (isim#tag)"
               className="w-full bg-white/5 border border-[#1b2230] rounded-lg pl-9 pr-4 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.07] transition-all duration-300"
             />
@@ -108,16 +141,20 @@ export default function Navbar() {
           <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#0d1117] border border-[#1b2230] rounded-lg overflow-hidden shadow-xl shadow-black/60 z-50">
             {/* DB sonuçları */}
             {suggestions.length > 0 && (
-              suggestions.map((p) => {
+              suggestions.map((p, idx) => {
                 const tierName = p.tier ? p.tier.charAt(0) + p.tier.slice(1).toLowerCase() : null;
                 const rankText = tierName
                   ? `${tierName}${p.rank ? " " + p.rank : ""}${p.lp != null ? " · " + p.lp + " LP" : ""}`
                   : null;
+                const isSelected = idx === selectedIdx;
                 return (
                   <button
                     key={p.puuid}
                     onClick={() => selectPlayer(p)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer text-left"
+                    onMouseEnter={() => setSelectedIdx(idx)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer text-left ${
+                      isSelected ? "bg-white/10" : "hover:bg-white/5"
+                    }`}
                   >
                     {/* Profil ikonu */}
                     {p.profileIcon ? (
@@ -159,7 +196,9 @@ export default function Navbar() {
             {query.includes("#") && (
               <button
                 onClick={handleSubmit}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer text-left"
+                className={`w-full flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer text-left ${
+                  selectedIdx === suggestions.length ? "bg-white/10" : "hover:bg-white/5"
+                }`}
               >
                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
                   <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

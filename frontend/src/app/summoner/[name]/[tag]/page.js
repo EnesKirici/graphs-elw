@@ -85,7 +85,7 @@ export default async function SummonerPage({ params }) {
     );
   }
 
-  const { profile, ranked, masteries, totalScore } = data;
+  const { profile, ranked, masteries } = data;
   const recentMatches = data.recentMatches || [];
   const recentStats = data.recentStats || {};
   const solo = ranked?.solo;
@@ -117,13 +117,26 @@ export default async function SummonerPage({ params }) {
                 {profile.gameName}
                 <span className="text-gray-400 text-base font-normal ml-1">#{profile.tagLine}</span>
               </h1>
-              <div className="flex items-center gap-3 mt-0.5">
-                <p className="text-sm text-blue-400">Level {profile.summonerLevel}</p>
-                {(data.seasonRoles?.mainRole || recentStats?.mainRole) && (
-                  <span className="text-[11px] bg-white/10 backdrop-blur-sm text-gray-300 px-2 py-0.5 rounded-full">
-                    {data.seasonRoles?.mainRole || recentStats.mainRole}
-                  </span>
-                )}
+              <div className="flex items-center gap-3 mt-1">
+                <p className="text-sm text-blue-400 font-medium">Level {profile.summonerLevel}</p>
+                {(() => {
+                  const mainRole = data.seasonRoles?.mainRole || recentStats?.mainRole;
+                  if (!mainRole) return null;
+                  // "Jungle/Mid Main" → ["Jungle", "Mid"] veya "Top Main" → ["Top"]
+                  const roleIcons = { Top: "/roles/top.png", Jungle: "/roles/jungle.png", Mid: "/roles/mid.png", ADC: "/roles/bot.png", Support: "/roles/support.png" };
+                  const parts = mainRole.replace(" Main", "").split("/");
+                  return (
+                    <span className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm text-gray-200 px-2.5 py-1 rounded-full">
+                      {parts.map((role, i) => (
+                        <span key={i} className="flex items-center gap-1">
+                          {roleIcons[role] && <img src={roleIcons[role]} alt="" width={16} height={16} />}
+                          {i < parts.length - 1 && <span className="text-gray-500">/</span>}
+                        </span>
+                      ))}
+                      <span className="text-xs font-medium">{mainRole}</span>
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -146,14 +159,13 @@ export default async function SummonerPage({ params }) {
           {/* ===== SOL KOLON (4 birim) — Rank + Mastery ===== */}
           <div className="lg:col-span-4 space-y-4">
             {/* Rank kartları */}
-            <RankCard title="Solo/Duo" data={solo} />
+            <RankCard title="Solo/Duo" data={solo} winrateTimeline={data.winrateTimeline} />
             <RankCard title="Flex" data={flex} />
 
             {/* Şampiyon havuzu — dropdown ile görünüm değiştir */}
             <ChampionPool
-              seasonChampions={data.seasonChampions || []}
+              seasonChampions={data.seasonChampions || {}}
               masteries={masteries}
-              totalScore={totalScore}
             />
 
             {/* Koridor İstatistikleri — radar chart + filtreli */}
@@ -292,7 +304,7 @@ export default async function SummonerPage({ params }) {
 }
 
 /* ===== RANK KARTI ===== */
-function RankCard({ title, data }) {
+function RankCard({ title, data, winrateTimeline }) {
   if (!data) {
     return (
       <div className="glass rounded-xl p-4 text-center">
@@ -309,30 +321,114 @@ function RankCard({ title, data }) {
       <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-3">{title}</p>
 
       <div className="flex items-center gap-3">
-        {/* Rank badge — oyunun orijinal görseli */}
-        <img
-          src={rankBadgeUrl(data.tier)}
-          alt={data.tier}
-          width={72}
-          height={72}
-          className="flex-shrink-0"
-        />
-        <div className="min-w-0">
+        {/* Rank badge */}
+        <img src={rankBadgeUrl(data.tier)} alt={data.tier} width={72} height={72} className="flex-shrink-0" />
+
+        {/* Sol: Tier + LP + W/L */}
+        <div className="flex-1 min-w-0">
           <p className="text-base font-bold text-white">{tierName} {data.rank}</p>
           <p className="text-xs text-gray-400">{data.lp} LP</p>
           <div className="flex items-center gap-1.5 mt-1">
-            <span className="text-[11px] text-emerald-400">{data.wins}W</span>
-            <span className="text-[11px] text-red-400">{data.losses}L</span>
-            <span className={`text-[11px] font-medium ${getWrColor(data.winRate)}`}>{data.winRate}%</span>
+            <span className="text-xs text-emerald-400">{data.wins} Win</span>
+            <span className="text-xs text-gray-600">/</span>
+            <span className="text-xs text-red-400">{data.losses} Lose</span>
           </div>
+        </div>
+
+        {/* Sağ: Win Rate */}
+        <div className="flex-shrink-0 text-right">
+          <p className={`text-xl font-bold ${getWrColor(data.winRate)}`}>{data.winRate}%</p>
+          <p className="text-[10px] text-gray-500">Win Rate</p>
         </div>
       </div>
 
-      {/* W/L bar — yeşil win, kırmızı loss */}
+      {/* W/L bar */}
       <div className="mt-2.5 h-1.5 rounded-full overflow-hidden flex">
         <div className="h-full bg-emerald-500" style={{ width: `${data.winRate}%` }} />
         <div className="h-full bg-red-500" style={{ width: `${100 - data.winRate}%` }} />
       </div>
+
+      {/* Winrate geçmişi chart */}
+      {winrateTimeline && winrateTimeline.length >= 2 && (
+        <WinrateChart timeline={winrateTimeline} />
+      )}
+    </div>
+  );
+}
+
+/* ===== WINRATE GEÇMİŞİ — SVG Line Chart ===== */
+function WinrateChart({ timeline }) {
+  const width = 300;
+  const height = 55;
+  const pad = { x: 4, y: 6 };
+
+  const chartW = width - pad.x * 2;
+  const chartH = height - pad.y * 2;
+
+  const rates = timeline.map((t) => t.winRate);
+  const minWr = Math.max(Math.min(...rates) - 5, 0);
+  const maxWr = Math.min(Math.max(...rates) + 5, 100);
+  const range = Math.max(maxWr - minWr, 10);
+
+  const points = timeline.map((t, i) => {
+    const x = pad.x + (i / (timeline.length - 1)) * chartW;
+    const y = pad.y + chartH - ((t.winRate - minWr) / range) * chartH;
+    return `${x},${y}`;
+  }).join(" ");
+
+  // %50 referans çizgisi
+  const ref50Y = (50 >= minWr && 50 <= maxWr)
+    ? pad.y + chartH - ((50 - minWr) / range) * chartH
+    : null;
+
+  const lastWr = timeline[timeline.length - 1].winRate;
+  const lineColor = lastWr >= 50 ? "#10b981" : "#ef4444";
+
+  // Gradient fill alanı
+  const firstPt = points.split(" ")[0];
+  const lastPt = points.split(" ").pop();
+  const fillPoints = `${pad.x},${pad.y + chartH} ${points} ${pad.x + chartW},${pad.y + chartH}`;
+
+  return (
+    <div className="mt-3 pt-2 border-t border-[#1b2230]/30">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[10px] text-gray-500">Win Rate Geçmişi</p>
+        <p className="text-[10px] text-gray-400">{timeline.length} maç</p>
+      </div>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="wrGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.2" />
+            <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* %50 referans çizgisi */}
+        {ref50Y !== null && (
+          <line x1={pad.x} y1={ref50Y} x2={width - pad.x} y2={ref50Y}
+            stroke="#1b2230" strokeWidth={1} strokeDasharray="4,3" />
+        )}
+
+        {/* Gradient dolgu */}
+        <polygon points={fillPoints} fill="url(#wrGradient)" />
+
+        {/* Çizgi */}
+        <polyline points={points} fill="none" stroke={lineColor}
+          strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+
+        {/* Son nokta */}
+        <circle
+          cx={pad.x + chartW}
+          cy={pad.y + chartH - ((lastWr - minWr) / range) * chartH}
+          r={3} fill={lineColor}
+        />
+
+        {/* %50 etiketi */}
+        {ref50Y !== null && (
+          <text x={width - pad.x - 2} y={ref50Y - 3} textAnchor="end"
+            className="fill-gray-600" style={{ fontSize: "8px" }}>50%</text>
+        )}
+      </svg>
     </div>
   );
 }
