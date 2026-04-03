@@ -370,8 +370,12 @@ function PlayerRow({ player: p, maxDmg, maxTaken }) {
 
       {/* ===== KDA ===== */}
       <div className="w-[100px] text-center flex-shrink-0">
-        <p className="text-sm text-gray-100">
-          {p.kills}/<span className="text-red-400">{p.deaths}</span>/{p.assists}
+        <p className="text-sm">
+          <span className="text-emerald-400/80">{p.kills}</span>
+          <span className="text-gray-600 mx-0.5">/</span>
+          <span className="text-red-400/80">{p.deaths}</span>
+          <span className="text-gray-600 mx-0.5">/</span>
+          <span className="text-yellow-500/80">{p.assists}</span>
           <span className="text-gray-400 text-xs ml-1">({p.killParticipation}%)</span>
         </p>
         <p className={`text-xs font-bold ${getKdaColor(p.kda)}`}>

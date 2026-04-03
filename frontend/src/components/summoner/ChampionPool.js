@@ -43,6 +43,33 @@ function getKdaColor(ratio) {
   return "text-gray-400";
 }
 
+/* KDA değeri — Perfect ise portal tooltip ile açıklama */
+function KdaValue({ ratio }) {
+  const [anchor, setAnchor] = useState(null);
+  const isPerfect = ratio === "Perfect";
+  const color = getKdaColor(ratio);
+
+  return (
+    <>
+      <p
+        className={`text-[11px] font-semibold ${color} ${isPerfect ? "cursor-help" : ""}`}
+        onMouseEnter={isPerfect ? (e) => setAnchor(e.currentTarget) : undefined}
+        onMouseLeave={isPerfect ? () => setAnchor(null) : undefined}
+      >
+        {isPerfect ? "Perfect" : typeof ratio === "number" ? ratio.toFixed(2) : "0"}
+      </p>
+      {isPerfect && anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
+            <p className="text-xs text-yellow-400 font-bold">Perfect KDA</p>
+            <p className="text-[11px] text-gray-400">0 ölüm — mükemmel performans</p>
+          </div>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+
 /* ===== Portal Tooltip ===== */
 function Tooltip({ anchorEl, children }) {
   if (!anchorEl || typeof window === "undefined") return null;
@@ -109,8 +136,14 @@ export default function ChampionPool({ seasonChampions, masteries }) {
     : (seasonChampions?.[gameType] || seasonChampions?.all || []);
 
   const champList = [...rawList].sort((a, b) => {
-    const va = a[sortKey] ?? 0;
-    const vb = b[sortKey] ?? 0;
+    let va, vb;
+    if (sortKey === "avgKda") {
+      va = typeof a.avgKda?.ratio === "number" ? a.avgKda.ratio : 999;
+      vb = typeof b.avgKda?.ratio === "number" ? b.avgKda.ratio : 999;
+    } else {
+      va = a[sortKey] ?? 0;
+      vb = b[sortKey] ?? 0;
+    }
     return sortAsc ? va - vb : vb - va;
   });
 
@@ -249,11 +282,6 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery }) {
         {champions.slice(0, 8).map((c, i) => {
           const kdaRatio = c.avgKda?.ratio ?? 0;
           const noGames = !c.games || c.games === 0;
-          const kdaDisplay = noGames
-            ? "—"
-            : kdaRatio === "Perfect"
-              ? "Perfect"
-              : `${c.avgKda.kills}/${c.avgKda.deaths}/${c.avgKda.assists}`;
 
           return (
             <Link
@@ -290,10 +318,10 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery }) {
                   <p className="text-xs text-gray-600">—</p>
                 ) : (
                   <>
-                    <p className="text-xs text-gray-300">{kdaDisplay}</p>
-                    <p className={`text-[11px] font-semibold ${getKdaColor(kdaRatio)}`}>
-                      {kdaRatio === "Perfect" ? "∞" : typeof kdaRatio === "number" ? kdaRatio.toFixed(2) : "0"}
+                    <p className="text-xs text-gray-300">
+                      {c.avgKda.kills}/{c.avgKda.deaths}/{c.avgKda.assists}
                     </p>
+                    <KdaValue ratio={kdaRatio} />
                   </>
                 )}
               </div>

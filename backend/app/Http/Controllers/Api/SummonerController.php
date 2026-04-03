@@ -113,13 +113,13 @@ class SummonerController extends Controller
         $recentStats = null;
         $seasonRoles = null;
         $seasonChampions = [];
+        $winrateTimeline = [];
         $bannerSplash = null;
         try {
             $recentMatches = $this->match->getRecentMatches($puuid, 10);
             $recentStats = $this->match->calculateRecentStats($recentMatches, $puuid);
             $seasonRoles = $this->match->getSeasonRoleStats($puuid);
             $seasonChampions = $this->match->getSeasonChampionStats($puuid);
-            $winrateTimeline = $this->match->getWinrateTimeline($puuid);
 
             // Mastery bilgisini sezon şampiyon verisine ekle
             $masteryMap = [];
@@ -142,6 +142,11 @@ class SummonerController extends Controller
             if ($recentStats['mostPlayedChampion'] ?? null) {
                 $bannerSplash = $this->ddragon->splashArtUrl($recentStats['mostPlayedChampion']['id']);
             }
+        } catch (\Exception $e) {}
+
+        // Winrate timeline — ayrı try-catch (hata diğer verileri etkilemesin)
+        try {
+            $winrateTimeline = $this->match->getWinrateTimeline($puuid);
         } catch (\Exception $e) {}
 
         // DB'ye kaydet — autocomplete için

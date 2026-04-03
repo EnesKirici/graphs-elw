@@ -36,6 +36,7 @@ class SummonerService
                 'profileIconId' => $summoner['profileIconId'],
                 'profileIcon'   => $this->ddragon->profileIconUrl($summoner['profileIconId']),
                 'summonerLevel' => $summoner['summonerLevel'],
+                'platform'      => config('riot.platform'),
             ];
         });
     }
@@ -60,6 +61,7 @@ class SummonerService
                 'profileIconId' => $summoner['profileIconId'],
                 'profileIcon'   => $this->ddragon->profileIconUrl($summoner['profileIconId']),
                 'summonerLevel' => $summoner['summonerLevel'],
+                'platform'      => config('riot.platform'),
             ];
         });
     }

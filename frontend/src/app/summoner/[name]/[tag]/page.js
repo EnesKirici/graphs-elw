@@ -3,25 +3,37 @@ import Link from "next/link";
 import MatchList from "@/components/summoner/MatchList";
 import RoleRadar from "@/components/summoner/RoleRadar";
 import ChampionPool from "@/components/summoner/ChampionPool";
+import WinrateSection from "@/components/summoner/WinrateSection";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
   return { title: `${decodeURIComponent(name)}#${decodeURIComponent(tag)} - GRAPHS` };
 }
 
+function platformToCountry(platform) {
+  const map = {
+    tr1: "tr", euw1: "eu", eun1: "eu", na1: "us",
+    kr: "kr", jp1: "jp", br1: "br", la1: "mx", la2: "ar",
+    oc1: "au", ru: "ru", ph2: "ph", sg2: "sg",
+    th2: "th", tw2: "tw", vn2: "vn",
+  };
+  return map[(platform || "").toLowerCase()] || "un";
+}
+
+function platformLabel(platform) {
+  const map = {
+    tr1: "Türkiye", euw1: "EU West", eun1: "EU Nordic", na1: "North America",
+    kr: "Korea", jp1: "Japan", br1: "Brazil", oc1: "Oceania", ru: "Russia",
+  };
+  return map[(platform || "").toLowerCase()] || platform;
+}
+
 function getWrColor(wr) {
-  if (wr >= 60) return "text-emerald-400";
-  if (wr >= 50) return "text-blue-400";
+  if (wr >= 51) return "text-emerald-400";
   if (wr >= 45) return "text-yellow-400";
   return "text-red-400";
 }
 
-function getKdaColor(kda) {
-  if (kda === "Perfect" || kda >= 5) return "text-yellow-400";
-  if (kda >= 3) return "text-emerald-400";
-  if (kda >= 2) return "text-blue-400";
-  return "text-gray-400";
-}
 
 // SVG circular progress — analytics gösterge
 function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 110 }) {
@@ -107,18 +119,31 @@ export default async function SummonerPage({ params }) {
 
         <div className="absolute bottom-0 left-0 right-0">
           <div className="max-w-7xl mx-auto px-6 pb-5 flex items-end gap-4">
-            <img
-              src={profile.profileIcon} alt=""
-              width={76} height={76}
-              className="rounded-xl border-2 border-[#1b2230] shadow-2xl"
-            />
+            <div className="relative">
+              <img
+                src={profile.profileIcon} alt=""
+                width={84} height={84}
+                className="rounded-xl border-2 border-[#1b2230] shadow-2xl"
+              />
+              {/* Level badge — minimal */}
+              <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] text-gray-300 font-bold bg-[#060a10]/80 backdrop-blur-sm px-1.5 py-px rounded">
+                {profile.summonerLevel}
+              </span>
+              {/* Bölge bayrağı — sağ üst */}
+              <img
+                src={`https://flagcdn.com/24x18/${platformToCountry(profile.platform)}.png`}
+                alt={platformLabel(profile.platform)}
+                title={platformLabel(profile.platform)}
+                width={20} height={15}
+                className="absolute -top-1.5 -right-1.5 rounded-sm shadow-lg"
+              />
+            </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-lg">
                 {profile.gameName}
                 <span className="text-gray-400 text-base font-normal ml-1">#{profile.tagLine}</span>
               </h1>
               <div className="flex items-center gap-3 mt-1">
-                <p className="text-sm text-blue-400 font-medium">Level {profile.summonerLevel}</p>
                 {(() => {
                   const mainRole = data.seasonRoles?.mainRole || recentStats?.mainRole;
                   if (!mainRole) return null;
@@ -159,8 +184,8 @@ export default async function SummonerPage({ params }) {
           {/* ===== SOL KOLON (4 birim) — Rank + Mastery ===== */}
           <div className="lg:col-span-4 space-y-4">
             {/* Rank kartları */}
-            <RankCard title="Solo/Duo" data={solo} winrateTimeline={data.winrateTimeline} />
-            <RankCard title="Flex" data={flex} />
+            <RankCard title="Solo/Duo" data={solo} winrateTimeline={data.winrateTimeline?.solo} defaultOpen />
+            <RankCard title="Flex" data={flex} winrateTimeline={data.winrateTimeline?.flex} />
 
             {/* Şampiyon havuzu — dropdown ile görünüm değiştir */}
             <ChampionPool
@@ -204,20 +229,20 @@ export default async function SummonerPage({ params }) {
                         {totalGames > 0 && (
                           <CircleProgress value={winRate} max={100}
                             label="Kazanma Oranı" display={`${winRate}%`}
-                            color={winRate >= 50 ? "#10b981" : "#ef4444"} />
+                            color={winRate >= 51 ? "#10b981" : winRate >= 45 ? "#f59e0b" : "#ef4444"} />
                         )}
                         {recentStats?.avgKDA && (
                           <CircleProgress
                             value={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio : 10}
                             max={6} label="Ort. KDA"
                             display={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio.toFixed(1) : '∞'}
-                            color={(recentStats.avgKDA.ratio >= 3) ? "#10b981" : (recentStats.avgKDA.ratio >= 2) ? "#3b82f6" : "#ef4444"} />
+                            color={(recentStats.avgKDA.ratio >= 3) ? "#10b981" : (recentStats.avgKDA.ratio >= 2) ? "#3b82f6" : "#f59e0b"} />
                         )}
                         {recentStats?.winRate !== undefined && (
                           <CircleProgress value={recentStats.winRate || 0} max={100}
                             label={`Son ${recentStats.totalGames || 0} Maç`}
                             display={`${recentStats.winRate || 0}%`}
-                            color={(recentStats.winRate || 0) >= 50 ? "#06b6d4" : "#f59e0b"} />
+                            color={(recentStats.winRate || 0) >= 51 ? "#10b981" : (recentStats.winRate || 0) >= 45 ? "#f59e0b" : "#ef4444"} />
                         )}
                       </div>
 
@@ -304,7 +329,7 @@ export default async function SummonerPage({ params }) {
 }
 
 /* ===== RANK KARTI ===== */
-function RankCard({ title, data, winrateTimeline }) {
+function RankCard({ title, data, winrateTimeline, defaultOpen }) {
   if (!data) {
     return (
       <div className="glass rounded-xl p-4 text-center">
@@ -316,17 +341,18 @@ function RankCard({ title, data, winrateTimeline }) {
 
   const tierName = data.tier.charAt(0) + data.tier.slice(1).toLowerCase();
 
+  const isSolo = !!defaultOpen;
+  const badgeSize = isSolo ? 96 : 68;
+
   return (
-    <div className="glass rounded-xl p-4">
+    <div className={`glass rounded-xl ${isSolo ? "p-5" : "p-4"}`}>
       <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-3">{title}</p>
 
-      <div className="flex items-center gap-3">
-        {/* Rank badge */}
-        <img src={rankBadgeUrl(data.tier)} alt={data.tier} width={72} height={72} className="flex-shrink-0" />
+      <div className="flex items-center gap-4">
+        <img src={rankBadgeUrl(data.tier)} alt={data.tier} width={badgeSize} height={badgeSize} className="flex-shrink-0" />
 
-        {/* Sol: Tier + LP + W/L */}
         <div className="flex-1 min-w-0">
-          <p className="text-base font-bold text-white">{tierName} {data.rank}</p>
+          <p className="text-lg font-bold text-white">{tierName} {data.rank}</p>
           <p className="text-xs text-gray-400">{data.lp} LP</p>
           <div className="flex items-center gap-1.5 mt-1">
             <span className="text-xs text-emerald-400">{data.wins} Win</span>
@@ -335,7 +361,6 @@ function RankCard({ title, data, winrateTimeline }) {
           </div>
         </div>
 
-        {/* Sağ: Win Rate */}
         <div className="flex-shrink-0 text-right">
           <p className={`text-xl font-bold ${getWrColor(data.winRate)}`}>{data.winRate}%</p>
           <p className="text-[10px] text-gray-500">Win Rate</p>
@@ -343,92 +368,15 @@ function RankCard({ title, data, winrateTimeline }) {
       </div>
 
       {/* W/L bar */}
-      <div className="mt-2.5 h-1.5 rounded-full overflow-hidden flex">
+      <div className="mt-3 h-1.5 rounded-full overflow-hidden flex">
         <div className="h-full bg-emerald-500" style={{ width: `${data.winRate}%` }} />
         <div className="h-full bg-red-500" style={{ width: `${100 - data.winRate}%` }} />
       </div>
 
-      {/* Winrate geçmişi chart */}
+      {/* Winrate geçmişi — açılır/kapanır */}
       {winrateTimeline && winrateTimeline.length >= 2 && (
-        <WinrateChart timeline={winrateTimeline} />
+        <WinrateSection timeline={winrateTimeline} defaultOpen={defaultOpen} />
       )}
-    </div>
-  );
-}
-
-/* ===== WINRATE GEÇMİŞİ — SVG Line Chart ===== */
-function WinrateChart({ timeline }) {
-  const width = 300;
-  const height = 55;
-  const pad = { x: 4, y: 6 };
-
-  const chartW = width - pad.x * 2;
-  const chartH = height - pad.y * 2;
-
-  const rates = timeline.map((t) => t.winRate);
-  const minWr = Math.max(Math.min(...rates) - 5, 0);
-  const maxWr = Math.min(Math.max(...rates) + 5, 100);
-  const range = Math.max(maxWr - minWr, 10);
-
-  const points = timeline.map((t, i) => {
-    const x = pad.x + (i / (timeline.length - 1)) * chartW;
-    const y = pad.y + chartH - ((t.winRate - minWr) / range) * chartH;
-    return `${x},${y}`;
-  }).join(" ");
-
-  // %50 referans çizgisi
-  const ref50Y = (50 >= minWr && 50 <= maxWr)
-    ? pad.y + chartH - ((50 - minWr) / range) * chartH
-    : null;
-
-  const lastWr = timeline[timeline.length - 1].winRate;
-  const lineColor = lastWr >= 50 ? "#10b981" : "#ef4444";
-
-  // Gradient fill alanı
-  const firstPt = points.split(" ")[0];
-  const lastPt = points.split(" ").pop();
-  const fillPoints = `${pad.x},${pad.y + chartH} ${points} ${pad.x + chartW},${pad.y + chartH}`;
-
-  return (
-    <div className="mt-3 pt-2 border-t border-[#1b2230]/30">
-      <div className="flex items-center justify-between mb-1">
-        <p className="text-[10px] text-gray-500">Win Rate Geçmişi</p>
-        <p className="text-[10px] text-gray-400">{timeline.length} maç</p>
-      </div>
-      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="wrGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={lineColor} stopOpacity="0.2" />
-            <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {/* %50 referans çizgisi */}
-        {ref50Y !== null && (
-          <line x1={pad.x} y1={ref50Y} x2={width - pad.x} y2={ref50Y}
-            stroke="#1b2230" strokeWidth={1} strokeDasharray="4,3" />
-        )}
-
-        {/* Gradient dolgu */}
-        <polygon points={fillPoints} fill="url(#wrGradient)" />
-
-        {/* Çizgi */}
-        <polyline points={points} fill="none" stroke={lineColor}
-          strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
-
-        {/* Son nokta */}
-        <circle
-          cx={pad.x + chartW}
-          cy={pad.y + chartH - ((lastWr - minWr) / range) * chartH}
-          r={3} fill={lineColor}
-        />
-
-        {/* %50 etiketi */}
-        {ref50Y !== null && (
-          <text x={width - pad.x - 2} y={ref50Y - 3} textAnchor="end"
-            className="fill-gray-600" style={{ fontSize: "8px" }}>50%</text>
-        )}
-      </svg>
     </div>
   );
 }

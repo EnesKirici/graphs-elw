@@ -47,6 +47,22 @@ class MatchService
     }
 
     /**
+     * Sezon ranked match ID'lerini cache'li çek.
+     */
+    public function getSeasonMatchIds(string $puuid, int $queueId): array
+    {
+        $cacheKey = "season_match_ids:{$puuid}:{$queueId}";
+
+        return Cache::remember($cacheKey, config('riot.cache_ttl.match_ids'), function () use ($puuid, $queueId) {
+            $seasonStart = strtotime('2025-01-08');
+            return $this->api->regionRequest(
+                "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
+                ['startTime' => $seasonStart, 'queue' => $queueId, 'count' => 100]
+            );
+        });
+    }
+
+    /**
      * Tek bir maçın detayını getir.
      * Maçlar değişmez → uzun süre cache'le.
      */
@@ -367,10 +383,7 @@ class MatchService
 
             foreach ($queues as $queueId => $queueKey) {
                 try {
-                    $matchIds = $this->api->regionRequest(
-                        "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
-                        ['startTime' => $seasonStart, 'queue' => $queueId, 'count' => 100]
-                    );
+                    $matchIds = $this->getSeasonMatchIds($puuid, $queueId);
                 } catch (\Exception $e) {
                     continue;
                 }
@@ -457,24 +470,21 @@ class MatchService
     }
 
     /**
-     * Sezon boyunca ranked winrate geçmişi — kronolojik sırada.
-     * Her maç sonrası kümülatif winrate hesaplar.
-     * Ek API maliyeti yok — match detail'ler önceki metodlar tarafından zaten cache'li.
+     * Sezon boyunca ranked winrate geçmişi — solo ve flex ayrı.
+     * Her maç sonrası kümülatif winrate + tarih hesaplar.
      */
     public function getWinrateTimeline(string $puuid): array
     {
-        $cacheKey = "winrate_timeline:{$puuid}";
+        $cacheKey = "winrate_timeline:v2:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $seasonStart = strtotime('2025-01-08');
-            $matches = [];
+            $result = ['solo' => [], 'flex' => []];
 
-            foreach ([420, 440] as $queueId) {
+            foreach ([420 => 'solo', 440 => 'flex'] as $queueId => $key) {
+                $matches = [];
                 try {
-                    $matchIds = $this->api->regionRequest(
-                        "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
-                        ['startTime' => $seasonStart, 'queue' => $queueId, 'count' => 100]
-                    );
+                    $matchIds = $this->getSeasonMatchIds($puuid, $queueId);
                 } catch (\Exception $e) {
                     continue;
                 }
@@ -495,26 +505,23 @@ class MatchService
                         continue;
                     }
                 }
+
+                usort($matches, fn($a, $b) => $a['time'] <=> $b['time']);
+
+                $wins = 0;
+                $total = 0;
+                foreach ($matches as $m) {
+                    $total++;
+                    if ($m['win']) $wins++;
+                    $result[$key][] = [
+                        'game'    => $total,
+                        'winRate' => round($wins / $total * 100, 1),
+                        'date'    => date('d M', (int) ($m['time'] / 1000)),
+                    ];
+                }
             }
 
-            // Kronolojik sırala
-            usort($matches, fn($a, $b) => $a['time'] <=> $b['time']);
-
-            // Kümülatif winrate hesapla
-            $wins = 0;
-            $total = 0;
-            $timeline = [];
-
-            foreach ($matches as $m) {
-                $total++;
-                if ($m['win']) $wins++;
-                $timeline[] = [
-                    'game'    => $total,
-                    'winRate' => round($wins / $total * 100, 1),
-                ];
-            }
-
-            return $timeline;
+            return $result;
         });
     }
 
@@ -541,10 +548,7 @@ class MatchService
 
             foreach ($queues as $queueId => $type) {
                 try {
-                    $matchIds = $this->api->regionRequest(
-                        "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
-                        ['startTime' => $seasonStart, 'queue' => $queueId, 'count' => 100]
-                    );
+                    $matchIds = $this->getSeasonMatchIds($puuid, $queueId);
                 } catch (\Exception $e) {
                     continue;
                 }
@@ -552,6 +556,10 @@ class MatchService
                 foreach ($matchIds as $matchId) {
                     try {
                         $detail = $this->getMatchDetail($matchId);
+
+                        // Remake maçları atla (5 dakikadan kısa)
+                        if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
+
                         foreach ($detail['info']['participants'] as $p) {
                             if ($p['puuid'] === $puuid) {
                                 $name = $p['championName'];
