@@ -1,20 +1,14 @@
 "use client";
 
-/*
-  MatchList — Sayfalı maç listesi.
-  Maça tıklanınca detay görünümüne geçer, geri butonuyla listeye döner.
-*/
-
 import { useState } from "react";
 import MatchCard from "./MatchCard";
 import MatchDetail from "./MatchDetail";
 
-export default function MatchList({ initialMatches, puuid }) {
+export default function MatchList({ initialMatches, puuid, selectedMatchId, onSelectMatch }) {
   const [matches, setMatches] = useState(initialMatches || []);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState((initialMatches || []).length >= 10);
-  const [selectedMatchId, setSelectedMatchId] = useState(null);
 
   async function loadMore() {
     setLoading(true);
@@ -39,9 +33,9 @@ export default function MatchList({ initialMatches, puuid }) {
 
   if (matches.length === 0) return null;
 
-  // Detay görünümü
+  // Detay görünümü — tam genişlik
   if (selectedMatchId) {
-    return <MatchDetail matchId={selectedMatchId} onBack={() => setSelectedMatchId(null)} />;
+    return <MatchDetail matchId={selectedMatchId} onBack={() => onSelectMatch(null)} />;
   }
 
   // Liste görünümü
@@ -56,7 +50,7 @@ export default function MatchList({ initialMatches, puuid }) {
         {matches.map((match) => (
           <div
             key={match.matchId}
-            onClick={() => setSelectedMatchId(match.matchId)}
+            onClick={() => onSelectMatch(match.matchId)}
             className="cursor-pointer"
           >
             <MatchCard match={match} />
@@ -64,7 +58,6 @@ export default function MatchList({ initialMatches, puuid }) {
         ))}
       </div>
 
-      {/* Devam Et butonu */}
       {hasMore && (
         <div className="p-3">
           <button
