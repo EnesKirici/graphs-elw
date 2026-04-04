@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import ReactDOM from "react-dom";
+import ItemTooltip from "@/components/shared/ItemTooltip";
+import RuneTooltip from "@/components/shared/RuneTooltip";
 
 function fmtDur(s) {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
@@ -26,31 +26,7 @@ function kdaColor(k) {
 
 const roles = { TOP: "Top", JUNGLE: "JG", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Sup" };
 
-/* Fixed tooltip — element pozisyonuna göre ekrana sabitlenir */
-function Tooltip({ anchorEl, children }) {
-  if (!anchorEl || typeof window === "undefined") return null;
-  const rect = anchorEl.getBoundingClientRect();
-
-  return ReactDOM.createPortal(
-    <div
-      className="fixed z-[9999] pointer-events-none"
-      style={{
-        top: `${rect.top - 8}px`,
-        left: `${rect.left + rect.width / 2}px`,
-        transform: "translate(-50%, -100%)",
-      }}
-    >
-      {children}
-    </div>,
-    document.body
-  );
-}
-
 export default function MatchCard({ match: m }) {
-  const [hovItem, setHovItem] = useState(null);
-  const [hovRune, setHovRune] = useState(false);
-  const [itemAnchor, setItemAnchor] = useState(null);
-  const [runeAnchor, setRuneAnchor] = useState(null);
 
   const remake = m.duration < 300;
   const bdr = remake ? "border-l-blue-400" : m.win ? "border-l-emerald-500" : "border-l-red-500";
@@ -75,19 +51,8 @@ export default function MatchCard({ match: m }) {
               {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={18} height={18} className="rounded-sm" title={m.spells[1].name} />}
             </div>
           </div>
-          {/* Rünler — ana rün büyük, yan rün küçük */}
-          <div className="flex flex-col items-center gap-0.5">
-            {m.runes?.keystone?.icon && (
-              <div
-                ref={(el) => { if (el && !runeAnchor) setRuneAnchor(el); }}
-                onMouseEnter={() => setHovRune(true)}
-                onMouseLeave={() => setHovRune(false)}
-              >
-                <img src={m.runes.keystone.icon} alt="" width={22} height={22} className="rounded-full cursor-help hover:ring-1 ring-blue-500/50" />
-              </div>
-            )}
-            {m.runes?.subTree?.icon && <img src={m.runes.subTree.icon} alt="" width={16} height={16} className="rounded-full opacity-60" />}
-          </div>
+          {/* Rünler — paylaşılan RuneTooltip */}
+          <RuneTooltip runes={m.runes} keystoneSize={22} subTreeSize={16} />
         </div>
 
         {/* NAME + ROLE */}
@@ -109,15 +74,10 @@ export default function MatchCard({ match: m }) {
           <p className="text-[9px] text-gray-600">CS</p>
         </div>
 
-        {/* ITEMS */}
+        {/* ITEMS — paylaşılan ItemTooltip */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
           {m.items.slice(0, 6).map((item, i) => (
-            <div key={i}
-              onMouseEnter={(e) => { setHovItem(i); setItemAnchor(e.currentTarget); }}
-              onMouseLeave={() => { setHovItem(null); setItemAnchor(null); }}
-            >
-              <img src={item.image} alt="" width={24} height={24} className="rounded-sm" />
-            </div>
+            <ItemTooltip key={i} item={item} size={24} />
           ))}
           {Array.from({ length: Math.max(0, 6 - m.items.length) }).map((_, i) => (
             <div key={`e${i}`} className="w-6 h-6 rounded-sm bg-[#1b2230]" />
@@ -147,83 +107,6 @@ export default function MatchCard({ match: m }) {
         </div>
       </div>
 
-      {/* ITEM TOOLTIP — Portal */}
-      {hovItem !== null && m.items[hovItem]?.name && itemAnchor && (
-        <Tooltip anchorEl={itemAnchor}>
-          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg p-3 shadow-2xl shadow-black/90 w-60">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <p className="text-sm font-bold text-white">{m.items[hovItem].name}</p>
-              {m.items[hovItem].gold > 0 && <span className="text-[11px] text-yellow-500 font-mono whitespace-nowrap">{m.items[hovItem].gold}g</span>}
-            </div>
-            {m.items[hovItem].desc?.stats?.length > 0 && (
-              <div className="mb-2">
-                {m.items[hovItem].desc.stats.map((s, j) => (
-                  <p key={j} className="text-[11px] text-blue-300">{s}</p>
-                ))}
-              </div>
-            )}
-            {m.items[hovItem].desc?.passives?.length > 0 && (
-              <div className="space-y-1.5 border-t border-[#1b2230] pt-2">
-                {m.items[hovItem].desc.passives.map((p, j) => (
-                  <div key={j}>
-                    <p className="text-[11px] font-semibold text-yellow-400">{p.name}</p>
-                    <p className="text-[10px] text-gray-400 leading-relaxed">{p.desc}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </Tooltip>
-      )}
-
-      {/* RUNE TOOLTIP — Portal, hover ile */}
-      {hovRune && m.runes && runeAnchor && (
-        <Tooltip anchorEl={runeAnchor}>
-          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg p-5 shadow-2xl shadow-black/90 w-80">
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <div className="flex items-center gap-2.5 mb-3">
-                  {m.runes.primaryTree?.icon && <img src={m.runes.primaryTree.icon} alt="" width={22} height={22} />}
-                  <span className="text-xs font-semibold text-gray-200">{m.runes.primaryTree?.name}</span>
-                </div>
-                <div className="space-y-2.5">
-                  {m.runes.primaryPerks?.map((p, i) => (
-                    <div key={i} className="flex items-center gap-2.5">
-                      <img src={p.icon} alt="" width={i === 0 ? 32 : 26} height={i === 0 ? 32 : 26}
-                        className={`rounded-md flex-shrink-0 ${i === 0 ? "ring-1 ring-yellow-500/50" : ""}`} />
-                      <p className={i === 0 ? "text-xs font-semibold text-white" : "text-[11px] text-gray-300"}>{p.name}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-2.5 mb-3">
-                  {m.runes.subTree?.icon && <img src={m.runes.subTree.icon} alt="" width={22} height={22} />}
-                  <span className="text-xs font-semibold text-gray-200">{m.runes.subTree?.name}</span>
-                </div>
-                <div className="space-y-2.5">
-                  {m.runes.secondaryPerks?.map((p, i) => (
-                    <div key={i} className="flex items-center gap-2.5">
-                      <img src={p.icon} alt="" width={26} height={26} className="rounded-md flex-shrink-0" />
-                      <p className="text-[11px] text-gray-300">{p.name}</p>
-                    </div>
-                  ))}
-                </div>
-                {m.runes.statShards?.length > 0 && (
-                  <div className="mt-3 pt-2.5 border-t border-[#1b2230]/50 space-y-1.5">
-                    {m.runes.statShards.map((s, i) => (
-                      <p key={i} className="text-[10px] text-gray-400 flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${i === 0 ? "bg-red-400" : i === 1 ? "bg-purple-400" : "bg-green-400"}`} />
-                        {s}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </Tooltip>
-      )}
     </div>
   );
 }

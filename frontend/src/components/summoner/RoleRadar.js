@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import ReactDOM from "react-dom";
+import { useState } from "react";
+import Tooltip from "@/components/shared/Tooltip";
 
 const QUEUE_FILTERS = [
   { key: "all", label: "Tümü" },
@@ -18,25 +18,6 @@ const RADAR_ROLES = [
   { role: "UTILITY", label: "Support", icon: "/roles/support.svg" },
   { role: "JUNGLE",  label: "Jungle",  icon: "/roles/jungle.svg" },
 ];
-
-function Tooltip({ anchorEl, children }) {
-  if (!anchorEl || typeof window === "undefined") return null;
-  const rect = anchorEl.getBoundingClientRect();
-
-  return ReactDOM.createPortal(
-    <div
-      className="fixed z-[9999] pointer-events-none"
-      style={{
-        top: `${rect.top - 8}px`,
-        left: `${rect.left + rect.width / 2}px`,
-        transform: "translate(-50%, -100%)",
-      }}
-    >
-      {children}
-    </div>,
-    document.body
-  );
-}
 
 export default function RoleRadar({ seasonRoles }) {
   const [filter, setFilter] = useState("all");

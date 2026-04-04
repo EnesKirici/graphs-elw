@@ -2,25 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import ReactDOM from "react-dom";
-
-function Tooltip({ anchorEl, children }) {
-  if (!anchorEl || typeof window === "undefined") return null;
-  const rect = anchorEl.getBoundingClientRect();
-  return ReactDOM.createPortal(
-    <div
-      className="fixed z-[9999] pointer-events-none"
-      style={{
-        top: `${rect.top - 8}px`,
-        left: `${rect.left + rect.width / 2}px`,
-        transform: "translate(-50%, -100%)",
-      }}
-    >
-      {children}
-    </div>,
-    document.body
-  );
-}
+import Tooltip from "@/components/shared/Tooltip";
 
 // WR değerine göre renk — kırmızı → turuncu → yeşil geçişi
 function wrToColor(wr) {
@@ -29,12 +11,33 @@ function wrToColor(wr) {
   return "#ef4444"; // kırmızı
 }
 
+const TIME_FILTERS = [
+  { key: "all", label: "Tümü" },
+  { key: "7d", label: "7 Gün", days: 7 },
+  { key: "15d", label: "15 Gün", days: 15 },
+  { key: "30d", label: "30 Gün", days: 30 },
+];
+
 export default function WinrateSection({ timeline, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   const [hovIdx, setHovIdx] = useState(null);
   const [hovAnchor, setHovAnchor] = useState(null);
+  const [filter, setFilter] = useState("all");
 
   if (!timeline || timeline.length < 2) return null;
+
+  // Filtreleme
+  const filteredTimeline = filter === "all"
+    ? timeline
+    : (() => {
+        const f = TIME_FILTERS.find((t) => t.key === filter);
+        if (!f?.days) return timeline;
+        const cutoff = Date.now() - f.days * 86400000;
+        return timeline.filter((t) => !t.timestamp || t.timestamp >= cutoff);
+      })();
+
+  // Filtrelenmiş veri 2'den azsa fallback olarak tümünü göster
+  const data = filteredTimeline.length >= 2 ? filteredTimeline : timeline;
 
   const width = 300;
   const height = 70;
@@ -43,24 +46,24 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
   const chartW = width - pad.x * 2;
   const chartH = height - pad.y * 2;
 
-  const rates = timeline.map((t) => t.winRate);
+  const rates = data.map((t) => t.winRate);
   const minWr = Math.max(Math.min(...rates) - 5, 0);
   const maxWr = Math.min(Math.max(...rates) + 5, 100);
   const range = Math.max(maxWr - minWr, 10);
 
-  const getX = (i) => pad.x + (i / (timeline.length - 1)) * chartW;
+  const getX = (i) => pad.x + (i / (data.length - 1)) * chartW;
   const getY = (wr) => pad.y + chartH - ((wr - minWr) / range) * chartH;
 
   const ref50Y = (50 >= minWr && 50 <= maxWr) ? getY(50) : null;
-  const lastWr = timeline[timeline.length - 1].winRate;
+  const lastWr = data[data.length - 1].winRate;
 
   // Çizgiyi segment segment çiz — her segment'in rengi WR'a göre
   const segments = [];
-  for (let i = 0; i < timeline.length - 1; i++) {
-    const avgWr = (timeline[i].winRate + timeline[i + 1].winRate) / 2;
+  for (let i = 0; i < data.length - 1; i++) {
+    const avgWr = (data[i].winRate + data[i + 1].winRate) / 2;
     segments.push({
-      x1: getX(i), y1: getY(timeline[i].winRate),
-      x2: getX(i + 1), y2: getY(timeline[i + 1].winRate),
+      x1: getX(i), y1: getY(data[i].winRate),
+      x2: getX(i + 1), y2: getY(data[i + 1].winRate),
       color: wrToColor(avgWr),
     });
   }
@@ -69,21 +72,21 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
   const fillColor = wrToColor(lastWr);
 
   // Fill polygon
-  const polyPoints = timeline.map((t, i) => `${getX(i)},${getY(t.winRate)}`).join(" ");
+  const polyPoints = data.map((t, i) => `${getX(i)},${getY(t.winRate)}`).join(" ");
   const fillPoints = `${pad.x},${pad.y + chartH} ${polyPoints} ${pad.x + chartW},${pad.y + chartH}`;
 
   // Tarih etiketleri
   const dateLabels = [];
-  if (timeline.length > 0) {
-    dateLabels.push({ i: 0, label: timeline[0].date });
-    if (timeline.length > 4) {
-      const mid = Math.floor(timeline.length / 2);
-      dateLabels.push({ i: mid, label: timeline[mid].date });
+  if (data.length > 0) {
+    dateLabels.push({ i: 0, label: data[0].date });
+    if (data.length > 4) {
+      const mid = Math.floor(data.length / 2);
+      dateLabels.push({ i: mid, label: data[mid].date });
     }
-    dateLabels.push({ i: timeline.length - 1, label: timeline[timeline.length - 1].date });
+    dateLabels.push({ i: data.length - 1, label: data[data.length - 1].date });
   }
 
-  const hovData = hovIdx !== null ? timeline[hovIdx] : null;
+  const hovData = hovIdx !== null ? data[hovIdx] : null;
 
   return (
     <div className="mt-3 pt-2 border-t border-[#1b2230]/30">
@@ -95,13 +98,30 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
           Win Rate Geçmişi
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-gray-500">{timeline.length} maç</span>
+          <span className="text-[11px] text-gray-500">{data.length} maç</span>
           <ChevronDown size={14} className={`text-gray-600 transition-transform ${open ? "rotate-180" : ""}`} />
         </div>
       </button>
 
       {open && (
         <div className="mt-2">
+          {/* Zaman filtreleri */}
+          <div className="flex items-center gap-1 mb-2 flex-wrap">
+            {TIME_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => { setFilter(f.key); setHovIdx(null); setHovAnchor(null); }}
+                className={`text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
+                  filter === f.key
+                    ? "bg-blue-500/15 text-blue-400"
+                    : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           <svg
             width="100%" height={height + 18}
             viewBox={`0 0 ${width} ${height + 18}`}
@@ -144,7 +164,7 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
             ))}
 
             {/* Hover noktaları — büyük görünmez hitbox */}
-            {timeline.map((t, i) => (
+            {data.map((t, i) => (
               <circle
                 key={i}
                 cx={getX(i)} cy={getY(t.winRate)}
@@ -157,18 +177,18 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
 
             {/* Hover edilen nokta — görünür */}
             {hovIdx !== null && (
-              <circle cx={getX(hovIdx)} cy={getY(timeline[hovIdx].winRate)}
-                r={4} fill={wrToColor(timeline[hovIdx].winRate)} className="pointer-events-none" />
+              <circle cx={getX(hovIdx)} cy={getY(data[hovIdx].winRate)}
+                r={4} fill={wrToColor(data[hovIdx].winRate)} className="pointer-events-none" />
             )}
 
             {/* Son nokta — her zaman görünür */}
-            <circle cx={getX(timeline.length - 1)} cy={getY(lastWr)}
+            <circle cx={getX(data.length - 1)} cy={getY(lastWr)}
               r={3} fill={wrToColor(lastWr)} className="pointer-events-none" />
 
             {/* Tarih etiketleri */}
             {dateLabels.map((dl) => (
               <text key={dl.i} x={getX(dl.i)} y={height + 12}
-                textAnchor={dl.i === 0 ? "start" : dl.i === timeline.length - 1 ? "end" : "middle"}
+                textAnchor={dl.i === 0 ? "start" : dl.i === data.length - 1 ? "end" : "middle"}
                 className="fill-gray-600" style={{ fontSize: "9px" }}>
                 {dl.label}
               </text>

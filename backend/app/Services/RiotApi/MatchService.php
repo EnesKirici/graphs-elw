@@ -168,6 +168,8 @@ class MatchService
                 'visionScore'    => $p['visionScore'] ?? 0,
                 'wardsPlaced'    => $p['wardsPlaced'] ?? 0,
                 'wardsKilled'    => $p['wardsKilled'] ?? 0,
+                'towerDamage'    => $p['damageDealtToTurrets'] ?? 0,
+                'objectiveDamage'=> $p['damageDealtToObjectives'] ?? 0,
                 'items'          => $items,
                 'spells'         => [$spell1, $spell2],
                 'runes'          => $runes,
@@ -206,6 +208,9 @@ class MatchService
         $team100 = array_values(array_filter($players, fn($p) => $p['teamId'] === 100));
         $team200 = array_values(array_filter($players, fn($p) => $p['teamId'] === 200));
 
+        // Lane analysis — rol bazlı karşılaştırma
+        $laneAnalysis = $this->buildLaneAnalysis($team100, $team200, $info['gameDuration']);
+
         return [
             'matchId'      => $matchId,
             'queueType'    => self::QUEUE_NAMES[$info['queueId'] ?? 0] ?? 'Diğer',
@@ -215,7 +220,202 @@ class MatchService
                 ['info' => $teams[100] ?? null, 'players' => $team100],
                 ['info' => $teams[200] ?? null, 'players' => $team200],
             ],
+            'laneAnalysis' => $laneAnalysis,
         ];
+    }
+
+    /**
+     * Koridor bazlı analiz — iki takımın aynı roldeki oyuncularını karşılaştırır.
+     *
+     * Hesaplama mantığı (rol bazlı ağırlıklar):
+     *   Her metrik normalize edilir (-1 ile +1 arası) ve rol ağırlığıyla çarpılır.
+     *   Pozitif skor = mavi üstün, negatif = kırmızı üstün.
+     *
+     * Metrikler:
+     *   KDA        — (kills+assists)/deaths farkı, tüm roller için temel
+     *   CS         — CS farkı / dakika, farm yapan roller için önemli
+     *   Gold       — Toplam gold farkı, genel güç göstergesi
+     *   Hasar      — Şampiyonlara verilen hasar farkı
+     *   AlınanHasar— Tanklar (top/jg) için pozitif, diğerleri için nötr
+     *   KuleHasarı — Kule hasarı farkı, split-push/lane pressure göstergesi
+     *   ObjHasarı  — Objective hasar (JUNGLE için ağırlıklı: ejder/baron/rift)
+     *   Görüş      — Vision score farkı (UTILITY için en ağırlıklı)
+     *   Totemler   — Ward placed + killed (UTILITY/JUNGLE için önemli)
+     */
+    private function buildLaneAnalysis(array $team100, array $team200, int $duration): array
+    {
+        $roles = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'];
+        $roleLabels = [
+            'TOP' => 'Top', 'JUNGLE' => 'Orman', 'MIDDLE' => 'Orta',
+            'BOTTOM' => 'Alt', 'UTILITY' => 'Destek',
+        ];
+
+        // Rol bazlı ağırlık tablosu — her rol için hangi metrik ne kadar önemli
+        $weights = [
+            'TOP' => [
+                'kda' => 3.0, 'cs' => 2.5, 'gold' => 2.0, 'damage' => 2.5,
+                'damageTaken' => 1.5, 'towerDmg' => 2.0, 'objDmg' => 0.5,
+                'vision' => 1.0, 'wards' => 1.0,
+            ],
+            'JUNGLE' => [
+                'kda' => 3.0, 'cs' => 1.5, 'gold' => 2.0, 'damage' => 2.0,
+                'damageTaken' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 3.5,
+                'vision' => 2.0, 'wards' => 2.0,
+            ],
+            'MIDDLE' => [
+                'kda' => 3.0, 'cs' => 2.5, 'gold' => 2.0, 'damage' => 3.0,
+                'damageTaken' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5,
+                'vision' => 1.0, 'wards' => 1.0,
+            ],
+            'BOTTOM' => [
+                'kda' => 3.0, 'cs' => 3.0, 'gold' => 2.5, 'damage' => 3.5,
+                'damageTaken' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5,
+                'vision' => 1.0, 'wards' => 1.0,
+            ],
+            'UTILITY' => [
+                'kda' => 2.5, 'cs' => 0.0, 'gold' => 1.0, 'damage' => 1.0,
+                'damageTaken' => 1.5, 'towerDmg' => 0.5, 'objDmg' => 0.5,
+                'vision' => 4.0, 'wards' => 3.5,
+            ],
+        ];
+
+        $analysis = [];
+        $minutes = max($duration / 60, 1);
+
+        foreach ($roles as $role) {
+            $blue = null;
+            $red  = null;
+            foreach ($team100 as $p) {
+                if ($p['role'] === $role) { $blue = $p; break; }
+            }
+            foreach ($team200 as $p) {
+                if ($p['role'] === $role) { $red = $p; break; }
+            }
+            if (!$blue || !$red) continue;
+
+            $w = $weights[$role];
+
+            // Her metriği hesapla — farkı normalize et
+            $factors = [];
+            $score = 0;
+
+            // KDA
+            $bKda = $blue['deaths'] > 0 ? ($blue['kills'] + $blue['assists']) / $blue['deaths'] : ($blue['kills'] + $blue['assists']);
+            $rKda = $red['deaths'] > 0 ? ($red['kills'] + $red['assists']) / $red['deaths'] : ($red['kills'] + $red['assists']);
+            $kdaDiff = $bKda - $rKda;
+            $kdaScore = max(-1, min(1, $kdaDiff / 3)) * $w['kda'];
+            $score += $kdaScore;
+            if (abs($kdaScore) > 0.5) $factors[] = ['metric' => 'KDA', 'value' => round($kdaScore, 1)];
+
+            // CS
+            $csDiff = $blue['cs'] - $red['cs'];
+            $csNorm = max(-1, min(1, ($csDiff / $minutes) / 3));
+            $csScore = $csNorm * $w['cs'];
+            $score += $csScore;
+            if (abs($csScore) > 0.5) $factors[] = ['metric' => 'CS', 'value' => round($csScore, 1)];
+
+            // Gold
+            $goldDiff = $blue['gold'] - $red['gold'];
+            $goldNorm = max(-1, min(1, $goldDiff / 4000));
+            $goldScore = $goldNorm * $w['gold'];
+            $score += $goldScore;
+            if (abs($goldScore) > 0.5) $factors[] = ['metric' => 'Gold', 'value' => round($goldScore, 1)];
+
+            // Verilen hasar
+            $dmgDiff = $blue['damage'] - $red['damage'];
+            $dmgNorm = max(-1, min(1, $dmgDiff / 8000));
+            $dmgScore = $dmgNorm * $w['damage'];
+            $score += $dmgScore;
+            if (abs($dmgScore) > 0.5) $factors[] = ['metric' => 'Hasar', 'value' => round($dmgScore, 1)];
+
+            // Alınan hasar (tanklar için pozitif = iyi, diğerleri için nötr)
+            $dtDiff = ($blue['damageTaken'] ?? 0) - ($red['damageTaken'] ?? 0);
+            if (in_array($role, ['TOP', 'JUNGLE', 'UTILITY'])) {
+                // Tank/engage rolleri: daha fazla hasar almak iyi (soaking)
+                $dtNorm = max(-1, min(1, $dtDiff / 10000));
+            } else {
+                // Carry rolleri: daha az hasar almak iyi
+                $dtNorm = max(-1, min(1, -$dtDiff / 10000));
+            }
+            $dtScore = $dtNorm * $w['damageTaken'];
+            $score += $dtScore;
+            if (abs($dtScore) > 0.3) $factors[] = ['metric' => 'Alınan Hasar', 'value' => round($dtScore, 1)];
+
+            // Kule hasarı
+            $twrDiff = ($blue['towerDamage'] ?? 0) - ($red['towerDamage'] ?? 0);
+            $twrNorm = max(-1, min(1, $twrDiff / 5000));
+            $twrScore = $twrNorm * $w['towerDmg'];
+            $score += $twrScore;
+            if (abs($twrScore) > 0.3) $factors[] = ['metric' => 'Kule Hasarı', 'value' => round($twrScore, 1)];
+
+            // Objective hasarı
+            $objDiff = ($blue['objectiveDamage'] ?? 0) - ($red['objectiveDamage'] ?? 0);
+            $objNorm = max(-1, min(1, $objDiff / 15000));
+            $objScore = $objNorm * $w['objDmg'];
+            $score += $objScore;
+            if (abs($objScore) > 0.3) $factors[] = ['metric' => 'Obj. Hasarı', 'value' => round($objScore, 1)];
+
+            // Vision
+            $visDiff = ($blue['visionScore'] ?? 0) - ($red['visionScore'] ?? 0);
+            $visNorm = max(-1, min(1, $visDiff / 20));
+            $visScore = $visNorm * $w['vision'];
+            $score += $visScore;
+            if (abs($visScore) > 0.3) $factors[] = ['metric' => 'Görüş', 'value' => round($visScore, 1)];
+
+            // Totemler (placed + killed)
+            $bWards = ($blue['wardsPlaced'] ?? 0) + ($blue['wardsKilled'] ?? 0);
+            $rWards = ($red['wardsPlaced'] ?? 0) + ($red['wardsKilled'] ?? 0);
+            $wardDiff = $bWards - $rWards;
+            $wardNorm = max(-1, min(1, $wardDiff / 15));
+            $wardScore = $wardNorm * $w['wards'];
+            $score += $wardScore;
+            if (abs($wardScore) > 0.3) $factors[] = ['metric' => 'Totemler', 'value' => round($wardScore, 1)];
+
+            // Verdict
+            if ($score > 5) {
+                $verdict = 'blue_dominant';
+            } elseif ($score > 2) {
+                $verdict = 'blue_ahead';
+            } elseif ($score < -5) {
+                $verdict = 'red_dominant';
+            } elseif ($score < -2) {
+                $verdict = 'red_ahead';
+            } else {
+                $verdict = 'even';
+            }
+
+            // Öne çıkan istatistikler
+            $highlights = [];
+            if (abs($csDiff) >= 15) {
+                $highlights[] = ($csDiff > 0 ? '+' : '') . $csDiff . ' CS';
+            }
+            if (abs($goldDiff) >= 1000) {
+                $highlights[] = ($goldDiff > 0 ? '+' : '') . round($goldDiff / 1000, 1) . 'k gold';
+            }
+            if (abs($blue['kills'] - $red['kills']) >= 2) {
+                $kDiff = $blue['kills'] - $red['kills'];
+                $highlights[] = ($kDiff > 0 ? '+' : '') . $kDiff . ' kill';
+            }
+
+            // Factors'ı mutlak değere göre sırala, en etkili olanı ilk göster
+            usort($factors, fn($a, $b) => abs($b['value']) <=> abs($a['value']));
+
+            $analysis[] = [
+                'role'       => $role,
+                'label'      => $roleLabels[$role] ?? $role,
+                'bluePlayer' => $blue['summonerName'],
+                'redPlayer'  => $red['summonerName'],
+                'csDiff'     => $csDiff,
+                'goldDiff'   => $goldDiff,
+                'dmgDiff'    => $dmgDiff,
+                'verdict'    => $verdict,
+                'highlights' => $highlights,
+                'factors'    => array_slice($factors, 0, 3), // En etkili 3 faktör
+                'score'      => round($score, 1),
+            ];
+        }
+
+        return $analysis;
     }
 
     /**
@@ -475,7 +675,7 @@ class MatchService
      */
     public function getWinrateTimeline(string $puuid): array
     {
-        $cacheKey = "winrate_timeline:v2:{$puuid}";
+        $cacheKey = "winrate_timeline:v3:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $seasonStart = strtotime('2025-01-08');
@@ -514,9 +714,10 @@ class MatchService
                     $total++;
                     if ($m['win']) $wins++;
                     $result[$key][] = [
-                        'game'    => $total,
-                        'winRate' => round($wins / $total * 100, 1),
-                        'date'    => date('d M', (int) ($m['time'] / 1000)),
+                        'game'      => $total,
+                        'winRate'   => round($wins / $total * 100, 1),
+                        'date'      => date('d M', (int) ($m['time'] / 1000)),
+                        'timestamp' => $m['time'],
                     ];
                 }
             }
