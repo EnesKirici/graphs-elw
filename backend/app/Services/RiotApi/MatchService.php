@@ -165,6 +165,7 @@ class MatchService
                 'damage'         => $p['totalDamageDealtToChampions'],
                 'damageTaken'    => $p['totalDamageTaken'],
                 'healing'        => $p['totalHeal'] ?? 0,
+                'teamHealing'    => ($p['totalHealsOnTeammates'] ?? 0) + ($p['totalDamageShieldedOnTeammates'] ?? 0),
                 'visionScore'    => $p['visionScore'] ?? 0,
                 'wardsPlaced'    => $p['wardsPlaced'] ?? 0,
                 'wardsKilled'    => $p['wardsKilled'] ?? 0,
@@ -173,7 +174,7 @@ class MatchService
                 'items'          => $items,
                 'spells'         => [$spell1, $spell2],
                 'runes'          => $runes,
-                'role'           => $p['teamPosition'] ?: $p['individualPosition'] ?: '',
+                'role'           => ($p['teamPosition'] ?: $p['individualPosition'] ?: '') === 'BOT' ? 'BOTTOM' : ($p['teamPosition'] ?: $p['individualPosition'] ?: ''),
                 'doubleKills'    => $p['doubleKills'] ?? 0,
                 'tripleKills'    => $p['tripleKills'] ?? 0,
                 'quadraKills'    => $p['quadraKills'] ?? 0,
@@ -231,16 +232,16 @@ class MatchService
      *   Her metrik normalize edilir (-1 ile +1 arası) ve rol ağırlığıyla çarpılır.
      *   Pozitif skor = mavi üstün, negatif = kırmızı üstün.
      *
-     * Metrikler:
+     * Metrikler (9 adet):
      *   KDA        — (kills+assists)/deaths farkı, tüm roller için temel
      *   CS         — CS farkı / dakika, farm yapan roller için önemli
      *   Gold       — Toplam gold farkı, genel güç göstergesi
      *   Hasar      — Şampiyonlara verilen hasar farkı
-     *   AlınanHasar— Tanklar (top/jg) için pozitif, diğerleri için nötr
+     *   AlınanHasar— Tanklar (top/jg) için pozitif (soak), carry'ler için negatif
      *   KuleHasarı — Kule hasarı farkı, split-push/lane pressure göstergesi
      *   ObjHasarı  — Objective hasar (JUNGLE için ağırlıklı: ejder/baron/rift)
-     *   Görüş      — Vision score farkı (UTILITY için en ağırlıklı)
-     *   Totemler   — Ward placed + killed (UTILITY/JUNGLE için önemli)
+     *   Görüş      — Vision score + ward placed + ward killed birleşik
+     *   İyileştirme— Takım arkadaşlarına iyileştirme + kalkan (healer/enchanter sup)
      */
     private function buildLaneAnalysis(array $team100, array $team200, int $duration): array
     {
@@ -250,32 +251,34 @@ class MatchService
             'BOTTOM' => 'Alt', 'UTILITY' => 'Destek',
         ];
 
-        // Rol bazlı ağırlık tablosu — her rol için hangi metrik ne kadar önemli
+        // Rol bazlı ağırlık tablosu (9 metrik)
+        // İyileştirme = totalHealsOnTeammates + totalDamageShieldedOnTeammates
+        // Görüş = visionScore (%60) + wardPlaced+wardKilled (%40) birleşik
         $weights = [
             'TOP' => [
                 'kda' => 3.0, 'cs' => 2.5, 'gold' => 2.0, 'damage' => 2.5,
                 'damageTaken' => 1.5, 'towerDmg' => 2.0, 'objDmg' => 0.5,
-                'vision' => 1.0, 'wards' => 1.0,
+                'vision' => 1.5, 'healing' => 0.5,
             ],
             'JUNGLE' => [
                 'kda' => 3.0, 'cs' => 1.5, 'gold' => 2.0, 'damage' => 2.0,
                 'damageTaken' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 3.5,
-                'vision' => 2.0, 'wards' => 2.0,
+                'vision' => 2.5, 'healing' => 0.5,
             ],
             'MIDDLE' => [
                 'kda' => 3.0, 'cs' => 2.5, 'gold' => 2.0, 'damage' => 3.0,
                 'damageTaken' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5,
-                'vision' => 1.0, 'wards' => 1.0,
+                'vision' => 1.5, 'healing' => 0.5,
             ],
             'BOTTOM' => [
                 'kda' => 3.0, 'cs' => 3.0, 'gold' => 2.5, 'damage' => 3.5,
                 'damageTaken' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5,
-                'vision' => 1.0, 'wards' => 1.0,
+                'vision' => 1.5, 'healing' => 0.5,
             ],
             'UTILITY' => [
-                'kda' => 2.5, 'cs' => 0.0, 'gold' => 1.0, 'damage' => 1.0,
-                'damageTaken' => 1.5, 'towerDmg' => 0.5, 'objDmg' => 0.5,
-                'vision' => 4.0, 'wards' => 3.5,
+                'kda' => 3.0, 'cs' => 0.0, 'gold' => 1.0, 'damage' => 1.0,
+                'damageTaken' => 2.5, 'towerDmg' => 0.5, 'objDmg' => 0.5,
+                'vision' => 3.5, 'healing' => 2.5,
             ],
         ];
 
@@ -328,10 +331,15 @@ class MatchService
             $score += $dmgScore;
             if (abs($dmgScore) > 0.5) $factors[] = ['metric' => 'Hasar', 'value' => round($dmgScore, 1)];
 
-            // Alınan hasar (tanklar için pozitif = iyi, diğerleri için nötr)
+            // Alınan hasar:
+            //   Top/JG: fazla almak iyi (tank/soak/frontline)
+            //   Mid/ADC: az almak iyi (carry pozisyonlama)
+            //   Support: karşılaştırmalı — iki support'un farkı alınır, kim daha
+            //   fazla aldıysa o "daha aktif" sayılır. Tank sup doğal olarak fazla alır,
+            //   healer sup az alır ama iyileştirme metriğinden puan alır. Eşit ağırlık (2.5).
             $dtDiff = ($blue['damageTaken'] ?? 0) - ($red['damageTaken'] ?? 0);
             if (in_array($role, ['TOP', 'JUNGLE', 'UTILITY'])) {
-                // Tank/engage rolleri: daha fazla hasar almak iyi (soaking)
+                // Tank/frontline/engage rolleri: daha fazla hasar almak iyi
                 $dtNorm = max(-1, min(1, $dtDiff / 10000));
             } else {
                 // Carry rolleri: daha az hasar almak iyi
@@ -355,21 +363,29 @@ class MatchService
             $score += $objScore;
             if (abs($objScore) > 0.3) $factors[] = ['metric' => 'Obj. Hasarı', 'value' => round($objScore, 1)];
 
-            // Vision
-            $visDiff = ($blue['visionScore'] ?? 0) - ($red['visionScore'] ?? 0);
-            $visNorm = max(-1, min(1, $visDiff / 20));
-            $visScore = $visNorm * $w['vision'];
+            // Görüş (birleşik: vision score %60 + ward activity %40)
+            // Support/Jungle için normalize böleni daha düşük → küçük farklar bile etkili
+            $bVis = ($blue['visionScore'] ?? 0);
+            $rVis = ($red['visionScore'] ?? 0);
+            $bWards = ($blue['wardsPlaced'] ?? 0) + ($blue['wardsKilled'] ?? 0);
+            $rWards = ($red['wardsPlaced'] ?? 0) + ($red['wardsKilled'] ?? 0);
+            $visDivisor = in_array($role, ['UTILITY', 'JUNGLE']) ? 10 : 20;
+            $wardDivisor = in_array($role, ['UTILITY', 'JUNGLE']) ? 8 : 15;
+            $visNorm = max(-1, min(1, ($bVis - $rVis) / $visDivisor));
+            $wardNorm = max(-1, min(1, ($bWards - $rWards) / $wardDivisor));
+            $combinedVision = ($visNorm * 0.6 + $wardNorm * 0.4);
+            $visScore = $combinedVision * $w['vision'];
             $score += $visScore;
             if (abs($visScore) > 0.3) $factors[] = ['metric' => 'Görüş', 'value' => round($visScore, 1)];
 
-            // Totemler (placed + killed)
-            $bWards = ($blue['wardsPlaced'] ?? 0) + ($blue['wardsKilled'] ?? 0);
-            $rWards = ($red['wardsPlaced'] ?? 0) + ($red['wardsKilled'] ?? 0);
-            $wardDiff = $bWards - $rWards;
-            $wardNorm = max(-1, min(1, $wardDiff / 15));
-            $wardScore = $wardNorm * $w['wards'];
-            $score += $wardScore;
-            if (abs($wardScore) > 0.3) $factors[] = ['metric' => 'Totemler', 'value' => round($wardScore, 1)];
+            // İyileştirme + Kalkan (takım arkadaşlarına)
+            $bHeal = $blue['teamHealing'] ?? 0;
+            $rHeal = $red['teamHealing'] ?? 0;
+            $healDiff = $bHeal - $rHeal;
+            $healNorm = max(-1, min(1, $healDiff / 8000));
+            $healScore = $healNorm * $w['healing'];
+            $score += $healScore;
+            if (abs($healScore) > 0.3) $factors[] = ['metric' => 'İyileştirme', 'value' => round($healScore, 1)];
 
             // Verdict
             if ($score > 5) {
@@ -538,7 +554,7 @@ class MatchService
                     'win'          => $player['win'],
                     'duration'     => $info['gameDuration'],
                     'queueType'    => self::QUEUE_NAMES[$info['queueId'] ?? 0] ?? 'Diğer',
-                    'role'         => $player['teamPosition'] ?: $player['individualPosition'] ?: '',
+                    'role'         => ($player['teamPosition'] ?: $player['individualPosition'] ?: '') === 'BOT' ? 'BOTTOM' : ($player['teamPosition'] ?: $player['individualPosition'] ?: ''),
                     'gameCreation' => $info['gameCreation'],
                     'champLevel'   => $player['champLevel'],
                     'doubleKills'  => $player['doubleKills'] ?? 0,
@@ -595,6 +611,8 @@ class MatchService
                             if ($p['puuid'] === $puuid) {
                                 $role = $p['teamPosition'] ?: $p['individualPosition'] ?: '';
                                 if (!$role) break;
+                                // Riot API bazen "BOT" döner, "BOTTOM"a normalize et
+                                if ($role === 'BOT') $role = 'BOTTOM';
                                 if (!isset($rawByKey[$queueKey][$role])) $rawByKey[$queueKey][$role] = ['games' => 0, 'wins' => 0];
                                 $rawByKey[$queueKey][$role]['games']++;
                                 if ($p['win']) $rawByKey[$queueKey][$role]['wins']++;
