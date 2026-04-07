@@ -30,6 +30,8 @@ function kdaColor(k) {
 const roles = { TOP: "Top", JUNGLE: "JG", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Sup" };
 
 const TIER_ORDER = { challenger: 0, grandmaster: 1, diamond: 2, emerald: 3, gold: 4, silver: 5 };
+
+
 function sortBadges(badges) {
   return [...badges].sort((a, b) => (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99));
 }
@@ -66,6 +68,84 @@ function PlayerIcon({ player: p }) {
           <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-2.5 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap">
             <p className="text-[11px] text-white font-medium">{p.gameName || p.name}<span className="text-gray-500 text-[9px] ml-0.5">#{p.tagLine}</span></p>
             <p className="text-[9px] text-gray-500">{p.name}</p>
+          </div>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+
+const PERF_COLORS = {
+  emerald: { text: "text-emerald-400", icon: "▲" },
+  blue:    { text: "text-blue-400",    icon: "◆" },
+  yellow:  { text: "text-yellow-400",  icon: "●" },
+  red:     { text: "text-red-400",     icon: "▼" },
+  gray:    { text: "text-gray-500",    icon: "—" },
+};
+
+function PerfLabelTag({ perfLabel, ranking }) {
+  const [anchor, setAnchor] = useState(null);
+  const c = PERF_COLORS[perfLabel.color] || PERF_COLORS.gray;
+
+  return (
+    <>
+      <p
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+        className={`text-[8px] font-semibold truncate cursor-default ${c.text}`}
+      >
+        {c.icon} {perfLabel.label}
+      </p>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-56">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`text-sm font-bold ${c.text}`}>{c.icon} {perfLabel.label}</span>
+              {ranking && <span className="text-[10px] text-gray-500 bg-[#1b2230] px-1.5 py-0.5 rounded">{ranking.rank}. sıra</span>}
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed">{perfLabel.desc}</p>
+            {ranking?.elwScore != null && (
+              <div className="mt-2 pt-2 border-t border-[#1b2230]/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-500">ELW Score</span>
+                  <span className={`text-[12px] font-bold ${c.text}`}>{ranking.elwScore.toFixed(1)}</span>
+                </div>
+                <div className="mt-1 h-1.5 rounded-full bg-[#1b2230] overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${ranking.elwScore * 10}%`, background: perfLabel.color === "emerald" ? "#10b981" : perfLabel.color === "blue" ? "#3b82f6" : perfLabel.color === "yellow" ? "#f59e0b" : perfLabel.color === "red" ? "#ef4444" : "#6b7280" }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+
+function MoreBadgesTooltip({ badges }) {
+  const [anchor, setAnchor] = useState(null);
+  return (
+    <>
+      <span
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+        className="text-[9px] text-gray-500 cursor-default hover:text-gray-300"
+      >
+        +{badges.length}
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 space-y-1">
+            {badges.map((b) => {
+              const st = TIER_STYLES[b.tier] || TIER_STYLES.silver;
+              const hasGrad = !!st.gradient;
+              return (
+                <div key={b.key} className="flex items-center gap-2">
+                  <span className={`text-[10px] font-bold ${hasGrad ? "bg-clip-text text-transparent" : (st.text || "")}`} style={hasGrad ? { backgroundImage: st.gradient } : undefined}>{b.label}</span>
+                  <span className="text-[9px] text-gray-500">{b.desc}</span>
+                </div>
+              );
+            })}
           </div>
         </Tooltip>
       )}
@@ -121,7 +201,7 @@ export default function MatchCard({ match: m }) {
 
   return (
     <div className={`border-l-[3px] ${bdr} ${bg} hover:bg-white/[0.03] transition-colors`}>
-      <div className="flex items-center gap-3 px-3 py-2.5">
+      <div className="flex items-center justify-between px-3 py-2.5">
 
         {/* CHAMP + SPELL + RUNE */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -129,6 +209,23 @@ export default function MatchCard({ match: m }) {
             <div className="relative">
               <img src={m.champion.image} alt="" width={44} height={44} className="rounded-lg" />
               <span className="absolute -bottom-1 -right-1 text-[8px] bg-[#0d1117] text-gray-400 px-0.5 rounded border border-[#1b2230] font-mono">{m.champLevel}</span>
+              {/* Sıralama — sol üst */}
+              {m.ranking && (
+                <span
+                  className={`absolute -top-2 -left-2 w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-black border-2 z-10 ${
+                    m.ranking.rank === 1
+                      ? "mvp-glow border-[#c8aa6e]/60"
+                      : m.ranking.rank <= 3
+                        ? "bg-[#0d1117] text-emerald-400 border-emerald-500/50"
+                        : m.ranking.rank >= 8
+                          ? "bg-[#0d1117] text-red-400 border-red-500/50"
+                          : "bg-[#0d1117] text-gray-300 border-[#2a3441]"
+                  }`}
+                  title={`${m.ranking.rank === 1 ? "MVP" : m.ranking.rank + ". sıra"} — ELW Score: ${m.ranking.elwScore}/10`}
+                >
+                  {m.ranking.rank === 1 ? <span className="mvp-text">1</span> : m.ranking.rank}
+                </span>
+              )}
             </div>
             <div className="flex gap-0.5">
               {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={18} height={18} className="rounded-sm" title={m.spells[0].name} />}
@@ -138,60 +235,72 @@ export default function MatchCard({ match: m }) {
           <RuneTooltip runes={m.runes} keystoneSize={22} subTreeSize={16} />
         </div>
 
-        {/* NAME + ROLE */}
+        {/* SOL SABİT: Name + Role */}
         <div className="w-16 flex-shrink-0">
           <p className="text-[11px] font-medium text-gray-200 truncate">{m.champion.name}</p>
           <p className="text-[9px] text-gray-500">{roles[m.role] || m.role}</p>
-          <p className="text-[9px] text-gray-600">{m.queueType}</p>
+          {m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} />}
         </div>
 
-        {/* KDA + CS alt satır */}
-        <div className="w-20 flex-shrink-0 text-center">
-          <p className="text-sm font-semibold text-gray-200">{m.kills}<span className="text-gray-600">/</span>{m.deaths}<span className="text-gray-600">/</span>{m.assists}</p>
-          <p className={`text-[10px] font-mono ${kdaColor(m.kda)}`}>{typeof m.kda === "number" ? m.kda.toFixed(2) : m.kda}</p>
-          <p className="text-[9px] text-gray-500 mt-0.5">{m.cs} CS</p>
-        </div>
-
-        {/* ITEMS */}
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          {m.items.slice(0, 6).map((item, i) => (
-            <ItemTooltip key={i} item={item} size={24} />
-          ))}
-          {Array.from({ length: Math.max(0, 6 - m.items.length) }).map((_, i) => (
-            <div key={`e${i}`} className="w-6 h-6 rounded-sm bg-[#1b2230]" />
-          ))}
-        </div>
-
-        {/* BADGES */}
-        {badges.length > 0 && (
-          <div className="flex-1 min-w-0 hidden md:flex flex-wrap items-center gap-1 px-1">
-            {badges.slice(0, 3).map((b) => (
-              <BadgeTag key={b.key} badge={b} />
-            ))}
-            {badges.length > 3 && (
-              <span className="text-[9px] text-gray-600">+{badges.length - 3}</span>
-            )}
+        {/* ORTA ESNEK: KDA + Items + Badges — eşit dağılır */}
+        <div className="flex-1 flex items-center justify-evenly gap-2 min-w-0">
+          {/* KDA */}
+          <div className="flex-shrink-0 text-center">
+            <p className="text-sm font-semibold text-gray-200">{m.kills}<span className="text-gray-600">/</span>{m.deaths}<span className="text-gray-600">/</span>{m.assists}</p>
+            <p className={`text-[10px] font-mono ${kdaColor(m.kda)}`}>{typeof m.kda === "number" ? m.kda.toFixed(2) : m.kda}</p>
+            <p className="text-[9px] text-gray-500 mt-0.5">{m.cs} CS</p>
           </div>
-        )}
 
-        {/* RESULT */}
-        <div className="w-14 flex-shrink-0 text-center ml-auto">
-          <p className={`text-[11px] font-bold ${resClr}`}>{resTxt}</p>
-          <p className="text-[10px] text-gray-500">{fmtDur(m.duration)}</p>
-          <p className="text-[9px] text-gray-600">{timeAgo(m.gameCreation)}</p>
+          {/* Items */}
+          <div className="flex-shrink-0">
+            <div className="flex gap-0.5">
+              {[0, 1, 2].map((i) => m.items[i]
+                ? <ItemTooltip key={i} item={m.items[i]} size={26} />
+                : <div key={i} className="w-[26px] h-[26px] rounded-sm bg-[#1b2230]" />
+              )}
+            </div>
+            <div className="flex gap-0.5 mt-0.5">
+              {[3, 4, 5].map((i) => m.items[i]
+                ? <ItemTooltip key={i} item={m.items[i]} size={26} />
+                : <div key={i} className="w-[26px] h-[26px] rounded-sm bg-[#1b2230]" />
+              )}
+              {m.items[6]
+                ? <ItemTooltip item={m.items[6]} size={26} />
+                : <div className="w-[26px] h-[26px] rounded-full bg-[#1b2230]" />
+              }
+            </div>
+          </div>
+
+          {/* Badges */}
+          {badges.length > 0 && (
+            <div className="hidden md:flex flex-col gap-0.5 flex-shrink-0">
+              <div className="flex items-center gap-1 flex-nowrap">
+                {badges.slice(0, 2).map((b) => <BadgeTag key={b.key} badge={b} />)}
+              </div>
+              {badges.length > 2 && (
+                <div className="flex items-center gap-1 flex-nowrap">
+                  {badges.slice(2, 4).map((b) => <BadgeTag key={b.key} badge={b} />)}
+                  {badges.length > 4 && <MoreBadgesTooltip badges={badges.slice(4)} />}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* TEAMS */}
-        <div className="flex-shrink-0 hidden lg:block">
-          <div className="flex gap-0.5 mb-0.5">
-            {m.allies?.map((a, i) => (
-              <PlayerIcon key={i} player={a} />
-            ))}
+        {/* SAĞ SABİT: Result + Teams */}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className="w-14 text-center">
+            <p className={`text-[11px] font-bold ${resClr}`}>{resTxt}</p>
+            <p className="text-[10px] text-gray-500">{fmtDur(m.duration)}</p>
+            <p className="text-[9px] text-gray-600">{timeAgo(m.gameCreation)}</p>
           </div>
-          <div className="flex gap-0.5">
-            {m.enemies?.map((e, i) => (
-              <PlayerIcon key={i} player={e} />
-            ))}
+          <div className="hidden lg:block">
+            <div className="flex gap-0.5 mb-0.5">
+              {m.allies?.map((a, i) => <PlayerIcon key={i} player={a} />)}
+            </div>
+            <div className="flex gap-0.5">
+              {m.enemies?.map((e, i) => <PlayerIcon key={i} player={e} />)}
+            </div>
           </div>
         </div>
       </div>

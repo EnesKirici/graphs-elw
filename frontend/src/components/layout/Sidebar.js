@@ -84,10 +84,10 @@ export default function Sidebar() {
             className={`w-full flex items-center gap-3 rounded-lg transition-all duration-200 text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer ${
               collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
             }`}
-            title={collapsed ? "Rozet Rehberi" : undefined}
+            title={collapsed ? "Rozet & Skor" : undefined}
           >
             <Award size={20} />
-            {!collapsed && <span className="text-sm font-medium">Rozet Rehberi</span>}
+            {!collapsed && <span className="text-sm font-medium">Rozet & Skor</span>}
           </button>
           {!collapsed && (
             <div className="px-3 py-1.5 flex items-center gap-2">

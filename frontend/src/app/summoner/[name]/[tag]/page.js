@@ -171,6 +171,7 @@ export default async function SummonerPage({ params }) {
                   {recentStats.frequentBadges.slice(0, 4).map((b) => (
                     <ProfileBadge key={b.key} badge={b} totalGames={recentStats.totalGames} />
                   ))}
+                  <span className="text-gray-500 text-[10px] cursor-help" title="Son maçlarda en sık kazanılan rozetler burada listelenir">?</span>
                 </div>
               )}
             </div>
@@ -233,14 +234,6 @@ export default async function SummonerPage({ params }) {
                               </span>
                             )}
                             {solo?.hotStreak && <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">Galibiyet Serisi</span>}
-                          </div>
-                        )}
-                        {/* Sık alınan rozetler — istatistik altında */}
-                        {recentStats?.frequentBadges?.length > 0 && (
-                          <div className="flex items-center justify-center gap-1.5 mt-3 pt-3 border-t border-[#1b2230]/20 flex-wrap">
-                            {recentStats.frequentBadges.slice(0, 5).map((b) => (
-                              <ProfileBadge key={b.key} badge={b} totalGames={recentStats.totalGames} size="sm" />
-                            ))}
                           </div>
                         )}
                       </>

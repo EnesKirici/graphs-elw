@@ -96,6 +96,122 @@ class MatchService
     }
 
     /**
+     * Maç timeline verisi — dakika dakika gold/xp/cs + eventler.
+     */
+    public function getMatchTimeline(string $matchId): ?array
+    {
+        return Cache::remember("match:timeline:{$matchId}", config('riot.cache_ttl.match_detail'), function () use ($matchId) {
+            try {
+                return $this->api->regionRequest(
+                    "/lol/match/v5/matches/{$matchId}/timeline"
+                );
+            } catch (\Exception $e) {
+                return null;
+            }
+        });
+    }
+
+    /**
+     * Timeline verisinden oyuncunun erken/geç oyun performansını analiz et.
+     * participantId ile eşleşen oyuncunun gold frame'lerini karşılaştırır.
+     */
+    private function calculatePerformanceLabel(array $ranking, array $player, array $info, ?array $timeline): ?array
+    {
+        $rank = $ranking['rank'];
+        $win = $player['win'];
+        $kda = $player['deaths'] > 0
+            ? ($player['kills'] + $player['assists']) / $player['deaths']
+            : ($player['kills'] + $player['assists']);
+        $deaths = $player['deaths'];
+        $minutes = max(($info['gameDuration'] ?? 1) / 60, 1);
+
+        // Timeline'dan erken/geç oyun gold analizi
+        $earlyGoldLead = null; // 10dk'daki gold farkı (ortalamaya göre)
+        $lateGoldLead = null;
+
+        if ($timeline && isset($timeline['info']['frames'])) {
+            $frames = $timeline['info']['frames'];
+            $participantId = null;
+
+            // participantId bul
+            foreach ($info['participants'] as $i => $p) {
+                if ($p['puuid'] === $player['puuid']) {
+                    $participantId = $i + 1; // 1-indexed
+                    break;
+                }
+            }
+
+            if ($participantId) {
+                $pid = (string) $participantId;
+
+                // Tüm oyuncuların ortalama gold'unu hesapla (frame bazlı)
+                $getAvgGold = function ($frame) {
+                    $golds = [];
+                    foreach ($frame['participantFrames'] as $pf) {
+                        $golds[] = $pf['totalGold'] ?? 0;
+                    }
+                    return count($golds) > 0 ? array_sum($golds) / count($golds) : 0;
+                };
+
+                // 10. dakika frame (index ~10, her frame 1dk)
+                $earlyFrame = $frames[min(10, count($frames) - 1)] ?? null;
+                if ($earlyFrame && isset($earlyFrame['participantFrames'][$pid])) {
+                    $myGold = $earlyFrame['participantFrames'][$pid]['totalGold'] ?? 0;
+                    $avgGold = $getAvgGold($earlyFrame);
+                    $earlyGoldLead = $myGold - $avgGold;
+                }
+
+                // Son frame
+                $lastFrame = end($frames);
+                if ($lastFrame && isset($lastFrame['participantFrames'][$pid])) {
+                    $myGold = $lastFrame['participantFrames'][$pid]['totalGold'] ?? 0;
+                    $avgGold = $getAvgGold($lastFrame);
+                    $lateGoldLead = $myGold - $avgGold;
+                }
+            }
+        }
+
+        // Etiket belirleme — öncelik sırasına göre
+        if ($rank <= 2 && $win && $kda >= 4) {
+            return ['label' => 'Durdurulamaz', 'desc' => 'Eşsiz performans sergileyerek takımını zafere taşıdı.', 'color' => 'emerald'];
+        }
+
+        if ($rank <= 3 && $win) {
+            return ['label' => 'Lider', 'desc' => 'İyi kararlar verip takımını zafere taşıdı.', 'color' => 'emerald'];
+        }
+
+        if ($earlyGoldLead !== null && $lateGoldLead !== null) {
+            // Geç açılan: erken kötü ama sonra iyi
+            if ($earlyGoldLead < -300 && $lateGoldLead > 500 && $win) {
+                return ['label' => 'Geç Açılan', 'desc' => 'Zaman içinde giderek artan performans göstererek zafere ulaştı.', 'color' => 'blue'];
+            }
+
+            // İyi başladı ama düştü
+            if ($earlyGoldLead > 500 && $lateGoldLead < -200 && !$win) {
+                return ['label' => 'Erken Baskın', 'desc' => 'İyi bir başlangıç yaptı ama avantajı koruyamadı.', 'color' => 'yellow'];
+            }
+        }
+
+        if ($rank <= 3 && !$win) {
+            return ['label' => 'Dirençli', 'desc' => 'Yenilgiye rağmen takımındaki en iyi performansı gösterdi.', 'color' => 'blue'];
+        }
+
+        if ($win && $rank >= 4 && $rank <= 6) {
+            return ['label' => 'Katkıcı', 'desc' => 'Takımına istikrarlı katkı sağlayarak galibiyete yardımcı oldu.', 'color' => 'gray'];
+        }
+
+        if ($rank >= 8) {
+            return ['label' => 'Mücadele', 'desc' => 'Zor bir maç geçirdi.', 'color' => 'red'];
+        }
+
+        if ($rank >= 5 && $rank <= 7) {
+            return ['label' => 'Ortalama', 'desc' => 'Standart bir performans sergiledi.', 'color' => 'gray'];
+        }
+
+        return null;
+    }
+
+    /**
      * Tek bir maçın tüm detayını frontend-friendly formatta döner.
      * 10 oyuncunun tam istatistikleri, takım verileri, hasar, gözcüler vb.
      */
@@ -506,6 +622,13 @@ class MatchService
 
                 if (!$player) continue;
 
+                // Maç içi sıralama — 10 oyuncunun performans skoru
+                $ranking = $this->calculateMatchRanking($info['participants'], $player['puuid'], $info['gameDuration'] ?? 0);
+
+                // Timeline + performans etiketi
+                $timeline = $this->getMatchTimeline($matchId);
+                $perfLabel = $this->calculatePerformanceLabel($ranking, $player, $info, $timeline);
+
                 // Item'ler (isim + açıklama dahil)
                 $items = [];
                 for ($i = 0; $i <= 6; $i++) {
@@ -585,6 +708,9 @@ class MatchService
                     'quadraKills'  => $player['quadraKills'] ?? 0,
                     'pentaKills'   => $player['pentaKills'] ?? 0,
                     'badges'       => $this->calculateBadges($player, $info),
+                    'ranking'      => $ranking,
+                    'perfLabel'    => $perfLabel,
+                    'missions'     => $player['missions'] ?? null,
                 ];
             } catch (\Exception $e) {
                 continue;
@@ -1121,9 +1247,118 @@ class MatchService
     }
 
     /**
+     * ELW Score — 10 üzerinden performans puanı.
+     *
+     * Rol bazlı ağırlıklar:
+     *   KDA          — hayatta kalma + öldürme dengesi
+     *   DPM          — dakika başı hasar (carry roller için önemli)
+     *   GPM          — gold verimliliği
+     *   KP           — kill katılımı
+     *   Görüş/dk     — harita kontrolü (sup/jg için önemli)
+     *   Kule Hasarı  — split-push katkısı (top/mid için önemli)
+     *   Obj Hasarı   — objektif katkısı (jg için önemli)
+     *   Alınan Hasar — tank katkısı (top/sup için pozitif)
+     *
+     * Z-score normalize: maç ortalaması = 5.0
+     */
+    private function calculateMatchRanking(array $participants, string $puuid, int $duration = 0): array
+    {
+        // Rol bazlı ağırlık tablosu — 9 metrik
+        $roleWeights = [
+            'TOP'     => ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 1.5, 'vision' => 1.0, 'towerDmg' => 2.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 0.0],
+            'JUNGLE'  => ['kda' => 2.5, 'dpm' => 1.5, 'gpm' => 1.5, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 0.5, 'objDmg' => 3.0, 'tankPct' => 0.5, 'healing' => 0.0],
+            'MIDDLE'  => ['kda' => 2.5, 'dpm' => 2.5, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
+            'BOTTOM'  => ['kda' => 2.0, 'dpm' => 3.0, 'gpm' => 2.5, 'kp' => 2.0, 'vision' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
+            'UTILITY' => ['kda' => 2.0, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.5, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 2.5],
+        ];
+        $defaultW = ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.0, 'vision' => 1.5, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.0];
+
+        $minutes = max($duration / 60, 1);
+
+        $scores = [];
+        foreach ($participants as $p) {
+            $deaths = max($p['deaths'], 1);
+            $c = $p['challenges'] ?? [];
+            $role = ($p['teamPosition'] ?: $p['individualPosition'] ?: '');
+            if ($role === 'BOT') $role = 'BOTTOM';
+            $w = $roleWeights[$role] ?? $defaultW;
+
+            // KDA — logaritmik scale, yüksek KDA farkı korunur
+            $kda = ($p['kills'] + $p['assists']) / $deaths;
+            $kdaNorm = min(log($kda + 1) / log(10), 1);  // log: KDA 9→1.0, KDA 3→0.6, KDA 15→1.0
+
+            $dpm = ($c['damagePerMinute'] ?? 0);
+            $dpmNorm = min($dpm / 1500, 1);     // 1500 DPM = max (eski: 1200)
+
+            $gpm = ($c['goldPerMinute'] ?? 0);
+            $gpmNorm = min($gpm / 700, 1);      // 700 GPM = max (eski: 600)
+
+            $kp = ($c['killParticipation'] ?? 0);
+
+            $vsMin = ($c['visionScorePerMinute'] ?? 0);
+            $vsNorm = min($vsMin / 3.0, 1);     // 3.0 VS/dk = max (eski: 2.5)
+
+            $towerDmg = ($p['damageDealtToTurrets'] ?? 0);
+            $towerNorm = min($towerDmg / 10000, 1);  // 10000 = max (eski: 8000)
+
+            $objDmg = ($p['damageDealtToObjectives'] ?? 0);
+            $objNorm = min($objDmg / 30000, 1);      // 30000 = max (eski: 25000)
+
+            $tankPct = ($c['damageTakenOnTeamPercentage'] ?? 0);
+
+            // İyileştirme — takım arkadaşlarına heal + shield, dakika başına
+            $teamHealing = (($p['totalHealsOnTeammates'] ?? 0) + ($p['totalDamageShieldedOnTeammates'] ?? 0)) / $minutes;
+            $healNorm = min($teamHealing / 800, 1);  // 800/dk = max (healer sup)
+
+            $score = $kdaNorm * $w['kda']
+                   + $dpmNorm * $w['dpm']
+                   + $gpmNorm * $w['gpm']
+                   + $kp * $w['kp']
+                   + $vsNorm * $w['vision']
+                   + $towerNorm * $w['towerDmg']
+                   + $objNorm * $w['objDmg']
+                   + $tankPct * $w['tankPct']
+                   + $healNorm * $w['healing'];
+
+            $scores[] = ['puuid' => $p['puuid'], 'score' => $score];
+        }
+
+        // Z-score normalize → 0-10 arası (×1.8 = 10.0 zor, ~2.8 stdDev uzakta olmalı)
+        $rawScores = array_column($scores, 'score');
+        $avg = array_sum($rawScores) / max(count($rawScores), 1);
+        $variance = 0;
+        foreach ($rawScores as $rs) { $variance += ($rs - $avg) ** 2; }
+        $stdDev = max(sqrt($variance / max(count($rawScores), 1)), 0.5);
+
+        foreach ($scores as &$s) {
+            $z = ($s['score'] - $avg) / $stdDev;
+            $s['elwScore'] = round(max(0, min(10, 5 + $z * 1.8)), 1);
+        }
+        unset($s);
+
+        // Skora göre sırala
+        usort($scores, fn($a, $b) => $b['score'] <=> $a['score']);
+
+        $rank = 1;
+        $myScore = 0;
+        foreach ($scores as $i => $s) {
+            if ($s['puuid'] === $puuid) {
+                $rank = $i + 1;
+                $myScore = $s['elwScore'];
+                break;
+            }
+        }
+
+        return [
+            'rank'     => $rank,
+            'elwScore' => $myScore,
+        ];
+    }
+
+    /**
      * Maç performansına göre rozet hesapla.
      * Tier sistemi LoL rank renklerine karşılık gelir (zorluk göstergesi):
-     *   challenger > grandmaster > diamond > emerald > gold > silver > bronze
+     *   challenger > grandmaster > diamond > emerald > gold > silver
      */
     private function calculateBadges(array $p, array $info): array
     {
@@ -1211,8 +1446,8 @@ class MatchService
         // === OBJEKTİF ===
 
         $plates = $c['turretPlatesTaken'] ?? 0;
-        if ($plates >= 2) {
-            $tier = $plates >= 7 ? 'challenger' : ($plates >= 5 ? 'diamond' : ($plates >= 3 ? 'gold' : 'silver'));
+        if ($plates >= 3) {
+            $tier = $plates >= 10 ? 'challenger' : ($plates >= 7 ? 'diamond' : ($plates >= 5 ? 'emerald' : 'gold'));
             $badges[] = ['key' => 'plate_taker', 'label' => 'Kule Yıkıcı', 'desc' => "{$plates} plaka aldı", 'category' => 'objective', 'tier' => $tier];
         }
 
@@ -1252,6 +1487,27 @@ class MatchService
         if ($ssDodge >= 20) {
             $tier = $ssDodge >= 70 ? 'challenger' : ($ssDodge >= 50 ? 'diamond' : ($ssDodge >= 35 ? 'emerald' : 'gold'));
             $badges[] = ['key' => 'dodge_master', 'label' => 'Kaçış Ustası', 'desc' => "{$ssDodge} skillshot savuşturdu", 'category' => 'combat', 'tier' => $tier];
+        }
+
+        // Feed tespiti — çok ölüm + düşük katkı = rozet yok, soru işareti
+        if (empty($badges) && $p['deaths'] >= 6) {
+            $messages = [
+                'Bazen böyle günler de olur...',
+                'Bir dahaki sefere!',
+                'Her maç ders verir.',
+                'Gri ekran simulator',
+                'Rakip bugün şanslıydı.',
+                'Takım arkadaşların seni özledi.',
+                'Respawn speedrun denemesi',
+                'Harita karanlıktı zaten...',
+            ];
+            $badges[] = [
+                'key' => 'rough_game',
+                'label' => '????',
+                'desc' => $messages[array_rand($messages)],
+                'category' => 'misc',
+                'tier' => 'silver',
+            ];
         }
 
         return $badges;

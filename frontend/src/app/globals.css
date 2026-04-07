@@ -94,6 +94,33 @@
 .tier-c { color: #6b7280; }
 .tier-d { color: #4b5563; }
 
+/* =============== MVP BADGE =============== */
+@keyframes mvpShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.mvp-glow {
+  background: #0d1117;
+  box-shadow: 0 0 6px rgba(200, 170, 110, 0.4), 0 0 12px rgba(120, 200, 230, 0.15);
+  animation: mvpPulse 2s ease-in-out infinite;
+}
+
+@keyframes mvpPulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(200, 170, 110, 0.3), 0 0 8px rgba(120, 200, 230, 0.1); }
+  50% { box-shadow: 0 0 8px rgba(200, 170, 110, 0.6), 0 0 16px rgba(120, 200, 230, 0.25); }
+}
+
+.mvp-text {
+  background: linear-gradient(90deg, #f0e6d2, #c8aa6e, #78c8e6, #c8aa6e, #f0e6d2);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: mvpShift 3s ease-in-out infinite;
+}
+
 /* =============== SCROLLBAR =============== */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #060a10; }
