@@ -11,6 +11,7 @@ use App\Services\RiotApi\MatchService;
 use App\Services\RiotApi\DataDragonService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SummonerController extends Controller
 {
@@ -100,6 +101,54 @@ class SummonerController extends Controller
         }
     }
 
+    /**
+     * Oyuncu cache'ini temizle ve güncel veriyi döndür.
+     * POST /api/v1/summoner/{puuid}/refresh
+     */
+    public function refresh(string $puuid): JsonResponse
+    {
+        // Bu oyuncuya ait tüm cache key pattern'lerini temizle
+        $patterns = [
+            "league:ranked:{$puuid}",
+            "summoner:puuid:{$puuid}",
+            "mastery:top:{$puuid}:*",
+            "mastery:score:{$puuid}",
+        ];
+
+        // Wildcard olmayan key'leri direkt sil
+        foreach ($patterns as $pattern) {
+            if (!str_contains($pattern, '*')) {
+                Cache::forget($pattern);
+            }
+        }
+
+        // Sezon/match bazlı cache'ler — versiyon prefix'li
+        $seasonKeys = [
+            "season_match_ids:v2:{$puuid}:420",
+            "season_match_ids:v2:{$puuid}:440",
+            "season_match_ids:v2:{$puuid}:400",
+            "season_match_ids:v2:{$puuid}:430",
+            "season_match_ids:v2:{$puuid}:490",
+            "winrate_timeline:v5:{$puuid}",
+            "season_roles:v3:{$puuid}",
+            "season_champs:v3:{$puuid}",
+            "match:ids:{$puuid}:10:0",
+            "match:ids:{$puuid}:20:0",
+        ];
+
+        foreach ($seasonKeys as $key) {
+            Cache::forget($key);
+        }
+
+        // Güncel veriyi yeniden çek ve döndür
+        try {
+            $profile = $this->summoner->getByPuuid($puuid);
+            return $this->buildFullResponse($profile);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Yenileme başarısız.'], 500);
+        }
+    }
+
     private function buildFullResponse(array $profile): JsonResponse
     {
         $puuid = $profile['puuid'];
@@ -144,9 +193,19 @@ class SummonerController extends Controller
             }
         } catch (\Exception $e) {}
 
-        // Winrate timeline — ayrı try-catch (hata diğer verileri etkilemesin)
+        // Winrate timeline — tek kaynak: sezon W/L verileri buradan türetilir
         try {
             $winrateTimeline = $this->match->getWinrateTimeline($puuid);
+
+            // Ranked W/L/WR'yi timeline verisinden al (tek kaynak)
+            foreach (['solo', 'flex'] as $q) {
+                if (isset($ranked[$q]) && $ranked[$q] && isset($winrateTimeline[$q])) {
+                    $ranked[$q]['wins']    = $winrateTimeline[$q]['wins'];
+                    $ranked[$q]['losses']  = $winrateTimeline[$q]['losses'];
+                    $ranked[$q]['games']   = $winrateTimeline[$q]['games'];
+                    $ranked[$q]['winRate'] = $winrateTimeline[$q]['winRate'];
+                }
+            }
         } catch (\Exception $e) {}
 
         // DB'ye kaydet — autocomplete için

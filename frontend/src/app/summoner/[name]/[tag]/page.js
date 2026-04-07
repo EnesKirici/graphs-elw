@@ -4,6 +4,7 @@ import RoleRadar from "@/components/summoner/RoleRadar";
 import ChampionPool from "@/components/summoner/ChampionPool";
 import WinrateSection from "@/components/summoner/WinrateSection";
 import SummonerContent from "@/components/summoner/SummonerContent";
+import RefreshButton from "@/components/summoner/RefreshButton";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
@@ -147,7 +148,6 @@ export default async function SummonerPage({ params }) {
                 {(() => {
                   const mainRole = data.seasonRoles?.mainRole || recentStats?.mainRole;
                   if (!mainRole) return null;
-                  // "Jungle/Mid Main" → ["Jungle", "Mid"] veya "Top Main" → ["Top"]
                   const roleIcons = { Top: "/roles/top.png", Jungle: "/roles/jungle.png", Mid: "/roles/mid.png", ADC: "/roles/bot.png", Support: "/roles/support.png" };
                   const parts = mainRole.replace(" Main", "").split("/");
                   return (
@@ -162,6 +162,7 @@ export default async function SummonerPage({ params }) {
                     </span>
                   );
                 })()}
+                <RefreshButton puuid={profile.puuid} />
               </div>
             </div>
           </div>
@@ -321,8 +322,8 @@ function RankCard({ title, data, winrateTimeline, defaultOpen }) {
       </div>
 
       {/* Winrate geçmişi — açılır/kapanır */}
-      {winrateTimeline && winrateTimeline.length >= 2 && (
-        <WinrateSection timeline={winrateTimeline} defaultOpen={defaultOpen} />
+      {winrateTimeline?.timeline?.length >= 2 && (
+        <WinrateSection timeline={winrateTimeline.timeline} defaultOpen={defaultOpen} />
       )}
     </div>
   );

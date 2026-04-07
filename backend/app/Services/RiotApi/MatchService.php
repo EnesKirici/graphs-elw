@@ -25,11 +25,31 @@ class MatchService
         1700 => 'Arena',
     ];
 
+    // Riot sezonu her yıl ~8 Ocak'ta başlar
+    private const SEASON_START_DAY = '01-08';
+
     public function __construct(
         private RiotApiService $api,
         private DataDragonService $ddragon,
         private LeagueService $league,
     ) {}
+
+    /**
+     * Mevcut sezonun başlangıç timestamp'ini döner.
+     * 8 Ocak'tan önceyse önceki yılın sezonunu kullanır.
+     */
+    private function seasonStartTimestamp(): int
+    {
+        $year = (int) date('Y');
+        $start = strtotime("{$year}-" . self::SEASON_START_DAY);
+
+        // Henüz bu yılın sezon başlangıcına gelmediyse önceki yılı kullan
+        if (time() < $start) {
+            $start = strtotime(($year - 1) . '-' . self::SEASON_START_DAY);
+        }
+
+        return $start;
+    }
 
     /**
      * Son N maçın ID'lerini getir.
@@ -51,10 +71,10 @@ class MatchService
      */
     public function getSeasonMatchIds(string $puuid, int $queueId): array
     {
-        $cacheKey = "season_match_ids:{$puuid}:{$queueId}";
+        $cacheKey = "season_match_ids:v2:{$puuid}:{$queueId}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.match_ids'), function () use ($puuid, $queueId) {
-            $seasonStart = strtotime('2025-01-08');
+            $seasonStart = $this->seasonStartTimestamp();
             return $this->api->regionRequest(
                 "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
                 ['startTime' => $seasonStart, 'queue' => $queueId, 'count' => 100]
@@ -576,14 +596,14 @@ class MatchService
      */
     public function getSeasonRoleStats(string $puuid): array
     {
-        $cacheKey = "season_roles:v2:{$puuid}";
+        $cacheKey = "season_roles:v3:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $roleLabels = ['TOP' => 'Top', 'JUNGLE' => 'Jungle', 'MIDDLE' => 'Mid', 'BOTTOM' => 'ADC', 'UTILITY' => 'Support'];
             $roleIcons  = ['TOP' => 'top', 'JUNGLE' => 'jungle', 'MIDDLE' => 'mid', 'BOTTOM' => 'bot', 'UTILITY' => 'support'];
 
-            // Sezon başlangıcı: Ocak 2025
-            $seasonStart = strtotime('2025-01-08');
+            // Sezon başlangıcı: Ocak 2026
+            $seasonStart = $this->seasonStartTimestamp();
 
             // Ranked + Normal kuyruklar
             $queues = [
@@ -693,11 +713,10 @@ class MatchService
      */
     public function getWinrateTimeline(string $puuid): array
     {
-        $cacheKey = "winrate_timeline:v3:{$puuid}";
+        $cacheKey = "winrate_timeline:v5:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
-            $seasonStart = strtotime('2025-01-08');
-            $result = ['solo' => [], 'flex' => []];
+            $result = ['solo' => null, 'flex' => null];
 
             foreach ([420 => 'solo', 440 => 'flex'] as $queueId => $key) {
                 $matches = [];
@@ -710,6 +729,10 @@ class MatchService
                 foreach ($matchIds as $matchId) {
                     try {
                         $detail = $this->getMatchDetail($matchId);
+
+                        // Remake'leri atla (5 dakikadan kısa maçlar)
+                        if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
+
                         foreach ($detail['info']['participants'] as $p) {
                             if ($p['puuid'] === $puuid) {
                                 $matches[] = [
@@ -728,16 +751,25 @@ class MatchService
 
                 $wins = 0;
                 $total = 0;
+                $timeline = [];
                 foreach ($matches as $m) {
                     $total++;
                     if ($m['win']) $wins++;
-                    $result[$key][] = [
+                    $timeline[] = [
                         'game'      => $total,
                         'winRate'   => round($wins / $total * 100, 1),
                         'date'      => date('d M', (int) ($m['time'] / 1000)),
                         'timestamp' => $m['time'],
                     ];
                 }
+
+                $result[$key] = [
+                    'timeline' => $timeline,
+                    'wins'     => $wins,
+                    'losses'   => $total - $wins,
+                    'games'    => $total,
+                    'winRate'  => $total > 0 ? round($wins / $total * 100, 1) : 0,
+                ];
             }
 
             return $result;
@@ -750,10 +782,10 @@ class MatchService
      */
     public function getSeasonChampionStats(string $puuid): array
     {
-        $cacheKey = "season_champs:v2:{$puuid}";
+        $cacheKey = "season_champs:v3:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
-            $seasonStart = strtotime('2025-01-08');
+            $seasonStart = $this->seasonStartTimestamp();
 
             $queues = [
                 420 => 'ranked',

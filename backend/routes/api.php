@@ -37,6 +37,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/summoner/autocomplete', [SummonerController::class, 'autocomplete']);
     Route::get('/summoner/search', [SummonerController::class, 'search']);
     Route::get('/summoner/{puuid}/matches', [SummonerController::class, 'matches']);
+    Route::post('/summoner/{puuid}/refresh', [SummonerController::class, 'refresh']);
     Route::get('/summoner/{puuid}', [SummonerController::class, 'show']);
 
     // Maç detay

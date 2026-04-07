@@ -31,6 +31,8 @@ class LeagueService
                 $wins = $entry['wins'];
                 $losses = $entry['losses'];
 
+                // W/L/winRate, getWinrateTimeline() tarafından override edilir (tek kaynak)
+                // Burada sadece tier/rank/LP ve League API'ye özgü alanlar tutulur
                 $data = [
                     'tier'      => $entry['tier'],
                     'rank'      => $entry['rank'],
@@ -42,6 +44,10 @@ class LeagueService
                         ? round($wins / ($wins + $losses) * 100, 1)
                         : 0,
                     'hotStreak' => $entry['hotStreak'],
+                    'veteran'   => $entry['veteran'] ?? false,
+                    'freshBlood'=> $entry['freshBlood'] ?? false,
+                    'inactive'  => $entry['inactive'] ?? false,
+                    'miniSeries'=> $entry['miniSeries'] ?? null,
                 ];
 
                 if ($entry['queueType'] === 'RANKED_SOLO_5x5') {
