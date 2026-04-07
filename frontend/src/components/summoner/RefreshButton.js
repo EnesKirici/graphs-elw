@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
+import Tooltip from "@/components/shared/Tooltip";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -16,6 +17,7 @@ function timeAgo(ts) {
 export default function RefreshButton({ puuid }) {
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [anchor, setAnchor] = useState(null);
   const [, setTick] = useState(0);
 
   const storageKey = `refresh:${puuid}`;
@@ -24,7 +26,6 @@ export default function RefreshButton({ puuid }) {
     const saved = localStorage.getItem(storageKey);
     if (saved) setLastRefresh(Number(saved));
 
-    // Her 30 saniyede "X dk önce" metnini güncelle
     const interval = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(interval);
   }, [storageKey]);
@@ -45,21 +46,24 @@ export default function RefreshButton({ puuid }) {
   }
 
   return (
-    <div className="flex flex-col items-start gap-0.5">
+    <>
       <button
         onClick={handleRefresh}
         disabled={loading}
-        title="Profili yenile"
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
         className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-gray-300 hover:text-white px-3 py-1.5 rounded-full transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
         <span className="text-xs font-medium">{loading ? "Yenileniyor..." : "Güncelle"}</span>
       </button>
-      {lastRefresh && (
-        <span className="text-[9px] text-gray-500 pl-1">
-          Son güncelleme: {timeAgo(lastRefresh)}
-        </span>
+      {anchor && lastRefresh && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap">
+            <p className="text-[11px] text-gray-400">Son güncelleme: {timeAgo(lastRefresh)}</p>
+          </div>
+        </Tooltip>
       )}
-    </div>
+    </>
   );
 }

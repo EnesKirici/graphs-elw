@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/context/SidebarContext";
-import { LayoutDashboard, Swords, Trophy, ChevronsLeft, Menu } from "lucide-react";
+import { LayoutDashboard, Swords, Trophy, ChevronsLeft, Menu, Award } from "lucide-react";
+import BadgeGuideModal from "@/components/summoner/BadgeGuideModal";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -16,6 +17,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { collapsed, toggle, ready } = useSidebar();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [badgeGuideOpen, setBadgeGuideOpen] = useState(false);
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
@@ -77,6 +79,16 @@ export default function Sidebar() {
 
         {/* Alt */}
         <div className="border-t border-[#1b2230]/30 p-2 space-y-1">
+          <button
+            onClick={() => setBadgeGuideOpen(true)}
+            className={`w-full flex items-center gap-3 rounded-lg transition-all duration-200 text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer ${
+              collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
+            }`}
+            title={collapsed ? "Rozet Rehberi" : undefined}
+          >
+            <Award size={20} />
+            {!collapsed && <span className="text-sm font-medium">Rozet Rehberi</span>}
+          </button>
           {!collapsed && (
             <div className="px-3 py-1.5 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -92,6 +104,8 @@ export default function Sidebar() {
           </button>
         </div>
       </aside>
+
+      <BadgeGuideModal open={badgeGuideOpen} onClose={() => setBadgeGuideOpen(false)} />
     </>
   );
 }

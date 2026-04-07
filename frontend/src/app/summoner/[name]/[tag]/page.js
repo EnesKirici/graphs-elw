@@ -5,6 +5,7 @@ import ChampionPool from "@/components/summoner/ChampionPool";
 import WinrateSection from "@/components/summoner/WinrateSection";
 import SummonerContent from "@/components/summoner/SummonerContent";
 import RefreshButton from "@/components/summoner/RefreshButton";
+import ProfileBadge from "@/components/summoner/ProfileBadge";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
@@ -164,6 +165,14 @@ export default async function SummonerPage({ params }) {
                 })()}
                 <RefreshButton puuid={profile.puuid} />
               </div>
+              {/* Top rozetler — banner'da */}
+              {recentStats?.frequentBadges?.length > 0 && (
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {recentStats.frequentBadges.slice(0, 4).map((b) => (
+                    <ProfileBadge key={b.key} badge={b} totalGames={recentStats.totalGames} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -224,6 +233,14 @@ export default async function SummonerPage({ params }) {
                               </span>
                             )}
                             {solo?.hotStreak && <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">Galibiyet Serisi</span>}
+                          </div>
+                        )}
+                        {/* Sık alınan rozetler — istatistik altında */}
+                        {recentStats?.frequentBadges?.length > 0 && (
+                          <div className="flex items-center justify-center gap-1.5 mt-3 pt-3 border-t border-[#1b2230]/20 flex-wrap">
+                            {recentStats.frequentBadges.slice(0, 5).map((b) => (
+                              <ProfileBadge key={b.key} badge={b} totalGames={recentStats.totalGames} size="sm" />
+                            ))}
                           </div>
                         )}
                       </>
@@ -300,7 +317,11 @@ function RankCard({ title, data, winrateTimeline, defaultOpen }) {
         <img src={rankBadgeUrl(data.tier)} alt={data.tier} width={badgeSize} height={badgeSize} className="flex-shrink-0" />
 
         <div className="flex-1 min-w-0">
-          <p className="text-lg font-bold text-white">{tierName} {data.rank}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-lg font-bold text-white">{tierName} {data.rank}</p>
+            {data.freshBlood && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">Yeni Yükseldi</span>}
+            {data.veteran && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full font-medium">Deneyimli</span>}
+          </div>
           <p className="text-xs text-gray-400">{data.lp} LP</p>
           <div className="flex items-center gap-1.5 mt-1">
             <span className="text-xs text-emerald-400">{data.wins} Win</span>
@@ -328,4 +349,5 @@ function RankCard({ title, data, winrateTimeline, defaultOpen }) {
     </div>
   );
 }
+
 

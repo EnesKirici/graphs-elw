@@ -68,12 +68,8 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
     });
   }
 
-  // Gradient fill — son WR rengine göre
-  const fillColor = wrToColor(lastWr);
-
-  // Fill polygon
-  const polyPoints = data.map((t, i) => `${getX(i)},${getY(t.winRate)}`).join(" ");
-  const fillPoints = `${pad.x},${pad.y + chartH} ${polyPoints} ${pad.x + chartW},${pad.y + chartH}`;
+  // Fill — her segment kendi renginde doldurulur
+  const bottomY = pad.y + chartH;
 
   // Tarih etiketleri
   const dateLabels = [];
@@ -129,10 +125,12 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
             onMouseLeave={() => { setHovIdx(null); setHovAnchor(null); }}
           >
             <defs>
-              <linearGradient id="wrFillGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={fillColor} stopOpacity="0.15" />
-                <stop offset="100%" stopColor={fillColor} stopOpacity="0" />
-              </linearGradient>
+              {segments.map((s, i) => (
+                <linearGradient key={`fg${i}`} id={`wrFill${i}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={s.color} stopOpacity="0.18" />
+                  <stop offset="100%" stopColor={s.color} stopOpacity="0" />
+                </linearGradient>
+              ))}
             </defs>
 
             {/* Min/Max WR etiketleri */}
@@ -154,8 +152,10 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
               </>
             )}
 
-            {/* Gradient dolgu */}
-            <polygon points={fillPoints} fill="url(#wrFillGrad)" />
+            {/* Segment bazlı gradient dolgu */}
+            {segments.map((s, i) => (
+              <polygon key={`f${i}`} points={`${s.x1},${bottomY} ${s.x1},${s.y1} ${s.x2},${s.y2} ${s.x2},${bottomY}`} fill={`url(#wrFill${i})`} />
+            ))}
 
             {/* Renkli çizgi segmentleri */}
             {segments.map((s, i) => (
