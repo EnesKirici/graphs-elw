@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, Eye, Swords, Shield, Info, User, Users } from "lucide-react";
 import Tooltip from "@/components/shared/Tooltip";
 import ItemTooltip from "@/components/shared/ItemTooltip";
@@ -384,25 +384,31 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
       {tab === "analysis" && (
         <div className="p-6">
           <div className="flex items-center justify-center gap-1.5 mb-6 flex-wrap">
-            {allPlayers.map((p) => {
+            {allPlayers.map((p, idx) => {
               const isBlue = t1?.players?.some(tp => tp.puuid === p.puuid);
               const isSelected = p.puuid === selectedPuuid;
               const rank = p._matchRank;
+              const sc = p._elwScore ?? 5;
+              const clr = sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
               return (
-                <button key={p.puuid} onClick={() => setSelectedPuuid(p.puuid)}
-                  className={`relative rounded-xl overflow-hidden transition-all cursor-pointer ${isSelected ? "ring-2 ring-blue-400 scale-110" : "opacity-60 hover:opacity-100"}`}>
-                  <img src={p.champion.image} alt={p.champion.name} width={44} height={44} className="rounded-xl" />
-                  {rank && (
-                    <span className={`absolute -top-0.5 -left-0.5 text-[9px] font-bold px-1 rounded-br-lg rounded-tl-lg ${
-                      rank === 1 ? "mvp-glow border-[#c8aa6e]/60" : rank <= 3 ? "bg-emerald-500/90 text-white" : rank >= 8 ? "bg-red-500/80 text-white" : "bg-gray-600/80 text-gray-200"
-                    }`}>{rank === 1 ? <span className="mvp-text">{rank}</span> : rank}</span>
-                  )}
-                  <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${isBlue ? "bg-blue-500" : "bg-red-500"}`} />
-                </button>
+                <React.Fragment key={p.puuid}>
+                  {idx === 5 && <div className="w-4" />}
+                  <button onClick={() => setSelectedPuuid(p.puuid)}
+                    className={`relative rounded-xl transition-all cursor-pointer ${isSelected ? "ring-2 ring-blue-400 scale-110" : "opacity-60 hover:opacity-100"}`}>
+                    <img src={p.champion.image} alt={p.champion.name} width={44} height={44} className="rounded-xl" />
+                    {rank && (
+                      <span className={`absolute -top-0.5 -left-0.5 text-[9px] font-bold px-1 rounded-br-lg rounded-tl-lg ${
+                        rank === 1 ? "mvp-glow border-[#c8aa6e]/60" : rank <= 3 ? "bg-emerald-500/90 text-white" : rank >= 8 ? "bg-red-500/80 text-white" : "bg-gray-600/80 text-gray-200"
+                      }`}>{rank === 1 ? <span className="mvp-text">{rank}</span> : rank}</span>
+                    )}
+                    <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${isBlue ? "bg-blue-500" : "bg-red-500"}`} />
+                    <span className={`block text-[10px] font-bold mt-0.5 px-1 py-0.5 rounded-md text-white text-center ${clr}`}>{sc.toFixed(1)}</span>
+                  </button>
+                </React.Fragment>
               );
             })}
           </div>
-          {selectedPlayer && <AnalysisPanel player={selectedPlayer} allPlayers={allPlayers} t1={t1} duration={data.duration} />}
+          {selectedPlayer && <AnalysisPanel player={selectedPlayer} t1={t1} />}
         </div>
       )}
     </div>
@@ -865,7 +871,7 @@ function StatsRow({ p, maxVals }) {
 }
 
 /* ===== ANALİZ PANELİ ===== */
-function AnalysisPanel({ player, allPlayers, t1, duration }) {
+function AnalysisPanel({ player, t1 }) {
   const p = player;
   const isBlue = t1?.players?.some(tp => tp.puuid === p.puuid);
   const itemGroups = useMemo(() => groupItemsByRecall(p.itemTimeline || []), [p.puuid]);
@@ -881,58 +887,10 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
 
   const maxLevel = Math.min(Math.max(p.champLevel || 18, ...skillOrder.map(s => s.level)), 18);
 
-  // Takım ELW Score karşılaştırma
-  const myTeamPlayers = isBlue ? (t1?.players || []) : allPlayers.filter(ap => !t1?.players?.some(tp => tp.puuid === ap.puuid));
-  const enemyTeamPlayers = isBlue ? allPlayers.filter(ap => !t1?.players?.some(tp => tp.puuid === ap.puuid)) : (t1?.players || []);
-  const sortByRole = (arr) => {
-    const roleIdx = (pl) => { const i = ["TOP","JUNGLE","MIDDLE","BOTTOM","UTILITY"].indexOf(pl.role); return i >= 0 ? i : 99; };
-    return [...arr].sort((a, b) => roleIdx(a) - roleIdx(b));
-  };
-  const myTeamSorted = sortByRole(myTeamPlayers);
-  const enemyTeamSorted = sortByRole(enemyTeamPlayers);
-
   return (
     <div className="grid grid-cols-[1fr_340px] gap-6">
       {/* Sol */}
       <div className="space-y-6">
-        {/* Takım ELW Score Karşılaştırma */}
-        <div className="bg-[#0d1117]/50 rounded-xl p-4 border border-[#1b2230]/30">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-gray-500 mb-2.5">{isBlue ? "Takımın" : "Karşı Takım"}</p>
-              <div className="flex items-center gap-2">
-                {myTeamSorted.map(tp => {
-                  const sc = tp._elwScore ?? 5;
-                  const clr = sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
-                  const isMe = tp.puuid === p.puuid;
-                  return (
-                    <div key={tp.puuid} className={`text-center ${isMe ? "scale-110" : ""}`}>
-                      <img src={tp.champion.image} alt="" width={36} height={36}
-                        className={`rounded-lg ${isMe ? "ring-2 ring-blue-400" : ""}`} />
-                      <span className={`block text-[10px] font-bold mt-0.5 px-1.5 py-0.5 rounded-md text-white ${clr}`}>{sc.toFixed(1)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-2.5">{isBlue ? "Karşı Takım" : "Takımın"}</p>
-              <div className="flex items-center gap-2">
-                {enemyTeamSorted.map(tp => {
-                  const sc = tp._elwScore ?? 5;
-                  const clr = sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
-                  return (
-                    <div key={tp.puuid} className="text-center">
-                      <img src={tp.champion.image} alt="" width={36} height={36} className="rounded-lg" />
-                      <span className={`block text-[10px] font-bold mt-0.5 px-1.5 py-0.5 rounded-md text-white ${clr}`}>{sc.toFixed(1)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Oyuncu Özet */}
         <div className={`p-5 rounded-xl border ${isBlue ? "bg-blue-500/[0.04] border-blue-500/15" : "bg-red-500/[0.04] border-red-500/15"}`}>
           <div className="flex items-center gap-4">
@@ -1060,10 +1018,13 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
                         <td className="pr-1.5">
                           {abilityData?.image ? (
                             <img src={abilityData.image} alt={abilityData.name || skill} width={24} height={24}
-                              className="rounded border border-[#2a3441]/50" title={abilityData.name} />
-                          ) : (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${SKILL_COLORS[skill]}`}>{skill}</span>
-                          )}
+                              className="rounded border border-[#2a3441]/50 min-w-6 min-h-6 object-cover"
+                              title={abilityData.name}
+                              onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "inline-block"; }}
+                            />
+                          ) : null}
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${SKILL_COLORS[skill]}`}
+                            style={abilityData?.image ? { display: "none" } : undefined}>{skill}</span>
                         </td>
                         {Array.from({ length: maxLevel }, (_, i) => {
                           const level = i + 1;
