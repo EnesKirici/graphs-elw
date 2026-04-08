@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, Swords, Shield } from "lucide-react";
 import Tooltip from "@/components/shared/Tooltip";
 import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
@@ -58,6 +58,13 @@ function groupItemsByRecall(items) {
   return groups;
 }
 
+function flipVerdict(verdict) {
+  if (!verdict) return verdict;
+  if (verdict.startsWith("blue_")) return verdict.replace("blue_", "red_");
+  if (verdict.startsWith("red_")) return verdict.replace("red_", "blue_");
+  return verdict;
+}
+
 const ROLES_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
 const OBJECTIVES = [
   { key: "baron", label: "Baron", icon: "/objectives/baron.png" },
@@ -70,7 +77,7 @@ const OBJECTIVES = [
 
 const TABS = [
   { key: "overview", label: "Genel Bakış" },
-  { key: "damage", label: "Hasar" },
+  { key: "damage", label: "Hasar & Alınan Hasar" },
   { key: "stats", label: "İstatistikler" },
   { key: "analysis", label: "Analiz" },
 ];
@@ -82,12 +89,42 @@ const SKILL_COLORS = {
   R: "bg-amber-500 text-white",
 };
 
+/* ===== RANK BADGE ===== */
+function RankBadge({ rank, size = "sm" }) {
+  if (!rank) return null;
+  const isMvp = rank === 1;
+  const sizeClasses = size === "lg"
+    ? "w-7 h-7 text-xs"
+    : "w-6 h-6 text-[11px]";
+
+  if (isMvp) {
+    return (
+      <span className={`mvp-glow ${sizeClasses} flex items-center justify-center rounded-lg flex-shrink-0 border border-[#c8aa6e]/60`}>
+        <span className="mvp-text font-bold">{rank}</span>
+      </span>
+    );
+  }
+
+  const bg = rank <= 3
+    ? "bg-emerald-500 text-white border-emerald-400/50 shadow-[0_0_6px_rgba(16,185,129,0.4)]"
+    : rank >= 8
+    ? "bg-red-500 text-white border-red-400/50 shadow-[0_0_6px_rgba(239,68,68,0.4)]"
+    : "bg-gray-600/80 text-gray-200 border-gray-500/30";
+
+  return (
+    <span className={`${sizeClasses} font-bold flex items-center justify-center rounded-lg flex-shrink-0 border ${bg}`}>
+      {rank}
+    </span>
+  );
+}
+
 /* ===== ANA BİLEŞEN ===== */
 export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("overview");
   const [selectedPuuid, setSelectedPuuid] = useState(null);
+  const [damageTab, setDamageTab] = useState("dealt");
 
   useEffect(() => {
     (async () => {
@@ -99,7 +136,6 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
     })();
   }, [matchId]);
 
-  // Analiz tab: varsayılan seçili oyuncu
   useEffect(() => {
     if (data && !selectedPuuid) {
       const allP = [...(data.teams?.[0]?.players || []), ...(data.teams?.[1]?.players || [])];
@@ -122,8 +158,10 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
     </div>
   );
 
-  const t1 = data.teams[0];
-  const t2 = data.teams[1];
+  // Takım sıralaması — aranan oyuncu her zaman sol (mavi) tarafta
+  const swapped = !!searchedPuuid && data.teams[1]?.players?.some(p => p.puuid === searchedPuuid);
+  const t1 = swapped ? data.teams[1] : data.teams[0];
+  const t2 = swapped ? data.teams[0] : data.teams[1];
   const obj1 = t1?.info?.objectives || {};
   const obj2 = t2?.info?.objectives || {};
   const laneAnalysis = data.laneAnalysis || [];
@@ -135,12 +173,29 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
   };
   const bluePlayers = sortByRole(t1?.players);
   const redPlayers = sortByRole(t2?.players);
+
+  // LaneAnalysis — swapped ise yönleri çevir
   const analysisMap = {};
-  laneAnalysis.forEach((a) => { analysisMap[a.role] = a; });
+  laneAnalysis.forEach((a) => {
+    if (!swapped) {
+      analysisMap[a.role] = a;
+    } else {
+      analysisMap[a.role] = {
+        ...a,
+        verdict: flipVerdict(a.verdict),
+        highlights: (a.highlights || []).map(h => {
+          if (h.charAt(0) === "+") return "-" + h.slice(1);
+          if (h.charAt(0) === "-") return "+" + h.slice(1);
+          return h;
+        }),
+        score: -(a.score || 0),
+      };
+    }
+  });
+
   const allPlayers = [...(t1?.players || []), ...(t2?.players || [])];
   const maxDmg = Math.max(...allPlayers.map(p => p.damage), 1);
   const maxDmgTaken = Math.max(...allPlayers.map(p => p.damageTaken || 0), 1);
-
   const selectedPlayer = allPlayers.find(p => p.puuid === selectedPuuid);
 
   return (
@@ -217,7 +272,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
       {tab === "overview" && (
         <>
           <div className="grid grid-cols-[1fr_90px_1fr] border-b border-[#1b2230]/30">
-            <div className={`px-5 py-2.5 ${t1?.info?.win ? "bg-blue-500/5" : "bg-red-500/5"}`}>
+            <div className={`px-5 py-2.5 ${t1?.info?.win ? "bg-blue-500/8" : "bg-red-500/8"}`}>
               <span className={`text-sm font-bold ${t1?.info?.win ? "text-emerald-400" : "text-red-400"}`}>
                 {t1?.info?.win ? "Zafer" : "Yenilgi"} (Mavi)
               </span>
@@ -225,7 +280,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
             <div className="flex items-center justify-center bg-[#0d1117]/50">
               <span className="text-xs text-gray-600">VS</span>
             </div>
-            <div className={`px-5 py-2.5 text-right ${t2?.info?.win ? "bg-blue-500/5" : "bg-red-500/5"}`}>
+            <div className={`px-5 py-2.5 text-right ${t2?.info?.win ? "bg-blue-500/8" : "bg-red-500/8"}`}>
               <span className={`text-sm font-bold ${t2?.info?.win ? "text-emerald-400" : "text-red-400"}`}>
                 {t2?.info?.win ? "Zafer" : "Yenilgi"} (Kırmızı)
               </span>
@@ -256,6 +311,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
               { label: "Toplam Gold", v1: t1?.info?.totalGold || 0, v2: t2?.info?.totalGold || 0, fmt: fmtGold },
               { label: "Toplam Kill", v1: t1?.info?.totalKills || 0, v2: t2?.info?.totalKills || 0 },
               { label: "Toplam Hasar", v1: t1?.players?.reduce((s, p) => s + p.damage, 0) || 0, v2: t2?.players?.reduce((s, p) => s + p.damage, 0) || 0, fmt: fmtDmg },
+              { label: "Alınan Hasar", v1: t1?.players?.reduce((s, p) => s + (p.damageTaken || 0), 0) || 0, v2: t2?.players?.reduce((s, p) => s + (p.damageTaken || 0), 0) || 0, fmt: fmtDmg },
               { label: "Görüş Skoru", v1: t1?.players?.reduce((s, p) => s + (p.visionScore || 0), 0) || 0, v2: t2?.players?.reduce((s, p) => s + (p.visionScore || 0), 0) || 0 },
               { label: "Kule Hasarı", v1: t1?.players?.reduce((s, p) => s + (p.towerDamage || 0), 0) || 0, v2: t2?.players?.reduce((s, p) => s + (p.towerDamage || 0), 0) || 0, fmt: fmtDmg },
             ].map((m) => {
@@ -273,75 +329,41 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
             })}
           </div>
 
-          {/* Hasar Dağılımı — Karşılıklı */}
+          {/* Alt Tab: Verilen / Alınan Hasar */}
           <div>
-            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4">Hasar Dağılımı</h3>
-            <div className="space-y-3">
-              {bluePlayers.map((bp, i) => {
-                const rp = redPlayers[i];
-                const bpPhys = bp.physicalDamage || 0, bpMagic = bp.magicDamage || 0, bpTrue = bp.trueDamage || 0;
-                const bpTotal = Math.max(bpPhys + bpMagic + bpTrue, 1);
-                const bpPct = ((bp.damage || 0) / maxDmg) * 100;
-
-                const rpPhys = rp?.physicalDamage || 0, rpMagic = rp?.magicDamage || 0, rpTrue = rp?.trueDamage || 0;
-                const rpTotal = rp ? Math.max(rpPhys + rpMagic + rpTrue, 1) : 1;
-                const rpPct = rp ? ((rp.damage || 0) / maxDmg) * 100 : 0;
-
-                return (
-                  <div key={bp.puuid} className="grid grid-cols-[1fr_80px_1fr] gap-2 items-center">
-                    {/* Mavi taraf — sağdan sola */}
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-xs text-gray-400 w-12 text-right font-mono">{fmtDmg(bp.damage || 0)}</span>
-                      <div className="flex-1 flex justify-end">
-                        <div className="h-4 rounded-l-full overflow-hidden flex justify-end" style={{ width: `${bpPct}%`, minWidth: "4px" }}>
-                          <div className="h-full bg-gray-400" style={{ width: `${(bpTrue / bpTotal) * 100}%` }} />
-                          <div className="h-full bg-blue-500" style={{ width: `${(bpMagic / bpTotal) * 100}%` }} />
-                          <div className="h-full bg-orange-500" style={{ width: `${(bpPhys / bpTotal) * 100}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                    {/* Ortada şampiyonlar */}
-                    <div className="flex items-center justify-center gap-1.5">
-                      <img src={bp.champion.image} alt="" width={30} height={30} className="rounded-lg ring-1 ring-blue-500/40" />
-                      <span className="text-[10px] text-gray-600">vs</span>
-                      {rp && <img src={rp.champion.image} alt="" width={30} height={30} className="rounded-lg ring-1 ring-red-500/40" />}
-                    </div>
-                    {/* Kırmızı taraf — soldan sağa */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <div className="h-4 rounded-r-full overflow-hidden flex" style={{ width: `${rpPct}%`, minWidth: rp ? "4px" : "0" }}>
-                          <div className="h-full bg-orange-500" style={{ width: `${(rpPhys / rpTotal) * 100}%` }} />
-                          <div className="h-full bg-blue-500" style={{ width: `${(rpMagic / rpTotal) * 100}%` }} />
-                          <div className="h-full bg-gray-400" style={{ width: `${(rpTrue / rpTotal) * 100}%` }} />
-                        </div>
-                      </div>
-                      <span className="text-xs text-gray-400 w-12 text-left font-mono">{rp ? fmtDmg(rp.damage || 0) : ""}</span>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex items-center gap-1 mb-4">
+              <button onClick={() => setDamageTab("dealt")}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${damageTab === "dealt" ? "bg-blue-500/15 text-blue-400 border border-blue-500/30" : "text-gray-500 hover:text-gray-300 border border-transparent"}`}>
+                <Swords size={14} /> Verilen Hasar
+              </button>
+              <button onClick={() => setDamageTab("taken")}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${damageTab === "taken" ? "bg-red-500/15 text-red-400 border border-red-500/30" : "text-gray-500 hover:text-gray-300 border border-transparent"}`}>
+                <Shield size={14} /> Alınan Hasar
+              </button>
             </div>
-            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[#1b2230]/20">
-              <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" />Fiziksel</span>
-              <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Büyü</span>
-              <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-gray-400" />Gerçek</span>
-            </div>
+
+            <DamageDistribution
+              bluePlayers={bluePlayers}
+              redPlayers={redPlayers}
+              allPlayers={allPlayers}
+              maxDmg={damageTab === "dealt" ? maxDmg : maxDmgTaken}
+              mode={damageTab}
+            />
           </div>
         </div>
       )}
 
-      {/* STATS TAB — Karşılıklı */}
+      {/* STATS TAB */}
       {tab === "stats" && (
         <div className="p-6">
           <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-5">Detaylı İstatistikler</h3>
-          <StatsTable bluePlayers={bluePlayers} redPlayers={redPlayers} allPlayers={allPlayers} t1={t1} />
+          <StatsTable bluePlayers={bluePlayers} redPlayers={redPlayers} allPlayers={allPlayers} />
         </div>
       )}
 
       {/* ANALYSIS TAB */}
       {tab === "analysis" && (
         <div className="p-6">
-          {/* Oyuncu Seçici */}
           <div className="flex items-center justify-center gap-1.5 mb-6 flex-wrap">
             {allPlayers.map((p) => {
               const isBlue = t1?.players?.some(tp => tp.puuid === p.puuid);
@@ -352,15 +374,14 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
                   <img src={p.champion.image} alt={p.champion.name} width={44} height={44} className="rounded-xl" />
                   {p.matchRank && (
                     <span className={`absolute -top-0.5 -left-0.5 text-[9px] font-bold px-1 rounded-br-lg rounded-tl-lg ${
-                      p.matchRank === 1 ? "bg-yellow-500 text-black" : p.matchRank <= 3 ? "bg-emerald-500/90 text-white" : p.matchRank >= 8 ? "bg-red-500/80 text-white" : "bg-gray-600/80 text-gray-200"
-                    }`}>{p.matchRank}</span>
+                      p.matchRank === 1 ? "mvp-glow border-[#c8aa6e]/60" : p.matchRank <= 3 ? "bg-emerald-500/90 text-white" : p.matchRank >= 8 ? "bg-red-500/80 text-white" : "bg-gray-600/80 text-gray-200"
+                    }`}>{p.matchRank === 1 ? <span className="mvp-text">{p.matchRank}</span> : p.matchRank}</span>
                   )}
                   <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${isBlue ? "bg-blue-500" : "bg-red-500"}`} />
                 </button>
               );
             })}
           </div>
-
           {selectedPlayer && <AnalysisPanel player={selectedPlayer} allPlayers={allPlayers} t1={t1} duration={data.duration} />}
         </div>
       )}
@@ -442,24 +463,16 @@ function VerdictBadge({ analysis }) {
 /* ===== OYUNCU SATIRI ===== */
 function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
   const dmgPct = (p.damage / maxDmg) * 100;
+  const dmgTakenPct = ((p.damageTaken || 0) / maxDmgTaken) * 100;
   const rank = formatRank(p.tier, p.rankDivision);
   const multiKill = p.pentaKills > 0 ? "PENTA" : p.quadraKills > 0 ? "QUADRA" : p.tripleKills > 0 ? "TRIPLE" : null;
   const mirrored = side === "red";
-
-  const rankBg = p.matchRank === 1 ? "bg-yellow-500 text-black"
-    : p.matchRank <= 3 ? "bg-emerald-500/90 text-white"
-    : p.matchRank >= 8 ? "bg-red-500/80 text-white"
-    : "bg-gray-600/80 text-gray-200";
 
   return (
     <div className={`px-4 py-3 hover:bg-white/[0.02] transition-colors ${mirrored ? "pl-3" : ""}`}>
       <div className={`flex items-center gap-2.5 ${mirrored ? "flex-row-reverse" : ""}`}>
         {/* Sıralama */}
-        {p.matchRank && (
-          <span className={`text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-md flex-shrink-0 ${rankBg}`}>
-            {p.matchRank}
-          </span>
-        )}
+        <RankBadge rank={p.matchRank} />
 
         {/* Champ + Spells + Runes */}
         <div className={`flex items-center gap-1.5 flex-shrink-0 ${mirrored ? "flex-row-reverse" : ""}`}>
@@ -507,20 +520,93 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
         </div>
       </div>
 
-      {/* Alt stat satırı */}
-      <div className={`flex items-center gap-4 mt-2 ${mirrored ? "flex-row-reverse" : ""} ${mirrored ? "pr-[50px]" : "pl-[56px]"}`}>
-        <span className="text-[10px] text-gray-500">{p.cs} CS · {p.csPerMin}/d</span>
-        <span className="text-[10px] text-gray-500">{fmtGold(p.gold)} gold</span>
-        <span className="text-[10px] text-gray-500">{p.killParticipation}%</span>
-        <span className="text-[10px] text-yellow-600/80">{p.visionScore} 👁</span>
-        <div className="flex-1 min-w-[80px]">
-          <div className={`flex items-center gap-1 ${mirrored ? "flex-row-reverse" : ""}`}>
-            <span className={`text-[10px] text-gray-400 w-10 ${mirrored ? "text-left" : "text-right"}`}>{fmtDmg(p.damage)}</span>
+      {/* Alt stat satırı — BÜYÜK */}
+      <div className={`flex items-center gap-3 mt-2.5 ${mirrored ? "flex-row-reverse" : ""} ${mirrored ? "pr-[54px]" : "pl-[60px]"}`}>
+        <span className="text-xs text-gray-400 font-medium">{p.cs} CS · {p.csPerMin}/d</span>
+        <span className="text-xs text-yellow-600/90 font-medium">{fmtGold(p.gold)} gold</span>
+        <span className="text-xs text-cyan-500/80 font-medium">{p.killParticipation}% KP</span>
+        <span className="text-xs text-amber-500/80 font-medium flex items-center gap-0.5">
+          <Eye size={12} className="opacity-70" />{p.visionScore}
+        </span>
+        {/* Verilen + Alınan Hasar Barları */}
+        <div className="flex-1 min-w-[100px] space-y-1">
+          <div className={`flex items-center gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}>
+            <span className={`text-xs text-red-400/80 font-mono w-11 ${mirrored ? "text-left" : "text-right"}`}>{fmtDmg(p.damage)}</span>
             <div className={`flex-1 h-1.5 bg-[#1b2230] rounded-full overflow-hidden ${mirrored ? "flex justify-end" : ""}`}>
               <div className="h-full bg-red-500/60 rounded-full" style={{ width: `${dmgPct}%` }} />
             </div>
           </div>
+          <div className={`flex items-center gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}>
+            <span className={`text-xs text-blue-400/60 font-mono w-11 ${mirrored ? "text-left" : "text-right"}`}>{fmtDmg(p.damageTaken || 0)}</span>
+            <div className={`flex-1 h-1.5 bg-[#1b2230] rounded-full overflow-hidden ${mirrored ? "flex justify-end" : ""}`}>
+              <div className="h-full bg-blue-500/40 rounded-full" style={{ width: `${dmgTakenPct}%` }} />
+            </div>
+          </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== HASAR DAĞILIMI — Karşılıklı ===== */
+function DamageDistribution({ bluePlayers, redPlayers, allPlayers, maxDmg, mode }) {
+  const getVal = (p) => mode === "dealt" ? (p.damage || 0) : (p.damageTaken || 0);
+  const getPhys = (p) => mode === "dealt" ? (p.physicalDamage || 0) : (p.physicalDamageTaken || p.damageTaken * 0.5 || 0);
+  const getMagic = (p) => mode === "dealt" ? (p.magicDamage || 0) : (p.magicDamageTaken || p.damageTaken * 0.3 || 0);
+  const getTrue = (p) => mode === "dealt" ? (p.trueDamage || 0) : (p.trueDamageTaken || p.damageTaken * 0.05 || 0);
+
+  return (
+    <div>
+      <div className="space-y-3">
+        {bluePlayers.map((bp, i) => {
+          const rp = redPlayers[i];
+          const bVal = getVal(bp), bPhys = getPhys(bp), bMagic = getMagic(bp), bTrue = getTrue(bp);
+          const bTotal = Math.max(bPhys + bMagic + bTrue, 1);
+          const bPct = (bVal / maxDmg) * 100;
+
+          const rVal = rp ? getVal(rp) : 0;
+          const rPhys = rp ? getPhys(rp) : 0, rMagic = rp ? getMagic(rp) : 0, rTrue = rp ? getTrue(rp) : 0;
+          const rTotal = rp ? Math.max(rPhys + rMagic + rTrue, 1) : 1;
+          const rPct = rp ? (rVal / maxDmg) * 100 : 0;
+
+          return (
+            <div key={bp.puuid} className="grid grid-cols-[1fr_80px_1fr] gap-2 items-center">
+              {/* Mavi taraf */}
+              <div className="flex items-center gap-2 justify-end">
+                <span className="text-xs text-gray-400 w-12 text-right font-mono">{fmtDmg(bVal)}</span>
+                <div className="flex-1 flex justify-end">
+                  <div className="h-4 rounded-l-full overflow-hidden flex justify-end" style={{ width: `${bPct}%`, minWidth: "4px" }}>
+                    <div className="h-full bg-gray-400" style={{ width: `${(bTrue / bTotal) * 100}%` }} />
+                    <div className="h-full bg-blue-500" style={{ width: `${(bMagic / bTotal) * 100}%` }} />
+                    <div className="h-full bg-orange-500" style={{ width: `${(bPhys / bTotal) * 100}%` }} />
+                  </div>
+                </div>
+              </div>
+              {/* Ortada şampiyonlar */}
+              <div className="flex items-center justify-center gap-1.5">
+                <img src={bp.champion.image} alt="" width={30} height={30} className="rounded-lg ring-1 ring-blue-500/40" />
+                <span className="text-[10px] text-gray-600">vs</span>
+                {rp && <img src={rp.champion.image} alt="" width={30} height={30} className="rounded-lg ring-1 ring-red-500/40" />}
+              </div>
+              {/* Kırmızı taraf */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <div className="h-4 rounded-r-full overflow-hidden flex" style={{ width: `${rPct}%`, minWidth: rp ? "4px" : "0" }}>
+                    <div className="h-full bg-orange-500" style={{ width: `${(rPhys / rTotal) * 100}%` }} />
+                    <div className="h-full bg-blue-500" style={{ width: `${(rMagic / rTotal) * 100}%` }} />
+                    <div className="h-full bg-gray-400" style={{ width: `${(rTrue / rTotal) * 100}%` }} />
+                  </div>
+                </div>
+                <span className="text-xs text-gray-400 w-12 text-left font-mono">{rp ? fmtDmg(rVal) : ""}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[#1b2230]/20">
+        <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" />Fiziksel</span>
+        <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Büyü</span>
+        <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-gray-400" />Gerçek</span>
       </div>
     </div>
   );
@@ -541,7 +627,6 @@ const STAT_COLS = [
 ];
 
 function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
-  // Her stat için max değer
   const maxVals = {};
   STAT_COLS.forEach(col => {
     maxVals[col.k] = Math.max(...allPlayers.map(p => p.challenges?.[col.k] ?? 0));
@@ -549,7 +634,6 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
 
   return (
     <div className="grid grid-cols-2 gap-6">
-      {/* Mavi Takım */}
       <div>
         <div className="text-sm font-bold text-blue-400 mb-3 px-1">Mavi Takım</div>
         <div className="bg-blue-500/[0.03] rounded-xl overflow-hidden border border-blue-500/10">
@@ -563,14 +647,11 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
               </tr>
             </thead>
             <tbody>
-              {bluePlayers.map(p => (
-                <StatsRow key={p.puuid} p={p} maxVals={maxVals} />
-              ))}
+              {bluePlayers.map(p => <StatsRow key={p.puuid} p={p} maxVals={maxVals} />)}
             </tbody>
           </table>
         </div>
       </div>
-      {/* Kırmızı Takım */}
       <div>
         <div className="text-sm font-bold text-red-400 mb-3 px-1">Kırmızı Takım</div>
         <div className="bg-red-500/[0.03] rounded-xl overflow-hidden border border-red-500/10">
@@ -584,9 +665,7 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
               </tr>
             </thead>
             <tbody>
-              {redPlayers.map(p => (
-                <StatsRow key={p.puuid} p={p} maxVals={maxVals} />
-              ))}
+              {redPlayers.map(p => <StatsRow key={p.puuid} p={p} maxVals={maxVals} />)}
             </tbody>
           </table>
         </div>
@@ -625,13 +704,10 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
   const itemGroups = useMemo(() => groupItemsByRecall(p.itemTimeline || []), [p.puuid]);
   const skillOrder = p.skillOrder || [];
 
-  // Skill order → 18 level grid
   const skillGrid = useMemo(() => {
     const grid = { Q: [], W: [], E: [], R: [] };
     skillOrder.forEach(s => {
-      if (grid[s.skillKey]) {
-        grid[s.skillKey].push(s.level);
-      }
+      if (grid[s.skillKey]) grid[s.skillKey].push(s.level);
     });
     return grid;
   }, [skillOrder]);
@@ -640,7 +716,7 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
 
   return (
     <div className="grid grid-cols-[1fr_340px] gap-6">
-      {/* Sol — Oyuncu Bilgisi + Item Timeline */}
+      {/* Sol */}
       <div className="space-y-6">
         {/* Oyuncu Özet */}
         <div className={`p-5 rounded-xl border ${isBlue ? "bg-blue-500/[0.04] border-blue-500/15" : "bg-red-500/[0.04] border-red-500/15"}`}>
@@ -648,9 +724,9 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
             <div className="relative">
               <img src={p.champion.image} alt="" width={56} height={56} className="rounded-xl" />
               {p.matchRank && (
-                <span className={`absolute -top-1 -left-1 text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
-                  p.matchRank === 1 ? "bg-yellow-500 text-black" : p.matchRank <= 3 ? "bg-emerald-500 text-white" : p.matchRank >= 8 ? "bg-red-500 text-white" : "bg-gray-600 text-white"
-                }`}>{p.matchRank === 1 ? "MVP" : `#${p.matchRank}`}</span>
+                <span className={`absolute -top-1.5 -left-1.5`}>
+                  <RankBadge rank={p.matchRank} size="lg" />
+                </span>
               )}
             </div>
             <div className="flex-1">
@@ -678,7 +754,6 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
               <p>{p.killParticipation}% KP</p>
             </div>
           </div>
-          {/* ELW Score Bar */}
           {p.elwScore != null && (
             <div className="mt-4 pt-3 border-t border-[#1b2230]/30">
               <div className="flex items-center gap-3">
@@ -752,7 +827,6 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
 
       {/* Sağ — Skill Order + Runes */}
       <div className="space-y-6">
-        {/* Skill Order */}
         <div>
           <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">Yetenek Sırası</h4>
           {skillOrder.length > 0 ? (
@@ -795,13 +869,11 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
           )}
         </div>
 
-        {/* Runes */}
         {p.runes && (
           <div>
             <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">Rünler</h4>
             <div className="bg-[#0d1117]/40 rounded-xl p-4">
               <div className="grid grid-cols-2 gap-5">
-                {/* Primary */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     {p.runes.primaryTree?.icon && <img src={p.runes.primaryTree.icon} alt="" width={24} height={24} />}
@@ -817,7 +889,6 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
                     ))}
                   </div>
                 </div>
-                {/* Secondary */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     {p.runes.subTree?.icon && <img src={p.runes.subTree.icon} alt="" width={24} height={24} />}
