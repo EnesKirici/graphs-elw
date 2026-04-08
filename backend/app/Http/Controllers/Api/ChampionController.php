@@ -66,7 +66,13 @@ class ChampionController extends Controller
                     'name'        => $s['name'],
                     'description' => $s['description'],
                     'image'       => "https://ddragon.leagueoflegends.com/cdn/{$version}/img/spell/{$s['image']['full']}",
+                    'cooldown'    => $s['cooldownBurn'] ?? null,
+                    'cost'        => $s['costBurn'] ?? null,
+                    'range'       => $s['rangeBurn'] ?? null,
+                    'maxrank'     => $s['maxrank'] ?? 5,
                 ]),
+                'allytips'  => $champion['allytips'] ?? [],
+                'enemytips' => $champion['enemytips'] ?? [],
                 'passive' => [
                     'name'        => $champion['passive']['name'],
                     'description' => $champion['passive']['description'],

@@ -244,6 +244,34 @@ class MatchService
             ];
         }
 
+        // Şampiyon yeteneklerini toplu çek (cache'li, her şampiyon 1 kez)
+        $champAbilities = [];
+        $uniqueChamps = array_unique(array_column($info['participants'], 'championName'));
+        foreach ($uniqueChamps as $champName) {
+            try {
+                $champData = $this->ddragon->getChampionDetail($champName);
+                $abilities = ['passive' => null, 'Q' => null, 'W' => null, 'E' => null, 'R' => null];
+                if (!empty($champData['passive'])) {
+                    $abilities['passive'] = [
+                        'name'  => $champData['passive']['name'] ?? '',
+                        'image' => "{$ddragonBase}/cdn/{$version}/img/passive/{$champData['passive']['image']['full']}",
+                    ];
+                }
+                foreach (['Q' => 0, 'W' => 1, 'E' => 2, 'R' => 3] as $key => $idx) {
+                    if (!empty($champData['spells'][$idx])) {
+                        $spell = $champData['spells'][$idx];
+                        $abilities[$key] = [
+                            'name'  => $spell['name'] ?? '',
+                            'image' => "{$ddragonBase}/cdn/{$version}/img/spell/{$spell['image']['full']}",
+                        ];
+                    }
+                }
+                $champAbilities[$champName] = $abilities;
+            } catch (\Exception $e) {
+                $champAbilities[$champName] = null;
+            }
+        }
+
         $players = [];
         foreach ($info['participants'] as $p) {
             $tid = $p['teamId'];
@@ -286,6 +314,7 @@ class MatchService
                 'champion'       => [
                     'name'  => $p['championName'],
                     'image' => $this->ddragon->championIconUrl($p['championName']),
+                    'abilities' => $champAbilities[$p['championName']] ?? null,
                 ],
                 'champLevel'     => $p['champLevel'],
                 'teamId'         => $tid,

@@ -528,6 +528,8 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
         <span className="text-xs text-amber-500/80 font-medium flex items-center gap-0.5">
           <Eye size={12} className="opacity-70" />{p.visionScore}
         </span>
+        {/* ELW Score */}
+        {p.elwScore != null && <ElwScoreBadge p={p} />}
         {/* Verilen + Alınan Hasar Barları */}
         <div className="flex-1 min-w-[100px] space-y-1">
           <div className={`flex items-center gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}>
@@ -545,6 +547,51 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ===== ELW SCORE BADGE (hover popup) ===== */
+function ElwScoreBadge({ p }) {
+  const [anchor, setAnchor] = useState(null);
+  const sc = p.elwScore;
+  const color = sc >= 7 ? "emerald" : sc >= 5 ? "blue" : sc >= 3 ? "yellow" : "red";
+  const colorMap = { emerald: "text-emerald-400", blue: "text-blue-400", yellow: "text-yellow-400", red: "text-red-400" };
+  const bgMap = { emerald: "bg-emerald-400", blue: "bg-blue-400", yellow: "bg-yellow-400", red: "bg-red-400" };
+  const label = sc >= 8 ? "Olağanüstü" : sc >= 6.5 ? "Çok İyi" : sc >= 5 ? "İyi" : sc >= 3.5 ? "Mücadele" : "Zor Maç";
+
+  return (
+    <>
+      <span
+        className={`text-xs font-bold flex items-center gap-1 cursor-help ${colorMap[color]}`}
+        onMouseEnter={e => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+      >
+        <span className="w-5 h-1.5 rounded-full bg-[#1b2230] overflow-hidden inline-block align-middle">
+          <span className={`block h-full rounded-full ${bgMap[color]}`} style={{ width: `${sc * 10}%` }} />
+        </span>
+        {sc.toFixed(1)}
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-52">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-500">ELW Score</span>
+              <span className={`text-lg font-bold ${colorMap[color]}`}>{sc.toFixed(1)}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-[#1b2230] overflow-hidden mb-2.5">
+              <div className={`h-full rounded-full ${bgMap[color]}`} style={{ width: `${sc * 10}%` }} />
+            </div>
+            <div className={`flex items-center gap-1.5 mb-1 ${colorMap[color]}`}>
+              {p.matchRank && <span className="text-xs">#{p.matchRank}</span>}
+              <span className="text-sm font-semibold">{label}</span>
+            </div>
+            <p className="text-[10px] text-gray-500 leading-relaxed">
+              {p.kills}/{p.deaths}/{p.assists} KDA · {p.cs} CS · {fmtGold(p.gold)} gold
+            </p>
+          </div>
+        </Tooltip>
+      )}
+    </>
   );
 }
 
@@ -614,16 +661,16 @@ function DamageDistribution({ bluePlayers, redPlayers, allPlayers, maxDmg, mode 
 
 /* ===== İSTATİSTİK TABLOSU — Karşılıklı ===== */
 const STAT_COLS = [
-  { k: "damagePerMinute", l: "DPM", fmt: (v) => Math.round(v) },
-  { k: "goldPerMinute", l: "GPM", fmt: (v) => Math.round(v) },
-  { k: "killParticipation", l: "KP", fmt: (v) => Math.round(v * 100) + "%" },
-  { k: "visionScorePerMin", l: "VS/dk", fmt: (v) => v.toFixed(1) },
-  { k: "teamDamagePct", l: "Hasar%", fmt: (v) => Math.round(v * 100) + "%" },
-  { k: "damageTakenPct", l: "Tank%", fmt: (v) => Math.round(v * 100) + "%" },
-  { k: "soloKills", l: "Solo", fmt: (v) => v },
-  { k: "turretPlatesTaken", l: "Plaka", fmt: (v) => v },
-  { k: "laneMinions10", l: "CS@10", fmt: (v) => v },
-  { k: "controlWardsPlaced", l: "CW", fmt: (v) => v },
+  { k: "damagePerMinute", l: "DPM", desc: "Dakika Başı Hasar — Şampiyonlara verilen toplam hasarın dakikaya bölümü", fmt: (v) => Math.round(v) },
+  { k: "goldPerMinute", l: "GPM", desc: "Dakika Başı Altın — Kazanılan toplam altının dakikaya bölümü", fmt: (v) => Math.round(v) },
+  { k: "killParticipation", l: "KP", desc: "Kill Katılım — Takım killlerinin yüzde kaçında yer aldığı", fmt: (v) => Math.round(v * 100) + "%" },
+  { k: "visionScorePerMin", l: "VS/dk", desc: "Görüş Skoru / Dakika — Harita kontrolüne katkı (ward, sweeper)", fmt: (v) => v.toFixed(1) },
+  { k: "teamDamagePct", l: "Hasar%", desc: "Takım Hasar Payı — Takımın toplam hasarındaki yüzdesi", fmt: (v) => Math.round(v * 100) + "%" },
+  { k: "damageTakenPct", l: "Tank%", desc: "Alınan Hasar Payı — Takımın aldığı toplam hasardaki yüzdesi (tank göstergesi)", fmt: (v) => Math.round(v * 100) + "%" },
+  { k: "soloKills", l: "Solo", desc: "Solo Kill — Yardım almadan tek başına öldürmeler", fmt: (v) => v },
+  { k: "turretPlatesTaken", l: "Plaka", desc: "Kule Plakası — 14. dakikadan önce kırılan kule plakaları", fmt: (v) => v },
+  { k: "laneMinions10", l: "CS@10", desc: "İlk 10dk CS — İlk 10 dakikada öldürülen minyon sayısı", fmt: (v) => v },
+  { k: "controlWardsPlaced", l: "CW", desc: "Kontrol Totemi — Yerleştirilen pembe ward sayısı", fmt: (v) => v },
 ];
 
 function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
@@ -631,6 +678,14 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
   STAT_COLS.forEach(col => {
     maxVals[col.k] = Math.max(...allPlayers.map(p => p.challenges?.[col.k] ?? 0));
   });
+
+  const headerCells = STAT_COLS.map(col => (
+    <th key={col.k} className="text-center py-2.5 px-1 text-[11px]">
+      <span className="text-gray-500 border-b border-dotted border-gray-600 cursor-help" title={col.desc}>
+        {col.l}
+      </span>
+    </th>
+  ));
 
   return (
     <div className="grid grid-cols-2 gap-6">
@@ -641,9 +696,7 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
             <thead>
               <tr className="border-b border-blue-500/10">
                 <th className="text-left text-gray-500 py-2.5 px-3">Oyuncu</th>
-                {STAT_COLS.map(col => (
-                  <th key={col.k} className="text-center text-gray-500 py-2.5 px-1 text-[11px]">{col.l}</th>
-                ))}
+                {headerCells}
               </tr>
             </thead>
             <tbody>
@@ -659,9 +712,7 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
             <thead>
               <tr className="border-b border-red-500/10">
                 <th className="text-left text-gray-500 py-2.5 px-3">Oyuncu</th>
-                {STAT_COLS.map(col => (
-                  <th key={col.k} className="text-center text-gray-500 py-2.5 px-1 text-[11px]">{col.l}</th>
-                ))}
+                {headerCells}
               </tr>
             </thead>
             <tbody>
@@ -714,10 +765,58 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
 
   const maxLevel = Math.min(Math.max(p.champLevel || 18, ...skillOrder.map(s => s.level)), 18);
 
+  // Takım ELW Score karşılaştırma
+  const myTeamPlayers = isBlue ? (t1?.players || []) : allPlayers.filter(ap => !t1?.players?.some(tp => tp.puuid === ap.puuid));
+  const enemyTeamPlayers = isBlue ? allPlayers.filter(ap => !t1?.players?.some(tp => tp.puuid === ap.puuid)) : (t1?.players || []);
+  const sortByRole = (arr) => {
+    const roleIdx = (pl) => { const i = ["TOP","JUNGLE","MIDDLE","BOTTOM","UTILITY"].indexOf(pl.role); return i >= 0 ? i : 99; };
+    return [...arr].sort((a, b) => roleIdx(a) - roleIdx(b));
+  };
+  const myTeamSorted = sortByRole(myTeamPlayers);
+  const enemyTeamSorted = sortByRole(enemyTeamPlayers);
+
   return (
     <div className="grid grid-cols-[1fr_340px] gap-6">
       {/* Sol */}
       <div className="space-y-6">
+        {/* Takım ELW Score Karşılaştırma */}
+        <div className="bg-[#0d1117]/50 rounded-xl p-4 border border-[#1b2230]/30">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-2.5">{isBlue ? "Takımın" : "Karşı Takım"}</p>
+              <div className="flex items-center gap-2">
+                {myTeamSorted.map(tp => {
+                  const sc = tp.elwScore ?? 5;
+                  const clr = sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
+                  const isMe = tp.puuid === p.puuid;
+                  return (
+                    <div key={tp.puuid} className={`text-center ${isMe ? "scale-110" : ""}`}>
+                      <img src={tp.champion.image} alt="" width={36} height={36}
+                        className={`rounded-lg ${isMe ? "ring-2 ring-blue-400" : ""}`} />
+                      <span className={`block text-[10px] font-bold mt-0.5 px-1.5 py-0.5 rounded-md text-white ${clr}`}>{sc.toFixed(1)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-2.5">{isBlue ? "Karşı Takım" : "Takımın"}</p>
+              <div className="flex items-center gap-2">
+                {enemyTeamSorted.map(tp => {
+                  const sc = tp.elwScore ?? 5;
+                  const clr = sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
+                  return (
+                    <div key={tp.puuid} className="text-center">
+                      <img src={tp.champion.image} alt="" width={36} height={36} className="rounded-lg" />
+                      <span className={`block text-[10px] font-bold mt-0.5 px-1.5 py-0.5 rounded-md text-white ${clr}`}>{sc.toFixed(1)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Oyuncu Özet */}
         <div className={`p-5 rounded-xl border ${isBlue ? "bg-blue-500/[0.04] border-blue-500/15" : "bg-red-500/[0.04] border-red-500/15"}`}>
           <div className="flex items-center gap-4">
@@ -834,33 +933,41 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
               <table className="w-full">
                 <thead>
                   <tr>
-                    <th className="w-8" />
+                    <th className="w-9" />
                     {Array.from({ length: maxLevel }, (_, i) => (
                       <th key={i} className="text-[10px] text-gray-600 font-medium text-center w-7 pb-1.5">{i + 1}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {["Q", "W", "E", "R"].map(skill => (
-                    <tr key={skill}>
-                      <td className="pr-1.5">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${SKILL_COLORS[skill]}`}>{skill}</span>
-                      </td>
-                      {Array.from({ length: maxLevel }, (_, i) => {
-                        const level = i + 1;
-                        const isLeveled = skillGrid[skill]?.includes(level);
-                        return (
-                          <td key={i} className="text-center py-0.5">
-                            {isLeveled ? (
-                              <span className={`inline-block w-5 h-5 rounded text-[10px] font-bold leading-5 ${SKILL_COLORS[skill]}`}>{skill}</span>
-                            ) : (
-                              <span className="inline-block w-5 h-5 rounded bg-[#1b2230]/30" />
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                  {["Q", "W", "E", "R"].map(skill => {
+                    const abilityData = p.champion.abilities?.[skill];
+                    return (
+                      <tr key={skill}>
+                        <td className="pr-1.5">
+                          {abilityData?.image ? (
+                            <img src={abilityData.image} alt={abilityData.name || skill} width={24} height={24}
+                              className="rounded border border-[#2a3441]/50" title={abilityData.name} />
+                          ) : (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${SKILL_COLORS[skill]}`}>{skill}</span>
+                          )}
+                        </td>
+                        {Array.from({ length: maxLevel }, (_, i) => {
+                          const level = i + 1;
+                          const isLeveled = skillGrid[skill]?.includes(level);
+                          return (
+                            <td key={i} className="text-center py-0.5">
+                              {isLeveled ? (
+                                <span className={`inline-block w-5 h-5 rounded text-[10px] font-bold leading-5 ${SKILL_COLORS[skill]}`}>{skill}</span>
+                              ) : (
+                                <span className="inline-block w-5 h-5 rounded bg-[#1b2230]/30" />
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

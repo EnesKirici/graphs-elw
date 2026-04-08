@@ -9,6 +9,9 @@
 
 import { fetchApi } from "@/lib/api";
 import Link from "next/link";
+import ChampionRadar from "@/components/champion/ChampionRadar";
+import StatsTable from "@/components/champion/StatsTable";
+import SkinGallery from "@/components/champion/SkinGallery";
 
 // Dinamik metadata - her şampiyonun kendi title'ı olur (SEO)
 export async function generateMetadata({ params }) {
@@ -16,180 +19,254 @@ export async function generateMetadata({ params }) {
   return { title: `${id} - GRAPHS` };
 }
 
+// Tag renk mapping
+const tagConfig = {
+  Fighter:  { color: "bg-orange-500/10 text-orange-400 border-orange-500/20", label: "Dövüşçü" },
+  Tank:     { color: "bg-green-500/10 text-green-400 border-green-500/20",   label: "Tank" },
+  Mage:     { color: "bg-blue-500/10 text-blue-400 border-blue-500/20",     label: "Büyücü" },
+  Assassin: { color: "bg-red-500/10 text-red-400 border-red-500/20",        label: "Suikastçi" },
+  Marksman: { color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", label: "Nişancı" },
+  Support:  { color: "bg-teal-500/10 text-teal-400 border-teal-500/20",     label: "Destek" },
+};
+
 export default async function ChampionDetail({ params }) {
   const { id } = await params;
   const data = await fetchApi(`/champions/${id}`);
   const champ = data.champion;
 
-  const statLabels = {
-    attack: { label: "Saldırı", color: "from-red-500 to-orange-500" },
-    defense: { label: "Savunma", color: "from-green-500 to-emerald-500" },
-    magic: { label: "Büyü", color: "from-blue-500 to-purple-500" },
-    difficulty: { label: "Zorluk", color: "from-yellow-500 to-amber-500" },
-  };
-
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
-      {/* Geri butonu */}
-      <Link
-        href="/champions"
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors mb-6"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        Şampiyonlara Dön
-      </Link>
-
-      {/* Hero - Splash art arka planlı üst bölüm */}
-      <div className="relative rounded-2xl overflow-hidden mb-8 animate-fade-in-up">
-        {/* Splash art */}
+    <div>
+      {/* ===== HERO BANNER ===== */}
+      <div className="relative h-56 md:h-72 overflow-hidden">
         <img
           src={champ.splash}
           alt={champ.name}
-          className="w-full h-64 md:h-80 object-cover object-top"
+          className="w-full h-full object-cover object-top"
         />
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060a10] via-[#060a10]/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#060a10] via-[#060a10]/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#060a10]/60 via-transparent to-transparent" />
 
-        {/* Şampiyon bilgisi (overlay üzerinde) */}
-        <div className="absolute bottom-0 left-0 right-0 p-8">
-          <div className="flex items-end gap-5">
-            <img
-              src={champ.image}
-              alt={champ.name}
-              width={72}
-              height={72}
-              className="rounded-xl border-2 border-[#1b2230] shadow-xl"
-            />
+        {/* Şampiyon bilgisi overlay */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <div className="max-w-7xl mx-auto px-6 pb-5 flex items-end gap-5">
+            <div className="relative">
+              <img
+                src={champ.image}
+                alt={champ.name}
+                width={84}
+                height={84}
+                className="rounded-xl border-2 border-[#1b2230] shadow-2xl"
+              />
+            </div>
             <div>
-              <h1 className="text-4xl font-extrabold text-white tracking-tight">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight drop-shadow-lg">
                 {champ.name}
               </h1>
-              <p className="text-gray-400 mt-1">{champ.title}</p>
+              <p className="text-gray-400 mt-0.5 italic">{champ.title}</p>
               <div className="flex gap-2 mt-2">
-                {champ.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-xs bg-white/10 backdrop-blur text-white/80 px-2.5 py-1 rounded-full"
-                  >
-                    {tag}
-                  </span>
-                ))}
+                {champ.tags.map((tag) => {
+                  const cfg = tagConfig[tag];
+                  return (
+                    <span
+                      key={tag}
+                      className={`text-xs px-2.5 py-1 rounded-md border ${cfg?.color || "bg-gray-500/10 text-gray-400 border-gray-500/20"}`}
+                    >
+                      {cfg?.label || tag}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* İstatistik barları */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {Object.entries(champ.info).map(([key, value], i) => (
-          <div
-            key={key}
-            className="glass rounded-xl p-4 animate-fade-in-up"
-            style={{
-              opacity: 0,
-              animationDelay: `${i * 100 + 200}ms`,
-              animationFillMode: "forwards",
-            }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wide">
-                {statLabels[key]?.label || key}
-              </p>
-              <span className="text-sm font-bold text-white">{value}</span>
-            </div>
-            <div className="w-full bg-[#1b2230] rounded-full h-2">
-              <div
-                className={`h-2 rounded-full bg-gradient-to-r ${statLabels[key]?.color || "from-gray-500 to-gray-400"} animate-fill-bar`}
-                style={{
-                  width: `${value * 10}%`,
-                  animationDelay: `${i * 100 + 400}ms`,
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Yetenekler */}
-      <div className="glass rounded-xl overflow-hidden mb-8 animate-fade-in-up delay-300" style={{ opacity: 0, animationFillMode: 'forwards' }}>
-        <div className="px-6 py-4 border-b border-[#1b2230]/50">
-          <h2 className="text-lg font-semibold text-white">Yetenekler</h2>
-        </div>
-        <div className="divide-y divide-[#1b2230]/30">
-          {/* Pasif */}
-          <div className="flex items-start gap-4 px-6 py-4 hover:bg-white/[0.01] transition-colors">
-            <div className="relative flex-shrink-0">
-              <img
-                src={champ.passive.image}
-                alt={champ.passive.name}
-                width={44}
-                height={44}
-                className="rounded-lg"
-              />
-              <span className="absolute -top-1 -right-1 text-[9px] bg-gray-700 text-gray-300 px-1 rounded font-mono">
-                P
-              </span>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-100">
-                {champ.passive.name}
-              </p>
-              <p
-                className="text-xs text-gray-500 mt-1 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: champ.passive.description }}
-              />
-            </div>
-          </div>
-
-          {/* Q, W, E, R */}
-          {champ.spells.map((spell, index) => (
-            <div
-              key={spell.id}
-              className="flex items-start gap-4 px-6 py-4 hover:bg-white/[0.01] transition-colors"
-            >
-              <div className="relative flex-shrink-0">
-                <img
-                  src={spell.image}
-                  alt={spell.name}
-                  width={44}
-                  height={44}
-                  className="rounded-lg"
-                />
-                <span className="absolute -top-1 -right-1 text-[9px] bg-blue-500/20 text-blue-400 px-1 rounded font-mono font-bold">
-                  {["Q", "W", "E", "R"][index]}
-                </span>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-100">
-                  {spell.name}
-                </p>
-                <p
-                  className="text-xs text-gray-500 mt-1 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: spell.description }}
-                />
-              </div>
-            </div>
-          ))}
+      {/* ===== BREADCRUMB ===== */}
+      <div className="max-w-7xl mx-auto px-6 py-2.5 border-b border-[#1b2230]/30">
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
+          <span>›</span>
+          <Link href="/champions" className="hover:text-gray-300 transition-colors">Şampiyonlar</Link>
+          <span>›</span>
+          <span className="text-gray-300">{champ.name}</span>
         </div>
       </div>
 
-      {/* Hikaye */}
-      <div className="glass rounded-xl p-6 animate-fade-in-up delay-400" style={{ opacity: 0, animationFillMode: 'forwards' }}>
-        <h2 className="text-lg font-semibold text-white mb-4">Hikaye</h2>
-        <p className="text-sm text-gray-400 leading-relaxed">{champ.lore}</p>
+      {/* ===== ANA İÇERİK — 2 Kolon ===== */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          {/* Sol kolon — Radar + Base Stats */}
+          <div className="lg:col-span-4 space-y-4">
+            <ChampionRadar info={champ.info} />
+            <StatsTable stats={champ.stats} />
+
+            {/* İpuçları */}
+            {(champ.allytips?.length > 0 || champ.enemytips?.length > 0) && (
+              <div className="glass rounded-xl overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+                  <h3 className="text-sm font-semibold text-gray-200">İpuçları</h3>
+                </div>
+                <div className="p-4 space-y-4">
+                  {champ.allytips?.length > 0 && (
+                    <div>
+                      <p className="text-[11px] text-emerald-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Oynama İpuçları
+                      </p>
+                      <ul className="space-y-1.5">
+                        {champ.allytips.map((tip, i) => (
+                          <li key={i} className="text-xs text-gray-400 leading-relaxed pl-3 border-l border-[#1b2230]">
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {champ.enemytips?.length > 0 && (
+                    <div>
+                      <p className="text-[11px] text-red-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                        Karşı Oynama
+                      </p>
+                      <ul className="space-y-1.5">
+                        {champ.enemytips.map((tip, i) => (
+                          <li key={i} className="text-xs text-gray-400 leading-relaxed pl-3 border-l border-[#1b2230]">
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sağ kolon — Yetenekler + Skinler + Hikaye */}
+          <div className="lg:col-span-8 space-y-4">
+
+            {/* Yetenekler */}
+            <div className="glass rounded-xl overflow-hidden animate-fade-in-up">
+              <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+                <h3 className="text-sm font-semibold text-gray-200">Yetenekler</h3>
+              </div>
+              <div className="divide-y divide-[#1b2230]/30">
+                {/* Pasif */}
+                <div className="flex items-start gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors group">
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={champ.passive.image}
+                      alt={champ.passive.name}
+                      width={48}
+                      height={48}
+                      className="rounded-lg border border-[#1b2230] group-hover:border-gray-600 transition-colors"
+                    />
+                    <span className="absolute -top-1.5 -right-1.5 text-[9px] bg-gray-700/90 text-gray-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                      P
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-100">{champ.passive.name}</p>
+                      <span className="text-[9px] text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">Pasif</span>
+                    </div>
+                    <p
+                      className="text-xs text-gray-500 mt-1.5 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: champ.passive.description }}
+                    />
+                  </div>
+                </div>
+
+                {/* Q, W, E, R */}
+                {champ.spells.map((spell, index) => {
+                  const keys = ["Q", "W", "E", "R"];
+                  const keyColors = [
+                    "bg-blue-500/20 text-blue-400 border-blue-500/30",
+                    "bg-green-500/20 text-green-400 border-green-500/30",
+                    "bg-purple-500/20 text-purple-400 border-purple-500/30",
+                    "bg-red-500/20 text-red-400 border-red-500/30",
+                  ];
+
+                  return (
+                    <div
+                      key={spell.id}
+                      className="flex items-start gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors group"
+                    >
+                      <div className="relative flex-shrink-0">
+                        <img
+                          src={spell.image}
+                          alt={spell.name}
+                          width={48}
+                          height={48}
+                          className="rounded-lg border border-[#1b2230] group-hover:border-gray-600 transition-colors"
+                        />
+                        <span className={`absolute -top-1.5 -right-1.5 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold border ${keyColors[index]}`}>
+                          {keys[index]}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-gray-100">{spell.name}</p>
+                        </div>
+
+                        {/* Cooldown / Cost / Range */}
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                          {spell.cooldown && spell.cooldown !== "0" && (
+                            <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                              <svg className="w-3 h-3 text-blue-400/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 6v6l4 2" />
+                              </svg>
+                              {spell.cooldown}s
+                            </span>
+                          )}
+                          {spell.cost && spell.cost !== "0" && (
+                            <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                              <svg className="w-3 h-3 text-blue-400/60" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" opacity="0.6" />
+                              </svg>
+                              {spell.cost}
+                            </span>
+                          )}
+                          {spell.range && spell.range !== "self" && spell.range !== "0" && (
+                            <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                              <svg className="w-3 h-3 text-blue-400/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" />
+                                <circle cx="12" cy="10" r="3" />
+                              </svg>
+                              {spell.range}
+                            </span>
+                          )}
+                        </div>
+
+                        <p
+                          className="text-xs text-gray-500 mt-2 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: spell.description }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Skin Galerisi */}
+            {champ.skins?.length > 0 && (
+              <SkinGallery skins={champ.skins} championName={champ.name} />
+            )}
+
+            {/* Hikaye */}
+            <div className="glass rounded-xl overflow-hidden animate-fade-in-up">
+              <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+                <h3 className="text-sm font-semibold text-gray-200">Hikaye</h3>
+              </div>
+              <div className="p-5">
+                <p className="text-sm text-gray-400 leading-relaxed">{champ.lore}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
