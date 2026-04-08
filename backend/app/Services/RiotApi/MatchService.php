@@ -299,6 +299,9 @@ class MatchService
                 'csPerMin'       => $csPerMin,
                 'gold'           => $p['goldEarned'],
                 'damage'         => $p['totalDamageDealtToChampions'],
+                'physicalDamage' => $p['physicalDamageDealtToChampions'] ?? 0,
+                'magicDamage'    => $p['magicDamageDealtToChampions'] ?? 0,
+                'trueDamage'     => $p['trueDamageDealtToChampions'] ?? 0,
                 'damageTaken'    => $p['totalDamageTaken'],
                 'healing'        => $p['totalHeal'] ?? 0,
                 'teamHealing'    => ($p['totalHealsOnTeammates'] ?? 0) + ($p['totalDamageShieldedOnTeammates'] ?? 0),
@@ -307,6 +310,25 @@ class MatchService
                 'wardsKilled'    => $p['wardsKilled'] ?? 0,
                 'towerDamage'    => $p['damageDealtToTurrets'] ?? 0,
                 'objectiveDamage'=> $p['damageDealtToObjectives'] ?? 0,
+                'challenges'     => [
+                    'soloKills'          => $p['challenges']['soloKills'] ?? 0,
+                    'damagePerMinute'    => $p['challenges']['damagePerMinute'] ?? 0,
+                    'goldPerMinute'      => $p['challenges']['goldPerMinute'] ?? 0,
+                    'killParticipation'  => $p['challenges']['killParticipation'] ?? 0,
+                    'visionScorePerMin'  => $p['challenges']['visionScorePerMinute'] ?? 0,
+                    'turretPlatesTaken'  => $p['challenges']['turretPlatesTaken'] ?? 0,
+                    'teamDamagePct'      => $p['challenges']['teamDamagePercentage'] ?? 0,
+                    'damageTakenPct'     => $p['challenges']['damageTakenOnTeamPercentage'] ?? 0,
+                    'epicMonsterSteals'  => $p['challenges']['epicMonsterSteals'] ?? 0,
+                    'skillshotsHit'      => $p['challenges']['skillshotsHit'] ?? 0,
+                    'skillshotsDodged'   => $p['challenges']['skillshotsDodged'] ?? 0,
+                    'laneMinions10'      => $p['challenges']['laneMinionsFirst10Minutes'] ?? 0,
+                    'csAdvantage'        => $p['challenges']['maxCsAdvantageOnLaneOpponent'] ?? 0,
+                    'firstBloodKill'     => $p['challenges']['firstBloodKill'] ?? false,
+                    'firstTowerKill'     => $p['challenges']['firstTowerKill'] ?? false,
+                    'controlWardsPlaced' => $p['challenges']['controlWardsPlaced'] ?? 0,
+                    'survivedLowHp'      => $p['challenges']['survivedSingleDigitHpCount'] ?? 0,
+                ],
                 'items'          => $items,
                 'spells'         => [$spell1, $spell2],
                 'runes'          => $runes,
@@ -341,6 +363,91 @@ class MatchService
                 : 0;
         }
         unset($pl);
+
+        // ELW Score hesapla — tüm 10 oyuncu için
+        $elwScores = $this->calculateAllElwScores($info['participants'], $info['gameDuration'] ?? 0);
+        foreach ($players as &$pl) {
+            $pl['elwScore'] = $elwScores[$pl['puuid']] ?? 5.0;
+        }
+        unset($pl);
+
+        // Sıralama hesapla — elwScore'a göre 1-10
+        $sortedByScore = $players;
+        usort($sortedByScore, fn($a, $b) => $b['elwScore'] <=> $a['elwScore']);
+        $rankMap = [];
+        foreach ($sortedByScore as $i => $sp) {
+            $rankMap[$sp['puuid']] = $i + 1;
+        }
+        foreach ($players as &$pl) {
+            $pl['matchRank'] = $rankMap[$pl['puuid']] ?? 10;
+        }
+        unset($pl);
+
+        // Timeline verileri — item purchase + skill order
+        $timeline = $this->getMatchTimeline($matchId);
+        if ($timeline && isset($timeline['info']['frames'])) {
+            // puuid → participantId eşleştirmesi
+            $puuidToParticipant = [];
+            foreach ($info['participants'] as $idx => $tp) {
+                $puuidToParticipant[$tp['puuid']] = $idx + 1;
+            }
+            $participantToPuuid = array_flip($puuidToParticipant);
+
+            // Her oyuncu için boş timeline verileri
+            $itemTimelines = [];
+            $skillOrders = [];
+            foreach ($players as $pl) {
+                $itemTimelines[$pl['puuid']] = [];
+                $skillOrders[$pl['puuid']] = [];
+            }
+
+            foreach ($timeline['info']['frames'] as $frame) {
+                foreach ($frame['events'] ?? [] as $event) {
+                    $pid = $event['participantId'] ?? null;
+                    $puuid = $pid ? ($participantToPuuid[$pid] ?? null) : null;
+                    if (!$puuid) continue;
+
+                    $timestamp = intval(($event['timestamp'] ?? 0) / 1000); // ms → s
+
+                    if ($event['type'] === 'ITEM_PURCHASED') {
+                        $itemId = $event['itemId'] ?? 0;
+                        if ($itemId <= 0) continue;
+                        $itemData = $allItems[(string) $itemId] ?? null;
+                        $itemGold = $itemData['gold']['total'] ?? 0;
+                        // Sadece anlamlı itemleri göster (consumable/component filtreleme: 300+ gold)
+                        if ($itemGold < 300) continue;
+                        $itemTimelines[$puuid][] = [
+                            'timestamp' => $timestamp,
+                            'itemId'    => $itemId,
+                            'name'      => $itemData['name'] ?? '',
+                            'image'     => "{$ddragonBase}/cdn/{$version}/img/item/{$itemId}.png",
+                            'gold'      => $itemGold,
+                        ];
+                    }
+
+                    if ($event['type'] === 'SKILL_LEVEL_UP') {
+                        $skillSlot = $event['skillSlot'] ?? null; // 1=Q, 2=W, 3=E, 4=R
+                        $levelUpType = $event['levelUpType'] ?? 'NORMAL';
+                        if ($skillSlot && $levelUpType === 'NORMAL') {
+                            $skillKey = ['Q', 'W', 'E', 'R'][$skillSlot - 1] ?? '?';
+                            $skillOrders[$puuid][] = [
+                                'level'     => count($skillOrders[$puuid]) + 1,
+                                'skillSlot' => $skillSlot,
+                                'skillKey'  => $skillKey,
+                                'timestamp' => $timestamp,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Oyunculara ekle
+            foreach ($players as &$pl) {
+                $pl['itemTimeline'] = $itemTimelines[$pl['puuid']] ?? [];
+                $pl['skillOrder'] = $skillOrders[$pl['puuid']] ?? [];
+            }
+            unset($pl);
+        }
 
         // Takımlara ayır
         $team100 = array_values(array_filter($players, fn($p) => $p['teamId'] === 100));
@@ -1247,6 +1354,63 @@ class MatchService
     }
 
     /**
+     * Tüm 10 oyuncunun ELW Score'unu hesapla — puuid → score map döner.
+     */
+    private function calculateAllElwScores(array $participants, int $duration): array
+    {
+        // calculateMatchRanking'i sahte puuid ile çağırıp tüm skorları al
+        // Ama daha temiz: aynı mantığı tekrar yazalım
+        $roleWeights = [
+            'TOP'     => ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 1.5, 'vision' => 1.0, 'towerDmg' => 2.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 0.0],
+            'JUNGLE'  => ['kda' => 2.5, 'dpm' => 1.5, 'gpm' => 1.5, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 0.5, 'objDmg' => 3.0, 'tankPct' => 0.5, 'healing' => 0.0],
+            'MIDDLE'  => ['kda' => 2.5, 'dpm' => 2.5, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
+            'BOTTOM'  => ['kda' => 2.0, 'dpm' => 3.0, 'gpm' => 2.5, 'kp' => 2.0, 'vision' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
+            'UTILITY' => ['kda' => 2.0, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.5, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 2.5],
+        ];
+        $defaultW = ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.0, 'vision' => 1.5, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.0];
+        $minutes = max($duration / 60, 1);
+
+        $scores = [];
+        foreach ($participants as $p) {
+            $deaths = max($p['deaths'], 1);
+            $c = $p['challenges'] ?? [];
+            $role = ($p['teamPosition'] ?: $p['individualPosition'] ?: '');
+            if ($role === 'BOT') $role = 'BOTTOM';
+            $w = $roleWeights[$role] ?? $defaultW;
+
+            $kda = ($p['kills'] + $p['assists']) / $deaths;
+            $kdaNorm = min(log($kda + 1) / log(10), 1);
+            $dpmNorm = min(($c['damagePerMinute'] ?? 0) / 1500, 1);
+            $gpmNorm = min(($c['goldPerMinute'] ?? 0) / 700, 1);
+            $kp = ($c['killParticipation'] ?? 0);
+            $vsNorm = min(($c['visionScorePerMinute'] ?? 0) / 3.0, 1);
+            $towerNorm = min(($p['damageDealtToTurrets'] ?? 0) / 10000, 1);
+            $objNorm = min(($p['damageDealtToObjectives'] ?? 0) / 30000, 1);
+            $tankPct = ($c['damageTakenOnTeamPercentage'] ?? 0);
+            $healNorm = min((($p['totalHealsOnTeammates'] ?? 0) + ($p['totalDamageShieldedOnTeammates'] ?? 0)) / $minutes / 800, 1);
+
+            $score = $kdaNorm * $w['kda'] + $dpmNorm * $w['dpm'] + $gpmNorm * $w['gpm'] + $kp * $w['kp']
+                   + $vsNorm * $w['vision'] + $towerNorm * $w['towerDmg'] + $objNorm * $w['objDmg']
+                   + $tankPct * $w['tankPct'] + $healNorm * $w['healing'];
+
+            $scores[] = ['puuid' => $p['puuid'], 'score' => $score];
+        }
+
+        $rawScores = array_column($scores, 'score');
+        $avg = array_sum($rawScores) / max(count($rawScores), 1);
+        $variance = 0;
+        foreach ($rawScores as $rs) { $variance += ($rs - $avg) ** 2; }
+        $stdDev = max(sqrt($variance / max(count($rawScores), 1)), 0.5);
+
+        $result = [];
+        foreach ($scores as $s) {
+            $z = ($s['score'] - $avg) / $stdDev;
+            $result[$s['puuid']] = round(max(0, min(10, 5 + $z * 1.8)), 1);
+        }
+        return $result;
+    }
+
+    /**
      * ELW Score — 10 üzerinden performans puanı.
      *
      * Rol bazlı ağırlıklar:
@@ -1495,11 +1659,12 @@ class MatchService
                 'Bazen böyle günler de olur...',
                 'Bir dahaki sefere!',
                 'Her maç ders verir.',
-                'Gri ekran simulator',
+                'Gri ekran',
                 'Rakip bugün şanslıydı.',
                 'Takım arkadaşların seni özledi.',
-                'Respawn speedrun denemesi',
+                'Speedrun denemesi',
                 'Harita karanlıktı zaten...',
+                'Dosta Korku, Düşmana Güven..'
             ];
             $badges[] = [
                 'key' => 'rough_game',

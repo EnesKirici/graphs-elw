@@ -35,7 +35,7 @@ export default function MatchList({ initialMatches, puuid, selectedMatchId, onSe
 
   // Detay görünümü — tam genişlik
   if (selectedMatchId) {
-    return <MatchDetail matchId={selectedMatchId} onBack={() => onSelectMatch(null)} />;
+    return <MatchDetail matchId={selectedMatchId} puuid={puuid} onBack={() => onSelectMatch(null)} />;
   }
 
   // Liste görünümü
