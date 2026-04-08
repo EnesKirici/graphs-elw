@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
+import { useBackground } from "@/context/BackgroundContext";
+import SplashModal from "@/components/dashboard/SplashModal";
 
 export default function SkinGallery({ skins, championName }) {
   const [activeIdx, setActiveIdx] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
+  const { setBg } = useBackground();
   const active = skins[activeIdx];
 
   return (
@@ -25,8 +30,35 @@ export default function SkinGallery({ skins, championName }) {
         <div className="absolute inset-0 bg-gradient-to-t from-[#060a10] via-transparent to-transparent opacity-60" />
 
         {/* Skin adı overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
           <p className="text-lg font-bold text-white drop-shadow-lg">{active.name}</p>
+
+          {/* Aksiyon butonları */}
+          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Background Yap */}
+            <button
+              onClick={() => setBg(active.splash)}
+              className="flex items-center gap-1.5 bg-black/50 hover:bg-blue-500/80 backdrop-blur-sm text-white/80 hover:text-white text-[11px] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              title="Arkaplan olarak ayarla"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              BG Yap
+            </button>
+
+            {/* Büyüt */}
+            <button
+              onClick={() => setModalOpen(true)}
+              className="flex items-center gap-1.5 bg-black/50 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-[11px] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              title="Tam ekran görüntüle"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+              Büyüt
+            </button>
+          </div>
         </div>
 
         {/* Sol/sağ navigasyon */}
@@ -73,6 +105,19 @@ export default function SkinGallery({ skins, championName }) {
             </button>
           ))}
         </div>
+      )}
+
+      {/* Büyütme Modalı — portal ile body'ye render edilir, glass containment sorununu önler */}
+      {modalOpen && createPortal(
+        <SplashModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          splash={active.splash}
+          championName={championName}
+          skinName={active.name}
+          onSetBackground={setBg}
+        />,
+        document.body
       )}
     </div>
   );

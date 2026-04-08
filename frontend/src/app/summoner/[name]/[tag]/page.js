@@ -181,10 +181,21 @@ export default async function SummonerPage({ params }) {
 
       {/* ===== BREADCRUMB ===== */}
       <div className="max-w-7xl mx-auto px-6 py-2.5 border-b border-[#1b2230]/30">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
-          <span>›</span>
-          <span className="text-gray-300">{profile.gameName}#{profile.tagLine}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
+            <span>›</span>
+            <span className="text-gray-300">{profile.gameName}#{profile.tagLine}</span>
+          </div>
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Ana Sayfa
+          </Link>
         </div>
       </div>
 

@@ -393,22 +393,29 @@ class MatchService
         }
         unset($pl);
 
-        // ELW Score hesapla — tüm 10 oyuncu için
-        $elwScores = $this->calculateAllElwScores($info['participants'], $info['gameDuration'] ?? 0);
+        // ELW Score hesapla — iki mod: bireysel + takım katkısı
+        $elwIndividual = $this->calculateAllElwScores($info['participants'], $info['gameDuration'] ?? 0, 'individual');
+        $elwTeam = $this->calculateAllElwScores($info['participants'], $info['gameDuration'] ?? 0, 'team');
         foreach ($players as &$pl) {
-            $pl['elwScore'] = $elwScores[$pl['puuid']] ?? 5.0;
+            $pl['elwScore'] = $elwIndividual[$pl['puuid']] ?? 5.0;
+            $pl['elwScoreTeam'] = $elwTeam[$pl['puuid']] ?? 5.0;
         }
         unset($pl);
 
-        // Sıralama hesapla — elwScore'a göre 1-10
-        $sortedByScore = $players;
-        usort($sortedByScore, fn($a, $b) => $b['elwScore'] <=> $a['elwScore']);
+        // Sıralama hesapla — her mod için ayrı rank
+        $sortIndiv = $players;
+        usort($sortIndiv, fn($a, $b) => $b['elwScore'] <=> $a['elwScore']);
         $rankMap = [];
-        foreach ($sortedByScore as $i => $sp) {
-            $rankMap[$sp['puuid']] = $i + 1;
-        }
+        foreach ($sortIndiv as $i => $sp) { $rankMap[$sp['puuid']] = $i + 1; }
+
+        $sortTeam = $players;
+        usort($sortTeam, fn($a, $b) => $b['elwScoreTeam'] <=> $a['elwScoreTeam']);
+        $rankMapTeam = [];
+        foreach ($sortTeam as $i => $sp) { $rankMapTeam[$sp['puuid']] = $i + 1; }
+
         foreach ($players as &$pl) {
             $pl['matchRank'] = $rankMap[$pl['puuid']] ?? 10;
+            $pl['matchRankTeam'] = $rankMapTeam[$pl['puuid']] ?? 10;
         }
         unset($pl);
 
@@ -485,11 +492,17 @@ class MatchService
         // Lane analysis — rol bazlı karşılaştırma
         $laneAnalysis = $this->buildLaneAnalysis($team100, $team200, $info['gameDuration']);
 
+        // Solo/Duo → bireysel default, Flex/ARAM/Normal → takım katkısı default
+        $queueId = $info['queueId'] ?? 0;
+        $defaultMode = in_array($queueId, [420]) ? 'individual' : 'team';
+
         return [
             'matchId'      => $matchId,
-            'queueType'    => self::QUEUE_NAMES[$info['queueId'] ?? 0] ?? 'Diğer',
+            'queueType'    => self::QUEUE_NAMES[$queueId] ?? 'Diğer',
+            'queueId'      => $queueId,
             'duration'     => $info['gameDuration'],
             'gameCreation' => $info['gameCreation'],
+            'defaultScoringMode' => $defaultMode,
             'teams'        => [
                 ['info' => $teams[100] ?? null, 'players' => $team100],
                 ['info' => $teams[200] ?? null, 'players' => $team200],
@@ -1383,20 +1396,72 @@ class MatchService
     }
 
     /**
-     * Tüm 10 oyuncunun ELW Score'unu hesapla — puuid → score map döner.
+     * ===== ELW Score Algoritması =====
+     *
+     * 10 üzerinden performans puanı — maç içindeki 10 oyuncuyu karşılaştırır.
+     * İki sıralama modu: Bireysel Performans ve Takım Katkısı.
+     *
+     * 9 Metrik (her biri normalize edilir: 0.0–1.0 arası):
+     *   KDA          — (kills+assists)/deaths, logaritmik scale (log(kda+1)/log(10))
+     *   DPM          — Dakika başı hasar, max 1500 DPM = 1.0
+     *   GPM          — Dakika başı gold, max 700 GPM = 1.0
+     *   KP           — Kill katılımı (0.0–1.0 arası, doğrudan Riot API'den)
+     *   Görüş/dk     — Vision score / dakika, max 3.0 = 1.0
+     *   Kule Hasarı  — Kulelere verilen hasar, max 10000 = 1.0
+     *   Obj Hasarı   — Objektiflere verilen hasar, max 30000 = 1.0
+     *   Tank Katkısı — Takımda alınan hasar yüzdesi (0.0–1.0, Riot API'den)
+     *   İyileştirme  — (Takım heal + shield) / dakika, max 800/dk = 1.0
+     *
+     * Rol bazlı ağırlıklar — her rol TOPLAM 12.0 (dengeli karşılaştırma):
+     *
+     *   BİREYSEL MOD (Solo/Duo default):
+     *     Carry metrikleri ön planda (KDA, DPM, GPM yüksek ağırlık)
+     *     Top: kule hasarı + tank, Jungle: objektif + KDA,
+     *     Mid/ADC: DPM + KDA, Destek: görüş + iyileştirme
+     *
+     *   TAKIM MOD (Flex/Normal default):
+     *     Takım katkısı metrikleri ön planda (KP, Vision, Tank yüksek ağırlık)
+     *     Top: tank 2.0 + KP 2.0, Jungle: KP 2.5 + vision 2.0,
+     *     Mid: KP 2.5 + vision 2.0, ADC: KP 3.0 + kule 2.0,
+     *     Destek: KP 3.0 + vision 3.0 + iyileştirme 2.0
+     *
+     * Z-Score Normalizasyon:
+     *   Ham skorlar maç ortalamasına göre normalize edilir.
+     *   Final = 5.0 + (z-score × 1.8), 0–10 arası sınırlandırılır.
+     *   Maç ortalaması = 5.0, standart sapma ~1.8 puan.
      */
-    private function calculateAllElwScores(array $participants, int $duration): array
+
+    // ===== BİREYSEL PERFORMANS — carry metrikleri ön planda =====
+    //                       kda  dpm  gpm  kp   vision tower  obj   tank  heal  = 12.0
+    private const INDIVIDUAL_WEIGHTS = [
+        'TOP'     => ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 1.0, 'vision' => 1.0, 'towerDmg' => 2.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 0.0],
+        'JUNGLE'  => ['kda' => 2.5, 'dpm' => 1.5, 'gpm' => 1.5, 'kp' => 1.5, 'vision' => 1.0, 'towerDmg' => 0.5, 'objDmg' => 2.5, 'tankPct' => 1.0, 'healing' => 0.0],
+        'MIDDLE'  => ['kda' => 2.5, 'dpm' => 2.5, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
+        'BOTTOM'  => ['kda' => 2.5, 'dpm' => 3.0, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
+        'UTILITY' => ['kda' => 2.0, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.0, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 2.0],
+    ];
+
+    // ===== TAKIM KATKISI — KP/Vision/Tank ön planda =====
+    //                       kda  dpm  gpm  kp   vision tower  obj   tank  heal  = 12.0
+    private const TEAM_WEIGHTS = [
+        'TOP'     => ['kda' => 2.0, 'dpm' => 1.5, 'gpm' => 1.0, 'kp' => 2.0, 'vision' => 1.5, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 2.0, 'healing' => 0.0],
+        'JUNGLE'  => ['kda' => 1.5, 'dpm' => 1.0, 'gpm' => 1.0, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 0.5, 'objDmg' => 2.5, 'tankPct' => 1.0, 'healing' => 0.0],
+        'MIDDLE'  => ['kda' => 2.0, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
+        'BOTTOM'  => ['kda' => 1.5, 'dpm' => 2.5, 'gpm' => 1.5, 'kp' => 3.0, 'vision' => 1.0, 'towerDmg' => 2.0, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
+        'UTILITY' => ['kda' => 1.5, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 3.0, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.0, 'healing' => 2.0],
+    ];
+
+    private const DEFAULT_INDIVIDUAL_W = ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.5];
+    private const DEFAULT_TEAM_W       = ['kda' => 2.0, 'dpm' => 1.5, 'gpm' => 1.0, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.5];
+
+    /**
+     * Tüm 10 oyuncunun ELW Score'unu hesapla — puuid → score map döner.
+     * @param string $mode 'individual' veya 'team'
+     */
+    private function calculateAllElwScores(array $participants, int $duration, string $mode = 'individual'): array
     {
-        // calculateMatchRanking'i sahte puuid ile çağırıp tüm skorları al
-        // Ama daha temiz: aynı mantığı tekrar yazalım
-        $roleWeights = [
-            'TOP'     => ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 1.5, 'vision' => 1.0, 'towerDmg' => 2.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 0.0],
-            'JUNGLE'  => ['kda' => 2.5, 'dpm' => 1.5, 'gpm' => 1.5, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 0.5, 'objDmg' => 3.0, 'tankPct' => 0.5, 'healing' => 0.0],
-            'MIDDLE'  => ['kda' => 2.5, 'dpm' => 2.5, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
-            'BOTTOM'  => ['kda' => 2.0, 'dpm' => 3.0, 'gpm' => 2.5, 'kp' => 2.0, 'vision' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
-            'UTILITY' => ['kda' => 2.0, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.5, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 2.5],
-        ];
-        $defaultW = ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.0, 'vision' => 1.5, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.0];
+        $roleWeights = $mode === 'team' ? self::TEAM_WEIGHTS : self::INDIVIDUAL_WEIGHTS;
+        $defaultW = $mode === 'team' ? self::DEFAULT_TEAM_W : self::DEFAULT_INDIVIDUAL_W;
         $minutes = max($duration / 60, 1);
 
         $scores = [];
@@ -1440,31 +1505,13 @@ class MatchService
     }
 
     /**
-     * ELW Score — 10 üzerinden performans puanı.
-     *
-     * Rol bazlı ağırlıklar:
-     *   KDA          — hayatta kalma + öldürme dengesi
-     *   DPM          — dakika başı hasar (carry roller için önemli)
-     *   GPM          — gold verimliliği
-     *   KP           — kill katılımı
-     *   Görüş/dk     — harita kontrolü (sup/jg için önemli)
-     *   Kule Hasarı  — split-push katkısı (top/mid için önemli)
-     *   Obj Hasarı   — objektif katkısı (jg için önemli)
-     *   Alınan Hasar — tank katkısı (top/sup için pozitif)
-     *
-     * Z-score normalize: maç ortalaması = 5.0
+     * Tek oyuncu için ELW Score + sıralama hesapla (maç kartlarında kullanılır).
+     * Bireysel mod ağırlıklarını kullanır. Detaylı dokümantasyon INDIVIDUAL_WEIGHTS üstünde.
      */
     private function calculateMatchRanking(array $participants, string $puuid, int $duration = 0): array
     {
-        // Rol bazlı ağırlık tablosu — 9 metrik
-        $roleWeights = [
-            'TOP'     => ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 1.5, 'vision' => 1.0, 'towerDmg' => 2.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 0.0],
-            'JUNGLE'  => ['kda' => 2.5, 'dpm' => 1.5, 'gpm' => 1.5, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 0.5, 'objDmg' => 3.0, 'tankPct' => 0.5, 'healing' => 0.0],
-            'MIDDLE'  => ['kda' => 2.5, 'dpm' => 2.5, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
-            'BOTTOM'  => ['kda' => 2.0, 'dpm' => 3.0, 'gpm' => 2.5, 'kp' => 2.0, 'vision' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
-            'UTILITY' => ['kda' => 2.0, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.5, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 2.5],
-        ];
-        $defaultW = ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.0, 'vision' => 1.5, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.0];
+        $roleWeights = self::INDIVIDUAL_WEIGHTS;
+        $defaultW = self::DEFAULT_INDIVIDUAL_W;
 
         $minutes = max($duration / 60, 1);
 

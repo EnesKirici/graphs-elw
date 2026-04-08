@@ -52,7 +52,7 @@ export default function StatsTable({ stats }) {
             max={18}
             value={level}
             onChange={(e) => setLevel(Number(e.target.value))}
-            className="flex-1 accent-blue-500 h-1.5 cursor-pointer"
+            className="flex-1 stat-slider"
           />
           <button
             onClick={() => setLevel(Math.min(18, level + 1))}

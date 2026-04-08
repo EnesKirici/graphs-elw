@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { ArrowLeft, Eye, Swords, Shield } from "lucide-react";
+import { ArrowLeft, Eye, Swords, Shield, Info, User, Users } from "lucide-react";
 import Tooltip from "@/components/shared/Tooltip";
 import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
@@ -125,6 +125,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
   const [tab, setTab] = useState("overview");
   const [selectedPuuid, setSelectedPuuid] = useState(null);
   const [damageTab, setDamageTab] = useState("dealt");
+  const [scoringMode, setScoringMode] = useState(null); // null = henüz yüklenmedi, default'u data'dan al
 
   useEffect(() => {
     (async () => {
@@ -142,7 +143,10 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
       const me = searchedPuuid ? allP.find(p => p.puuid === searchedPuuid) : allP[0];
       if (me) setSelectedPuuid(me.puuid);
     }
-  }, [data, searchedPuuid, selectedPuuid]);
+    if (data && scoringMode === null) {
+      setScoringMode(data.defaultScoringMode || "individual");
+    }
+  }, [data, searchedPuuid, selectedPuuid, scoringMode]);
 
   if (loading) return (
     <div className="glass rounded-xl p-10 text-center">
@@ -193,10 +197,22 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
     }
   });
 
-  const allPlayers = [...(t1?.players || []), ...(t2?.players || [])];
+  const isTeamMode = scoringMode === "team";
+  // Oyuncu verilerini aktif moda göre override et
+  const applyMode = (players) => players?.map(p => ({
+    ...p,
+    _elwScore: isTeamMode ? (p.elwScoreTeam ?? p.elwScore) : p.elwScore,
+    _matchRank: isTeamMode ? (p.matchRankTeam ?? p.matchRank) : p.matchRank,
+  }));
+  const allPlayersRaw = [...(t1?.players || []), ...(t2?.players || [])];
+  const allPlayers = applyMode(allPlayersRaw);
   const maxDmg = Math.max(...allPlayers.map(p => p.damage), 1);
   const maxDmgTaken = Math.max(...allPlayers.map(p => p.damageTaken || 0), 1);
   const selectedPlayer = allPlayers.find(p => p.puuid === selectedPuuid);
+
+  // bluePlayers/redPlayers'ı da mode'lu hale getir
+  const bluePlayersM = applyMode(bluePlayers);
+  const redPlayersM = applyMode(redPlayers);
 
   return (
     <div className="glass rounded-xl overflow-hidden">
@@ -268,6 +284,9 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
         ))}
       </div>
 
+      {/* SCORING MODE BAR */}
+      <ScoringModeBar scoringMode={scoringMode} setScoringMode={setScoringMode} />
+
       {/* OVERVIEW TAB */}
       {tab === "overview" && (
         <>
@@ -287,8 +306,8 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
             </div>
           </div>
 
-          {bluePlayers.map((bp, i) => {
-            const rp = redPlayers[i];
+          {bluePlayersM.map((bp, i) => {
+            const rp = redPlayersM[i];
             const analysis = bp?.role ? analysisMap[bp.role] : null;
             return (
               <div key={bp.puuid} className="grid grid-cols-[1fr_90px_1fr] border-b border-[#1b2230]/15 last:border-b-0">
@@ -343,8 +362,8 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
             </div>
 
             <DamageDistribution
-              bluePlayers={bluePlayers}
-              redPlayers={redPlayers}
+              bluePlayers={bluePlayersM}
+              redPlayers={redPlayersM}
               allPlayers={allPlayers}
               maxDmg={damageTab === "dealt" ? maxDmg : maxDmgTaken}
               mode={damageTab}
@@ -357,7 +376,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
       {tab === "stats" && (
         <div className="p-6">
           <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-5">Detaylı İstatistikler</h3>
-          <StatsTable bluePlayers={bluePlayers} redPlayers={redPlayers} allPlayers={allPlayers} />
+          <StatsTable bluePlayers={bluePlayersM} redPlayers={redPlayersM} allPlayers={allPlayers} />
         </div>
       )}
 
@@ -368,14 +387,15 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
             {allPlayers.map((p) => {
               const isBlue = t1?.players?.some(tp => tp.puuid === p.puuid);
               const isSelected = p.puuid === selectedPuuid;
+              const rank = p._matchRank;
               return (
                 <button key={p.puuid} onClick={() => setSelectedPuuid(p.puuid)}
                   className={`relative rounded-xl overflow-hidden transition-all cursor-pointer ${isSelected ? "ring-2 ring-blue-400 scale-110" : "opacity-60 hover:opacity-100"}`}>
                   <img src={p.champion.image} alt={p.champion.name} width={44} height={44} className="rounded-xl" />
-                  {p.matchRank && (
+                  {rank && (
                     <span className={`absolute -top-0.5 -left-0.5 text-[9px] font-bold px-1 rounded-br-lg rounded-tl-lg ${
-                      p.matchRank === 1 ? "mvp-glow border-[#c8aa6e]/60" : p.matchRank <= 3 ? "bg-emerald-500/90 text-white" : p.matchRank >= 8 ? "bg-red-500/80 text-white" : "bg-gray-600/80 text-gray-200"
-                    }`}>{p.matchRank === 1 ? <span className="mvp-text">{p.matchRank}</span> : p.matchRank}</span>
+                      rank === 1 ? "mvp-glow border-[#c8aa6e]/60" : rank <= 3 ? "bg-emerald-500/90 text-white" : rank >= 8 ? "bg-red-500/80 text-white" : "bg-gray-600/80 text-gray-200"
+                    }`}>{rank === 1 ? <span className="mvp-text">{rank}</span> : rank}</span>
                   )}
                   <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${isBlue ? "bg-blue-500" : "bg-red-500"}`} />
                 </button>
@@ -385,6 +405,64 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
           {selectedPlayer && <AnalysisPanel player={selectedPlayer} allPlayers={allPlayers} t1={t1} duration={data.duration} />}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ===== SKOR MODU BAR ===== */
+function ScoringModeBar({ scoringMode, setScoringMode }) {
+  const [showInfo, setShowInfo] = useState(false);
+  return (
+    <div className="px-6 py-2 flex items-center justify-between bg-[#0d1117]/30 border-b border-[#1b2230]/20">
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] text-gray-600">Sıralama:</span>
+        <div className="flex items-center gap-0.5 bg-[#0d1117]/60 rounded-lg p-0.5">
+          <button onClick={() => setScoringMode("individual")}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${scoringMode === "individual" ? "bg-blue-500/20 text-blue-400" : "text-gray-500 hover:text-gray-300"}`}>
+            <User size={11} /> Bireysel
+          </button>
+          <button onClick={() => setScoringMode("team")}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${scoringMode === "team" ? "bg-purple-500/20 text-purple-400" : "text-gray-500 hover:text-gray-300"}`}>
+            <Users size={11} /> Takım Katkısı
+          </button>
+        </div>
+      </div>
+      <div className="relative">
+        <button onClick={() => setShowInfo(!showInfo)}
+          className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-gray-400 transition-colors cursor-pointer">
+          <Info size={12} /> ELW Score nedir?
+        </button>
+        {showInfo && (
+          <div className="absolute right-0 top-full mt-1 z-50 w-80 bg-[#0a0e14] border border-[#2a3441] rounded-xl p-4 shadow-2xl shadow-black/90">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-bold text-gray-200">ELW Score</h4>
+              <button onClick={() => setShowInfo(false)} className="text-gray-600 hover:text-gray-400 cursor-pointer text-xs">✕</button>
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed mb-3">
+              Maçtaki 10 oyuncuyu 9 farklı metrikle (KDA, Hasar/dk, Gold/dk, Kill Katılımı, Görüş, Kule Hasarı, Objektif Hasarı, Tank Katkısı, İyileştirme) karşılaştırarak 0-10 arası puan verir.
+            </p>
+            <div className="space-y-2 mb-3">
+              <div className="flex items-start gap-2">
+                <User size={12} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[11px] text-blue-400 font-semibold">Bireysel Performans</p>
+                  <p className="text-[10px] text-gray-500">KDA, hasar ve gold gibi kişisel carry metriklerine daha fazla ağırlık verir. Solo/Duo maçlarda varsayılan.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Users size={12} className="text-purple-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[11px] text-purple-400 font-semibold">Takım Katkısı</p>
+                  <p className="text-[10px] text-gray-500">Kill katılımı, görüş kontrolü ve tank katkısı gibi takım odaklı metriklere daha fazla ağırlık verir. Flex maçlarda varsayılan.</p>
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-600 border-t border-[#1b2230]/30 pt-2">
+              Her koridor için ağırlıklar farklıdır. Örneğin destek için görüş skoru daha önemli, ADC için hasar/dk daha önemlidir.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -472,7 +550,7 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
     <div className={`px-4 py-3 hover:bg-white/[0.02] transition-colors ${mirrored ? "pl-3" : ""}`}>
       <div className={`flex items-center gap-2.5 ${mirrored ? "flex-row-reverse" : ""}`}>
         {/* Sıralama */}
-        <RankBadge rank={p.matchRank} />
+        <RankBadge rank={p._matchRank} />
 
         {/* Champ + Spells + Runes */}
         <div className={`flex items-center gap-1.5 flex-shrink-0 ${mirrored ? "flex-row-reverse" : ""}`}>
@@ -529,7 +607,7 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
           <Eye size={12} className="opacity-70" />{p.visionScore}
         </span>
         {/* ELW Score */}
-        {p.elwScore != null && <ElwScoreBadge p={p} />}
+        {p._elwScore != null && <ElwScoreBadge p={p} />}
         {/* Verilen + Alınan Hasar Barları */}
         <div className="flex-1 min-w-[100px] space-y-1">
           <div className={`flex items-center gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}>
@@ -553,7 +631,7 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
 /* ===== ELW SCORE BADGE (hover popup) ===== */
 function ElwScoreBadge({ p }) {
   const [anchor, setAnchor] = useState(null);
-  const sc = p.elwScore;
+  const sc = p._elwScore;
   const color = sc >= 7 ? "emerald" : sc >= 5 ? "blue" : sc >= 3 ? "yellow" : "red";
   const colorMap = { emerald: "text-emerald-400", blue: "text-blue-400", yellow: "text-yellow-400", red: "text-red-400" };
   const bgMap = { emerald: "bg-emerald-400", blue: "bg-blue-400", yellow: "bg-yellow-400", red: "bg-red-400" };
@@ -582,7 +660,7 @@ function ElwScoreBadge({ p }) {
               <div className={`h-full rounded-full ${bgMap[color]}`} style={{ width: `${sc * 10}%` }} />
             </div>
             <div className={`flex items-center gap-1.5 mb-1 ${colorMap[color]}`}>
-              {p.matchRank && <span className="text-xs">#{p.matchRank}</span>}
+              {p._matchRank && <span className="text-xs">#{p._matchRank}</span>}
               <span className="text-sm font-semibold">{label}</span>
             </div>
             <p className="text-[10px] text-gray-500 leading-relaxed">
@@ -786,7 +864,7 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
               <p className="text-xs text-gray-500 mb-2.5">{isBlue ? "Takımın" : "Karşı Takım"}</p>
               <div className="flex items-center gap-2">
                 {myTeamSorted.map(tp => {
-                  const sc = tp.elwScore ?? 5;
+                  const sc = tp._elwScore ?? 5;
                   const clr = sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
                   const isMe = tp.puuid === p.puuid;
                   return (
@@ -803,7 +881,7 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
               <p className="text-xs text-gray-500 mb-2.5">{isBlue ? "Karşı Takım" : "Takımın"}</p>
               <div className="flex items-center gap-2">
                 {enemyTeamSorted.map(tp => {
-                  const sc = tp.elwScore ?? 5;
+                  const sc = tp._elwScore ?? 5;
                   const clr = sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
                   return (
                     <div key={tp.puuid} className="text-center">
@@ -822,9 +900,9 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
           <div className="flex items-center gap-4">
             <div className="relative">
               <img src={p.champion.image} alt="" width={56} height={56} className="rounded-xl" />
-              {p.matchRank && (
+              {p._matchRank && (
                 <span className={`absolute -top-1.5 -left-1.5`}>
-                  <RankBadge rank={p.matchRank} size="lg" />
+                  <RankBadge rank={p._matchRank} size="lg" />
                 </span>
               )}
             </div>
@@ -853,16 +931,16 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
               <p>{p.killParticipation}% KP</p>
             </div>
           </div>
-          {p.elwScore != null && (
+          {p._elwScore != null && (
             <div className="mt-4 pt-3 border-t border-[#1b2230]/30">
               <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-500">ELW Score</span>
                 <div className="flex-1 h-2 bg-[#1b2230] rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${p.elwScore >= 7 ? "bg-emerald-500" : p.elwScore >= 5 ? "bg-blue-500" : p.elwScore >= 3 ? "bg-yellow-500" : "bg-red-500"}`}
-                    style={{ width: `${p.elwScore * 10}%` }} />
+                  <div className={`h-full rounded-full ${p._elwScore >= 7 ? "bg-emerald-500" : p._elwScore >= 5 ? "bg-blue-500" : p._elwScore >= 3 ? "bg-yellow-500" : "bg-red-500"}`}
+                    style={{ width: `${p._elwScore * 10}%` }} />
                 </div>
-                <span className={`text-sm font-bold ${p.elwScore >= 7 ? "text-emerald-400" : p.elwScore >= 5 ? "text-blue-400" : p.elwScore >= 3 ? "text-yellow-400" : "text-red-400"}`}>
-                  {p.elwScore.toFixed(1)}
+                <span className={`text-sm font-bold ${p._elwScore >= 7 ? "text-emerald-400" : p._elwScore >= 5 ? "text-blue-400" : p._elwScore >= 3 ? "text-yellow-400" : "text-red-400"}`}>
+                  {p._elwScore.toFixed(1)}
                 </span>
               </div>
             </div>
