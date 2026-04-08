@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useId } from "react";
 import { ChevronDown } from "lucide-react";
 import Tooltip from "@/components/shared/Tooltip";
 
@@ -19,6 +19,7 @@ const TIME_FILTERS = [
 ];
 
 export default function WinrateSection({ timeline, defaultOpen = false }) {
+  const uid = useId().replace(/:/g, "");
   const [open, setOpen] = useState(defaultOpen);
   const [hovIdx, setHovIdx] = useState(null);
   const [hovAnchor, setHovAnchor] = useState(null);
@@ -126,7 +127,7 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
           >
             <defs>
               {segments.map((s, i) => (
-                <linearGradient key={`fg${i}`} id={`wrFill${i}`} x1="0" y1="0" x2="0" y2="1">
+                <linearGradient key={`fg${i}`} id={`${uid}Fill${i}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={s.color} stopOpacity="0.18" />
                   <stop offset="100%" stopColor={s.color} stopOpacity="0" />
                 </linearGradient>
@@ -154,7 +155,7 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
 
             {/* Segment bazlı gradient dolgu */}
             {segments.map((s, i) => (
-              <polygon key={`f${i}`} points={`${s.x1},${bottomY} ${s.x1},${s.y1} ${s.x2},${s.y2} ${s.x2},${bottomY}`} fill={`url(#wrFill${i})`} />
+              <polygon key={`f${i}`} points={`${s.x1},${bottomY} ${s.x1},${s.y1} ${s.x2},${s.y2} ${s.x2},${bottomY}`} fill={`url(#${uid}Fill${i})`} />
             ))}
 
             {/* Renkli çizgi segmentleri */}

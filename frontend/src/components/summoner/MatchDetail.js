@@ -409,6 +409,28 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
   );
 }
 
+/* ===== HOVER BADGE (rozet hover popup) ===== */
+function HoverBadge({ label, desc, className }) {
+  const [anchor, setAnchor] = useState(null);
+  return (
+    <>
+      <span className={`text-xs px-3 py-1.5 rounded-lg border font-medium cursor-help ${className}`}
+        onMouseEnter={e => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}>
+        {label}
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[200px] text-center">
+            <p className="text-xs text-white font-medium mb-0.5">{label}</p>
+            <p className="text-[10px] text-gray-400 leading-relaxed">{desc}</p>
+          </div>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+
 /* ===== SKOR MODU BAR ===== */
 function ScoringModeBar({ scoringMode, setScoringMode }) {
   const [showInfo, setShowInfo] = useState(false);
@@ -751,6 +773,26 @@ const STAT_COLS = [
   { k: "controlWardsPlaced", l: "CW", desc: "Kontrol Totemi — Yerleştirilen pembe ward sayısı", fmt: (v) => v },
 ];
 
+function StatHeader({ label, desc }) {
+  const [anchor, setAnchor] = useState(null);
+  return (
+    <th className="text-center py-2.5 px-1 text-[11px] relative">
+      <span className="text-gray-500 border-b border-dotted border-gray-600 cursor-help"
+        onMouseEnter={e => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}>
+        {label}
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 w-48 text-center">
+            <p className="text-[11px] text-gray-200 font-normal leading-relaxed whitespace-normal">{desc}</p>
+          </div>
+        </Tooltip>
+      )}
+    </th>
+  );
+}
+
 function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
   const maxVals = {};
   STAT_COLS.forEach(col => {
@@ -758,11 +800,7 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
   });
 
   const headerCells = STAT_COLS.map(col => (
-    <th key={col.k} className="text-center py-2.5 px-1 text-[11px]">
-      <span className="text-gray-500 border-b border-dotted border-gray-600 cursor-help" title={col.desc}>
-        {col.l}
-      </span>
-    </th>
+    <StatHeader key={col.k} label={col.l} desc={col.desc} />
   ));
 
   return (
@@ -991,10 +1029,7 @@ function AnalysisPanel({ player, allPlayers, t1, duration }) {
                   silver: "bg-gray-400/15 text-gray-400 border-gray-400/30",
                 };
                 return (
-                  <span key={i} className={`text-xs px-3 py-1.5 rounded-lg border font-medium ${tierColors[b.tier] || tierColors.silver}`}
-                    title={b.desc}>
-                    {b.label}
-                  </span>
+                  <HoverBadge key={i} label={b.label} desc={b.desc} className={tierColors[b.tier] || tierColors.silver} />
                 );
               })}
             </div>

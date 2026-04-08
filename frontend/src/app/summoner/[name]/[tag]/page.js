@@ -6,6 +6,7 @@ import WinrateSection from "@/components/summoner/WinrateSection";
 import SummonerContent from "@/components/summoner/SummonerContent";
 import RefreshButton from "@/components/summoner/RefreshButton";
 import ProfileBadge from "@/components/summoner/ProfileBadge";
+import BadgeInfoTooltip from "@/components/summoner/BadgeInfoTooltip";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
@@ -171,7 +172,7 @@ export default async function SummonerPage({ params }) {
                   {recentStats.frequentBadges.slice(0, 4).map((b) => (
                     <ProfileBadge key={b.key} badge={b} totalGames={recentStats.totalGames} />
                   ))}
-                  <span className="text-gray-500 text-[10px] cursor-help" title="Son maçlarda en sık kazanılan rozetler burada listelenir">?</span>
+                  <BadgeInfoTooltip />
                 </div>
               )}
             </div>
