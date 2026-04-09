@@ -2,15 +2,20 @@
 
 namespace App\Services\RiotApi;
 
+use App\Models\MatchRecord;
+use App\Models\MatchTimeline;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Riot Match-V5 API'den ham veri çekme + cache katmanı.
+ * Riot Match-V5 API veri katmanı — DB-first mimarisi.
+ *
+ * Maç verileri kalıcı olarak MySQL'de saklanır (maçlar asla değişmez).
+ * Akış: DB'de var mı? → Evet: DB'den oku (0 API isteği)
+ *                      → Hayır: Riot API'den çek → DB'ye yaz → döndür
  */
 class MatchDataService
 {
-    // Queue ID → okunabilir isim
     public const QUEUE_NAMES = [
         420 => 'Solo/Duo',
         440 => 'Flex',
@@ -23,7 +28,6 @@ class MatchDataService
         1700 => 'Arena',
     ];
 
-    // Riot sezonu her yıl ~8 Ocak'ta başlar
     private const SEASON_START_DAY = '01-08';
 
     public function __construct(
@@ -31,24 +35,18 @@ class MatchDataService
         private DataDragonService $ddragon,
     ) {}
 
-    /**
-     * Mevcut sezonun başlangıç timestamp'ini döner.
-     * 8 Ocak'tan önceyse önceki yılın sezonunu kullanır.
-     */
     public function seasonStartTimestamp(): int
     {
         $year = (int) date('Y');
         $start = strtotime("{$year}-" . self::SEASON_START_DAY);
-
         if (time() < $start) {
             $start = strtotime(($year - 1) . '-' . self::SEASON_START_DAY);
         }
-
         return $start;
     }
 
     /**
-     * Son N maçın ID'lerini getir.
+     * Son N maçın ID'lerini getir (kısa cache — yeni maç kontrolü için).
      */
     public function getMatchIds(string $puuid, int $count = 20, int $start = 0): array
     {
@@ -79,110 +77,89 @@ class MatchDataService
     }
 
     /**
-     * Tek bir maçın detayını getir.
-     * Maçlar değişmez → uzun süre cache'le.
+     * Tek bir maçın detayını getir — DB-first.
+     * DB'de varsa oradan okur (0 API isteği), yoksa API'den çekip DB'ye yazar.
      */
     public function getMatchDetail(string $matchId): array
     {
-        return Cache::remember("match:detail:{$matchId}", config('riot.cache_ttl.match_detail'), function () use ($matchId) {
-            return $this->api->regionRequest(
-                "/lol/match/v5/matches/{$matchId}"
-            );
-        });
+        // 1. DB'de var mı?
+        $match = MatchRecord::find($matchId);
+        if ($match) {
+            return $match->data;
+        }
+
+        // 2. API'den çek
+        $response = $this->api->regionRequest("/lol/match/v5/matches/{$matchId}");
+
+        // 3. DB'ye kaydet
+        try {
+            MatchRecord::create([
+                'match_id'      => $matchId,
+                'data'          => $response,
+                'queue_id'      => $response['info']['queueId'] ?? 0,
+                'game_duration' => $response['info']['gameDuration'] ?? 0,
+                'game_creation' => $response['info']['gameCreation'] ?? 0,
+            ]);
+        } catch (\Exception $e) {
+            // Duplicate key hatası olabilir (race condition) — görmezden gel
+        }
+
+        return $response;
     }
 
     /**
-     * Maç timeline verisi — dakika dakika gold/xp/cs + eventler.
+     * Maç timeline verisi — DB-first.
      */
     public function getMatchTimeline(string $matchId): ?array
     {
-        return Cache::remember("match:timeline:{$matchId}", config('riot.cache_ttl.match_detail'), function () use ($matchId) {
-            try {
-                return $this->api->regionRequest(
-                    "/lol/match/v5/matches/{$matchId}/timeline"
-                );
-            } catch (\Exception $e) {
-                return null;
-            }
-        });
+        // 1. DB'de var mı?
+        $timeline = MatchTimeline::find($matchId);
+        if ($timeline) {
+            return $timeline->data;
+        }
+
+        // 2. API'den çek
+        try {
+            $response = $this->api->regionRequest("/lol/match/v5/matches/{$matchId}/timeline");
+        } catch (\Exception $e) {
+            return null;
+        }
+
+        // 3. DB'ye kaydet
+        try {
+            MatchTimeline::create([
+                'match_id' => $matchId,
+                'data'     => $response,
+            ]);
+        } catch (\Exception $e) {}
+
+        return $response;
     }
 
     /**
-     * Birden fazla maç detayını ve timeline'ını paralel olarak çek ve cache'e yaz.
-     * Cache'de olmayanları Http::pool() ile eşzamanlı indirir.
+     * Birden fazla maç detayını paralel olarak çek ve DB'ye yaz.
+     * DB'de olmayanları Http::pool() ile eşzamanlı indirir.
      */
     public function preloadMatches(array $matchIds): void
     {
-        $regionUrl = config('riot.region_url');
-        $apiKey = config('riot.api_key');
-        $ttl = config('riot.cache_ttl.match_detail');
-
-        // Cache'de olmayan detail ve timeline'ları bul
-        $missingDetails = [];
-        $missingTimelines = [];
-        foreach ($matchIds as $id) {
-            if (!Cache::has("match:detail:{$id}")) {
-                $missingDetails[] = $id;
-            }
-            if (!Cache::has("match:timeline:{$id}")) {
-                $missingTimelines[] = $id;
-            }
-        }
-
-        if (empty($missingDetails) && empty($missingTimelines)) {
-            return; // Hepsi cache'de
-        }
-
-        $responses = Http::pool(function ($pool) use ($missingDetails, $missingTimelines, $regionUrl, $apiKey) {
-            foreach ($missingDetails as $id) {
-                $pool->as("detail:{$id}")
-                    ->timeout(10)
-                    ->withHeaders(['X-Riot-Token' => $apiKey])
-                    ->get("{$regionUrl}/lol/match/v5/matches/{$id}");
-            }
-            foreach ($missingTimelines as $id) {
-                $pool->as("timeline:{$id}")
-                    ->timeout(10)
-                    ->withHeaders(['X-Riot-Token' => $apiKey])
-                    ->get("{$regionUrl}/lol/match/v5/matches/{$id}/timeline");
-            }
-        });
-
-        // Başarılı sonuçları cache'e yaz
-        foreach ($missingDetails as $id) {
-            $resp = $responses["detail:{$id}"] ?? null;
-            if ($resp && $resp->successful()) {
-                Cache::put("match:detail:{$id}", $resp->json(), $ttl);
-            }
-        }
-        foreach ($missingTimelines as $id) {
-            $resp = $responses["timeline:{$id}"] ?? null;
-            if ($resp && $resp->successful()) {
-                Cache::put("match:timeline:{$id}", $resp->json(), $ttl);
-            }
-        }
+        $this->preloadMatchDetails($matchIds);
+        $this->preloadMatchTimelines($matchIds);
     }
 
     /**
      * Sadece maç detaylarını paralel yükle (timeline olmadan).
-     * Sezon istatistikleri gibi sadece detail gereken durumlar için.
      */
     public function preloadMatchDetails(array $matchIds): void
     {
-        $regionUrl = config('riot.region_url');
-        $apiKey = config('riot.api_key');
-        $ttl = config('riot.cache_ttl.match_detail');
-
-        $missing = [];
-        foreach ($matchIds as $id) {
-            if (!Cache::has("match:detail:{$id}")) {
-                $missing[] = $id;
-            }
-        }
+        // DB'de olmayan maçları bul
+        $existing = MatchRecord::whereIn('match_id', $matchIds)->pluck('match_id')->toArray();
+        $missing = array_values(array_diff($matchIds, $existing));
 
         if (empty($missing)) return;
 
-        // Riot API rate limit: aynı anda çok fazla istek atmamak için 20'şerli grupla
+        $regionUrl = config('riot.region_url');
+        $apiKey = config('riot.api_key');
+
         foreach (array_chunk($missing, 20) as $chunk) {
             $responses = Http::pool(function ($pool) use ($chunk, $regionUrl, $apiKey) {
                 foreach ($chunk as $id) {
@@ -196,7 +173,53 @@ class MatchDataService
             foreach ($chunk as $id) {
                 $resp = $responses[$id] ?? null;
                 if ($resp && $resp->successful()) {
-                    Cache::put("match:detail:{$id}", $resp->json(), $ttl);
+                    $data = $resp->json();
+                    try {
+                        MatchRecord::create([
+                            'match_id'      => $id,
+                            'data'          => $data,
+                            'queue_id'      => $data['info']['queueId'] ?? 0,
+                            'game_duration' => $data['info']['gameDuration'] ?? 0,
+                            'game_creation' => $data['info']['gameCreation'] ?? 0,
+                        ]);
+                    } catch (\Exception $e) {}
+                }
+            }
+        }
+    }
+
+    /**
+     * Sadece timeline'ları paralel yükle.
+     */
+    public function preloadMatchTimelines(array $matchIds): void
+    {
+        $existing = MatchTimeline::whereIn('match_id', $matchIds)->pluck('match_id')->toArray();
+        $missing = array_values(array_diff($matchIds, $existing));
+
+        if (empty($missing)) return;
+
+        $regionUrl = config('riot.region_url');
+        $apiKey = config('riot.api_key');
+
+        foreach (array_chunk($missing, 20) as $chunk) {
+            $responses = Http::pool(function ($pool) use ($chunk, $regionUrl, $apiKey) {
+                foreach ($chunk as $id) {
+                    $pool->as($id)
+                        ->timeout(10)
+                        ->withHeaders(['X-Riot-Token' => $apiKey])
+                        ->get("{$regionUrl}/lol/match/v5/matches/{$id}/timeline");
+                }
+            });
+
+            foreach ($chunk as $id) {
+                $resp = $responses[$id] ?? null;
+                if ($resp && $resp->successful()) {
+                    try {
+                        MatchTimeline::create([
+                            'match_id' => $id,
+                            'data'     => $resp->json(),
+                        ]);
+                    } catch (\Exception $e) {}
                 }
             }
         }

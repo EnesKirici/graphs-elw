@@ -364,10 +364,10 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
 
         {/* SAĞ SABİT: Result + Teams */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
-          <div className="w-14 text-center">
+          <div className="w-16 text-center">
             <p className={`text-[11px] font-bold ${resClr}`}>{resTxt}</p>
-            <p className="text-[10px] text-gray-500">{fmtDur(m.duration)}</p>
-            <p className="text-[9px] text-gray-600">{timeAgo(m.gameCreation)}</p>
+            <p className="text-[9px] text-gray-500">{m.queueType || ""}</p>
+            <p className="text-[10px] text-gray-500">{fmtDur(m.duration)} · {timeAgo(m.gameCreation)}</p>
           </div>
           <div className="hidden lg:block">
             <div className="flex gap-0.5 mb-0.5">

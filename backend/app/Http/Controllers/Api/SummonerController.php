@@ -159,22 +159,20 @@ class SummonerController extends Controller
         $masteries = $this->mastery->getTopMasteries($puuid, 10);
         $totalScore = $this->mastery->getTotalScore($puuid);
 
-        // Tüm sezon maç ID'lerini topla ve toplu paralel preload yap
-        // Bu sayede sonraki getMatchDetail çağrıları cache'den dönecek
+        // Sadece önemli maç ID'lerini topla ve toplu paralel preload yap
+        // Solo + Flex + Recent — Normal/Blind/Quick lazy cache'e bırakılır
         try {
-            $allSeasonIds = [];
-            foreach ([420, 440, 400, 430, 490] as $queueId) {
+            $preloadIds = [];
+            foreach ([420, 440] as $queueId) {
                 try {
                     $ids = $this->matchData->getSeasonMatchIds($puuid, $queueId);
-                    $allSeasonIds = array_merge($allSeasonIds, $ids);
+                    $preloadIds = array_merge($preloadIds, $ids);
                 } catch (\Exception $e) {}
             }
-            // Recent match ID'lerini de ekle
             $recentIds = $this->matchData->getMatchIds($puuid, 10, 0);
-            $allSeasonIds = array_unique(array_merge($allSeasonIds, $recentIds));
+            $preloadIds = array_unique(array_merge($preloadIds, $recentIds));
 
-            // Tümünü paralel indir (cache'de olmayanlar)
-            $this->matchData->preloadMatchDetails($allSeasonIds);
+            $this->matchData->preloadMatchDetails($preloadIds);
         } catch (\Exception $e) {}
 
         // Maç geçmişi + sezon koridor verisi + sezon şampiyon istatistikleri
@@ -210,6 +208,20 @@ class SummonerController extends Controller
 
             if ($recentStats['mostPlayedChampion'] ?? null) {
                 $bannerSplash = $this->ddragon->splashArtUrl($recentStats['mostPlayedChampion']['id']);
+            }
+
+            // Sezon verileri boşsa recentMatches'tan fallback oluştur
+            if (empty($seasonChampions['all'] ?? []) && !empty($recentMatches)) {
+                $seasonChampions = $this->buildChampionFallback($recentMatches);
+            }
+            if (empty($seasonRoles['all'] ?? []) && !empty($recentStats['roleStats'] ?? [])) {
+                $seasonRoles = [
+                    'all'      => $recentStats['roleStats'],
+                    'solo'     => [],
+                    'flex'     => [],
+                    'normal'   => $recentStats['roleStats'],
+                    'mainRole' => $recentStats['mainRole'] ?? null,
+                ];
             }
         } catch (\Exception $e) {}
 
@@ -304,5 +316,54 @@ class SummonerController extends Controller
             ]);
 
         return response()->json($players);
+    }
+
+    /**
+     * recentMatches'tan şampiyon istatistikleri oluştur (sezon verileri boşsa fallback).
+     */
+    private function buildChampionFallback(array $matches): array
+    {
+        $champData = [];
+        foreach ($matches as $m) {
+            $name = $m['champion']['name'] ?? null;
+            if (!$name) continue;
+            if (!isset($champData[$name])) {
+                $champData[$name] = [
+                    'games' => 0, 'wins' => 0,
+                    'kills' => 0, 'deaths' => 0, 'assists' => 0,
+                    'image' => $m['champion']['image'] ?? '',
+                ];
+            }
+            $champData[$name]['games']++;
+            if ($m['win']) $champData[$name]['wins']++;
+            $champData[$name]['kills']   += $m['kills'];
+            $champData[$name]['deaths']  += $m['deaths'];
+            $champData[$name]['assists'] += $m['assists'];
+        }
+
+        uasort($champData, fn($a, $b) => $b['games'] <=> $a['games']);
+
+        $list = [];
+        foreach ($champData as $name => $d) {
+            $g = $d['games'];
+            $list[] = [
+                'championName'  => $name,
+                'championImage' => $d['image'],
+                'games'         => $g,
+                'wins'          => $d['wins'],
+                'losses'        => $g - $d['wins'],
+                'winRate'       => $g > 0 ? round($d['wins'] / $g * 100, 1) : 0,
+                'avgKda'        => [
+                    'kills'   => round($d['kills'] / $g, 1),
+                    'deaths'  => round($d['deaths'] / $g, 1),
+                    'assists' => round($d['assists'] / $g, 1),
+                    'ratio'   => $d['deaths'] > 0
+                        ? round(($d['kills'] + $d['assists']) / $d['deaths'], 2)
+                        : 'Perfect',
+                ],
+            ];
+        }
+
+        return ['all' => $list, 'ranked' => [], 'normal' => $list];
     }
 }
