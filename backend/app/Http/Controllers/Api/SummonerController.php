@@ -8,6 +8,7 @@ use App\Services\RiotApi\SummonerService;
 use App\Services\RiotApi\LeagueService;
 use App\Services\RiotApi\ChampionMasteryService;
 use App\Services\RiotApi\MatchService;
+use App\Services\RiotApi\MatchDataService;
 use App\Services\RiotApi\DataDragonService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class SummonerController extends Controller
         private LeagueService $league,
         private ChampionMasteryService $mastery,
         private MatchService $match,
+        private MatchDataService $matchData,
         private DataDragonService $ddragon,
     ) {}
 
@@ -156,6 +158,24 @@ class SummonerController extends Controller
         $ranked = $this->league->getRankedInfo($puuid);
         $masteries = $this->mastery->getTopMasteries($puuid, 10);
         $totalScore = $this->mastery->getTotalScore($puuid);
+
+        // Tüm sezon maç ID'lerini topla ve toplu paralel preload yap
+        // Bu sayede sonraki getMatchDetail çağrıları cache'den dönecek
+        try {
+            $allSeasonIds = [];
+            foreach ([420, 440, 400, 430, 490] as $queueId) {
+                try {
+                    $ids = $this->matchData->getSeasonMatchIds($puuid, $queueId);
+                    $allSeasonIds = array_merge($allSeasonIds, $ids);
+                } catch (\Exception $e) {}
+            }
+            // Recent match ID'lerini de ekle
+            $recentIds = $this->matchData->getMatchIds($puuid, 10, 0);
+            $allSeasonIds = array_unique(array_merge($allSeasonIds, $recentIds));
+
+            // Tümünü paralel indir (cache'de olmayanlar)
+            $this->matchData->preloadMatchDetails($allSeasonIds);
+        } catch (\Exception $e) {}
 
         // Maç geçmişi + sezon koridor verisi + sezon şampiyon istatistikleri
         $recentMatches = [];

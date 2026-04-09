@@ -164,6 +164,45 @@ class MatchDataService
     }
 
     /**
+     * Sadece maç detaylarını paralel yükle (timeline olmadan).
+     * Sezon istatistikleri gibi sadece detail gereken durumlar için.
+     */
+    public function preloadMatchDetails(array $matchIds): void
+    {
+        $regionUrl = config('riot.region_url');
+        $apiKey = config('riot.api_key');
+        $ttl = config('riot.cache_ttl.match_detail');
+
+        $missing = [];
+        foreach ($matchIds as $id) {
+            if (!Cache::has("match:detail:{$id}")) {
+                $missing[] = $id;
+            }
+        }
+
+        if (empty($missing)) return;
+
+        // Riot API rate limit: aynı anda çok fazla istek atmamak için 20'şerli grupla
+        foreach (array_chunk($missing, 20) as $chunk) {
+            $responses = Http::pool(function ($pool) use ($chunk, $regionUrl, $apiKey) {
+                foreach ($chunk as $id) {
+                    $pool->as($id)
+                        ->timeout(10)
+                        ->withHeaders(['X-Riot-Token' => $apiKey])
+                        ->get("{$regionUrl}/lol/match/v5/matches/{$id}");
+                }
+            });
+
+            foreach ($chunk as $id) {
+                $resp = $responses[$id] ?? null;
+                if ($resp && $resp->successful()) {
+                    Cache::put("match:detail:{$id}", $resp->json(), $ttl);
+                }
+            }
+        }
+    }
+
+    /**
      * Champion ID'den görsel URL'i bul.
      */
     public function getChampImageById(int $championId): ?string

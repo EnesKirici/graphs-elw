@@ -2,6 +2,8 @@
 
 namespace App\Services\RiotApi;
 
+use App\Models\CachedPlayer;
+
 /**
  * Maç geçmişi orkestratör servisi.
  *
@@ -203,6 +205,9 @@ class MatchService
         $queueId = $info['queueId'] ?? 0;
         $defaultMode = in_array($queueId, [420]) ? 'individual' : 'team';
 
+        // Maçtaki 10 oyuncuyu veritabanına kaydet
+        $this->cachePlayersFromMatchIds([$matchId]);
+
         return [
             'matchId'      => $matchId,
             'queueType'    => MatchDataService::QUEUE_NAMES[$queueId] ?? 'Diğer',
@@ -346,6 +351,9 @@ class MatchService
             }
         }
 
+        // Maçlardaki tüm oyuncuları veritabanına kaydet (autocomplete için)
+        $this->cachePlayersFromMatchIds($matchIds);
+
         return $matches;
     }
 
@@ -376,6 +384,43 @@ class MatchService
     // ────────────────────────────────────────────
     //  Private helpers
     // ────────────────────────────────────────────
+
+    /**
+     * Maçlardaki tüm oyuncuları CachedPlayer tablosuna kaydet (autocomplete için).
+     * Zaten mevcut oyuncuları atlar, sadece yeni oyuncuları ekler.
+     */
+    private function cachePlayersFromMatchIds(array $matchIds): void
+    {
+        try {
+            $seen = [];
+            foreach ($matchIds as $matchId) {
+                try {
+                    $detail = $this->matchData->getMatchDetail($matchId);
+                    foreach ($detail['info']['participants'] ?? [] as $p) {
+                        $pid = $p['puuid'] ?? null;
+                        if (!$pid || isset($seen[$pid])) continue;
+                        $seen[$pid] = true;
+
+                        $name = $p['riotIdGameName'] ?? $p['summonerName'] ?? null;
+                        $tag = $p['riotIdTagline'] ?? null;
+                        if (!$name || !$tag) continue;
+
+                        CachedPlayer::firstOrCreate(
+                            ['puuid' => $pid],
+                            [
+                                'game_name'       => $name,
+                                'tag_line'        => $tag,
+                                'profile_icon_id' => $p['profileIcon'] ?? null,
+                                'summoner_level'  => $p['summonerLevel'] ?? null,
+                            ]
+                        );
+                    }
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+        } catch (\Exception $e) {}
+    }
 
     /**
      * Şampiyon yeteneklerini toplu çek (cache'li, her şampiyon 1 kez).
