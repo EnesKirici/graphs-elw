@@ -98,13 +98,10 @@ class LaneAnalysisService
             $score += $dmgScore;
             if (abs($dmgScore) > 0.5) $factors[] = ['metric' => 'Hasar', 'value' => round($dmgScore, 1)];
 
-            // Alınan hasar
+            // Alınan hasar — tüm roller için fazla almak aktiflik göstergesi
+            // Ağırlık farkıyla dengelenir (Top/JG/Sup yüksek, carry düşük)
             $dtDiff = ($blue['damageTaken'] ?? 0) - ($red['damageTaken'] ?? 0);
-            if (in_array($role, ['TOP', 'JUNGLE', 'UTILITY'])) {
-                $dtNorm = max(-1, min(1, $dtDiff / 10000));
-            } else {
-                $dtNorm = max(-1, min(1, -$dtDiff / 10000));
-            }
+            $dtNorm = max(-1, min(1, $dtDiff / 10000));
             $dtScore = $dtNorm * $w['damageTaken'];
             $score += $dtScore;
             if (abs($dtScore) > 0.3) $factors[] = ['metric' => 'Alınan Hasar', 'value' => round($dtScore, 1)];

@@ -3,6 +3,7 @@
 namespace App\Services\RiotApi;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 /**
  * Riot Match-V5 API'den ham veri çekme + cache katmanı.
@@ -104,6 +105,62 @@ class MatchDataService
                 return null;
             }
         });
+    }
+
+    /**
+     * Birden fazla maç detayını ve timeline'ını paralel olarak çek ve cache'e yaz.
+     * Cache'de olmayanları Http::pool() ile eşzamanlı indirir.
+     */
+    public function preloadMatches(array $matchIds): void
+    {
+        $regionUrl = config('riot.region_url');
+        $apiKey = config('riot.api_key');
+        $ttl = config('riot.cache_ttl.match_detail');
+
+        // Cache'de olmayan detail ve timeline'ları bul
+        $missingDetails = [];
+        $missingTimelines = [];
+        foreach ($matchIds as $id) {
+            if (!Cache::has("match:detail:{$id}")) {
+                $missingDetails[] = $id;
+            }
+            if (!Cache::has("match:timeline:{$id}")) {
+                $missingTimelines[] = $id;
+            }
+        }
+
+        if (empty($missingDetails) && empty($missingTimelines)) {
+            return; // Hepsi cache'de
+        }
+
+        $responses = Http::pool(function ($pool) use ($missingDetails, $missingTimelines, $regionUrl, $apiKey) {
+            foreach ($missingDetails as $id) {
+                $pool->as("detail:{$id}")
+                    ->timeout(10)
+                    ->withHeaders(['X-Riot-Token' => $apiKey])
+                    ->get("{$regionUrl}/lol/match/v5/matches/{$id}");
+            }
+            foreach ($missingTimelines as $id) {
+                $pool->as("timeline:{$id}")
+                    ->timeout(10)
+                    ->withHeaders(['X-Riot-Token' => $apiKey])
+                    ->get("{$regionUrl}/lol/match/v5/matches/{$id}/timeline");
+            }
+        });
+
+        // Başarılı sonuçları cache'e yaz
+        foreach ($missingDetails as $id) {
+            $resp = $responses["detail:{$id}"] ?? null;
+            if ($resp && $resp->successful()) {
+                Cache::put("match:detail:{$id}", $resp->json(), $ttl);
+            }
+        }
+        foreach ($missingTimelines as $id) {
+            $resp = $responses["timeline:{$id}"] ?? null;
+            if ($resp && $resp->successful()) {
+                Cache::put("match:timeline:{$id}", $resp->json(), $ttl);
+            }
+        }
     }
 
     /**

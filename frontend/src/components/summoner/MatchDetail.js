@@ -296,8 +296,8 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
                 {t1?.info?.win ? "Zafer" : "Yenilgi"} (Mavi)
               </span>
             </div>
-            <div className="flex items-center justify-center bg-[#0d1117]/50">
-              <span className="text-xs text-gray-600">VS</span>
+            <div className="flex items-center justify-center bg-[#0d1117]/50 relative">
+              <LaneGuideButton />
             </div>
             <div className={`px-5 py-2.5 text-right ${t2?.info?.win ? "bg-blue-500/8" : "bg-red-500/8"}`}>
               <span className={`text-sm font-bold ${t2?.info?.win ? "text-emerald-400" : "text-red-400"}`}>
@@ -311,9 +311,9 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
             const analysis = bp?.role ? analysisMap[bp.role] : null;
             return (
               <div key={bp.puuid} className="grid grid-cols-[1fr_90px_1fr] border-b border-[#1b2230]/15 last:border-b-0">
-                <PlayerRow p={bp} maxDmg={maxDmg} maxDmgTaken={maxDmgTaken} side="blue" />
+                <PlayerRow p={bp} maxDmg={maxDmg} maxDmgTaken={maxDmgTaken} side="blue" allPlayers={allPlayers} duration={data.duration} />
                 <VerdictBadge analysis={analysis} />
-                {rp ? <PlayerRow p={rp} maxDmg={maxDmg} maxDmgTaken={maxDmgTaken} side="red" /> : <div />}
+                {rp ? <PlayerRow p={rp} maxDmg={maxDmg} maxDmgTaken={maxDmgTaken} side="red" allPlayers={allPlayers} duration={data.duration} /> : <div />}
               </div>
             );
           })}
@@ -389,7 +389,9 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
               const isSelected = p.puuid === selectedPuuid;
               const rank = p._matchRank;
               const sc = p._elwScore ?? 5;
-              const clr = sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
+              const isTopRainbow = sc >= 8.5 && rank === 1;
+              const isTopGlow = sc >= 8.5 && !isTopRainbow;
+              const clr = isTopRainbow ? "bg-[#0d1117] border border-[#c8aa6e]/40" : isTopGlow ? "bg-[#0d1117] border border-emerald-500/40" : sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
               return (
                 <React.Fragment key={p.puuid}>
                   {idx === 5 && <div className="w-4" />}
@@ -402,7 +404,9 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
                       }`}>{rank === 1 ? <span className="mvp-text">{rank}</span> : rank}</span>
                     )}
                     <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${isBlue ? "bg-blue-500" : "bg-red-500"}`} />
-                    <span className={`block text-[10px] font-bold mt-0.5 px-1 py-0.5 rounded-md text-white text-center ${clr}`}>{sc.toFixed(1)}</span>
+                    <span className={`block text-[10px] font-bold mt-0.5 px-1 py-0.5 rounded-md text-center ${clr} ${!isTopRainbow && !isTopGlow ? "text-white" : ""}`}>
+                      {isTopRainbow ? <span className="elw-rainbow-text">{sc.toFixed(1)}</span> : isTopGlow ? <span className="perf-shimmer-text perf-shimmer-emerald">{sc.toFixed(1)}</span> : sc.toFixed(1)}
+                    </span>
                   </button>
                 </React.Fragment>
               );
@@ -430,6 +434,51 @@ function HoverBadge({ label, desc, className }) {
           <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[200px] text-center">
             <p className="text-xs text-white font-medium mb-0.5">{label}</p>
             <p className="text-[10px] text-gray-400 leading-relaxed">{desc}</p>
+          </div>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+
+/* ===== ANALİZ ROZET (tier gradient destekli) ===== */
+const ANALYSIS_TIER_STYLES = {
+  challenger:  { gradient: "linear-gradient(90deg, #f0e6d2, #c8aa6e, #78c8e6, #c8aa6e, #f0e6d2)", bg: "bg-gradient-to-r from-[#c8aa6e]/20 via-[#78c8e6]/15 to-[#c8aa6e]/20", border: "border-[#c8aa6e]/50", glow: "0 0 8px rgba(200,170,110,0.3)", shimmer: true },
+  grandmaster: { gradient: "linear-gradient(90deg, #cd3737, #ff6b6b, #cd3737)", bg: "bg-gradient-to-r from-[#1a0505]/40 via-[#cd3737]/15 to-[#1a0505]/40", border: "border-[#cd3737]/40", glow: "0 0 6px rgba(205,55,55,0.25)", shimmer: true },
+  diamond:     { gradient: "linear-gradient(90deg, #4a9bd9, #78c8e6, #576ece)", bg: "bg-gradient-to-r from-[#576ece]/12 to-[#4a9bd9]/8", border: "border-[#4a9bd9]/30" },
+  emerald:     { text: "text-[#2d9e6e]", bg: "bg-[#2d9e6e]/10", border: "border-[#2d9e6e]/25" },
+  gold:        { text: "text-[#c89b3c]", bg: "bg-[#c89b3c]/8",  border: "border-[#c89b3c]/20" },
+  silver:      { text: "text-[#80939e]", bg: "bg-[#80939e]/6",  border: "border-[#80939e]/15" },
+};
+
+function AnalysisBadge({ badge }) {
+  const [anchor, setAnchor] = useState(null);
+  const s = ANALYSIS_TIER_STYLES[badge.tier] || ANALYSIS_TIER_STYLES.silver;
+  const hasGrad = !!s.gradient;
+
+  return (
+    <>
+      <span
+        onMouseEnter={e => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border cursor-help ${s.bg} ${s.border} ${!hasGrad ? (s.text || "") : ""}`}
+        style={hasGrad ? { boxShadow: s.glow || undefined } : undefined}
+      >
+        <span
+          className={hasGrad ? "bg-clip-text text-transparent font-bold" : ""}
+          style={hasGrad ? { backgroundImage: s.gradient, backgroundSize: s.shimmer ? "300% 100%" : undefined, animation: s.shimmer ? "perfTextShimmer 3s ease-in-out infinite" : undefined } : undefined}
+        >
+          {badge.label}
+        </span>
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[220px]">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`text-xs font-bold ${hasGrad ? "bg-clip-text text-transparent" : (s.text || "")}`} style={hasGrad ? { backgroundImage: s.gradient } : undefined}>{badge.label}</span>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded border ${s.bg} ${s.border} ${!hasGrad ? (s.text || "") : "text-gray-300"}`}>{badge.tier}</span>
+            </div>
+            <p className="text-[10px] text-gray-400 leading-relaxed">{badge.desc}</p>
           </div>
         </Tooltip>
       )}
@@ -539,10 +588,121 @@ function BanGroup({ bans }) {
   );
 }
 
+/* ===== KORIDOR ANALİZİ KILAVUZ BUTONU ===== */
+const LANE_GUIDE_METRICS = [
+  { name: "KDA", desc: "(K+A)/D farkı, ±3 normalize" },
+  { name: "CS", desc: "CS/dk farkı, ±3 normalize" },
+  { name: "Gold", desc: "Toplam gold farkı, ±4000 normalize" },
+  { name: "Hasar", desc: "Şampiyonlara verilen hasar farkı, ±8000" },
+  { name: "Alınan Hasar", desc: "Fazla hasar almak aktiflik göstergesi, ağırlık rolle değişir" },
+  { name: "Kule Hasarı", desc: "Kulelere verilen hasar farkı, ±5000" },
+  { name: "Obj. Hasarı", desc: "Objektif hasarı (ejder/baron), ±15000" },
+  { name: "Görüş", desc: "Vision score (%60) + ward activity (%40) birleşik" },
+  { name: "İyileştirme", desc: "Takım arkadaşlarına heal + kalkan farkı" },
+];
+
+const LANE_GUIDE_WEIGHTS = [
+  { role: "Top",     vals: [3.0, 2.5, 2.0, 2.5, 1.5, 2.0, 0.5, 1.5, 0.5] },
+  { role: "Orman",   vals: [3.0, 1.5, 2.0, 2.0, 1.0, 1.0, 3.5, 2.5, 0.5] },
+  { role: "Orta",    vals: [3.0, 2.5, 2.0, 3.0, 0.5, 1.5, 0.5, 1.5, 0.5] },
+  { role: "Alt",     vals: [3.0, 3.0, 2.5, 3.5, 0.5, 1.5, 0.5, 1.5, 0.5] },
+  { role: "Destek",  vals: [3.0, 0.0, 1.0, 1.0, 2.5, 0.5, 0.5, 3.5, 2.5] },
+];
+
+function LaneGuideButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        className="flex items-center gap-0.5 text-[10px] text-gray-600 hover:text-gray-400 transition-colors cursor-pointer"
+        title="Koridor analizi nasıl hesaplanır?"
+      >
+        <Info size={10} /> VS
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-2xl shadow-2xl shadow-black/90 w-[600px] max-h-[80vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-gray-200">Koridor Analizi Nasıl Hesaplanır?</h2>
+              <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-gray-300 text-lg cursor-pointer">✕</button>
+            </div>
+
+            <p className="text-[11px] text-gray-400 leading-relaxed mb-4">
+              Her koridor, aynı roldeki iki oyuncuyu <strong className="text-gray-300">9 metrik</strong> üzerinden karşılaştırır. Her metrik <strong className="text-gray-300">-1 ile +1</strong> arası normalize edilir ve rol bazlı ağırlıkla çarpılır. Pozitif skor mavi tarafın üstünlüğünü, negatif skor kırmızının üstünlüğünü gösterir.
+            </p>
+
+            {/* Verdict eşikleri */}
+            <div className="grid grid-cols-5 gap-2 mb-5">
+              {[
+                { label: "◀◀ Baskın", range: "> +5", color: "text-blue-300 bg-blue-500/15 border-blue-500/25" },
+                { label: "◀ Önde", range: "+2 ~ +5", color: "text-blue-400 bg-blue-500/8 border-blue-500/15" },
+                { label: "= Dengeli", range: "-2 ~ +2", color: "text-gray-400 bg-[#0d1117]/50 border-[#1b2230]/30" },
+                { label: "▶ Önde", range: "-2 ~ -5", color: "text-red-400 bg-red-500/8 border-red-500/15" },
+                { label: "▶▶ Baskın", range: "< -5", color: "text-red-300 bg-red-500/15 border-red-500/25" },
+              ].map(v => (
+                <div key={v.label} className={`text-center py-2 rounded-lg border text-[10px] font-bold ${v.color}`}>
+                  <p>{v.label}</p>
+                  <p className="text-[9px] font-normal opacity-70 mt-0.5">{v.range}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Metrikler */}
+            <h3 className="text-xs font-semibold text-gray-300 mb-2">9 Metrik</h3>
+            <div className="space-y-1 mb-5">
+              {LANE_GUIDE_METRICS.map(m => (
+                <div key={m.name} className="flex items-start gap-2">
+                  <span className="text-[10px] text-blue-400 font-semibold w-24 flex-shrink-0">{m.name}</span>
+                  <span className="text-[10px] text-gray-500">{m.desc}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Ağırlık tablosu */}
+            <h3 className="text-xs font-semibold text-gray-300 mb-2">Rol Bazlı Ağırlıklar</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[10px]">
+                <thead>
+                  <tr className="border-b border-[#1b2230]/50">
+                    <th className="text-left text-gray-500 py-1.5 pr-2">Rol</th>
+                    {LANE_GUIDE_METRICS.map(m => (
+                      <th key={m.name} className="text-center text-gray-500 py-1.5 px-1">{m.name.split(" ")[0]}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {LANE_GUIDE_WEIGHTS.map(r => (
+                    <tr key={r.role} className="border-b border-[#1b2230]/20">
+                      <td className="text-gray-300 font-medium py-1.5 pr-2">{r.role}</td>
+                      {r.vals.map((v, i) => (
+                        <td key={i} className="text-center py-1.5 px-1">
+                          <span className={`${v >= 3.0 ? "text-emerald-400 font-bold" : v >= 2.0 ? "text-blue-400" : v >= 1.0 ? "text-gray-400" : "text-gray-600"}`}>{v}</span>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 p-3 rounded-lg bg-[#0d1117]/50 border border-[#1b2230]/30">
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                <strong className="text-gray-400">Not:</strong> Koridor analizi sadece 1v1 lane karşılaştırmasıdır. ELW Score ise maçtaki 10 oyuncuya göre z-score normalizasyonu ile hesaplanır — ikisi birbirinden bağımsızdır. Bir oyuncu lane'de dengeli olabilir ama takım katkısı sayesinde yüksek ELW alabilir.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /* ===== VERDICT BADGE ===== */
 function VerdictBadge({ analysis }) {
+  const [anchor, setAnchor] = useState(null);
   if (!analysis) return <div className="w-[90px] flex items-center justify-center bg-[#0d1117]/30" />;
-  const { verdict, highlights } = analysis;
+  const { verdict, highlights, factors, score, label: roleLabel } = analysis;
   const cfg = {
     blue_dominant: { color: "text-blue-300", bg: "bg-blue-500/15", border: "border-blue-500/25", icon: "◀◀", label: "Baskın" },
     blue_ahead:    { color: "text-blue-400", bg: "bg-blue-500/8",  border: "border-blue-500/15", icon: "◀",  label: "Önde" },
@@ -552,22 +712,100 @@ function VerdictBadge({ analysis }) {
   }[verdict] || { color: "text-gray-400", bg: "bg-[#0d1117]/30", border: "border-[#1b2230]/20", icon: "=", label: "Dengeli" };
 
   return (
-    <div className={`w-[90px] flex flex-col items-center justify-center ${cfg.bg} border-x ${cfg.border} py-2`}>
-      <span className={`text-base font-bold ${cfg.color}`}>{cfg.icon}</span>
-      <span className={`text-xs ${cfg.color} font-bold`}>{cfg.label}</span>
-      {highlights.length > 0 && (
-        <div className="mt-1 space-y-0.5">
-          {highlights.slice(0, 2).map((h, i) => (
-            <p key={i} className={`text-[9px] text-center leading-snug font-semibold ${cfg.color}`}>{h}</p>
-          ))}
-        </div>
+    <>
+      <div
+        className={`w-[90px] flex flex-col items-center justify-center ${cfg.bg} border-x ${cfg.border} py-2 cursor-help`}
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+      >
+        <span className={`text-base font-bold ${cfg.color}`}>{cfg.icon}</span>
+        <span className={`text-xs ${cfg.color} font-bold`}>{cfg.label}</span>
+        {highlights.length > 0 && (
+          <div className="mt-1 space-y-0.5">
+            {highlights.slice(0, 2).map((h, i) => (
+              <p key={i} className={`text-[9px] text-center leading-snug font-semibold ${cfg.color}`}>{h}</p>
+            ))}
+          </div>
+        )}
+      </div>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-64">
+            {/* Başlık */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-300 font-medium">{roleLabel} Koridor</span>
+              <span className={`text-sm font-bold ${cfg.color}`}>{cfg.icon} {cfg.label}</span>
+            </div>
+
+            {/* Toplam skor barı — ortadan iki yana */}
+            {score != null && (
+              <div className="mb-2.5">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[9px] text-blue-400">Mavi</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-[#1b2230] overflow-hidden relative">
+                    <div className="absolute inset-0 flex">
+                      <div className="w-1/2 flex justify-end">
+                        {score > 0 && <div className="h-full bg-blue-500/60 rounded-l-full" style={{ width: `${Math.min(Math.abs(score) / 10 * 100, 100)}%` }} />}
+                      </div>
+                      <div className="w-1/2">
+                        {score < 0 && <div className="h-full bg-red-500/60 rounded-r-full" style={{ width: `${Math.min(Math.abs(score) / 10 * 100, 100)}%` }} />}
+                      </div>
+                    </div>
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-600" />
+                  </div>
+                  <span className="text-[9px] text-red-400">Kırmızı</span>
+                </div>
+                <p className="text-center text-[10px] text-gray-400">
+                  Skor: <span className={score > 0 ? "text-blue-400 font-bold" : score < 0 ? "text-red-400 font-bold" : "text-gray-400"}>
+                    {score > 0 ? `Mavi +${score}` : score < 0 ? `Kırmızı +${Math.abs(score)}` : "0"}
+                  </span>
+                  <span className="text-gray-500 ml-1">
+                    ({Math.abs(score) > 5 ? "Baskın" : Math.abs(score) > 2 ? "Önde" : "Dengeli"})
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {/* En etkili faktörler */}
+            {factors && factors.length > 0 && (
+              <div className="space-y-1 mb-2.5">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Belirleyici Faktörler</p>
+                {factors.map((f, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-[11px] text-gray-300">{f.metric}</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-14 h-1.5 rounded-full bg-[#1b2230] overflow-hidden flex" style={{ justifyContent: f.value < 0 ? "flex-end" : "flex-start" }}>
+                        <div className={`h-full rounded-full ${f.value > 0 ? "bg-blue-500" : "bg-red-500"}`} style={{ width: `${Math.min(Math.abs(f.value) / 3 * 100, 100)}%` }} />
+                      </div>
+                      <span className={`text-[11px] font-bold w-7 text-right ${f.value > 0 ? "text-blue-400" : "text-red-400"}`}>{f.value > 0 ? "+" : ""}{f.value}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Highlights */}
+            {highlights.length > 0 && (
+              <div className="pt-2 border-t border-[#1b2230]/50 space-y-0.5">
+                {highlights.map((h, i) => (
+                  <p key={i} className={`text-[10px] font-medium ${cfg.color}`}>{h}</p>
+                ))}
+              </div>
+            )}
+
+            {/* Kısa açıklama */}
+            <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+              9 metrik (KDA, CS, Gold, Hasar, Alınan Hasar, Kule, Objektif, Görüş, İyileştirme) rol ağırlıklarıyla hesaplanır.
+            </p>
+          </div>
+        </Tooltip>
       )}
-    </div>
+    </>
   );
 }
 
 /* ===== OYUNCU SATIRI ===== */
-function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
+function PlayerRow({ p, maxDmg, maxDmgTaken, side, allPlayers, duration }) {
   const dmgPct = (p.damage / maxDmg) * 100;
   const dmgTakenPct = ((p.damageTaken || 0) / maxDmgTaken) * 100;
   const rank = formatRank(p.tier, p.rankDivision);
@@ -635,7 +873,7 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
           <Eye size={12} className="opacity-70" />{p.visionScore}
         </span>
         {/* ELW Score */}
-        {p._elwScore != null && <ElwScoreBadge p={p} />}
+        {p._elwScore != null && <ElwScoreBadge p={{...p, _duration: duration}} allPlayers={allPlayers} />}
         {/* Verilen + Alınan Hasar Barları */}
         <div className="flex-1 min-w-[100px] space-y-1">
           <div className={`flex items-center gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}>
@@ -657,43 +895,107 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side }) {
 }
 
 /* ===== ELW SCORE BADGE (hover popup) ===== */
-function ElwScoreBadge({ p }) {
+function ElwScoreBadge({ p, allPlayers }) {
   const [anchor, setAnchor] = useState(null);
   const sc = p._elwScore;
   const color = sc >= 7 ? "emerald" : sc >= 5 ? "blue" : sc >= 3 ? "yellow" : "red";
   const colorMap = { emerald: "text-emerald-400", blue: "text-blue-400", yellow: "text-yellow-400", red: "text-red-400" };
+  const hexMap = { emerald: "#10b981", blue: "#3b82f6", yellow: "#f59e0b", red: "#ef4444" };
   const bgMap = { emerald: "bg-emerald-400", blue: "bg-blue-400", yellow: "bg-yellow-400", red: "bg-red-400" };
   const label = sc >= 8 ? "Olağanüstü" : sc >= 6.5 ? "Çok İyi" : sc >= 5 ? "İyi" : sc >= 3.5 ? "Mücadele" : "Zor Maç";
+
+  // Maçtaki 10 oyuncunun ELW skor barı karşılaştırması
+  const sorted = allPlayers ? [...allPlayers].sort((a, b) => (b._elwScore || 0) - (a._elwScore || 0)) : [];
+  const maxScore = sorted.length > 0 ? sorted[0]._elwScore || 10 : 10;
+
+  // Dakika başı hasar
+  const minutes = p._duration ? Math.max(p._duration / 60, 1) : 1;
+  const dpm = Math.round((p.damage || 0) / minutes);
+  const vsMin = ((p.visionScore || 0) / minutes).toFixed(1);
+
+  const isRainbow = sc >= 8.5 && p._matchRank === 1;
+  const isGlow = sc >= 8.5 && !isRainbow;
 
   return (
     <>
       <span
-        className={`text-xs font-bold flex items-center gap-1 cursor-help ${colorMap[color]}`}
+        className={`text-xs font-bold flex items-center gap-1 cursor-help ${!isRainbow && !isGlow ? colorMap[color] : ""}`}
         onMouseEnter={e => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
       >
         <span className="w-5 h-1.5 rounded-full bg-[#1b2230] overflow-hidden inline-block align-middle">
-          <span className={`block h-full rounded-full ${bgMap[color]}`} style={{ width: `${sc * 10}%` }} />
+          <span className={`block h-full rounded-full ${isRainbow ? "elw-rainbow-bar" : bgMap[color]}`} style={{ width: `${sc * 10}%` }} />
         </span>
-        {sc.toFixed(1)}
+        <span className={isRainbow ? "elw-rainbow-text" : isGlow ? "perf-shimmer-text perf-shimmer-emerald" : ""}>{sc.toFixed(1)}</span>
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-52">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500">ELW Score</span>
-              <span className={`text-lg font-bold ${colorMap[color]}`}>{sc.toFixed(1)}</span>
+          <div className="bg-[#0a0e14]/95 backdrop-blur-md border border-[#2a3441]/80 rounded-2xl px-5 py-4 shadow-2xl shadow-black/95 w-[280px]">
+            {/* Başlık — Şampiyon + İsim + Skor */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <img src={p.champion?.image} alt="" width={36} height={36} className="rounded-xl ring-1 ring-white/10" />
+                <div>
+                  <p className="text-[13px] text-white font-semibold leading-tight">{p.summonerName}</p>
+                  <p className="text-[10px] text-gray-500">{p.champion?.name}</p>
+                </div>
+              </div>
+              <span className={`text-2xl font-black tracking-tight ${isRainbow ? "elw-rainbow-text" : colorMap[color]}`}>{sc.toFixed(1)}</span>
             </div>
-            <div className="h-1.5 rounded-full bg-[#1b2230] overflow-hidden mb-2.5">
-              <div className={`h-full rounded-full ${bgMap[color]}`} style={{ width: `${sc * 10}%` }} />
+
+            {/* Skor barı */}
+            <div className="h-2 rounded-full bg-[#1b2230] overflow-hidden mb-1.5">
+              <div className={`h-full rounded-full ${isRainbow ? "elw-rainbow-bar" : bgMap[color]}`} style={{ width: `${sc * 10}%` }} />
             </div>
-            <div className={`flex items-center gap-1.5 mb-1 ${colorMap[color]}`}>
-              {p._matchRank && <span className="text-xs">#{p._matchRank}</span>}
-              <span className="text-sm font-semibold">{label}</span>
+            <div className={`flex items-center gap-2 mb-3 ${isRainbow ? "" : colorMap[color]}`}>
+              {p._matchRank && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isRainbow ? "mvp-glow border border-[#c8aa6e]/60" : "bg-[#1b2230] border border-[#2a3441]/50"}`}>
+                  <span className={isRainbow ? "mvp-text" : ""}>#{p._matchRank}</span>
+                </span>
+              )}
+              <span className={`text-[13px] font-bold ${isRainbow ? "elw-rainbow-text" : ""}`}>{label}</span>
             </div>
-            <p className="text-[10px] text-gray-500 leading-relaxed">
-              {p.kills}/{p.deaths}/{p.assists} KDA · {p.cs} CS · {fmtGold(p.gold)} gold
-            </p>
+
+            {/* Detaylı istatistikler */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 py-2.5 px-3 rounded-xl bg-[#0d1117]/60 border border-[#1b2230]/30">
+              {[
+                { lbl: "KDA", val: `${p.kills}/${p.deaths}/${p.assists}`, sub: typeof p.kda === "number" ? p.kda.toFixed(1) : p.kda },
+                { lbl: "CS", val: p.cs, sub: `${p.csPerMin}/d` },
+                { lbl: "Hasar/dk", val: dpm },
+                { lbl: "Görüş/dk", val: vsMin },
+                { lbl: "Gold", val: fmtGold(p.gold) },
+                { lbl: "KP", val: `${p.killParticipation}%` },
+              ].map(s => (
+                <div key={s.lbl} className="flex justify-between items-baseline">
+                  <span className="text-[10px] text-gray-500">{s.lbl}</span>
+                  <span className="text-[11px] text-gray-100 font-semibold">{s.val}{s.sub ? <span className="text-gray-500 text-[9px] ml-0.5">({s.sub})</span> : ""}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Maçtaki 10 oyuncu skor karşılaştırması */}
+            {sorted.length > 0 && (
+              <div className="pt-2.5 border-t border-[#1b2230]/40">
+                <p className="text-[9px] text-gray-600 mb-2 uppercase tracking-wider font-medium">Maç Sıralaması</p>
+                <div className="space-y-[3px]">
+                  {sorted.map((sp, si) => {
+                    const isMe = sp.puuid === p.puuid;
+                    const spSc = sp._elwScore || 0;
+                    const spRainbow = spSc >= 8.5 && si === 0;
+                    const spColor = spSc >= 7 ? hexMap.emerald : spSc >= 5 ? hexMap.blue : spSc >= 3 ? hexMap.yellow : hexMap.red;
+                    return (
+                      <div key={sp.puuid} className={`flex items-center gap-1.5 ${isMe ? "opacity-100" : "opacity-40"}`}>
+                        <img src={sp.champion?.image} alt="" width={16} height={16} className="rounded" />
+                        <div className="flex-1 h-[5px] rounded-full bg-[#1b2230] overflow-hidden">
+                          <div className={`h-full rounded-full ${spRainbow ? "elw-rainbow-bar" : ""}`} style={{ width: `${(spSc / maxScore) * 100}%`, background: spRainbow ? undefined : spColor }} />
+                        </div>
+                        <span className={`text-[9px] font-mono w-7 text-right ${spRainbow ? "elw-rainbow-text font-bold" : isMe ? "text-white font-bold" : "text-gray-500"}`}>{spSc.toFixed(1)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </Tooltip>
       )}
@@ -927,20 +1229,24 @@ function AnalysisPanel({ player, t1 }) {
               <p>{p.killParticipation}% KP</p>
             </div>
           </div>
-          {p._elwScore != null && (
-            <div className="mt-4 pt-3 border-t border-[#1b2230]/30">
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-500">ELW Score</span>
-                <div className="flex-1 h-2 bg-[#1b2230] rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${p._elwScore >= 7 ? "bg-emerald-500" : p._elwScore >= 5 ? "bg-blue-500" : p._elwScore >= 3 ? "bg-yellow-500" : "bg-red-500"}`}
-                    style={{ width: `${p._elwScore * 10}%` }} />
+          {p._elwScore != null && (() => {
+            const _glowActive = p._elwScore >= 8.5;
+            const _glowKey = p._elwScore >= 7 ? "emerald" : p._elwScore >= 5 ? "blue" : p._elwScore >= 3 ? "yellow" : "emerald";
+            return (
+              <div className="mt-4 pt-3 border-t border-[#1b2230]/30">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-500">ELW Score</span>
+                  <div className="flex-1 h-2 bg-[#1b2230] rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${p._elwScore >= 7 ? "bg-emerald-500" : p._elwScore >= 5 ? "bg-blue-500" : p._elwScore >= 3 ? "bg-yellow-500" : "bg-red-500"}`}
+                      style={{ width: `${p._elwScore * 10}%` }} />
+                  </div>
+                  <span className={`text-sm font-bold ${_glowActive ? `perf-shimmer-text perf-shimmer-${_glowKey}` : p._elwScore >= 7 ? "text-emerald-400" : p._elwScore >= 5 ? "text-blue-400" : p._elwScore >= 3 ? "text-yellow-400" : "text-red-400"}`}>
+                    {p._elwScore.toFixed(1)}
+                  </span>
                 </div>
-                <span className={`text-sm font-bold ${p._elwScore >= 7 ? "text-emerald-400" : p._elwScore >= 5 ? "text-blue-400" : p._elwScore >= 3 ? "text-yellow-400" : "text-red-400"}`}>
-                  {p._elwScore.toFixed(1)}
-                </span>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Item Timeline */}
@@ -977,19 +1283,7 @@ function AnalysisPanel({ player, t1 }) {
           <div>
             <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">Rozetler</h4>
             <div className="flex flex-wrap gap-2">
-              {p.badges.map((b, i) => {
-                const tierColors = {
-                  challenger: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
-                  grandmaster: "bg-red-500/15 text-red-400 border-red-500/30",
-                  diamond: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-                  emerald: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-                  gold: "bg-yellow-600/15 text-yellow-500 border-yellow-600/30",
-                  silver: "bg-gray-400/15 text-gray-400 border-gray-400/30",
-                };
-                return (
-                  <HoverBadge key={i} label={b.label} desc={b.desc} className={tierColors[b.tier] || tierColors.silver} />
-                );
-              })}
+              {p.badges.map((b, i) => <AnalysisBadge key={i} badge={b} />)}
             </div>
           </div>
         )}

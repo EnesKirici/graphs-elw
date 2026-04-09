@@ -230,6 +230,10 @@ class MatchService
     public function getRecentMatches(string $puuid, int $count = 20, int $start = 0): array
     {
         $matchIds = $this->matchData->getMatchIds($puuid, $count, $start);
+
+        // Tüm maç detaylarını ve timeline'ları paralel olarak ön-yükle
+        $this->matchData->preloadMatches($matchIds);
+
         $version = $this->ddragon->getCurrentVersion();
         $ddragonBase = config('riot.ddragon_url');
 

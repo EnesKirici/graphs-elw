@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 export default function SearchBar({ champions }) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const ref = useRef(null);
   const router = useRouter();
 
@@ -33,9 +34,9 @@ export default function SearchBar({ champions }) {
       // Oyuncu arama: "elw#0000" → /summoner/elw/0000
       const [name, tag] = query.split("#");
       if (name && tag) {
-        router.push(`/summoner/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
-        setQuery("");
+        setIsSearching(true);
         setIsOpen(false);
+        router.push(`/summoner/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
       }
     } else if (filteredChamps.length === 1) {
       router.push(`/champions/${filteredChamps[0].id}`);
@@ -56,22 +57,31 @@ export default function SearchBar({ champions }) {
         <div className="relative group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
           <div className="relative">
-            <svg
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-blue-400 transition-colors"
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            {isSearching ? (
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5">
+                <div className="absolute inset-0 border-2 border-blue-500/30 rounded-full" />
+                <div className="absolute inset-0 border-2 border-transparent border-t-blue-400 rounded-full animate-spin" />
+              </div>
+            ) : (
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-blue-400 transition-colors"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            )}
             <input
               type="text"
-              value={query}
+              value={isSearching ? "" : query}
               onChange={(e) => {
+                if (isSearching) return;
                 setQuery(e.target.value);
                 setIsOpen(e.target.value.length > 0);
               }}
-              onFocus={() => query.length > 0 && setIsOpen(true)}
-              placeholder="Şampiyon veya oyuncu ara... (isim#tag)"
-              className="w-full bg-[#0d1117] border border-[#1b2230] rounded-xl pl-12 pr-4 py-4 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 transition-all duration-300"
+              onFocus={() => query.length > 0 && !isSearching && setIsOpen(true)}
+              placeholder={isSearching ? "Oyuncu aranıyor..." : "Şampiyon veya oyuncu ara... (isim#tag)"}
+              disabled={isSearching}
+              className={`w-full bg-[#0d1117] border border-[#1b2230] rounded-xl pl-12 pr-4 py-4 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 transition-all duration-300 ${isSearching ? "opacity-70 cursor-wait" : ""}`}
             />
           </div>
         </div>

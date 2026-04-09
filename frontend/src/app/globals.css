@@ -121,6 +121,88 @@
   animation: mvpShift 3s ease-in-out infinite;
 }
 
+/* =============== PERF LABEL SHIMMER (ELW 8.5+) =============== */
+@keyframes perfTextShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.perf-shimmer-text {
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: perfTextShimmer 3s ease-in-out infinite;
+}
+
+.perf-shimmer-emerald {
+  background-image: linear-gradient(90deg, #6ee7b7, #10b981, #34d399, #10b981, #6ee7b7);
+}
+
+.perf-shimmer-blue {
+  background-image: linear-gradient(90deg, #93c5fd, #3b82f6, #60a5fa, #3b82f6, #93c5fd);
+}
+
+.perf-shimmer-yellow {
+  background-image: linear-gradient(90deg, #fcd34d, #f59e0b, #fbbf24, #f59e0b, #fcd34d);
+}
+
+/* =============== PERF LABEL GLOW (ELW 8.5+) =============== */
+.perf-glow {
+  border-radius: 4px;
+  animation: perfGlowPulse 2.5s ease-in-out infinite;
+}
+
+.perf-glow-emerald {
+  box-shadow: 0 0 4px rgba(16, 185, 129, 0.4), 0 0 10px rgba(16, 185, 129, 0.15);
+}
+.perf-glow-blue {
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.4), 0 0 10px rgba(59, 130, 246, 0.15);
+}
+.perf-glow-yellow {
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.4), 0 0 10px rgba(245, 158, 11, 0.15);
+}
+
+@keyframes perfGlowPulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+/* =============== ELW SCORE RAINBOW GLOW (8.5+ & 1st) =============== */
+@keyframes elwRainbowShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes elwRainbowGlow {
+  0%   { box-shadow: 0 0 6px rgba(200, 170, 110, 0.5), 0 0 14px rgba(120, 200, 230, 0.2); }
+  33%  { box-shadow: 0 0 6px rgba(16, 185, 129, 0.5), 0 0 14px rgba(52, 211, 153, 0.2); }
+  66%  { box-shadow: 0 0 6px rgba(59, 130, 246, 0.5), 0 0 14px rgba(147, 197, 253, 0.2); }
+  100% { box-shadow: 0 0 6px rgba(200, 170, 110, 0.5), 0 0 14px rgba(120, 200, 230, 0.2); }
+}
+
+.elw-rainbow-text {
+  background: linear-gradient(90deg, #f0e6d2, #c8aa6e, #78c8e6, #10b981, #3b82f6, #c8aa6e, #f0e6d2);
+  background-size: 400% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: elwRainbowShift 4s ease-in-out infinite;
+}
+
+.elw-rainbow-bar {
+  background: linear-gradient(90deg, #c8aa6e, #78c8e6, #10b981, #3b82f6, #f59e0b, #c8aa6e);
+  background-size: 400% 100%;
+  animation: elwRainbowShift 3s ease-in-out infinite;
+}
+
+.elw-rainbow-glow {
+  animation: elwRainbowGlow 3s ease-in-out infinite;
+  border-radius: 8px;
+}
+
 /* =============== RANGE SLIDER =============== */
 input[type="range"].stat-slider {
   -webkit-appearance: none;

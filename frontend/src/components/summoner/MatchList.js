@@ -47,15 +47,20 @@ export default function MatchList({ initialMatches, puuid, selectedMatchId, onSe
       </div>
 
       <div className="divide-y divide-[#1b2230]/20">
-        {matches.map((match) => (
-          <div
-            key={match.matchId}
-            onClick={() => onSelectMatch(match.matchId)}
-            className="cursor-pointer"
-          >
-            <MatchCard match={match} />
-          </div>
-        ))}
+        {matches.map((match, idx) => {
+          // Son maçlardan ELW skor geçmişi — sparkline için (ters sırada: eskiden yeniye)
+          const scoreHistory = [...matches].reverse().map(m => m.ranking?.elwScore ?? null).filter(s => s !== null);
+          const currentIndex = matches.length - 1 - idx;
+          return (
+            <div
+              key={match.matchId}
+              onClick={() => onSelectMatch(match.matchId)}
+              className="cursor-pointer"
+            >
+              <MatchCard match={match} scoreHistory={scoreHistory} scoreIndex={currentIndex} />
+            </div>
+          );
+        })}
       </div>
 
       {hasMore && (

@@ -76,45 +76,120 @@ function PlayerIcon({ player: p }) {
 }
 
 const PERF_COLORS = {
-  emerald: { text: "text-emerald-400", icon: "▲" },
-  blue:    { text: "text-blue-400",    icon: "◆" },
-  yellow:  { text: "text-yellow-400",  icon: "●" },
-  red:     { text: "text-red-400",     icon: "▼" },
-  gray:    { text: "text-gray-500",    icon: "—" },
+  emerald: { text: "text-emerald-400", icon: "▲", hex: "#10b981" },
+  blue:    { text: "text-blue-400",    icon: "◆", hex: "#3b82f6" },
+  yellow:  { text: "text-yellow-400",  icon: "●", hex: "#f59e0b" },
+  red:     { text: "text-red-400",     icon: "▼", hex: "#ef4444" },
+  gray:    { text: "text-gray-500",    icon: "—", hex: "#6b7280" },
 };
 
-function PerfLabelTag({ perfLabel, ranking }) {
+function MiniSparkline({ scores, currentIndex, color }) {
+  if (!scores || scores.length < 2) return null;
+  const w = 180, h = 50, px = 4, py = 4;
+  const min = Math.min(...scores, 0);
+  const max = Math.max(...scores, 10);
+  const range = max - min || 1;
+  const pts = scores.map((s, i) => ({
+    x: px + (i / (scores.length - 1)) * (w - px * 2),
+    y: py + (1 - (s - min) / range) * (h - py * 2),
+  }));
+  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+  const area = `${line} L${pts[pts.length - 1].x},${h} L${pts[0].x},${h} Z`;
+  const cur = currentIndex != null && pts[currentIndex] ? pts[currentIndex] : null;
+
+  return (
+    <svg width={w} height={h} className="block">
+      <defs>
+        <linearGradient id={`sg-${color}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#sg-${color})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      {/* 5.0 referans çizgisi */}
+      <line x1={px} y1={py + (1 - (5 - min) / range) * (h - py * 2)} x2={w - px} y2={py + (1 - (5 - min) / range) * (h - py * 2)} stroke="#2a3441" strokeWidth="0.5" strokeDasharray="3,3" />
+      {cur && (
+        <>
+          <circle cx={cur.x} cy={cur.y} r="3.5" fill="#0a0e14" stroke={color} strokeWidth="2" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function PerfLabelTag({ perfLabel, ranking, match, scoreHistory, scoreIndex }) {
   const [anchor, setAnchor] = useState(null);
   const c = PERF_COLORS[perfLabel.color] || PERF_COLORS.gray;
+  const sc = ranking?.elwScore;
+  const isRainbow = sc != null && sc >= 8.5 && ranking?.rank === 1;
+  const isGlow = sc != null && sc >= 8.5 && !isRainbow;
+  const glowColor = perfLabel.color === "emerald" || perfLabel.color === "blue" || perfLabel.color === "yellow" ? perfLabel.color : "emerald";
 
   return (
     <>
       <p
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
-        className={`text-[8px] font-semibold truncate cursor-default ${c.text}`}
+        className={`text-[10px] font-bold cursor-default ${isRainbow || isGlow ? "" : c.text}`}
       >
-        {c.icon} {perfLabel.label}
+        <span className={isRainbow ? "elw-rainbow-text" : isGlow ? `perf-shimmer-text perf-shimmer-${glowColor}` : ""}>{c.icon} {perfLabel.label}</span>
       </p>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-56">
-            <div className="flex items-center gap-2 mb-2">
-              <span className={`text-sm font-bold ${c.text}`}>{c.icon} {perfLabel.label}</span>
-              {ranking && <span className="text-[10px] text-gray-500 bg-[#1b2230] px-1.5 py-0.5 rounded">{ranking.rank}. sıra</span>}
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-60">
+            {/* Başlık — ELW Score + değer */}
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] text-gray-500 font-medium">ELW Score</span>
+              {sc != null && <span className={`text-xl font-bold ${isRainbow ? "elw-rainbow-text" : c.text}`}>{sc.toFixed(1)}</span>}
             </div>
-            <p className="text-[11px] text-gray-400 leading-relaxed">{perfLabel.desc}</p>
-            {ranking?.elwScore != null && (
-              <div className="mt-2 pt-2 border-t border-[#1b2230]/50">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-500">ELW Score</span>
-                  <span className={`text-[12px] font-bold ${c.text}`}>{ranking.elwScore.toFixed(1)}</span>
-                </div>
-                <div className="mt-1 h-1.5 rounded-full bg-[#1b2230] overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${ranking.elwScore * 10}%`, background: perfLabel.color === "emerald" ? "#10b981" : perfLabel.color === "blue" ? "#3b82f6" : perfLabel.color === "yellow" ? "#f59e0b" : perfLabel.color === "red" ? "#ef4444" : "#6b7280" }} />
+
+            {/* Mini sparkline grafik */}
+            {scoreHistory && scoreHistory.length >= 2 && (
+              <div className="mb-2 rounded-lg bg-[#0d1117] p-1.5 border border-[#1b2230]/30">
+                <MiniSparkline scores={scoreHistory} currentIndex={scoreIndex} color={c.hex} />
+                <div className="flex justify-between mt-0.5 px-1">
+                  <span className="text-[8px] text-gray-600">eski</span>
+                  <span className="text-[8px] text-gray-600">son maçlar →</span>
                 </div>
               </div>
             )}
+
+            {/* Skor barı */}
+            {sc != null && (
+              <div className="h-1.5 rounded-full bg-[#1b2230] overflow-hidden mb-2.5">
+                <div className={`h-full rounded-full transition-all ${isRainbow ? "elw-rainbow-bar" : ""}`} style={{ width: `${sc * 10}%`, background: isRainbow ? undefined : c.hex }} />
+              </div>
+            )}
+
+            {/* Temel istatistikler */}
+            {match && (
+              <div className="grid grid-cols-3 gap-x-2 gap-y-1 mb-2.5 text-center">
+                <div>
+                  <p className="text-[9px] text-gray-600">KDA</p>
+                  <p className="text-[11px] text-gray-200 font-semibold">{match.kills}/{match.deaths}/{match.assists}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-gray-600">CS</p>
+                  <p className="text-[11px] text-gray-200 font-semibold">{match.cs}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-gray-600">Hasar</p>
+                  <p className="text-[11px] text-gray-200 font-semibold">{match.damage >= 1000 ? `${(match.damage / 1000).toFixed(1)}k` : match.damage}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Performans etiketi */}
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`text-sm font-bold ${c.text}`}>{c.icon} {perfLabel.label}</span>
+              {ranking && (
+                <span className="text-[10px] text-gray-400 bg-[#1b2230] px-1.5 py-0.5 rounded font-medium">
+                  {ranking.rank === 1 ? "MVP" : `${ranking.rank}.`}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-gray-500 leading-relaxed">{perfLabel.desc}</p>
           </div>
         </Tooltip>
       )}
@@ -190,7 +265,7 @@ function BadgeTag({ badge }) {
   );
 }
 
-export default function MatchCard({ match: m }) {
+export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
 
   const remake = m.duration < 300;
   const bdr = remake ? "border-l-blue-400" : m.win ? "border-l-emerald-500" : "border-l-red-500";
@@ -236,10 +311,10 @@ export default function MatchCard({ match: m }) {
         </div>
 
         {/* SOL SABİT: Name + Role */}
-        <div className="w-16 flex-shrink-0">
+        <div className="w-24 flex-shrink-0">
           <p className="text-[11px] font-medium text-gray-200 truncate">{m.champion.name}</p>
           <p className="text-[9px] text-gray-500">{roles[m.role] || m.role}</p>
-          {m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} />}
+          {m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} match={m} scoreHistory={scoreHistory} scoreIndex={scoreIndex} />}
         </div>
 
         {/* ORTA ESNEK: KDA + Items + Badges — eşit dağılır */}

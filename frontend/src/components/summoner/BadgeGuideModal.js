@@ -99,6 +99,26 @@ const ELW_WEIGHTS = {
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Orman", MIDDLE: "Orta", BOTTOM: "ADC", UTILITY: "Destek" };
 
+const LANE_METRICS = [
+  { name: "KDA", desc: "(K+A)/D farkı, ±3 normalize" },
+  { name: "CS", desc: "CS/dk farkı, ±3 normalize" },
+  { name: "Gold", desc: "Toplam gold farkı, ±4000" },
+  { name: "Hasar", desc: "Şampiyonlara verilen hasar farkı, ±8000" },
+  { name: "Alınan Hasar", desc: "Fazla hasar almak aktiflik göstergesi, ağırlık rolle değişir" },
+  { name: "Kule Hasarı", desc: "Kulelere verilen hasar farkı, ±5000" },
+  { name: "Obj. Hasarı", desc: "Objektif hasarı (ejder/baron), ±15000" },
+  { name: "Görüş", desc: "Vision score (%60) + ward activity (%40) birleşik" },
+  { name: "İyileştirme", desc: "Takım arkadaşlarına heal + kalkan farkı" },
+];
+
+const LANE_WEIGHTS = [
+  { role: "Top",    vals: [3.0, 2.5, 2.0, 2.5, 1.5, 2.0, 0.5, 1.5, 0.5] },
+  { role: "Orman",  vals: [3.0, 1.5, 2.0, 2.0, 1.0, 1.0, 3.5, 2.5, 0.5] },
+  { role: "Orta",   vals: [3.0, 2.5, 2.0, 3.0, 0.5, 1.5, 0.5, 1.5, 0.5] },
+  { role: "Alt",    vals: [3.0, 3.0, 2.5, 3.5, 0.5, 1.5, 0.5, 1.5, 0.5] },
+  { role: "Destek", vals: [3.0, 0.0, 1.0, 1.0, 2.5, 0.5, 0.5, 3.5, 2.5] },
+];
+
 const PERF_LABELS = [
   { label: "Durdurulamaz", desc: "1-2. sıra + galibiyet + yüksek KDA", color: "text-emerald-400" },
   { label: "Lider",        desc: "1-3. sıra + galibiyet",              color: "text-emerald-400" },
@@ -141,6 +161,7 @@ export default function BadgeGuideModal({ open, onClose }) {
           {[
             { key: "badges", label: "Rozetler" },
             { key: "elw", label: "ELW Score" },
+            { key: "lane", label: "Koridor Analizi" },
             { key: "labels", label: "Performans Etiketleri" },
           ].map((t) => (
             <button
@@ -257,6 +278,83 @@ export default function BadgeGuideModal({ open, onClose }) {
                       {s.range}: {s.label}
                     </span>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* KORİDOR ANALİZİ TAB */}
+          {tab === "lane" && (
+            <div className="space-y-5">
+              <div className="bg-[#0a0e14] rounded-lg p-4 border border-[#1b2230]/30">
+                <h3 className="text-sm font-bold text-white mb-1">Koridor Analizi Nedir?</h3>
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  Her koridor, aynı roldeki iki oyuncuyu <strong className="text-gray-200">9 metrik</strong> üzerinden karşılaştırır. Her metrik -1 ile +1 arası normalize edilir ve rol bazlı ağırlıkla çarpılır. Pozitif skor mavi tarafın, negatif skor kırmızı tarafın üstünlüğünü gösterir.
+                </p>
+                <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+                  <strong className="text-gray-400">Not:</strong> Koridor analizi sadece 1v1 karşılaştırmadır. ELW Score ise maçtaki 10 oyuncuya göre hesaplanır — ikisi birbirinden bağımsızdır. Bir oyuncu lane'de dengeli olabilir ama takım katkısı sayesinde yüksek ELW alabilir.
+                </p>
+              </div>
+
+              {/* Verdict eşikleri */}
+              <div>
+                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3">Sonuç Eşikleri</h3>
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    { label: "◀◀ Baskın", range: "> +5", color: "text-blue-300", bg: "bg-blue-500/15", border: "border-blue-500/25" },
+                    { label: "◀ Önde", range: "+2 ~ +5", color: "text-blue-400", bg: "bg-blue-500/8", border: "border-blue-500/15" },
+                    { label: "= Dengeli", range: "-2 ~ +2", color: "text-gray-400", bg: "bg-[#0d1117]/50", border: "border-[#1b2230]/30" },
+                    { label: "▶ Önde", range: "-2 ~ -5", color: "text-red-400", bg: "bg-red-500/8", border: "border-red-500/15" },
+                    { label: "▶▶ Baskın", range: "< -5", color: "text-red-300", bg: "bg-red-500/15", border: "border-red-500/25" },
+                  ].map(v => (
+                    <div key={v.label} className={`text-center py-2 rounded-lg border text-[10px] font-bold ${v.color} ${v.bg} ${v.border}`}>
+                      <p>{v.label}</p>
+                      <p className="text-[9px] font-normal opacity-70 mt-0.5">{v.range}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 9 Metrik */}
+              <div>
+                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3">9 Metrik</h3>
+                <div className="space-y-2">
+                  {LANE_METRICS.map((m) => (
+                    <div key={m.name} className="flex items-center gap-3 py-1.5 border-b border-[#1b2230]/15">
+                      <span className="text-[11px] font-semibold text-blue-400 w-28">{m.name}</span>
+                      <span className="text-[10px] text-gray-500 flex-1">{m.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rol ağırlık tablosu */}
+              <div>
+                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3">Rol Bazlı Ağırlıklar</h3>
+                <p className="text-[10px] text-gray-500 mb-3">Her koridorun güçlü olması gereken metriklere daha fazla ağırlık verilir. Yüksek değerler yeşil ile gösterilir.</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px]">
+                    <thead>
+                      <tr className="border-b border-[#1b2230]/30">
+                        <th className="text-left text-gray-500 py-1.5 pr-2">Rol</th>
+                        {LANE_METRICS.map(m => (
+                          <th key={m.name} className="text-center text-gray-400 py-1.5 px-1 font-semibold">{m.name.split(" ")[0]}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {LANE_WEIGHTS.map(r => (
+                        <tr key={r.role} className="border-b border-[#1b2230]/10">
+                          <td className="text-gray-300 font-medium py-1.5 pr-2">{r.role}</td>
+                          {r.vals.map((v, i) => (
+                            <td key={i} className={`text-center py-1.5 px-1 font-mono ${v >= 3.0 ? "text-emerald-400 font-bold" : v >= 2.0 ? "text-blue-400" : v >= 1.0 ? "text-gray-400" : "text-gray-600"}`}>
+                              {v === 0 ? "—" : v.toFixed(1)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
