@@ -106,7 +106,8 @@ function PageTracker({ trackPageView }) {
   const prevPath = useRef(null);
 
   useEffect(() => {
-    if (pathname && pathname !== prevPath.current) {
+    // Admin sayfalarini track etme
+    if (pathname && pathname !== prevPath.current && !pathname.startsWith("/admin")) {
       prevPath.current = pathname;
       trackPageView(pathname);
     }
