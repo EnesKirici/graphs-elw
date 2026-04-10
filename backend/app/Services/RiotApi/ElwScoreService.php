@@ -198,38 +198,24 @@ class ElwScoreService
             }
         }
 
-        if ($rank <= 2 && $win && $kda >= 4) {
-            return ['label' => 'Durdurulamaz', 'desc' => 'Eşsiz performans sergileyerek takımını zafere taşıdı.', 'color' => 'emerald'];
-        }
+        $labels = \App\Models\AdminSetting::getValue('performance_labels', self::DEFAULT_LABELS);
 
-        if ($rank <= 3 && $win) {
-            return ['label' => 'Lider', 'desc' => 'İyi kararlar verip takımını zafere taşıdı.', 'color' => 'emerald'];
-        }
+        foreach ($labels as $l) {
+            $c = $l['conditions'] ?? [];
+            // win koşulu
+            if (isset($c['win']) && $c['win'] !== null && (bool) $c['win'] !== $win) continue;
+            // rank koşulları
+            if (isset($c['rank_max']) && $rank > $c['rank_max']) continue;
+            if (isset($c['rank_min']) && $rank < $c['rank_min']) continue;
+            // KDA koşulu
+            if (isset($c['kda_min']) && $kda < $c['kda_min']) continue;
+            // Gold koşulları
+            if (isset($c['earlyGold_max']) && ($earlyGoldLead === null || $earlyGoldLead >= $c['earlyGold_max'])) continue;
+            if (isset($c['earlyGold_min']) && ($earlyGoldLead === null || $earlyGoldLead <= $c['earlyGold_min'])) continue;
+            if (isset($c['lateGold_min']) && ($lateGoldLead === null || $lateGoldLead <= $c['lateGold_min'])) continue;
+            if (isset($c['lateGold_max']) && ($lateGoldLead === null || $lateGoldLead >= $c['lateGold_max'])) continue;
 
-        if ($earlyGoldLead !== null && $lateGoldLead !== null) {
-            if ($earlyGoldLead < -300 && $lateGoldLead > 500 && $win) {
-                return ['label' => 'Geç Açılan', 'desc' => 'Zaman içinde giderek artan performans göstererek zafere ulaştı.', 'color' => 'blue'];
-            }
-
-            if ($earlyGoldLead > 500 && $lateGoldLead < -200 && !$win) {
-                return ['label' => 'Erken Baskın', 'desc' => 'İyi bir başlangıç yaptı ama avantajı koruyamadı.', 'color' => 'yellow'];
-            }
-        }
-
-        if ($rank <= 3 && !$win) {
-            return ['label' => 'Dirençli', 'desc' => 'Yenilgiye rağmen takımındaki en iyi performansı gösterdi.', 'color' => 'blue'];
-        }
-
-        if ($win && $rank >= 4 && $rank <= 6) {
-            return ['label' => 'Katkıcı', 'desc' => 'Takımına istikrarlı katkı sağlayarak galibiyete yardımcı oldu.', 'color' => 'gray'];
-        }
-
-        if ($rank >= 8) {
-            return ['label' => 'Mücadele', 'desc' => 'Zor bir maç geçirdi.', 'color' => 'red'];
-        }
-
-        if ($rank >= 5 && $rank <= 7) {
-            return ['label' => 'Ortalama', 'desc' => 'Standart bir performans sergiledi.', 'color' => 'gray'];
+            return ['label' => $l['label'], 'desc' => $l['desc'], 'color' => $l['color']];
         }
 
         return null;
@@ -253,4 +239,23 @@ class ElwScoreService
         }
         return $result;
     }
+
+    private const DEFAULT_LABELS = [
+        ['label' => 'Durdurulamaz', 'desc' => 'Eşsiz performans sergileyerek takımını zafere taşıdı.', 'color' => 'emerald',
+         'conditions' => ['rank_max' => 2, 'win' => true, 'kda_min' => 4]],
+        ['label' => 'Lider', 'desc' => 'İyi kararlar verip takımını zafere taşıdı.', 'color' => 'emerald',
+         'conditions' => ['rank_max' => 3, 'win' => true]],
+        ['label' => 'Geç Açılan', 'desc' => 'Zaman içinde giderek artan performans göstererek zafere ulaştı.', 'color' => 'blue',
+         'conditions' => ['earlyGold_max' => -300, 'lateGold_min' => 500, 'win' => true]],
+        ['label' => 'Erken Baskın', 'desc' => 'İyi bir başlangıç yaptı ama avantajı koruyamadı.', 'color' => 'yellow',
+         'conditions' => ['earlyGold_min' => 500, 'lateGold_max' => -200, 'win' => false]],
+        ['label' => 'Dirençli', 'desc' => 'Yenilgiye rağmen takımındaki en iyi performansı gösterdi.', 'color' => 'blue',
+         'conditions' => ['rank_max' => 3, 'win' => false]],
+        ['label' => 'Katkıcı', 'desc' => 'Takımına istikrarlı katkı sağlayarak galibiyete yardımcı oldu.', 'color' => 'gray',
+         'conditions' => ['rank_min' => 4, 'rank_max' => 6, 'win' => true]],
+        ['label' => 'Mücadele', 'desc' => 'Zor bir maç geçirdi.', 'color' => 'red',
+         'conditions' => ['rank_min' => 8]],
+        ['label' => 'Ortalama', 'desc' => 'Standart bir performans sergiledi.', 'color' => 'gray',
+         'conditions' => ['rank_min' => 5, 'rank_max' => 7]],
+    ];
 }
