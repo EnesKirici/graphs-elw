@@ -26,6 +26,13 @@ Route::prefix('v1')->group(function () {
         ]);
     });
 
+    // Rate limit debug endpoint
+    Route::get('/debug/rate-limit', function () {
+        return response()->json(
+            \App\Services\RiotApi\RiotApiService::getRateLimitStatus()
+        );
+    });
+
     // DDragon versiyon bilgisi
     Route::get('/version', [ChampionController::class, 'version']);
 

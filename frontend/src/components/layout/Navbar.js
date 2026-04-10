@@ -7,11 +7,56 @@ import { useBackground } from "@/context/BackgroundContext";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 const ROLE_ICONS = {
-  TOP: "/roles/top.png", JUNGLE: "/roles/jungle.png", MIDDLE: "/roles/mid.png",
-  BOTTOM: "/roles/bot.png", UTILITY: "/roles/support.png",
-  Top: "/roles/top.png", Jungle: "/roles/jungle.png", Mid: "/roles/mid.png",
-  ADC: "/roles/bot.png", Support: "/roles/support.png",
+  TOP: "/roles/top.webp", JUNGLE: "/roles/jungle.webp", MIDDLE: "/roles/mid.webp",
+  BOTTOM: "/roles/bot.webp", UTILITY: "/roles/support.webp",
+  Top: "/roles/top.webp", Jungle: "/roles/jungle.webp", Mid: "/roles/mid.webp",
+  ADC: "/roles/bot.webp", Support: "/roles/support.webp",
 };
+
+function RateLimitIndicator() {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let mounted = true;
+    const poll = () => {
+      fetch(`${API_BASE}/debug/rate-limit`).then(r => r.json()).then(d => { if (mounted) setData(d); }).catch(() => {});
+    };
+    poll();
+    const id = setInterval(poll, 5000);
+    return () => { mounted = false; clearInterval(id); };
+  }, []);
+
+  if (!data) return null;
+
+  // "20:1,100:120" → parse et
+  const limitParts = (data.appLimit || "").split(",");
+  const countParts = (data.appCount || "").split(",");
+  let longLimit = 0, longUsed = 0;
+  limitParts.forEach((p, i) => {
+    const [limit, window] = p.split(":");
+    const [used] = (countParts[i] || "0").split(":");
+    if (parseInt(window) > 10) { longLimit = parseInt(limit); longUsed = parseInt(used); }
+  });
+
+  const pct = longLimit > 0 ? Math.round(longUsed / longLimit * 100) : 0;
+  const isHot = pct > 70;
+  const isCooldown = data.cooldownUntil > 0;
+
+  return (
+    <div className="flex items-center gap-1.5 text-[10px] font-mono">
+      {isCooldown ? (
+        <span className="text-red-400 animate-pulse">LIMIT {data.cooldownUntil}s</span>
+      ) : (
+        <>
+          <div className="w-10 h-1.5 rounded-full bg-[#1b2230] overflow-hidden" title={`${longUsed}/${longLimit} (${pct}%)`}>
+            <div className={`h-full rounded-full ${isHot ? "bg-red-500" : pct > 40 ? "bg-yellow-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+          </div>
+          <span className={isHot ? "text-red-400" : "text-gray-600"}>{longUsed}/{longLimit}</span>
+        </>
+      )}
+      {data.rateLimited > 0 && <span className="text-red-500">429×{data.rateLimited}</span>}
+    </div>
+  );
+}
 
 export default function Navbar() {
   const router = useRouter();
@@ -171,7 +216,7 @@ export default function Navbar() {
                       </p>
                       {rankText ? (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <img src={`/ranks/badges/${p.tier.toLowerCase()}.png`} alt="" width={16} height={16} />
+                          <img src={`/ranks/badges/${p.tier.toLowerCase()}.webp`} alt="" width={16} height={16} />
                           <p className="text-[11px] text-gray-400">{rankText}</p>
                         </div>
                       ) : (
@@ -225,6 +270,7 @@ export default function Navbar() {
             BG Kaldır
           </button>
         )}
+        <RateLimitIndicator />
         <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
         <span className="text-xs text-gray-500">TR1</span>
       </div>

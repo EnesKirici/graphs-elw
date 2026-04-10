@@ -73,7 +73,7 @@ class MatchStatisticsService
                     $sorted[] = [
                         'role'    => $key,
                         'label'   => self::ROLE_LABELS[$key] ?? $key,
-                        'icon'    => '/roles/' . (self::ROLE_ICONS[$key] ?? strtolower($key)) . '.png',
+                        'icon'    => '/roles/' . (self::ROLE_ICONS[$key] ?? strtolower($key)) . '.webp',
                         'games'   => $rd['games'],
                         'wins'    => $rd['wins'],
                         'losses'  => $rd['games'] - $rd['wins'],
@@ -316,7 +316,7 @@ class MatchStatisticsService
             $roleStats[] = [
                 'role'    => $key,
                 'label'   => self::ROLE_LABELS[$key] ?? $key,
-                'icon'    => '/roles/' . (self::ROLE_ICONS[$key] ?? strtolower($key)) . '.png',
+                'icon'    => '/roles/' . (self::ROLE_ICONS[$key] ?? strtolower($key)) . '.webp',
                 'games'   => $rd['games'],
                 'wins'    => $rd['wins'],
                 'losses'  => $rd['games'] - $rd['wins'],

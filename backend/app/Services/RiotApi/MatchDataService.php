@@ -109,6 +109,8 @@ class MatchDataService
 
     /**
      * Maç timeline verisi — DB-first.
+     * DB'ye ham veri yerine sadece gerekli kısımları kaydeder (~1MB → ~10KB).
+     * Dönüş formatı mevcut kodla uyumlu: ['info']['frames'][]['events'] + ['participantFrames']
      */
     public function getMatchTimeline(string $matchId): ?array
     {
@@ -125,15 +127,68 @@ class MatchDataService
             return null;
         }
 
-        // 3. DB'ye kaydet
+        // 3. Sadece gerekli verileri çıkar ve DB'ye kaydet
+        $slim = $this->extractTimelineData($response);
         try {
             MatchTimeline::create([
                 'match_id' => $matchId,
-                'data'     => $response,
+                'data'     => $slim,
             ]);
         } catch (\Exception $e) {}
 
-        return $response;
+        return $slim;
+    }
+
+    /**
+     * Ham timeline verisinden sadece gerekli kısımları çıkar.
+     * Kullanılan: ITEM_PURCHASED eventleri, SKILL_LEVEL_UP eventleri, participantFrames (gold)
+     */
+    private function extractTimelineData(array $raw): array
+    {
+        $frames = $raw['info']['frames'] ?? [];
+        $slimFrames = [];
+
+        foreach ($frames as $frame) {
+            $slimFrame = [];
+
+            // participantFrames — sadece totalGold (performance label için)
+            if (isset($frame['participantFrames'])) {
+                $pf = [];
+                foreach ($frame['participantFrames'] as $pid => $data) {
+                    $pf[$pid] = ['totalGold' => $data['totalGold'] ?? 0];
+                }
+                $slimFrame['participantFrames'] = $pf;
+            }
+
+            // Events — sadece ITEM_PURCHASED ve SKILL_LEVEL_UP
+            $events = [];
+            foreach ($frame['events'] ?? [] as $event) {
+                $type = $event['type'] ?? '';
+                if ($type === 'ITEM_PURCHASED') {
+                    $events[] = [
+                        'type'          => $type,
+                        'timestamp'     => $event['timestamp'] ?? 0,
+                        'participantId' => $event['participantId'] ?? null,
+                        'itemId'        => $event['itemId'] ?? 0,
+                    ];
+                } elseif ($type === 'SKILL_LEVEL_UP') {
+                    $events[] = [
+                        'type'          => $type,
+                        'timestamp'     => $event['timestamp'] ?? 0,
+                        'participantId' => $event['participantId'] ?? null,
+                        'skillSlot'     => $event['skillSlot'] ?? null,
+                        'levelUpType'   => $event['levelUpType'] ?? 'NORMAL',
+                    ];
+                }
+            }
+            if (!empty($events)) {
+                $slimFrame['events'] = $events;
+            }
+
+            $slimFrames[] = $slimFrame;
+        }
+
+        return ['info' => ['frames' => $slimFrames]];
     }
 
     /**
@@ -217,7 +272,7 @@ class MatchDataService
                     try {
                         MatchTimeline::create([
                             'match_id' => $id,
-                            'data'     => $resp->json(),
+                            'data'     => $this->extractTimelineData($resp->json()),
                         ]);
                     } catch (\Exception $e) {}
                 }

@@ -1,12 +1,11 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {
-    root: __dirname,
+  webpack: (config) => {
+    config.watchOptions = {
+      poll: false,
+      ignored: ['**/node_modules/**', '**/.next/**'],
+    };
+    return config;
   },
   // DDragon'dan gelen şampiyon/item görsellerini Next.js Image ile kullanabilmek için
   // Normalde Next.js harici URL'lerden görsel yüklemeye izin vermez (güvenlik).

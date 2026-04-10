@@ -24,9 +24,9 @@ function formatPoints(p) {
 
 function getMasteryCrestUrl(level) {
   if (!level || level <= 0) return null;
-  if (level <= 3) return "/masteries/level0.png";
-  if (level >= 10) return "/masteries/level10.png";
-  return `/masteries/level${level}.png`;
+  if (level <= 3) return "/masteries/level0.webp";
+  if (level >= 10) return "/masteries/level10.webp";
+  return `/masteries/level${level}.webp`;
 }
 
 function getWrColor(wr) {

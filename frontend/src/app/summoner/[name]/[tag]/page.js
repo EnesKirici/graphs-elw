@@ -69,7 +69,7 @@ function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 
 
 // Rank görselleri — local dosyalar (public/ranks/)
 function rankBadgeUrl(tier) {
-  return `/ranks/badges/${tier.toLowerCase()}.png`;
+  return `/ranks/badges/${tier.toLowerCase()}.webp`;
 }
 
 // Centered splash URL (1280x720)
@@ -150,7 +150,7 @@ export default async function SummonerPage({ params }) {
                 {(() => {
                   const mainRole = data.seasonRoles?.mainRole || recentStats?.mainRole;
                   if (!mainRole) return null;
-                  const roleIcons = { Top: "/roles/top.png", Jungle: "/roles/jungle.png", Mid: "/roles/mid.png", ADC: "/roles/bot.png", Support: "/roles/support.png" };
+                  const roleIcons = { Top: "/roles/top.webp", Jungle: "/roles/jungle.webp", Mid: "/roles/mid.webp", ADC: "/roles/bot.webp", Support: "/roles/support.webp" };
                   const parts = mainRole.replace(" Main", "").split("/");
                   return (
                     <span className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm text-gray-200 px-2.5 py-1 rounded-full">

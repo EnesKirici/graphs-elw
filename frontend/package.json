@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node --max-old-space-size=5048 node_modules/.bin/next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start"
   },

@@ -5,9 +5,9 @@ import Link from "next/link";
 import { Flame, Sparkles, Star, Shield, Award, Zap } from "lucide-react";
 
 const TIERS = [
-  { key: "challenger", label: "Challenger", color: "text-yellow-300", badge: "/ranks/badges/challenger.png" },
-  { key: "grandmaster", label: "Grandmaster", color: "text-red-400", badge: "/ranks/badges/grandmaster.png" },
-  { key: "master", label: "Master", color: "text-purple-400", badge: "/ranks/badges/master.png" },
+  { key: "challenger", label: "Challenger", color: "text-yellow-300", badge: "/ranks/badges/challenger.webp" },
+  { key: "grandmaster", label: "Grandmaster", color: "text-red-400", badge: "/ranks/badges/grandmaster.webp" },
+  { key: "master", label: "Master", color: "text-purple-400", badge: "/ranks/badges/master.webp" },
 ];
 
 const QUEUES = [
@@ -16,8 +16,8 @@ const QUEUES = [
 ];
 
 const ROLE_ICONS = {
-  Top: "/roles/top.png", Mid: "/roles/mid.png", Jungle: "/roles/jungle.png",
-  ADC: "/roles/bot.png", Support: "/roles/support.png",
+  Top: "/roles/top.webp", Mid: "/roles/mid.webp", Jungle: "/roles/jungle.webp",
+  ADC: "/roles/bot.webp", Support: "/roles/support.webp",
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";

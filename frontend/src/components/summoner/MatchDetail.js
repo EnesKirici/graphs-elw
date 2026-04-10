@@ -18,7 +18,7 @@ function kdaColor(kda) {
   if (kda >= 2) return "text-blue-400";
   return "text-gray-400";
 }
-function rankBadgeUrl(tier) { return tier ? `/ranks/badges/${tier.toLowerCase()}.png` : null; }
+function rankBadgeUrl(tier) { return tier ? `/ranks/badges/${tier.toLowerCase()}.webp` : null; }
 function formatRank(tier, div) {
   if (!tier) return "Unranked";
   const name = tier.charAt(0) + tier.slice(1).toLowerCase();
@@ -67,11 +67,11 @@ function flipVerdict(verdict) {
 
 const ROLES_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
 const OBJECTIVES = [
-  { key: "baron", label: "Baron", icon: "/objectives/baron.png" },
-  { key: "dragon", label: "Dragon", icon: "/objectives/dragon.png" },
-  { key: "tower", label: "Kule", icon: "/objectives/tower.png" },
-  { key: "inhibitor", label: "İnhibitör", icon: "/objectives/inhibitor.png" },
-  { key: "riftHerald", label: "Alamet", icon: "/objectives/riftHerald.png" },
+  { key: "baron", label: "Baron", icon: "/objectives/baron.webp" },
+  { key: "dragon", label: "Dragon", icon: "/objectives/dragon.webp" },
+  { key: "tower", label: "Kule", icon: "/objectives/tower.webp" },
+  { key: "inhibitor", label: "İnhibitör", icon: "/objectives/inhibitor.webp" },
+  { key: "riftHerald", label: "Alamet", icon: "/objectives/riftHerald.webp" },
   { key: "horde", label: "Voidgrub", icon: null },
 ];
 
