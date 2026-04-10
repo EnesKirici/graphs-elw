@@ -368,6 +368,11 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-16 text-center">
             <p className={`text-[11px] font-bold ${resClr}`}>{resTxt}</p>
+            {m.lpChange != null && (
+              <p className={`text-[10px] font-bold ${m.lpChange > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {m.lpChange > 0 ? "+" : ""}{m.lpChange} LP
+              </p>
+            )}
             <p className="text-[9px] text-gray-500">{m.queueType || ""}</p>
             <p className="text-[10px] text-gray-500" suppressHydrationWarning>{fmtDur(m.duration)} · {timeAgo(m.gameCreation)}</p>
           </div>

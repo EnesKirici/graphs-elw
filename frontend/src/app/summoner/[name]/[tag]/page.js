@@ -73,10 +73,6 @@ function rankBadgeUrl(tier) {
   return `/ranks/badges/${tier.toLowerCase()}.webp`;
 }
 
-// Centered splash URL (1280x720) — skinNum ile kostüm desteği
-function centeredSplashUrl(champName, skinNum = 0) {
-  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${champName}_${skinNum}.jpg`;
-}
 
 export default async function SummonerPage({ params }) {
   const { name, tag } = await params;
@@ -110,15 +106,13 @@ export default async function SummonerPage({ params }) {
   // Banner: en çok oynanan şampiyonun rastgele skin centered splash'ı
   const bannerChamp = data.bannerChampion || recentStats?.mostPlayedChampion?.id || (masteries[0]?.championName);
   const bannerSkins = data.bannerSkins || [0];
-  const randomSkin = bannerSkins[Math.floor(Math.random() * bannerSkins.length)];
-  const bannerUrl = bannerChamp ? centeredSplashUrl(bannerChamp.replace(/[^a-zA-Z]/g, ''), randomSkin) : null;
 
   return (
     <div>
       {/* ===== BANNER ===== */}
       <div className="relative h-48 md:h-56 overflow-hidden">
-        {bannerUrl && (
-          <img src={bannerUrl} alt="" className="w-full h-full object-cover object-[center_20%]" />
+        {bannerChamp && (
+          <BannerImage champion={bannerChamp} skins={bannerSkins} />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#060a10] via-[#060a10]/40 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#060a10]/50 via-transparent to-transparent" />

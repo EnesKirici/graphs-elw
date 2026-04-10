@@ -160,16 +160,28 @@ class SummonerController extends Controller
         $masteries = $this->mastery->getTopMasteries($puuid, 10);
         $totalScore = $this->mastery->getTotalScore($puuid);
 
-        // LP snapshot kaydet — her profil yüklemesinde mevcut LP'yi DB'ye yaz
-        $this->saveLpSnapshot($puuid, $ranked);
-
         // ────────────────────────────────────────────
-        //  HIZLI YÜKLEME: Sadece son 10 maç detayını çek
-        //  Sezon verileri DB'deki veriden hesaplanır (ek API isteği yok)
-        //  Timeline'lar ilk yüklemede çekilmez (maç detayında çekilir)
+        //  AKILLI YÜKLEME:
+        //  1. Son 10 maç + Sezon ranked maçları paralel preload
+        //  2. Timeline'lar ilk yüklemede çekilmez (maç detayında çekilir)
+        //  3. DB'de olan maçlar tekrar çekilmez (0 istek)
         // ────────────────────────────────────────────
 
-        // Son 10 maç ID'lerini al ve detaylarını paralel preload et
+        // Son 10 maç ID + Sezon Solo/Flex ID'lerini topla ve toplu preload
+        try {
+            $preloadIds = [];
+            $recentIds = $this->matchData->getMatchIds($puuid, 10, 0);
+            $preloadIds = array_merge($preloadIds, $recentIds);
+            foreach ([420, 440] as $queueId) {
+                try {
+                    $ids = $this->matchData->getSeasonMatchIds($puuid, $queueId);
+                    $preloadIds = array_merge($preloadIds, $ids);
+                } catch (\Exception $e) {}
+            }
+            $preloadIds = array_unique($preloadIds);
+            $this->matchData->preloadMatchDetails($preloadIds);
+        } catch (\Exception $e) {}
+
         $recentMatches = [];
         $recentStats = null;
         $seasonRoles = null;
@@ -198,6 +210,13 @@ class SummonerController extends Controller
                     $bannerSkins = [0];
                 }
             }
+        } catch (\Exception $e) {}
+
+        // LP snapshot — mevcut LP'yi en son ranked maçla eşleştirip kaydet
+        // Sonra her maça LP değişimini hesaplayıp ekle
+        try {
+            $this->saveLpSnapshot($puuid, $ranked, $recentMatches);
+            $recentMatches = $this->attachLpChanges($puuid, $recentMatches);
         } catch (\Exception $e) {}
 
         // Sezon verileri — DB'de maç varsa hesapla, yoksa recentMatches'tan fallback
@@ -380,33 +399,115 @@ class SummonerController extends Controller
     }
 
     /**
-     * LP snapshot kaydet — aynı LP'yi tekrar kaydetme.
+     * LP snapshot — mevcut LP'yi en son ranked maç ile eşleştirip kaydet.
+     * Aynı match_id için zaten kayıt varsa tekrar kaydetmez.
      */
-    private function saveLpSnapshot(string $puuid, array $ranked): void
+    private function saveLpSnapshot(string $puuid, array $ranked, array $recentMatches): void
     {
         try {
             foreach (['solo' => 'RANKED_SOLO_5x5', 'flex' => 'RANKED_FLEX_SR'] as $key => $queue) {
                 $data = $ranked[$key] ?? null;
                 if (!$data || !isset($data['lp'])) continue;
 
-                // Son snapshot ile aynı mı kontrol et (gereksiz kayıt önleme)
-                $last = LpSnapshot::where('puuid', $puuid)
-                    ->where('queue', $queue)
-                    ->latest('id')
-                    ->first();
+                $queueId = $key === 'solo' ? 420 : 440;
 
-                if ($last && $last->tier === $data['tier'] && $last->rank === $data['rank'] && $last->lp === $data['lp']) {
-                    continue; // LP değişmemiş, kaydetme
+                // Bu kuyruk için en son ranked maçı bul
+                $lastRankedMatch = null;
+                foreach ($recentMatches as $m) {
+                    if (($m['queueType'] ?? '') === ($key === 'solo' ? 'Solo/Duo' : 'Flex')) {
+                        $lastRankedMatch = $m;
+                        break; // İlk bulunan = en yeni
+                    }
                 }
 
+                if (!$lastRankedMatch) continue;
+                $matchId = $lastRankedMatch['matchId'];
+
+                // Bu match_id için zaten snapshot var mı?
+                $exists = LpSnapshot::where('puuid', $puuid)
+                    ->where('match_id', $matchId)
+                    ->exists();
+                if ($exists) continue;
+
                 LpSnapshot::create([
-                    'puuid' => $puuid,
-                    'queue' => $queue,
-                    'tier'  => $data['tier'],
-                    'rank'  => $data['rank'],
-                    'lp'    => $data['lp'],
+                    'puuid'    => $puuid,
+                    'queue'    => $queue,
+                    'match_id' => $matchId,
+                    'tier'     => $data['tier'],
+                    'rank'     => $data['rank'],
+                    'lp'       => $data['lp'],
                 ]);
             }
         } catch (\Exception $e) {}
+    }
+
+    /**
+     * Her maça LP değişimini hesaplayıp ekle.
+     * İki ardışık snapshot arasındaki farkı hesaplar.
+     */
+    private function attachLpChanges(string $puuid, array $matches): array
+    {
+        // Bu oyuncunun tüm LP snapshot'larını çek (yeniden eskiye)
+        $snapshots = LpSnapshot::where('puuid', $puuid)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->keyBy('match_id');
+
+        // Tüm snapshot'ları sıralı listede tut (LP farkı hesabı için)
+        $soloSnapshots = LpSnapshot::where('puuid', $puuid)
+            ->where('queue', 'RANKED_SOLO_5x5')
+            ->orderBy('id', 'desc')
+            ->get();
+        $flexSnapshots = LpSnapshot::where('puuid', $puuid)
+            ->where('queue', 'RANKED_FLEX_SR')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        foreach ($matches as &$m) {
+            $m['lpChange'] = null;
+            $matchId = $m['matchId'] ?? null;
+            if (!$matchId) continue;
+
+            $snap = $snapshots[$matchId] ?? null;
+            if (!$snap) continue;
+
+            // Bu snapshot'tan bir öncekini bul (aynı queue)
+            $list = $snap->queue === 'RANKED_SOLO_5x5' ? $soloSnapshots : $flexSnapshots;
+            $found = false;
+            $prevSnap = null;
+            foreach ($list as $s) {
+                if ($found) { $prevSnap = $s; break; }
+                if ($s->match_id === $matchId) $found = true;
+            }
+
+            if ($prevSnap) {
+                $currentTotal = $this->lpToAbsolute($snap->tier, $snap->rank, $snap->lp);
+                $prevTotal = $this->lpToAbsolute($prevSnap->tier, $prevSnap->rank, $prevSnap->lp);
+                $m['lpChange'] = $currentTotal - $prevTotal;
+            }
+        }
+        unset($m);
+
+        return $matches;
+    }
+
+    /**
+     * Tier+Rank+LP'yi mutlak sayıya çevir (LP farkı hesabı için).
+     * Iron IV 0LP = 0, Challenger 1000LP = ~5400
+     */
+    private function lpToAbsolute(string $tier, string $rank, int $lp): int
+    {
+        $tiers = ['IRON' => 0, 'BRONZE' => 400, 'SILVER' => 800, 'GOLD' => 1200, 'PLATINUM' => 1600, 'EMERALD' => 2000, 'DIAMOND' => 2400, 'MASTER' => 2800, 'GRANDMASTER' => 2800, 'CHALLENGER' => 2800];
+        $ranks = ['IV' => 0, 'III' => 100, 'II' => 200, 'I' => 300];
+
+        $base = $tiers[strtoupper($tier)] ?? 0;
+        $rankOffset = $ranks[$rank] ?? 0;
+
+        // Master+ tek division, LP direkt eklenir
+        if (in_array(strtoupper($tier), ['MASTER', 'GRANDMASTER', 'CHALLENGER'])) {
+            return $base + $lp;
+        }
+
+        return $base + $rankOffset + $lp;
     }
 }

@@ -46,8 +46,7 @@ class MatchStatisticsService
 
                 foreach ($matchIds as $matchId) {
                     try {
-                        $detail = $this->matchData->getMatchDetailIfExists($matchId);
-                        if (!$detail) continue;
+                        $detail = $this->matchData->getMatchDetail($matchId);
                         foreach ($detail['info']['participants'] as $p) {
                             if ($p['puuid'] === $puuid) {
                                 $role = $p['teamPosition'] ?: $p['individualPosition'] ?: '';
@@ -128,8 +127,7 @@ class MatchStatisticsService
 
                 foreach ($matchIds as $matchId) {
                     try {
-                        $detail = $this->matchData->getMatchDetailIfExists($matchId);
-                        if (!$detail) continue;
+                        $detail = $this->matchData->getMatchDetail($matchId);
 
                         if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
 
@@ -203,8 +201,7 @@ class MatchStatisticsService
 
                 foreach ($matchIds as $matchId) {
                     try {
-                        $detail = $this->matchData->getMatchDetailIfExists($matchId);
-                        if (!$detail) continue;
+                        $detail = $this->matchData->getMatchDetail($matchId);
 
                         if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
 

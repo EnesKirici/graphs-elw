@@ -1,33 +1,30 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 
 function centeredSplashUrl(champName, skinNum = 0) {
   return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${champName}_${skinNum}.jpg`;
 }
 
 export default function BannerImage({ champion, skins = [0] }) {
-  const selectedSkin = useMemo(
-    () => skins[Math.floor(Math.random() * skins.length)],
-    [skins]
-  );
-
   const champId = champion?.replace(/[^a-zA-Z]/g, "");
-  const [src, setSrc] = useState(
-    champId ? centeredSplashUrl(champId, selectedSkin) : null
-  );
+  const [skinNum, setSkinNum] = useState(0);
 
-  if (!src) return null;
+  useEffect(() => {
+    if (skins.length > 1) {
+      setSkinNum(skins[Math.floor(Math.random() * skins.length)]);
+    }
+  }, [skins]);
+
+  if (!champId) return null;
 
   return (
     <img
-      src={src}
+      src={centeredSplashUrl(champId, skinNum)}
       alt=""
       className="w-full h-full object-cover object-[center_20%]"
       onError={() => {
-        if (selectedSkin !== 0) {
-          setSrc(centeredSplashUrl(champId, 0));
-        }
+        if (skinNum !== 0) setSkinNum(0);
       }}
     />
   );

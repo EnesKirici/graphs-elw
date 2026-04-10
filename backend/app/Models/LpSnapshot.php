@@ -9,6 +9,6 @@ class LpSnapshot extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'puuid', 'queue', 'tier', 'rank', 'lp',
+        'puuid', 'queue', 'match_id', 'tier', 'rank', 'lp',
     ];
 }
