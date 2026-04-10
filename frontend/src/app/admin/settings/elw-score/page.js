@@ -34,6 +34,7 @@ function ScorePreview({ score, config }) {
 
   const colorMap = { emerald: "text-emerald-400", blue: "text-blue-400", yellow: "text-yellow-400", red: "text-red-400" };
   const bgMap = { emerald: "bg-emerald-500", blue: "bg-blue-500", yellow: "bg-yellow-500", red: "bg-red-500" };
+  const colorLabel = { emerald: "Yesil", blue: "Mavi", yellow: "Sari", red: "Kirmizi" };
 
   return (
     <div className={`flex items-center gap-3 p-3 rounded-xl border border-[#1b2230]/50 ${isRainbow ? "bg-gradient-to-r from-amber-500/5 via-cyan-500/5 to-emerald-500/5" : isGlow ? "bg-emerald-500/5" : "bg-white/[0.02]"}`}>
@@ -49,7 +50,10 @@ function ScorePreview({ score, config }) {
         <div className="flex items-center gap-2 mt-0.5">
           {isRainbow && <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full">MVP RAINBOW</span>}
           {isGlow && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">GLOW</span>}
-          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${bgMap[color]}/20 ${colorMap[color]}`}>{color}</span>
+          <span className="flex items-center gap-1">
+            <span className={`w-2 h-2 rounded-full ${bgMap[color]}`} />
+            <span className="text-[9px] text-gray-500">{colorLabel[color]}</span>
+          </span>
         </div>
       </div>
     </div>

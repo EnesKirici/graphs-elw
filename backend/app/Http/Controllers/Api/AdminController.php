@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnalyticsEvent;
+use App\Models\BannedIp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -20,6 +22,21 @@ class AdminController extends Controller
         $ip = $request->ip();
         $key = 'admin-login:' . $ip;
 
+        // Başarısız deneme sayısını takip et
+        $failKey = 'admin-fail-count:' . $ip;
+        $failCount = (int) Cache::get($failKey, 0);
+
+        // 10 başarısız deneme → kalıcı ban, taviz yok
+        if ($failCount >= 10) {
+            BannedIp::ban($ip, "Brute force: {$failCount} basarisiz login denemesi", 0, true);
+            Cache::forget($failKey);
+
+            return response()->json([
+                'error' => 'IP adresiniz kalıcı olarak engellenmiştir.',
+            ], 403);
+        }
+
+        // Rate limiting (kısa vadeli — 5 deneme / 5 dakika)
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
             return response()->json([
@@ -32,10 +49,15 @@ class AdminController extends Controller
         $password = $request->input('password');
 
         if (!$password || $password !== config('admin.password')) {
+            // Başarısız deneme sayacını artır (24 saat TTL)
+            Cache::put($failKey, $failCount + 1, 86400);
+
             return response()->json(['error' => 'Geçersiz şifre.'], 401);
         }
 
+        // Başarılı giriş — sayaçları temizle
         RateLimiter::clear($key);
+        Cache::forget($failKey);
 
         return response()->json([
             'token' => config('admin.token'),
@@ -96,6 +118,14 @@ class AdminController extends Controller
             ->orderBy('date')
             ->get();
 
+        // Aktif ban sayısı
+        $activeBans = BannedIp::whereNull('unbanned_at')
+            ->where(function ($q) {
+                $q->where('is_permanent', true)
+                  ->orWhere('expires_at', '>', now());
+            })
+            ->count();
+
         return response()->json([
             'sessions' => [
                 'today' => $sessionsToday,
@@ -106,6 +136,7 @@ class AdminController extends Controller
                 'today' => $eventsToday,
                 'week'  => $eventsWeek,
             ],
+            'activeBans'    => $activeBans,
             'searchesToday' => $searchesToday,
             'topSearches'   => $topSearches,
             'topPages'      => $topPages,
@@ -180,5 +211,71 @@ class AdminController extends Controller
             ->paginate($perPage);
 
         return response()->json($results);
+    }
+
+    /**
+     * Banlı IP listesi.
+     * GET /api/v1/admin/bans
+     */
+    public function bans(Request $request): JsonResponse
+    {
+        $filter = $request->query('filter', 'active'); // active, expired, all
+
+        $query = BannedIp::orderByDesc('banned_at');
+
+        if ($filter === 'active') {
+            $query->whereNull('unbanned_at')
+                  ->where(function ($q) {
+                      $q->where('is_permanent', true)
+                        ->orWhere('expires_at', '>', now());
+                  });
+        } elseif ($filter === 'expired') {
+            $query->where(function ($q) {
+                $q->whereNotNull('unbanned_at')
+                  ->orWhere(function ($q2) {
+                      $q2->where('is_permanent', false)
+                         ->where('expires_at', '<=', now());
+                  });
+            });
+        }
+
+        $perPage = min((int) $request->query('per_page', 20), 100);
+
+        return response()->json($query->paginate($perPage));
+    }
+
+    /**
+     * Manuel IP banlama.
+     * POST /api/v1/admin/bans
+     */
+    public function banIp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ip_address' => 'required|string|max:45',
+            'reason'     => 'required|string|max:255',
+            'minutes'    => 'nullable|integer|min:1',
+            'permanent'  => 'nullable|boolean',
+        ]);
+
+        $ban = BannedIp::ban(
+            $request->input('ip_address'),
+            $request->input('reason'),
+            $request->input('minutes', 60),
+            $request->boolean('permanent', false)
+        );
+
+        return response()->json(['ok' => true, 'ban' => $ban]);
+    }
+
+    /**
+     * IP banını kaldır.
+     * DELETE /api/v1/admin/bans/{id}
+     */
+    public function unbanIp(int $id): JsonResponse
+    {
+        $ban = BannedIp::findOrFail($id);
+        $ban->update(['unbanned_at' => now()]);
+
+        return response()->json(['ok' => true]);
     }
 }

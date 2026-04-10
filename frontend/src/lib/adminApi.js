@@ -32,54 +32,44 @@ export async function adminLogin(password) {
   return data;
 }
 
-export async function fetchAdmin(endpoint) {
+async function authRequest(endpoint, options = {}) {
   const token = getToken();
-  if (!token) {
-    logout();
-    throw new Error("Token yok.");
-  }
+  if (!token) { logout(); throw new Error("Token yok."); }
 
   const res = await fetch(`${API_BASE}/admin${endpoint}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
     cache: "no-store",
   });
 
-  if (res.status === 401) {
-    logout();
-    throw new Error("Oturum süresi doldu.");
-  }
-
-  if (!res.ok) {
-    throw new Error(`API Hatası: ${res.status}`);
-  }
-
+  if (res.status === 401) { logout(); throw new Error("Oturum süresi doldu."); }
+  if (!res.ok) throw new Error(`API Hatası: ${res.status}`);
   return res.json();
 }
 
-export async function putAdmin(endpoint, data) {
-  const token = getToken();
-  if (!token) {
-    logout();
-    throw new Error("Token yok.");
-  }
+export function fetchAdmin(endpoint) {
+  return authRequest(endpoint);
+}
 
-  const res = await fetch(`${API_BASE}/admin${endpoint}`, {
+export function putAdmin(endpoint, data) {
+  return authRequest(endpoint, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+}
 
-  if (res.status === 401) {
-    logout();
-    throw new Error("Oturum süresi doldu.");
-  }
+export function postAdmin(endpoint, data) {
+  return authRequest(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
 
-  if (!res.ok) {
-    throw new Error(`API Hatası: ${res.status}`);
-  }
-
-  return res.json();
+export function deleteAdmin(endpoint) {
+  return authRequest(endpoint, { method: "DELETE" });
 }

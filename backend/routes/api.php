@@ -67,7 +67,7 @@ Route::prefix('v1')->group(function () {
     // Public settings (frontend config)
     Route::get('/settings/public', [SettingsController::class, 'publicSettings']);
 
-    // Admin — login (public, rate limited)
+    // Admin — login (ban kontrolü + rate limited)
     Route::post('/admin/login', [AdminController::class, 'login']);
 
     // Admin — korumalı endpoint'ler
@@ -79,6 +79,11 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/settings/{key}', [SettingsController::class, 'show']);
         Route::put('/settings/{key}', [SettingsController::class, 'update']);
+
+        // Ban yönetimi
+        Route::get('/bans', [AdminController::class, 'bans']);
+        Route::post('/bans', [AdminController::class, 'banIp']);
+        Route::delete('/bans/{id}', [AdminController::class, 'unbanIp']);
     });
 
 });
