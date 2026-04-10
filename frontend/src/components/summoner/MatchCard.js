@@ -285,7 +285,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
               <img src={m.champion.image} alt="" width={44} height={44} className="rounded-lg" />
               <span className="absolute -bottom-1 -right-1 text-[8px] bg-[#0d1117] text-gray-400 px-0.5 rounded border border-[#1b2230] font-mono">{m.champLevel}</span>
               {/* Sıralama — sol üst */}
-              {m.ranking && (
+              {!remake && m.ranking && (
                 <span
                   className={`absolute -top-2 -left-2 w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-black border-2 z-10 ${
                     m.ranking.rank === 1
@@ -314,19 +314,19 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
         <div className="w-24 flex-shrink-0">
           <p className="text-[11px] font-medium text-gray-200 truncate">{m.champion.name}</p>
           <p className="text-[9px] text-gray-500">{roles[m.role] || m.role}</p>
-          {m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} match={m} scoreHistory={scoreHistory} scoreIndex={scoreIndex} />}
+          {!remake && m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} match={m} scoreHistory={scoreHistory} scoreIndex={scoreIndex} />}
         </div>
 
-        {/* ORTA ESNEK: KDA + Items + Badges — eşit dağılır */}
-        <div className="flex-1 flex items-center justify-evenly gap-2 min-w-0">
-          {/* KDA */}
-          <div className="flex-shrink-0 text-center">
+        {/* ORTA: KDA + Items + Badges — sabit sütun genişlikleri */}
+        <div className="flex-1 flex items-center gap-3 min-w-0">
+          {/* KDA — sabit genişlik */}
+          <div className="w-[70px] flex-shrink-0 text-center">
             <p className="text-sm font-semibold text-gray-200">{m.kills}<span className="text-gray-600">/</span>{m.deaths}<span className="text-gray-600">/</span>{m.assists}</p>
-            <p className={`text-[10px] font-mono ${kdaColor(m.kda)}`}>{typeof m.kda === "number" ? m.kda.toFixed(2) : m.kda}</p>
+            <p className={`text-[10px] font-mono ${remake ? "text-gray-500" : kdaColor(m.kda)}`}>{remake ? "-" : typeof m.kda === "number" ? m.kda.toFixed(2) : m.kda}</p>
             <p className="text-[9px] text-gray-500 mt-0.5">{m.cs} CS</p>
           </div>
 
-          {/* Items */}
+          {/* Items — sabit genişlik */}
           <div className="flex-shrink-0">
             <div className="flex gap-0.5">
               {[0, 1, 2].map((i) => m.items[i]
@@ -346,20 +346,22 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
             </div>
           </div>
 
-          {/* Badges */}
-          {badges.length > 0 && (
-            <div className="hidden md:flex flex-col gap-0.5 flex-shrink-0">
-              <div className="flex items-center gap-1 flex-nowrap">
-                {badges.slice(0, 2).map((b) => <BadgeTag key={b.key} badge={b} />)}
-              </div>
-              {badges.length > 2 && (
+          {/* Badges — kalan alanı doldurur, badge yoksa boş kalır */}
+          <div className="hidden md:flex flex-col gap-0.5 flex-1 min-w-0">
+            {!remake && badges.length > 0 && (
+              <>
                 <div className="flex items-center gap-1 flex-nowrap">
-                  {badges.slice(2, 4).map((b) => <BadgeTag key={b.key} badge={b} />)}
-                  {badges.length > 4 && <MoreBadgesTooltip badges={badges.slice(4)} />}
+                  {badges.slice(0, 2).map((b) => <BadgeTag key={b.key} badge={b} />)}
                 </div>
-              )}
-            </div>
-          )}
+                {badges.length > 2 && (
+                  <div className="flex items-center gap-1 flex-nowrap">
+                    {badges.slice(2, 4).map((b) => <BadgeTag key={b.key} badge={b} />)}
+                    {badges.length > 4 && <MoreBadgesTooltip badges={badges.slice(4)} />}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* SAĞ SABİT: Result + Teams */}
@@ -367,7 +369,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
           <div className="w-16 text-center">
             <p className={`text-[11px] font-bold ${resClr}`}>{resTxt}</p>
             <p className="text-[9px] text-gray-500">{m.queueType || ""}</p>
-            <p className="text-[10px] text-gray-500">{fmtDur(m.duration)} · {timeAgo(m.gameCreation)}</p>
+            <p className="text-[10px] text-gray-500" suppressHydrationWarning>{fmtDur(m.duration)} · {timeAgo(m.gameCreation)}</p>
           </div>
           <div className="hidden lg:block">
             <div className="flex gap-0.5 mb-0.5">

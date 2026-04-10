@@ -129,6 +129,10 @@ class MatchService
                     'firstTowerKill'     => $p['challenges']['firstTowerKill'] ?? false,
                     'controlWardsPlaced' => $p['challenges']['controlWardsPlaced'] ?? 0,
                     'survivedLowHp'      => $p['challenges']['survivedSingleDigitHpCount'] ?? 0,
+                    'outnumberedKills'   => $p['challenges']['outnumberedKills'] ?? 0,
+                    'dragonTakedowns'    => $p['challenges']['dragonTakedowns'] ?? 0,
+                    'baronTakedowns'     => $p['challenges']['baronTakedowns'] ?? 0,
+                    'riftHeraldTakedowns'=> $p['challenges']['riftHeraldTakedowns'] ?? 0,
                 ],
                 'items'          => $items,
                 'spells'         => [$spell1, $spell2],
@@ -236,8 +240,8 @@ class MatchService
     {
         $matchIds = $this->matchData->getMatchIds($puuid, $count, $start);
 
-        // Tüm maç detaylarını ve timeline'ları paralel olarak ön-yükle
-        $this->matchData->preloadMatches($matchIds);
+        // Sadece maç detaylarını paralel preload (timeline yok — maç detayında çekilir)
+        $this->matchData->preloadMatchDetails($matchIds);
 
         $version = $this->ddragon->getCurrentVersion();
         $ddragonBase = config('riot.ddragon_url');
@@ -263,7 +267,8 @@ class MatchService
 
                 $ranking = $this->elw->calculateMatchRanking($info['participants'], $player['puuid'], $info['gameDuration'] ?? 0);
 
-                $timeline = $this->matchData->getMatchTimeline($matchId);
+                // Timeline DB'de varsa kullan, yoksa null (maç detayında çekilecek)
+                $timeline = $this->matchData->getMatchTimelineIfExists($matchId);
                 $perfLabel = $this->elw->calculatePerformanceLabel($ranking, $player, $info, $timeline);
 
                 // Items

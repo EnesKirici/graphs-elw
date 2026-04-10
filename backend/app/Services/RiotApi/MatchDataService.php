@@ -91,20 +91,19 @@ class MatchDataService
         // 2. API'den çek
         $response = $this->api->regionRequest("/lol/match/v5/matches/{$matchId}");
 
-        // 3. DB'ye kaydet
+        // 3. Sadece kullandığımız alanları çıkar ve DB'ye kaydet (~75KB → ~15KB)
+        $slim = $this->extractMatchData($response);
         try {
             MatchRecord::create([
                 'match_id'      => $matchId,
-                'data'          => $response,
-                'queue_id'      => $response['info']['queueId'] ?? 0,
-                'game_duration' => $response['info']['gameDuration'] ?? 0,
-                'game_creation' => $response['info']['gameCreation'] ?? 0,
+                'data'          => $slim,
+                'queue_id'      => $slim['info']['queueId'] ?? 0,
+                'game_duration' => $slim['info']['gameDuration'] ?? 0,
+                'game_creation' => $slim['info']['gameCreation'] ?? 0,
             ]);
-        } catch (\Exception $e) {
-            // Duplicate key hatası olabilir (race condition) — görmezden gel
-        }
+        } catch (\Exception $e) {}
 
-        return $response;
+        return $slim;
     }
 
     /**
@@ -112,6 +111,27 @@ class MatchDataService
      * DB'ye ham veri yerine sadece gerekli kısımları kaydeder (~1MB → ~10KB).
      * Dönüş formatı mevcut kodla uyumlu: ['info']['frames'][]['events'] + ['participantFrames']
      */
+    /**
+     * Timeline sadece DB'den oku — API'ye gitme. Yoksa null döner.
+     */
+    /**
+     * Timeline sadece DB'den oku — API'ye gitme. Yoksa null döner.
+     */
+    public function getMatchTimelineIfExists(string $matchId): ?array
+    {
+        $timeline = MatchTimeline::find($matchId);
+        return $timeline?->data;
+    }
+
+    /**
+     * Maç detayı sadece DB'den oku — API'ye gitme. Yoksa null döner.
+     */
+    public function getMatchDetailIfExists(string $matchId): ?array
+    {
+        $match = MatchRecord::find($matchId);
+        return $match?->data;
+    }
+
     public function getMatchTimeline(string $matchId): ?array
     {
         // 1. DB'de var mı?
@@ -192,6 +212,79 @@ class MatchDataService
     }
 
     /**
+     * Ham maç verisinden sadece kullandığımız alanları çıkar.
+     * Riot API ~150 alan/participant döner, biz ~40 kullanıyoruz.
+     * ~75KB → ~15KB (%80 küçülme)
+     */
+    private function extractMatchData(array $raw): array
+    {
+        $info = $raw['info'] ?? [];
+
+        $slimParticipants = array_map(function ($p) {
+            return [
+                'puuid' => $p['puuid'], 'summonerName' => $p['summonerName'] ?? '',
+                'riotIdGameName' => $p['riotIdGameName'] ?? '', 'riotIdTagline' => $p['riotIdTagline'] ?? '',
+                'championName' => $p['championName'], 'championId' => $p['championId'] ?? 0,
+                'champLevel' => $p['champLevel'], 'teamId' => $p['teamId'],
+                'teamPosition' => $p['teamPosition'] ?? '', 'individualPosition' => $p['individualPosition'] ?? '',
+                'win' => $p['win'], 'kills' => $p['kills'], 'deaths' => $p['deaths'], 'assists' => $p['assists'],
+                'totalMinionsKilled' => $p['totalMinionsKilled'] ?? 0, 'neutralMinionsKilled' => $p['neutralMinionsKilled'] ?? 0,
+                'goldEarned' => $p['goldEarned'] ?? 0, 'totalDamageDealtToChampions' => $p['totalDamageDealtToChampions'] ?? 0,
+                'physicalDamageDealtToChampions' => $p['physicalDamageDealtToChampions'] ?? 0,
+                'magicDamageDealtToChampions' => $p['magicDamageDealtToChampions'] ?? 0,
+                'trueDamageDealtToChampions' => $p['trueDamageDealtToChampions'] ?? 0,
+                'totalDamageTaken' => $p['totalDamageTaken'] ?? 0,
+                'totalHeal' => $p['totalHeal'] ?? 0,
+                'totalHealsOnTeammates' => $p['totalHealsOnTeammates'] ?? 0,
+                'totalDamageShieldedOnTeammates' => $p['totalDamageShieldedOnTeammates'] ?? 0,
+                'visionScore' => $p['visionScore'] ?? 0, 'wardsPlaced' => $p['wardsPlaced'] ?? 0, 'wardsKilled' => $p['wardsKilled'] ?? 0,
+                'damageDealtToTurrets' => $p['damageDealtToTurrets'] ?? 0, 'damageDealtToObjectives' => $p['damageDealtToObjectives'] ?? 0,
+                'summoner1Id' => $p['summoner1Id'] ?? 0, 'summoner2Id' => $p['summoner2Id'] ?? 0,
+                'perks' => $p['perks'] ?? null, 'profileIcon' => $p['profileIcon'] ?? 0, 'summonerLevel' => $p['summonerLevel'] ?? 0,
+                'item0' => $p['item0'] ?? 0, 'item1' => $p['item1'] ?? 0, 'item2' => $p['item2'] ?? 0,
+                'item3' => $p['item3'] ?? 0, 'item4' => $p['item4'] ?? 0, 'item5' => $p['item5'] ?? 0, 'item6' => $p['item6'] ?? 0,
+                'doubleKills' => $p['doubleKills'] ?? 0, 'tripleKills' => $p['tripleKills'] ?? 0,
+                'quadraKills' => $p['quadraKills'] ?? 0, 'pentaKills' => $p['pentaKills'] ?? 0,
+                'challenges' => [
+                    'soloKills' => $p['challenges']['soloKills'] ?? 0,
+                    'damagePerMinute' => $p['challenges']['damagePerMinute'] ?? 0,
+                    'goldPerMinute' => $p['challenges']['goldPerMinute'] ?? 0,
+                    'killParticipation' => $p['challenges']['killParticipation'] ?? 0,
+                    'visionScorePerMinute' => $p['challenges']['visionScorePerMinute'] ?? 0,
+                    'turretPlatesTaken' => $p['challenges']['turretPlatesTaken'] ?? 0,
+                    'teamDamagePercentage' => $p['challenges']['teamDamagePercentage'] ?? 0,
+                    'damageTakenOnTeamPercentage' => $p['challenges']['damageTakenOnTeamPercentage'] ?? 0,
+                    'epicMonsterSteals' => $p['challenges']['epicMonsterSteals'] ?? 0,
+                    'skillshotsHit' => $p['challenges']['skillshotsHit'] ?? 0,
+                    'skillshotsDodged' => $p['challenges']['skillshotsDodged'] ?? 0,
+                    'laneMinionsFirst10Minutes' => $p['challenges']['laneMinionsFirst10Minutes'] ?? 0,
+                    'maxCsAdvantageOnLaneOpponent' => $p['challenges']['maxCsAdvantageOnLaneOpponent'] ?? 0,
+                    'firstBloodKill' => $p['challenges']['firstBloodKill'] ?? false,
+                    'firstTowerKill' => $p['challenges']['firstTowerKill'] ?? false,
+                    'controlWardsPlaced' => $p['challenges']['controlWardsPlaced'] ?? 0,
+                    'survivedSingleDigitHpCount' => $p['challenges']['survivedSingleDigitHpCount'] ?? 0,
+                    'outnumberedKills' => $p['challenges']['outnumberedKills'] ?? 0,
+                    'dragonTakedowns' => $p['challenges']['dragonTakedowns'] ?? 0,
+                    'baronTakedowns' => $p['challenges']['baronTakedowns'] ?? 0,
+                    'riftHeraldTakedowns' => $p['challenges']['riftHeraldTakedowns'] ?? 0,
+                ],
+                'missions' => $p['missions'] ?? null,
+            ];
+        }, $info['participants'] ?? []);
+
+        return [
+            'metadata' => $raw['metadata'] ?? [],
+            'info' => [
+                'queueId' => $info['queueId'] ?? 0,
+                'gameDuration' => $info['gameDuration'] ?? 0,
+                'gameCreation' => $info['gameCreation'] ?? 0,
+                'teams' => $info['teams'] ?? [],
+                'participants' => $slimParticipants,
+            ],
+        ];
+    }
+
+    /**
      * Birden fazla maç detayını paralel olarak çek ve DB'ye yaz.
      * DB'de olmayanları Http::pool() ile eşzamanlı indirir.
      */
@@ -228,14 +321,14 @@ class MatchDataService
             foreach ($chunk as $id) {
                 $resp = $responses[$id] ?? null;
                 if ($resp && $resp->successful()) {
-                    $data = $resp->json();
+                    $slim = $this->extractMatchData($resp->json());
                     try {
                         MatchRecord::create([
                             'match_id'      => $id,
-                            'data'          => $data,
-                            'queue_id'      => $data['info']['queueId'] ?? 0,
-                            'game_duration' => $data['info']['gameDuration'] ?? 0,
-                            'game_creation' => $data['info']['gameCreation'] ?? 0,
+                            'data'          => $slim,
+                            'queue_id'      => $slim['info']['queueId'] ?? 0,
+                            'game_duration' => $slim['info']['gameDuration'] ?? 0,
+                            'game_creation' => $slim['info']['gameCreation'] ?? 0,
                         ]);
                     } catch (\Exception $e) {}
                 }

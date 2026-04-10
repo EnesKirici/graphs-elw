@@ -156,8 +156,10 @@ class LaneAnalysisService
                 $verdict = 'even';
             }
 
-            // Öne çıkan istatistikler
-            $highlights = [];
+            // Öne çıkan istatistikler — rol bazlı + genel
+            $highlights = $this->generateRoleHighlights($role, $blue, $red, $minutes);
+
+            // Genel fark highlights
             if (abs($csDiff) >= 15) {
                 $highlights[] = ($csDiff > 0 ? '+' : '') . $csDiff . ' CS';
             }
@@ -168,6 +170,7 @@ class LaneAnalysisService
                 $kDiff = $blue['kills'] - $red['kills'];
                 $highlights[] = ($kDiff > 0 ? '+' : '') . $kDiff . ' kill';
             }
+            $highlights = array_slice($highlights, 0, 5);
 
             usort($factors, fn($a, $b) => abs($b['value']) <=> abs($a['value']));
 
@@ -187,5 +190,192 @@ class LaneAnalysisService
         }
 
         return $analysis;
+    }
+
+    /**
+     * Rol bazlı detaylı highlights üret.
+     * Format: "Metrik: X vs Y" → frontend swap'ta X↔Y çevrilir.
+     */
+    private function generateRoleHighlights(string $role, array $blue, array $red, float $minutes): array
+    {
+        $h = [];
+
+        // ===== ROL BAZLI HIGHLIGHTS =====
+
+        if ($role === 'JUNGLE') {
+            // Objektif çalma
+            $bSteals = $blue['challenges']['epicMonsterSteals'] ?? 0;
+            $rSteals = $red['challenges']['epicMonsterSteals'] ?? 0;
+            if ($bSteals > 0 || $rSteals > 0) {
+                $h[] = "Obj. çalma: {$bSteals} vs {$rSteals}";
+            }
+
+            // Ejder katılımı
+            $bDragon = $blue['challenges']['dragonTakedowns'] ?? 0;
+            $rDragon = $red['challenges']['dragonTakedowns'] ?? 0;
+            if ($bDragon + $rDragon > 0) {
+                $h[] = "Ejder: {$bDragon} vs {$rDragon}";
+            }
+
+            // Baron katılımı
+            $bBaron = $blue['challenges']['baronTakedowns'] ?? 0;
+            $rBaron = $red['challenges']['baronTakedowns'] ?? 0;
+            if ($bBaron > 0 || $rBaron > 0) {
+                $h[] = "Baron: {$bBaron} vs {$rBaron}";
+            }
+
+            // Herald katılımı
+            $bHerald = $blue['challenges']['riftHeraldTakedowns'] ?? 0;
+            $rHerald = $red['challenges']['riftHeraldTakedowns'] ?? 0;
+            if ($bHerald + $rHerald > 0 && abs($bHerald - $rHerald) >= 1) {
+                $h[] = "Herald: {$bHerald} vs {$rHerald}";
+            }
+
+            // Görüş skoru
+            $bVis = $blue['visionScore'] ?? 0;
+            $rVis = $red['visionScore'] ?? 0;
+            if (abs($bVis - $rVis) >= 10) {
+                $h[] = "Görüş: {$bVis} vs {$rVis}";
+            }
+        }
+
+        if ($role === 'TOP') {
+            // Solo kill
+            $bSolo = $blue['challenges']['soloKills'] ?? 0;
+            $rSolo = $red['challenges']['soloKills'] ?? 0;
+            if ($bSolo > 0 || $rSolo > 0) {
+                $h[] = "Solo kill: {$bSolo} vs {$rSolo}";
+            }
+
+            // Kule plakaları
+            $bPlates = $blue['challenges']['turretPlatesTaken'] ?? 0;
+            $rPlates = $red['challenges']['turretPlatesTaken'] ?? 0;
+            if (abs($bPlates - $rPlates) >= 2) {
+                $h[] = "Plaka: {$bPlates} vs {$rPlates}";
+            }
+
+            // 10dk CS farkı
+            $bCS10 = $blue['challenges']['laneMinions10'] ?? 0;
+            $rCS10 = $red['challenges']['laneMinions10'] ?? 0;
+            if ($bCS10 > 0 && $rCS10 > 0 && abs($bCS10 - $rCS10) >= 10) {
+                $h[] = "10dk CS: {$bCS10} vs {$rCS10}";
+            }
+
+            // Kule hasarı
+            $bTwr = $blue['towerDamage'] ?? 0;
+            $rTwr = $red['towerDamage'] ?? 0;
+            if (abs($bTwr - $rTwr) >= 2000) {
+                $h[] = "Kule hasarı: " . round($bTwr / 1000, 1) . "k vs " . round($rTwr / 1000, 1) . "k";
+            }
+        }
+
+        if ($role === 'MIDDLE') {
+            // Solo kill
+            $bSolo = $blue['challenges']['soloKills'] ?? 0;
+            $rSolo = $red['challenges']['soloKills'] ?? 0;
+            if ($bSolo > 0 || $rSolo > 0) {
+                $h[] = "Solo kill: {$bSolo} vs {$rSolo}";
+            }
+
+            // DPM karşılaştırma
+            $bDPM = $blue['challenges']['damagePerMinute'] ?? 0;
+            $rDPM = $red['challenges']['damagePerMinute'] ?? 0;
+            if (abs($bDPM - $rDPM) >= 150) {
+                $h[] = "DPM: " . round($bDPM) . " vs " . round($rDPM);
+            }
+
+            // 10dk CS farkı
+            $bCS10 = $blue['challenges']['laneMinions10'] ?? 0;
+            $rCS10 = $red['challenges']['laneMinions10'] ?? 0;
+            if ($bCS10 > 0 && $rCS10 > 0 && abs($bCS10 - $rCS10) >= 10) {
+                $h[] = "10dk CS: {$bCS10} vs {$rCS10}";
+            }
+        }
+
+        if ($role === 'BOTTOM') {
+            // DPM karşılaştırma
+            $bDPM = $blue['challenges']['damagePerMinute'] ?? 0;
+            $rDPM = $red['challenges']['damagePerMinute'] ?? 0;
+            if (abs($bDPM - $rDPM) >= 150) {
+                $h[] = "DPM: " . round($bDPM) . " vs " . round($rDPM);
+            }
+
+            // 10dk CS farkı
+            $bCS10 = $blue['challenges']['laneMinions10'] ?? 0;
+            $rCS10 = $red['challenges']['laneMinions10'] ?? 0;
+            if ($bCS10 > 0 && $rCS10 > 0 && abs($bCS10 - $rCS10) >= 10) {
+                $h[] = "10dk CS: {$bCS10} vs {$rCS10}";
+            }
+
+            // Kule plakaları
+            $bPlates = $blue['challenges']['turretPlatesTaken'] ?? 0;
+            $rPlates = $red['challenges']['turretPlatesTaken'] ?? 0;
+            if (abs($bPlates - $rPlates) >= 2) {
+                $h[] = "Plaka: {$bPlates} vs {$rPlates}";
+            }
+        }
+
+        if ($role === 'UTILITY') {
+            // Totem skoru
+            $bVis = $blue['visionScore'] ?? 0;
+            $rVis = $red['visionScore'] ?? 0;
+            if (abs($bVis - $rVis) >= 8) {
+                $h[] = "Totem: {$bVis} vs {$rVis}";
+            }
+
+            // Kontrol ward
+            $bCW = $blue['challenges']['controlWardsPlaced'] ?? 0;
+            $rCW = $red['challenges']['controlWardsPlaced'] ?? 0;
+            if ($bCW + $rCW > 0) {
+                $h[] = "Kontrol ward: {$bCW} vs {$rCW}";
+            }
+
+            // Ward aktivitesi (koyulan + yok edilen)
+            $bWards = ($blue['wardsPlaced'] ?? 0) + ($blue['wardsKilled'] ?? 0);
+            $rWards = ($red['wardsPlaced'] ?? 0) + ($red['wardsKilled'] ?? 0);
+            if (abs($bWards - $rWards) >= 8) {
+                $h[] = "Ward: {$bWards} vs {$rWards}";
+            }
+
+            // İyileştirme + kalkan
+            $bHeal = $blue['teamHealing'] ?? 0;
+            $rHeal = $red['teamHealing'] ?? 0;
+            if ($bHeal + $rHeal > 0 && abs($bHeal - $rHeal) >= 2000) {
+                $h[] = "İyileştirme: " . round($bHeal / 1000, 1) . "k vs " . round($rHeal / 1000, 1) . "k";
+            }
+        }
+
+        // ===== TÜM ROLLER İÇİN ORTAK =====
+
+        // 1v2+ Kill (outnumberedKills — sayıca az iken alınan kill, ör: 1v2, 1v3)
+        $bOut = $blue['challenges']['outnumberedKills'] ?? 0;
+        $rOut = $red['challenges']['outnumberedKills'] ?? 0;
+        if ($bOut > 0 || $rOut > 0) {
+            $h[] = "1v2+ Kill: {$bOut} vs {$rOut}";
+        }
+
+        // Multi kill — Penta > Quadra > Triple
+        $bPenta = $blue['pentaKills'] ?? 0;
+        $rPenta = $red['pentaKills'] ?? 0;
+        $bQuadra = $blue['quadraKills'] ?? 0;
+        $rQuadra = $red['quadraKills'] ?? 0;
+        $bTriple = $blue['tripleKills'] ?? 0;
+        $rTriple = $red['tripleKills'] ?? 0;
+        if ($bPenta > 0 || $rPenta > 0) {
+            $h[] = "Penta Kill: {$bPenta} vs {$rPenta}";
+        } elseif ($bQuadra > 0 || $rQuadra > 0) {
+            $h[] = "Quadra Kill: {$bQuadra} vs {$rQuadra}";
+        } elseif ($bTriple > 0 || $rTriple > 0) {
+            $h[] = "Triple Kill: {$bTriple} vs {$rTriple}";
+        }
+
+        // Kill participation (tüm roller — yeterince fark varsa)
+        $bKP = $blue['killParticipation'] ?? 0;
+        $rKP = $red['killParticipation'] ?? 0;
+        if (abs($bKP - $rKP) >= 15) {
+            $h[] = "KP: %{$bKP} vs %{$rKP}";
+        }
+
+        return $h;
     }
 }

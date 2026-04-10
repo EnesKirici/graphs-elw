@@ -7,6 +7,7 @@ import SummonerContent from "@/components/summoner/SummonerContent";
 import RefreshButton from "@/components/summoner/RefreshButton";
 import ProfileBadge from "@/components/summoner/ProfileBadge";
 import BadgeInfoTooltip from "@/components/summoner/BadgeInfoTooltip";
+import BannerImage from "@/components/summoner/BannerImage";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
@@ -72,9 +73,9 @@ function rankBadgeUrl(tier) {
   return `/ranks/badges/${tier.toLowerCase()}.webp`;
 }
 
-// Centered splash URL (1280x720)
-function centeredSplashUrl(champName) {
-  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${champName}_0.jpg`;
+// Centered splash URL (1280x720) — skinNum ile kostüm desteği
+function centeredSplashUrl(champName, skinNum = 0) {
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${champName}_${skinNum}.jpg`;
 }
 
 export default async function SummonerPage({ params }) {
@@ -106,16 +107,18 @@ export default async function SummonerPage({ params }) {
   const solo = ranked?.solo;
   const flex = ranked?.flex;
 
-  // Banner: en çok oynanan şampiyonun centered splash'ı
-  const bannerChamp = recentStats?.mostPlayedChampion?.id || (masteries[0]?.championName);
-  const bannerUrl = bannerChamp ? centeredSplashUrl(bannerChamp.replace(/[^a-zA-Z]/g, '')) : null;
+  // Banner: en çok oynanan şampiyonun rastgele skin centered splash'ı
+  const bannerChamp = data.bannerChampion || recentStats?.mostPlayedChampion?.id || (masteries[0]?.championName);
+  const bannerSkins = data.bannerSkins || [0];
+  const randomSkin = bannerSkins[Math.floor(Math.random() * bannerSkins.length)];
+  const bannerUrl = bannerChamp ? centeredSplashUrl(bannerChamp.replace(/[^a-zA-Z]/g, ''), randomSkin) : null;
 
   return (
     <div>
       {/* ===== BANNER ===== */}
       <div className="relative h-48 md:h-56 overflow-hidden">
         {bannerUrl && (
-          <img src={bannerUrl} alt="" className="w-full h-full object-cover object-center" />
+          <img src={bannerUrl} alt="" className="w-full h-full object-cover object-[center_20%]" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#060a10] via-[#060a10]/40 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#060a10]/50 via-transparent to-transparent" />

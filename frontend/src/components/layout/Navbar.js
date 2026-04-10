@@ -15,45 +15,126 @@ const ROLE_ICONS = {
 
 function RateLimitIndicator() {
   const [data, setData] = useState(null);
+  const [hover, setHover] = useState(false);
+
   useEffect(() => {
     let mounted = true;
     const poll = () => {
       fetch(`${API_BASE}/debug/rate-limit`).then(r => r.json()).then(d => { if (mounted) setData(d); }).catch(() => {});
     };
     poll();
-    const id = setInterval(poll, 5000);
+    const id = setInterval(poll, 3000);
     return () => { mounted = false; clearInterval(id); };
   }, []);
 
   if (!data) return null;
 
-  // "20:1,100:120" → parse et
   const limitParts = (data.appLimit || "").split(",");
   const countParts = (data.appCount || "").split(",");
-  let longLimit = 0, longUsed = 0;
+  let shortLimit = 0, shortUsed = 0, longLimit = 0, longUsed = 0;
   limitParts.forEach((p, i) => {
     const [limit, window] = p.split(":");
     const [used] = (countParts[i] || "0").split(":");
-    if (parseInt(window) > 10) { longLimit = parseInt(limit); longUsed = parseInt(used); }
+    if (parseInt(window) <= 10) { shortLimit = parseInt(limit); shortUsed = parseInt(used); }
+    else { longLimit = parseInt(limit); longUsed = parseInt(used); }
   });
 
   const pct = longLimit > 0 ? Math.round(longUsed / longLimit * 100) : 0;
   const isHot = pct > 70;
   const isCooldown = data.cooldownUntil > 0;
+  const noKey = !data.appLimit && data.requests > 0;
+  const barColor = noKey ? "bg-red-500" : isCooldown ? "bg-red-500" : isHot ? "bg-red-500" : pct > 40 ? "bg-yellow-500" : "bg-emerald-500";
+  const textColor = noKey ? "text-red-400" : isCooldown ? "text-red-400" : isHot ? "text-red-400" : pct > 40 ? "text-yellow-400" : "text-emerald-400";
 
   return (
-    <div className="flex items-center gap-1.5 text-[10px] font-mono">
-      {isCooldown ? (
-        <span className="text-red-400 animate-pulse">LIMIT {data.cooldownUntil}s</span>
-      ) : (
-        <>
-          <div className="w-10 h-1.5 rounded-full bg-[#1b2230] overflow-hidden" title={`${longUsed}/${longLimit} (${pct}%)`}>
-            <div className={`h-full rounded-full ${isHot ? "bg-red-500" : pct > 40 ? "bg-yellow-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+    <div
+      className="relative"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {/* Compact bar */}
+      <div className="flex items-center gap-2 cursor-default px-2.5 py-1.5 rounded-lg bg-white/5 border border-[#1b2230] hover:border-[#2a3441] transition-colors">
+        {noKey ? (
+          <span className="text-[11px] text-red-400 font-bold animate-pulse">API KEY!</span>
+        ) : isCooldown ? (
+          <>
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-[11px] text-red-400 font-mono font-bold">LIMIT {data.cooldownUntil}s</span>
+          </>
+        ) : (
+          <>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: noKey ? "#ef4444" : isHot ? "#ef4444" : pct > 40 ? "#f59e0b" : "#10b981" }} />
+            <div className="w-16 h-2 rounded-full bg-[#1b2230] overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.max(pct, 3)}%` }} />
+            </div>
+            <span className={`text-[11px] font-mono font-semibold ${textColor}`}>{longUsed}/{longLimit}</span>
+            {data.rateLimited > 0 && <span className="text-[10px] text-red-500 font-bold">429x{data.rateLimited}</span>}
+          </>
+        )}
+      </div>
+
+      {/* Hover detay paneli */}
+      {hover && (
+        <div className="absolute top-full right-0 mt-2 bg-[#0a0e14] border border-[#2a3441] rounded-xl px-5 py-4 shadow-2xl shadow-black/90 w-72 z-50">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-400 font-medium">Riot API Durumu</span>
+            <span className={`text-xs font-bold ${noKey ? "text-red-400" : isCooldown ? "text-red-400" : "text-emerald-400"}`}>
+              {noKey ? "KEY GECERSiZ" : isCooldown ? "LIMIT ASILDI" : "AKTIF"}
+            </span>
           </div>
-          <span className={isHot ? "text-red-400" : "text-gray-600"}>{longUsed}/{longLimit}</span>
-        </>
+
+          {/* 2dk limit bar */}
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-gray-500">2dk Limit</span>
+              <span className={`text-[11px] font-mono font-bold ${textColor}`}>{longUsed} / {longLimit}</span>
+            </div>
+            <div className="h-2.5 rounded-full bg-[#1b2230] overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.max(pct, 1)}%` }} />
+            </div>
+            <div className="flex justify-between mt-0.5">
+              <span className="text-[9px] text-gray-600">{pct}% kullanıldı</span>
+              <span className="text-[9px] text-gray-600">{Math.max(longLimit - longUsed, 0)} kalan</span>
+            </div>
+          </div>
+
+          {/* Saniye limit */}
+          {shortLimit > 0 && (
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-gray-500">Saniye Limit</span>
+                <span className="text-[11px] font-mono text-gray-400">{shortUsed} / {shortLimit}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-[#1b2230] overflow-hidden">
+                <div className="h-full rounded-full bg-blue-500/60" style={{ width: `${shortLimit > 0 ? Math.max(shortUsed / shortLimit * 100, 1) : 0}%` }} />
+              </div>
+            </div>
+          )}
+
+          {/* Detay istatistikler */}
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[#1b2230]/50">
+            <div className="text-center">
+              <p className="text-sm font-bold text-gray-200">{data.requests}</p>
+              <p className="text-[9px] text-gray-600">Toplam</p>
+            </div>
+            <div className="text-center">
+              <p className={`text-sm font-bold ${data.rateLimited > 0 ? "text-red-400" : "text-gray-200"}`}>{data.rateLimited}</p>
+              <p className="text-[9px] text-gray-600">429 Hata</p>
+            </div>
+            <div className="text-center">
+              <p className={`text-sm font-bold ${data.blocked > 0 ? "text-yellow-400" : "text-gray-200"}`}>{data.blocked}</p>
+              <p className="text-[9px] text-gray-600">Engellenen</p>
+            </div>
+          </div>
+
+          {isCooldown && (
+            <div className="mt-3 pt-2 border-t border-[#1b2230]/50 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-[11px] text-red-400">Bekleniyor: {data.cooldownUntil} saniye</span>
+            </div>
+          )}
+        </div>
       )}
-      {data.rateLimited > 0 && <span className="text-red-500">429×{data.rateLimited}</span>}
     </div>
   );
 }

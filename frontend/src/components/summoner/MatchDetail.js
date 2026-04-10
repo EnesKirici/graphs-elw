@@ -190,6 +190,8 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
         highlights: (a.highlights || []).map(h => {
           if (h.charAt(0) === "+") return "-" + h.slice(1);
           if (h.charAt(0) === "-") return "+" + h.slice(1);
+          const vs = h.match(/^(.+?): (.+?) vs (.+?)$/);
+          if (vs) return `${vs[1]}: ${vs[3]} vs ${vs[2]}`;
           return h;
         }),
         score: -(a.score || 0),

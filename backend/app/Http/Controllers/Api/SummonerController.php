@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CachedPlayer;
+use App\Models\LpSnapshot;
 use App\Services\RiotApi\SummonerService;
 use App\Services\RiotApi\LeagueService;
 use App\Services\RiotApi\ChampionMasteryService;
@@ -159,32 +160,48 @@ class SummonerController extends Controller
         $masteries = $this->mastery->getTopMasteries($puuid, 10);
         $totalScore = $this->mastery->getTotalScore($puuid);
 
-        // Sadece önemli maç ID'lerini topla ve toplu paralel preload yap
-        // Solo + Flex + Recent — Normal/Blind/Quick lazy cache'e bırakılır
-        try {
-            $preloadIds = [];
-            foreach ([420, 440] as $queueId) {
-                try {
-                    $ids = $this->matchData->getSeasonMatchIds($puuid, $queueId);
-                    $preloadIds = array_merge($preloadIds, $ids);
-                } catch (\Exception $e) {}
-            }
-            $recentIds = $this->matchData->getMatchIds($puuid, 10, 0);
-            $preloadIds = array_unique(array_merge($preloadIds, $recentIds));
+        // LP snapshot kaydet — her profil yüklemesinde mevcut LP'yi DB'ye yaz
+        $this->saveLpSnapshot($puuid, $ranked);
 
-            $this->matchData->preloadMatchDetails($preloadIds);
-        } catch (\Exception $e) {}
+        // ────────────────────────────────────────────
+        //  HIZLI YÜKLEME: Sadece son 10 maç detayını çek
+        //  Sezon verileri DB'deki veriden hesaplanır (ek API isteği yok)
+        //  Timeline'lar ilk yüklemede çekilmez (maç detayında çekilir)
+        // ────────────────────────────────────────────
 
-        // Maç geçmişi + sezon koridor verisi + sezon şampiyon istatistikleri
+        // Son 10 maç ID'lerini al ve detaylarını paralel preload et
         $recentMatches = [];
         $recentStats = null;
         $seasonRoles = null;
         $seasonChampions = [];
         $winrateTimeline = [];
-        $bannerSplash = null;
+        $bannerChampion = null;
+        $bannerSkins = [0];
         try {
             $recentMatches = $this->match->getRecentMatches($puuid, 10);
             $recentStats = $this->match->calculateRecentStats($recentMatches, $puuid);
+
+            $champId = $recentStats['mostPlayedChampion']['id'] ?? null;
+            if (!$champId && !empty($masteries)) {
+                $champId = $masteries[0]['championName'] ?? null;
+            }
+
+            if ($champId) {
+                $bannerChampion = $champId;
+                try {
+                    $champDetail = $this->ddragon->getChampionDetail($champId);
+                    $bannerSkins = collect($champDetail['skins'] ?? [])
+                        ->pluck('num')
+                        ->values()
+                        ->toArray();
+                } catch (\Exception $e) {
+                    $bannerSkins = [0];
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // Sezon verileri — DB'de maç varsa hesapla, yoksa recentMatches'tan fallback
+        try {
             $seasonRoles = $this->match->getSeasonRoleStats($puuid);
             $seasonChampions = $this->match->getSeasonChampionStats($puuid);
 
@@ -205,31 +222,25 @@ class SummonerController extends Controller
                 }
                 unset($sc);
             }
-
-            if ($recentStats['mostPlayedChampion'] ?? null) {
-                $bannerSplash = $this->ddragon->splashArtUrl($recentStats['mostPlayedChampion']['id']);
-            }
-
-            // Sezon verileri boşsa recentMatches'tan fallback oluştur
-            if (empty($seasonChampions['all'] ?? []) && !empty($recentMatches)) {
-                $seasonChampions = $this->buildChampionFallback($recentMatches);
-            }
-            if (empty($seasonRoles['all'] ?? []) && !empty($recentStats['roleStats'] ?? [])) {
-                $seasonRoles = [
-                    'all'      => $recentStats['roleStats'],
-                    'solo'     => [],
-                    'flex'     => [],
-                    'normal'   => $recentStats['roleStats'],
-                    'mainRole' => $recentStats['mainRole'] ?? null,
-                ];
-            }
         } catch (\Exception $e) {}
 
-        // Winrate timeline — tek kaynak: sezon W/L verileri buradan türetilir
+        // Sezon verileri boşsa recentMatches'tan fallback
+        if (empty($seasonChampions['all'] ?? []) && !empty($recentMatches)) {
+            $seasonChampions = $this->buildChampionFallback($recentMatches);
+        }
+        if (empty($seasonRoles['all'] ?? []) && !empty($recentStats['roleStats'] ?? [])) {
+            $seasonRoles = [
+                'all'      => $recentStats['roleStats'],
+                'solo'     => [],
+                'flex'     => [],
+                'normal'   => $recentStats['roleStats'],
+                'mainRole' => $recentStats['mainRole'] ?? null,
+            ];
+        }
+
+        // Winrate timeline
         try {
             $winrateTimeline = $this->match->getWinrateTimeline($puuid);
-
-            // Ranked W/L/WR'yi timeline verisinden al (tek kaynak)
             foreach (['solo', 'flex'] as $q) {
                 if (isset($ranked[$q]) && $ranked[$q] && isset($winrateTimeline[$q])) {
                     $ranked[$q]['wins']    = $winrateTimeline[$q]['wins'];
@@ -275,7 +286,8 @@ class SummonerController extends Controller
             'seasonRoles'      => $seasonRoles,
             'seasonChampions'   => $seasonChampions,
             'winrateTimeline'   => $winrateTimeline ?? [],
-            'bannerSplash'      => $bannerSplash,
+            'bannerChampion'    => $bannerChampion,
+            'bannerSkins'       => $bannerSkins,
         ]);
     }
 
@@ -365,5 +377,36 @@ class SummonerController extends Controller
         }
 
         return ['all' => $list, 'ranked' => [], 'normal' => $list];
+    }
+
+    /**
+     * LP snapshot kaydet — aynı LP'yi tekrar kaydetme.
+     */
+    private function saveLpSnapshot(string $puuid, array $ranked): void
+    {
+        try {
+            foreach (['solo' => 'RANKED_SOLO_5x5', 'flex' => 'RANKED_FLEX_SR'] as $key => $queue) {
+                $data = $ranked[$key] ?? null;
+                if (!$data || !isset($data['lp'])) continue;
+
+                // Son snapshot ile aynı mı kontrol et (gereksiz kayıt önleme)
+                $last = LpSnapshot::where('puuid', $puuid)
+                    ->where('queue', $queue)
+                    ->latest('id')
+                    ->first();
+
+                if ($last && $last->tier === $data['tier'] && $last->rank === $data['rank'] && $last->lp === $data['lp']) {
+                    continue; // LP değişmemiş, kaydetme
+                }
+
+                LpSnapshot::create([
+                    'puuid' => $puuid,
+                    'queue' => $queue,
+                    'tier'  => $data['tier'],
+                    'rank'  => $data['rank'],
+                    'lp'    => $data['lp'],
+                ]);
+            }
+        } catch (\Exception $e) {}
     }
 }
