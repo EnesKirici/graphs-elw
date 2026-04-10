@@ -8,7 +8,8 @@ import { fetchApi } from "@/lib/api";
 import ChampionGrid from "@/components/champion/ChampionGrid";
 
 export const metadata = {
-  title: "Şampiyonlar - GRAPHS",
+  title: "Şampiyonlar",
+  description: "League of Legends tüm şampiyonlar, roller, yetenekler ve istatistikler.",
 };
 
 export default async function ChampionsPage() {

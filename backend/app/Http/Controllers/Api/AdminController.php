@@ -137,6 +137,7 @@ class AdminController extends Controller
                 'week'  => $eventsWeek,
             ],
             'activeBans'    => $activeBans,
+            'banAlerts'     => Cache::get('ban_alerts', []),
             'searchesToday' => $searchesToday,
             'topSearches'   => $topSearches,
             'topPages'      => $topPages,
@@ -276,6 +277,16 @@ class AdminController extends Controller
         $ban = BannedIp::findOrFail($id);
         $ban->update(['unbanned_at' => now()]);
 
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Ban bildirimlerini temizle.
+     * DELETE /api/v1/admin/ban-alerts
+     */
+    public function clearAlerts(): JsonResponse
+    {
+        Cache::forget('ban_alerts');
         return response()->json(['ok' => true]);
     }
 }

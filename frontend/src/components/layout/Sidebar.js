@@ -47,12 +47,16 @@ export default function Sidebar() {
         ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}>
         {/* Logo */}
-        <div className={`h-14 flex items-center border-b border-[#1b2230]/30 ${collapsed ? "justify-center px-2" : "px-4 gap-2.5"}`}>
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              G
-            </div>
-            {!collapsed && <span className="text-base font-bold text-white tracking-tight">GRAPHS</span>}
+        <div className={`h-14 flex items-center border-b border-[#1b2230]/30 ${collapsed ? "justify-center px-2" : "px-4"}`}>
+          <Link href="/" className="flex items-center gap-0">
+            {collapsed ? (
+              <img src="/logo/white_3.webp" alt="ELW" width={28} height={28} className="rounded-md" />
+            ) : (
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[15px] font-black text-white tracking-wide uppercase">ELW</span>
+                <span className="text-[13px] font-medium text-gray-500 tracking-wider uppercase">Graphs</span>
+              </div>
+            )}
           </Link>
         </div>
 

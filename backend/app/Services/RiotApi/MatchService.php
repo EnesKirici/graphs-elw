@@ -62,7 +62,12 @@ class MatchService
 
         // Oyuncu verilerini derle
         $players = [];
+        $botIndex = 0;
         foreach ($info['participants'] as $p) {
+            // Bot oyuncuların puuid'i "BOT" olabilir — unique yap
+            if ($p['puuid'] === 'BOT' || $p['puuid'] === '' || str_starts_with($p['puuid'], 'BOT')) {
+                $p['puuid'] = 'BOT_' . $botIndex++;
+            }
             $tid = $p['teamId'];
             $items = $this->buildPlayerItems($p, $allItems, $version, $ddragonBase);
             $spell1 = $spellMap[$p['summoner1Id'] ?? 0] ?? ['name' => '?', 'image' => ''];
@@ -170,8 +175,18 @@ class MatchService
         unset($pl);
 
         // ELW Score — iki mod
-        $elwIndividual = $this->elw->calculateAllElwScores($info['participants'], $info['gameDuration'] ?? 0, 'individual');
-        $elwTeam = $this->elw->calculateAllElwScores($info['participants'], $info['gameDuration'] ?? 0, 'team');
+        // Bot puuid'lerini participants'ta da unique yap (ElwScore hesaplaması için)
+        $fixedParticipants = $info['participants'];
+        $bi = 0;
+        foreach ($fixedParticipants as &$fp) {
+            if ($fp['puuid'] === 'BOT' || $fp['puuid'] === '' || str_starts_with($fp['puuid'], 'BOT')) {
+                $fp['puuid'] = 'BOT_' . $bi++;
+            }
+        }
+        unset($fp);
+
+        $elwIndividual = $this->elw->calculateAllElwScores($fixedParticipants, $info['gameDuration'] ?? 0, 'individual');
+        $elwTeam = $this->elw->calculateAllElwScores($fixedParticipants, $info['gameDuration'] ?? 0, 'team');
         foreach ($players as &$pl) {
             $pl['elwScore'] = $elwIndividual[$pl['puuid']] ?? 5.0;
             $pl['elwScoreTeam'] = $elwTeam[$pl['puuid']] ?? 5.0;

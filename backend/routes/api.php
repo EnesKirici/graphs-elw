@@ -29,12 +29,14 @@ Route::prefix('v1')->group(function () {
         ]);
     });
 
-    // Rate limit debug endpoint
-    Route::get('/debug/rate-limit', function () {
-        return response()->json(
-            \App\Services\RiotApi\RiotApiService::getRateLimitStatus()
-        );
-    });
+    // Rate limit debug endpoint — sadece local'de açık
+    if (app()->environment('local')) {
+        Route::get('/debug/rate-limit', function () {
+            return response()->json(
+                \App\Services\RiotApi\RiotApiService::getRateLimitStatus()
+            );
+        });
+    }
 
     // DDragon versiyon bilgisi
     Route::get('/version', [ChampionController::class, 'version']);
@@ -84,6 +86,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/bans', [AdminController::class, 'bans']);
         Route::post('/bans', [AdminController::class, 'banIp']);
         Route::delete('/bans/{id}', [AdminController::class, 'unbanIp']);
+        Route::delete('/ban-alerts', [AdminController::class, 'clearAlerts']);
     });
 
 });

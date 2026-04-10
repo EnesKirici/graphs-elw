@@ -16,7 +16,10 @@ import SkinGallery from "@/components/champion/SkinGallery";
 // Dinamik metadata - her şampiyonun kendi title'ı olur (SEO)
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  return { title: `${id} - GRAPHS` };
+  return {
+    title: `${id} — Şampiyon Detayı`,
+    description: `${id} şampiyon yetenekleri, skinleri ve istatistikleri.`,
+  };
 }
 
 // Tag renk mapping

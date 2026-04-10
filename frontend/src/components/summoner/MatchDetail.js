@@ -312,7 +312,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
             const rp = redPlayersM[i];
             const analysis = bp?.role ? analysisMap[bp.role] : null;
             return (
-              <div key={bp.puuid} className="grid grid-cols-[1fr_90px_1fr] border-b border-[#1b2230]/15 last:border-b-0">
+              <div key={bp.puuid + '-' + i} className="grid grid-cols-[1fr_90px_1fr] border-b border-[#1b2230]/15 last:border-b-0">
                 <PlayerRow p={bp} maxDmg={maxDmg} maxDmgTaken={maxDmgTaken} side="blue" allPlayers={allPlayers} duration={data.duration} />
                 <VerdictBadge analysis={analysis} />
                 {rp ? <PlayerRow p={rp} maxDmg={maxDmg} maxDmgTaken={maxDmgTaken} side="red" allPlayers={allPlayers} duration={data.duration} /> : <div />}
@@ -395,7 +395,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
               const isTopGlow = sc >= 8.5 && !isTopRainbow;
               const clr = isTopRainbow ? "bg-[#0d1117] border border-[#c8aa6e]/40" : isTopGlow ? "bg-[#0d1117] border border-emerald-500/40" : sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
               return (
-                <React.Fragment key={p.puuid}>
+                <React.Fragment key={p.puuid + '-' + idx}>
                   {idx === 5 && <div className="w-4" />}
                   <button onClick={() => setSelectedPuuid(p.puuid)}
                     className={`relative rounded-xl transition-all cursor-pointer ${isSelected ? "ring-2 ring-blue-400 scale-110" : "opacity-60 hover:opacity-100"}`}>
@@ -986,7 +986,7 @@ function ElwScoreBadge({ p, allPlayers }) {
                     const spRainbow = spSc >= 8.5 && si === 0;
                     const spColor = spSc >= 7 ? hexMap.emerald : spSc >= 5 ? hexMap.blue : spSc >= 3 ? hexMap.yellow : hexMap.red;
                     return (
-                      <div key={sp.puuid} className={`flex items-center gap-1.5 ${isMe ? "opacity-100" : "opacity-40"}`}>
+                      <div key={sp.puuid + '-' + si} className={`flex items-center gap-1.5 ${isMe ? "opacity-100" : "opacity-40"}`}>
                         <img src={sp.champion?.image} alt="" width={16} height={16} className="rounded" />
                         <div className="flex-1 h-[5px] rounded-full bg-[#1b2230] overflow-hidden">
                           <div className={`h-full rounded-full ${spRainbow ? "elw-rainbow-bar" : ""}`} style={{ width: `${(spSc / maxScore) * 100}%`, background: spRainbow ? undefined : spColor }} />
@@ -1027,7 +1027,7 @@ function DamageDistribution({ bluePlayers, redPlayers, allPlayers, maxDmg, mode 
           const rPct = rp ? (rVal / maxDmg) * 100 : 0;
 
           return (
-            <div key={bp.puuid} className="grid grid-cols-[1fr_80px_1fr] gap-2 items-center">
+            <div key={bp.puuid + '-' + i} className="grid grid-cols-[1fr_80px_1fr] gap-2 items-center">
               {/* Mavi taraf */}
               <div className="flex items-center gap-2 justify-end">
                 <span className="text-xs text-gray-400 w-12 text-right font-mono">{fmtDmg(bVal)}</span>
@@ -1126,7 +1126,7 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
               </tr>
             </thead>
             <tbody>
-              {bluePlayers.map(p => <StatsRow key={p.puuid} p={p} maxVals={maxVals} />)}
+              {bluePlayers.map((p, i) => <StatsRow key={p.puuid + '-b' + i} p={p} maxVals={maxVals} />)}
             </tbody>
           </table>
         </div>
@@ -1142,7 +1142,7 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
               </tr>
             </thead>
             <tbody>
-              {redPlayers.map(p => <StatsRow key={p.puuid} p={p} maxVals={maxVals} />)}
+              {redPlayers.map((p, i) => <StatsRow key={p.puuid + '-r' + i} p={p} maxVals={maxVals} />)}
             </tbody>
           </table>
         </div>

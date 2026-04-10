@@ -8,8 +8,27 @@ const geist = Geist({
 });
 
 export const metadata = {
-  title: "GRAPHS - League of Legends Analytics",
-  description: "LoL meta istatistikleri, şampiyon analizleri ve oyuncu karşılaştırmaları",
+  title: {
+    default: "ELW Graphs — League of Legends İstatistik ve Analiz",
+    template: "%s | ELW Graphs",
+  },
+  description: "League of Legends oyuncu profilleri, maç analizleri, ELW Score performans puanlama, şampiyon istatistikleri ve meta takibi.",
+  keywords: ["league of legends", "lol", "oyuncu istatistikleri", "maç analizi", "elw score", "lol türkiye", "şampiyon istatistikleri"],
+  openGraph: {
+    title: "ELW Graphs — League of Legends İstatistik ve Analiz",
+    description: "Oyuncu profilleri, maç analizleri, ELW Score performans puanlama sistemi.",
+    siteName: "ELW Graphs",
+    type: "website",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({ children }) {

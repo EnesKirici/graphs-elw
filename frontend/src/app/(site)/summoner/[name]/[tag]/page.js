@@ -11,7 +11,12 @@ import BannerImage from "@/components/summoner/BannerImage";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
-  return { title: `${decodeURIComponent(name)}#${decodeURIComponent(tag)} - GRAPHS` };
+  const dn = decodeURIComponent(name);
+  const dt = decodeURIComponent(tag);
+  return {
+    title: `${dn}#${dt} — Oyuncu Profili`,
+    description: `${dn}#${dt} League of Legends oyuncu profili, maç geçmişi, ELW Score ve istatistikler.`,
+  };
 }
 
 function platformToCountry(platform) {
