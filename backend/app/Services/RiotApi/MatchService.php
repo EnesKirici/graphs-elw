@@ -84,10 +84,13 @@ class MatchService
             $teams[$tid]['totalKills'] += $p['kills'];
             $teams[$tid]['totalGold']  += $p['goldEarned'];
 
+            $isBot = str_starts_with($p['puuid'], 'BOT_');
+
             $players[] = [
                 'puuid'          => $p['puuid'],
-                'summonerName'   => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
-                'tagLine'        => $p['riotIdTagline'] ?? '',
+                'isBot'          => $isBot,
+                'summonerName'   => $isBot ? ($p['championName'] . ' (Bot)') : ($p['riotIdGameName'] ?? $p['summonerName'] ?? '?'),
+                'tagLine'        => $isBot ? '' : ($p['riotIdTagline'] ?? ''),
                 'champion'       => [
                     'name'  => $p['championName'],
                     'image' => $this->ddragon->championIconUrl($p['championName']),
@@ -506,11 +509,11 @@ class MatchService
         $timeline = $this->matchData->getMatchTimeline($matchId);
         if (!$timeline || !isset($timeline['info']['frames'])) return;
 
-        $puuidToParticipant = [];
-        foreach ($info['participants'] as $idx => $tp) {
-            $puuidToParticipant[$tp['puuid']] = $idx + 1;
+        // participantId → puuid eşleştirmesi (players array'indeki fix'li puuid kullan)
+        $participantToPuuid = [];
+        foreach ($players as $idx => $pl) {
+            $participantToPuuid[$idx + 1] = $pl['puuid'];
         }
-        $participantToPuuid = array_flip($puuidToParticipant);
 
         $itemTimelines = [];
         $skillOrders = [];

@@ -23,7 +23,10 @@ class ElwScoreService
         'JUNGLE'  => ['kda' => 2.5, 'dpm' => 1.5, 'gpm' => 1.5, 'kp' => 1.5, 'vision' => 1.0, 'towerDmg' => 0.5, 'objDmg' => 2.5, 'tankPct' => 1.0, 'healing' => 0.0],
         'MIDDLE'  => ['kda' => 2.5, 'dpm' => 2.5, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
         'BOTTOM'  => ['kda' => 2.5, 'dpm' => 3.0, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
-        'UTILITY' => ['kda' => 2.0, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.0, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 2.0],
+        // Enchanter support (Lulu, Janna, Soraka...) — heal/shield ve vision ön planda
+        'UTILITY_ENCHANTER' => ['kda' => 2.0, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.0, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 2.0],
+        // Hasar support (Brand, Zyra, Vel'Koz...) — hasar ve KP ön planda
+        'UTILITY_DAMAGE'    => ['kda' => 2.0, 'dpm' => 2.0, 'gpm' => 0.5, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 0.5, 'healing' => 2.0],
     ];
 
     // ===== TAKIM KATKISI — KP/Vision/Tank ön planda =====
@@ -33,7 +36,8 @@ class ElwScoreService
         'JUNGLE'  => ['kda' => 1.5, 'dpm' => 1.0, 'gpm' => 1.0, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 0.5, 'objDmg' => 2.5, 'tankPct' => 1.0, 'healing' => 0.0],
         'MIDDLE'  => ['kda' => 2.0, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
         'BOTTOM'  => ['kda' => 1.5, 'dpm' => 2.5, 'gpm' => 1.5, 'kp' => 3.0, 'vision' => 1.0, 'towerDmg' => 2.0, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
-        'UTILITY' => ['kda' => 1.5, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 3.0, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.0, 'healing' => 2.0],
+        'UTILITY_ENCHANTER' => ['kda' => 1.5, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 3.0, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.0, 'healing' => 2.0],
+        'UTILITY_DAMAGE'    => ['kda' => 1.5, 'dpm' => 2.0, 'gpm' => 0.5, 'kp' => 3.0, 'vision' => 2.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 0.5, 'healing' => 2.0],
     ];
 
     private const DEFAULT_INDIVIDUAL_W = ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.5];
@@ -55,6 +59,13 @@ class ElwScoreService
             $c = $p['challenges'] ?? [];
             $role = ($p['teamPosition'] ?: $p['individualPosition'] ?: '');
             if ($role === 'BOT') $role = 'BOTTOM';
+
+            // Support alt-tip: hasar > heal+shield ise damage support
+            if ($role === 'UTILITY') {
+                $hs = ($p['totalHealsOnTeammates'] ?? 0) + ($p['totalDamageShieldedOnTeammates'] ?? 0);
+                $role = (($p['totalDamageDealtToChampions'] ?? 0) > $hs) ? 'UTILITY_DAMAGE' : 'UTILITY_ENCHANTER';
+            }
+
             $w = $roleWeights[$role] ?? $defaultW;
 
             $kda = ($p['kills'] + $p['assists']) / $deaths;
@@ -94,6 +105,13 @@ class ElwScoreService
             $c = $p['challenges'] ?? [];
             $role = ($p['teamPosition'] ?: $p['individualPosition'] ?: '');
             if ($role === 'BOT') $role = 'BOTTOM';
+
+            // Support alt-tip: hasar > heal+shield ise damage support
+            if ($role === 'UTILITY') {
+                $hs = ($p['totalHealsOnTeammates'] ?? 0) + ($p['totalDamageShieldedOnTeammates'] ?? 0);
+                $role = (($p['totalDamageDealtToChampions'] ?? 0) > $hs) ? 'UTILITY_DAMAGE' : 'UTILITY_ENCHANTER';
+            }
+
             $w = $roleWeights[$role] ?? $defaultW;
 
             $kda = ($p['kills'] + $p['assists']) / $deaths;

@@ -837,11 +837,20 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side, allPlayers, duration }) {
 
         {/* İsim + Rank */}
         <div className={`flex-1 min-w-0 ${mirrored ? "text-right" : ""}`}>
-          <p className="text-sm text-gray-100 font-medium truncate">{p.summonerName}<span className="text-gray-600 text-[10px] ml-0.5">#{p.tagLine}</span></p>
+          <p className={`text-sm font-medium truncate ${p.isBot ? "text-gray-500 italic" : "text-gray-100"}`}>
+            {p.summonerName}
+            {!p.isBot && p.tagLine && <span className="text-gray-600 text-[10px] ml-0.5">#{p.tagLine}</span>}
+          </p>
           <div className={`flex items-center gap-1 ${mirrored ? "justify-end" : ""}`}>
-            {!mirrored && p.tier && <img src={rankBadgeUrl(p.tier)} alt="" width={16} height={16} />}
-            <span className="text-[10px] text-gray-500">{rank}</span>
-            {mirrored && p.tier && <img src={rankBadgeUrl(p.tier)} alt="" width={16} height={16} />}
+            {p.isBot ? (
+              <span className="text-[10px] text-gray-600 bg-gray-500/10 px-1.5 py-0.5 rounded">BOT</span>
+            ) : (
+              <>
+                {!mirrored && p.tier && <img src={rankBadgeUrl(p.tier)} alt="" width={16} height={16} />}
+                <span className="text-[10px] text-gray-500">{rank}</span>
+                {mirrored && p.tier && <img src={rankBadgeUrl(p.tier)} alt="" width={16} height={16} />}
+              </>
+            )}
           </div>
         </div>
 
