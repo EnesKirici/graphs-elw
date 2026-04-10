@@ -1,0 +1,120 @@
+"use client";
+
+import { createContext, useContext, useRef, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
+import { postAnalytics, sendAnalyticsBeacon } from "@/lib/api";
+
+const AnalyticsContext = createContext(null);
+
+const FLUSH_INTERVAL = 10_000; // 10 saniye
+const MAX_QUEUE_SIZE = 10;
+
+function getSessionId() {
+  if (typeof window === "undefined") return "";
+  let id = sessionStorage.getItem("analytics_sid");
+  if (!id) {
+    id = crypto.randomUUID();
+    sessionStorage.setItem("analytics_sid", id);
+  }
+  return id;
+}
+
+export function AnalyticsProvider({ children }) {
+  const queue = useRef([]);
+  const sessionId = useRef("");
+  const sessionStart = useRef(Date.now());
+  const pagesVisited = useRef(0);
+  const flushTimer = useRef(null);
+
+  useEffect(() => {
+    sessionId.current = getSessionId();
+    sessionStart.current = Date.now();
+
+    // Periyodik flush
+    flushTimer.current = setInterval(() => flush(), FLUSH_INTERVAL);
+
+    // Sayfa kapanırken session_end + kalan event'leri gönder
+    const handleUnload = () => {
+      const duration = Math.round((Date.now() - sessionStart.current) / 1000);
+
+      queue.current.push({
+        type: "session_end",
+        page: window.location.pathname,
+        data: { duration_seconds: duration, pages_visited: pagesVisited.current },
+        session_id: sessionId.current,
+      });
+
+      sendAnalyticsBeacon({ events: queue.current });
+      queue.current = [];
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      if (flushTimer.current) clearInterval(flushTimer.current);
+    };
+  }, []);
+
+  const flush = useCallback(() => {
+    if (queue.current.length === 0) return;
+
+    const events = [...queue.current];
+    queue.current = [];
+    postAnalytics("/analytics/batch", { events });
+  }, []);
+
+  const enqueue = useCallback((type, page, data) => {
+    queue.current.push({
+      type,
+      page: page || (typeof window !== "undefined" ? window.location.pathname : ""),
+      data: data || null,
+      session_id: sessionId.current,
+    });
+
+    if (queue.current.length >= MAX_QUEUE_SIZE) {
+      flush();
+    }
+  }, [flush]);
+
+  const trackPageView = useCallback((page) => {
+    pagesVisited.current++;
+    enqueue("page_view", page, null);
+  }, [enqueue]);
+
+  const trackSearch = useCallback((query) => {
+    enqueue("search", null, { query });
+  }, [enqueue]);
+
+  const trackClick = useCallback((element, extra) => {
+    enqueue("click", null, { element, ...extra });
+  }, [enqueue]);
+
+  return (
+    <AnalyticsContext.Provider value={{ trackPageView, trackSearch, trackClick }}>
+      <PageTracker trackPageView={trackPageView} />
+      {children}
+    </AnalyticsContext.Provider>
+  );
+}
+
+/**
+ * Sayfa değişimlerini otomatik izle.
+ */
+function PageTracker({ trackPageView }) {
+  const pathname = usePathname();
+  const prevPath = useRef(null);
+
+  useEffect(() => {
+    if (pathname && pathname !== prevPath.current) {
+      prevPath.current = pathname;
+      trackPageView(pathname);
+    }
+  }, [pathname, trackPageView]);
+
+  return null;
+}
+
+export function useAnalytics() {
+  return useContext(AnalyticsContext);
+}

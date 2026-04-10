@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useBackground } from "@/context/BackgroundContext";
+import { useAnalytics } from "@/context/AnalyticsContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -142,6 +143,7 @@ function RateLimitIndicator() {
 export default function Navbar() {
   const router = useRouter();
   const { background, removeBg } = useBackground();
+  const analytics = useAnalytics();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -203,6 +205,7 @@ export default function Navbar() {
     if (query.includes("#")) {
       const [n, t] = query.split("#");
       if (n && t) {
+        analytics?.trackSearch(`${n}#${t}`);
         router.push(`/summoner/${encodeURIComponent(n)}/${encodeURIComponent(t)}`);
         setQuery("");
         setShowDropdown(false);
@@ -232,6 +235,7 @@ export default function Navbar() {
   }
 
   function selectPlayer(p) {
+    analytics?.trackSearch(`${p.gameName}#${p.tagLine}`);
     router.push(`/summoner/${encodeURIComponent(p.gameName)}/${encodeURIComponent(p.tagLine)}`);
     setQuery("");
     setShowDropdown(false);

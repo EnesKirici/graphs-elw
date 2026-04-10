@@ -34,3 +34,32 @@ export async function fetchApi(endpoint) {
 
   return res.json();
 }
+
+/**
+ * Analytics event'i backend'e POST et.
+ */
+export async function postAnalytics(endpoint, data) {
+  try {
+    await fetch(`${API_BASE}${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      cache: "no-store",
+    });
+  } catch {
+    // Analytics hatalarını sessizce yut — site çalışmaya devam etsin
+  }
+}
+
+/**
+ * Sayfa kapanırken kalan event'leri sendBeacon ile gönder.
+ */
+export function sendAnalyticsBeacon(data) {
+  try {
+    const url = `${API_BASE}/analytics/batch`;
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    navigator.sendBeacon(url, blob);
+  } catch {
+    // Beacon hatalarını sessizce yut
+  }
+}

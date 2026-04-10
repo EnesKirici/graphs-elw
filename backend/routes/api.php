@@ -5,6 +5,9 @@ use App\Http\Controllers\Api\ChampionController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\SummonerController;
 use App\Http\Controllers\Api\LeaderboardController;
+use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\SettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,5 +59,26 @@ Route::prefix('v1')->group(function () {
     // Şampiyon endpoint'leri
     Route::get('/champions', [ChampionController::class, 'index']);
     Route::get('/champions/{id}', [ChampionController::class, 'show']);
+
+    // Analytics — public (site ziyaretçileri event gönderir)
+    Route::post('/analytics/event', [AnalyticsController::class, 'store']);
+    Route::post('/analytics/batch', [AnalyticsController::class, 'batch']);
+
+    // Public settings (frontend config)
+    Route::get('/settings/public', [SettingsController::class, 'publicSettings']);
+
+    // Admin — login (public, rate limited)
+    Route::post('/admin/login', [AdminController::class, 'login']);
+
+    // Admin — korumalı endpoint'ler
+    Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'dashboard']);
+        Route::get('/analytics/searches', [AdminController::class, 'searches']);
+        Route::get('/analytics/page-views', [AdminController::class, 'pageViews']);
+        Route::get('/analytics/events', [AdminController::class, 'events']);
+
+        Route::get('/settings/{key}', [SettingsController::class, 'show']);
+        Route::put('/settings/{key}', [SettingsController::class, 'update']);
+    });
 
 });
