@@ -74,6 +74,7 @@ Route::prefix('v1')->group(function () {
 
     // Admin — korumalı endpoint'ler
     Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::post('/logout', [AdminController::class, 'logout']);
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
         Route::get('/analytics/searches', [AdminController::class, 'searches']);
         Route::get('/analytics/page-views', [AdminController::class, 'pageViews']);

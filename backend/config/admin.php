@@ -1,6 +1,6 @@
 <?php
 
 return [
-    'password' => env('ADMIN_PASSWORD'),
-    'token'    => env('ADMIN_TOKEN'),
+    // Admin auth artık Sanctum token sistemi üzerinden çalışır.
+    // Kullanıcı oluşturmak için: php artisan admin:create {username} {password}
 ];

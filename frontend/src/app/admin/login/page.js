@@ -6,6 +6,7 @@ import { adminLogin } from "@/lib/adminApi";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      await adminLogin(password);
+      await adminLogin(username, password);
       router.replace("/admin");
     } catch (err) {
       setError(err.message);
@@ -40,13 +41,24 @@ export default function AdminLoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="glass rounded-xl p-6 space-y-4">
           <div>
+            <label className="block text-xs text-gray-400 mb-1.5">Kullanıcı Adı</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Kullanıcı adı"
+              autoFocus
+              className="w-full bg-white/5 border border-[#1b2230] rounded-lg px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+            />
+          </div>
+
+          <div>
             <label className="block text-xs text-gray-400 mb-1.5">Şifre</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Admin şifresi"
-              autoFocus
+              placeholder="Şifre"
               className="w-full bg-white/5 border border-[#1b2230] rounded-lg px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
             />
           </div>
@@ -59,7 +71,7 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
-            disabled={loading || !password}
+            disabled={loading || !username || !password}
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
           >
             {loading ? "Giriş yapılıyor..." : "Giriş Yap"}

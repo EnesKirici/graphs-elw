@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminUser;
 use App\Models\AnalyticsEvent;
 use App\Models\BannedIp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 
 class AdminController extends Controller
@@ -46,21 +48,28 @@ class AdminController extends Controller
 
         RateLimiter::hit($key, 300);
 
-        $password = $request->input('password');
+        $request->validate([
+            'username' => 'required|string',
+            'password' => 'required|string',
+        ]);
 
-        if (!$password || $password !== config('admin.password')) {
-            // Başarısız deneme sayacını artır (24 saat TTL)
+        $user = AdminUser::where('username', $request->input('username'))->first();
+
+        if (!$user || !Hash::check($request->input('password'), $user->password)) {
             Cache::put($failKey, $failCount + 1, 86400);
-
-            return response()->json(['error' => 'Geçersiz şifre.'], 401);
+            return response()->json(['error' => 'Geçersiz kullanıcı adı veya şifre.'], 401);
         }
 
-        // Başarılı giriş — sayaçları temizle
+        // Başarılı giriş — sayaçları temizle, eski tokenları sil, yeni token oluştur
         RateLimiter::clear($key);
         Cache::forget($failKey);
+        $user->tokens()->delete();
+
+        $token = $user->createToken('admin', expiresAt: now()->addHours(12));
 
         return response()->json([
-            'token' => config('admin.token'),
+            'token' => $token->plainTextToken,
+            'username' => $user->username,
         ]);
     }
 
@@ -287,6 +296,16 @@ class AdminController extends Controller
     public function clearAlerts(): JsonResponse
     {
         Cache::forget('ban_alerts');
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Çıkış yap — mevcut token'ı sil.
+     * POST /api/v1/admin/logout
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()->delete();
         return response()->json(['ok' => true]);
     }
 }

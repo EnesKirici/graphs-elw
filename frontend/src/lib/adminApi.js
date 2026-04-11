@@ -10,16 +10,25 @@ export function isAuthenticated() {
   return !!getToken();
 }
 
-export function logout() {
+export async function logout() {
+  const token = getToken();
+  if (token) {
+    try {
+      await fetch(`${API_BASE}/admin/logout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {}
+  }
   localStorage.removeItem("admin_token");
   window.location.href = "/admin/login";
 }
 
-export async function adminLogin(password) {
+export async function adminLogin(username, password) {
   const res = await fetch(`${API_BASE}/admin/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ username, password }),
   });
 
   const data = await res.json();
