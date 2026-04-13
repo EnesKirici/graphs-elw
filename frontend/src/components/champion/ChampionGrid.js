@@ -3,13 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const tagColors = {
-  Fighter: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  Tank: "bg-green-500/10 text-green-400 border-green-500/20",
-  Mage: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  Assassin: "bg-red-500/10 text-red-400 border-red-500/20",
-  Marksman: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-  Support: "bg-teal-500/10 text-teal-400 border-teal-500/20",
+const positionLabels = {
+  TOP: "Top",
+  JUNGLE: "Jungle",
+  MIDDLE: "Mid",
+  BOTTOM: "Bot",
+  SUPPORT: "Sup",
 };
 
 export default function ChampionGrid({ champions }) {
@@ -81,16 +80,11 @@ export default function ChampionGrid({ champions }) {
                 <p className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
                   {champ.name}
                 </p>
-                <div className="flex flex-wrap justify-center gap-1 mt-2">
-                  {champ.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className={`text-[9px] px-1.5 py-0.5 rounded-md border ${tagColors[tag] || "bg-gray-500/10 text-gray-400 border-gray-500/20"}`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                {champ.positions?.length > 0 && (
+                  <p className="text-[10px] text-gray-500 mt-1.5">
+                    {champ.positions.map((pos) => positionLabels[pos] || pos).join(" · ")}
+                  </p>
+                )}
               </div>
             </div>
           </Link>

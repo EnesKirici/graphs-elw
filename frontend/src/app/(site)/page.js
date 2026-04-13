@@ -5,18 +5,13 @@ import RankingCard from "@/components/dashboard/RankingCard";
 import WinRateChanges from "@/components/dashboard/WinRateChanges";
 import TopBanned from "@/components/dashboard/TopBanned";
 import TopPicked from "@/components/dashboard/TopPicked";
-import ChampionGrid from "@/components/dashboard/ChampionGrid";
 import BackgroundAnimation from "@/components/dashboard/BackgroundAnimation";
+import Link from "next/link";
 
 export default async function Home() {
   let data = null;
-  let champData = null;
   try {
-    // İki API çağrısını paralel yap (Promise.all)
-    [data, champData] = await Promise.all([
-      fetchApi("/meta/dashboard"),
-      fetchApi("/champions"),
-    ]);
+    data = await fetchApi("/meta/dashboard");
   } catch (error) {}
 
   if (!data) {
@@ -42,7 +37,7 @@ export default async function Home() {
         <WinRateBanner sliderPool={data.sliderPool} version={data.version} />
 
         {/* Arama */}
-        <SearchBar champions={champData?.champions || []} />
+        <SearchBar champions={data.champions} />
 
         {/* 3'lü ranking grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -77,13 +72,23 @@ export default async function Home() {
           <TopBanned champions={data.topBanRate} />
         </div>
 
-        {/* Tüm şampiyonlar grid */}
-        {champData && (
-          <ChampionGrid
-            champions={champData.champions}
-            version={champData.version}
-          />
-        )}
+        {/* Şampiyonlar sayfasına yönlendirme */}
+        <Link
+          href="/champions"
+          className="glass rounded-xl p-5 flex items-center justify-between group hover:border-blue-500/30 transition-all duration-300"
+        >
+          <div>
+            <h3 className="text-base font-semibold text-gray-200 group-hover:text-white transition-colors">
+              Tüm Şampiyonlar
+            </h3>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              {data.count} şampiyon — koridor, sınıf ve detaylı bilgiler
+            </p>
+          </div>
+          <svg className="w-5 h-5 text-gray-600 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
       </div>
     </div>
   );

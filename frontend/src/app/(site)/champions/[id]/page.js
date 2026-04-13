@@ -32,6 +32,14 @@ const tagConfig = {
   Support:  { color: "bg-teal-500/10 text-teal-400 border-teal-500/20",     label: "Destek" },
 };
 
+const positionConfig = {
+  TOP:     { label: "Top",    color: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+  JUNGLE:  { label: "Jungle", color: "bg-green-500/10 text-green-400 border-green-500/20" },
+  MIDDLE:  { label: "Mid",    color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+  BOTTOM:  { label: "Bot",    color: "bg-red-500/10 text-red-400 border-red-500/20" },
+  SUPPORT: { label: "Sup",    color: "bg-teal-500/10 text-teal-400 border-teal-500/20" },
+};
+
 export default async function ChampionDetail({ params }) {
   const { id } = await params;
   const data = await fetchApi(`/champions/${id}`);
@@ -66,7 +74,7 @@ export default async function ChampionDetail({ params }) {
                 {champ.name}
               </h1>
               <p className="text-gray-400 mt-0.5 italic">{champ.title}</p>
-              <div className="flex gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {champ.tags.map((tag) => {
                   const cfg = tagConfig[tag];
                   return (
@@ -78,6 +86,22 @@ export default async function ChampionDetail({ params }) {
                     </span>
                   );
                 })}
+                {champ.positions?.length > 0 && (
+                  <>
+                    <span className="text-gray-600">·</span>
+                    {champ.positions.map((pos) => {
+                      const cfg = positionConfig[pos];
+                      return (
+                        <span
+                          key={pos}
+                          className={`text-xs px-2.5 py-1 rounded-md border ${cfg?.color || "bg-gray-500/10 text-gray-400 border-gray-500/20"}`}
+                        >
+                          {cfg?.label || pos}
+                        </span>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             </div>
           </div>

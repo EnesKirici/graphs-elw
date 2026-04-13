@@ -20,16 +20,18 @@ class ChampionController extends Controller
     {
         $champions = $this->ddragon->getChampions();
         $version = $this->ddragon->getCurrentVersion();
+        $positionMap = $this->ddragon->getChampionPositions();
 
         // DDragon verisini frontend için daha temiz bir formata dönüştür
-        $formatted = collect($champions)->map(function ($champ) use ($version) {
+        $formatted = collect($champions)->map(function ($champ) use ($positionMap) {
             return [
-                'id'    => $champ['id'],        // "Aatrox"
-                'key'   => $champ['key'],       // "266" (numeric ID)
-                'name'  => $champ['name'],      // "Aatrox"
-                'title' => $champ['title'],     // "Darkin Kılıcı"
-                'tags'  => $champ['tags'],      // ["Fighter", "Tank"]
-                'image' => $this->ddragon->championIconUrl($champ['id']),
+                'id'        => $champ['id'],        // "Aatrox"
+                'key'       => $champ['key'],       // "266" (numeric ID)
+                'name'      => $champ['name'],      // "Aatrox"
+                'title'     => $champ['title'],     // "Darkin Kılıcı"
+                'tags'      => $champ['tags'],      // ["Fighter", "Tank"]
+                'image'     => $this->ddragon->championIconUrl($champ['id']),
+                'positions' => $positionMap[$champ['id']] ?? [],
             ];
         })->values();
 
@@ -48,17 +50,19 @@ class ChampionController extends Controller
     {
         $champion = $this->ddragon->getChampionDetail($id);
         $version = $this->ddragon->getCurrentVersion();
+        $positionMap = $this->ddragon->getChampionPositions();
 
         return response()->json([
             'version'  => $version,
             'champion' => [
-                'id'      => $champion['id'],
-                'key'     => $champion['key'],
-                'name'    => $champion['name'],
-                'title'   => $champion['title'],
-                'lore'    => $champion['lore'],
-                'tags'    => $champion['tags'],
-                'info'    => $champion['info'],     // attack, defense, magic, difficulty
+                'id'        => $champion['id'],
+                'key'       => $champion['key'],
+                'name'      => $champion['name'],
+                'title'     => $champion['title'],
+                'lore'      => $champion['lore'],
+                'tags'      => $champion['tags'],
+                'positions' => $positionMap[$champion['id']] ?? [],
+                'info'      => $champion['info'],     // attack, defense, magic, difficulty
                 'image'   => $this->ddragon->championIconUrl($champion['id']),
                 'splash'  => $this->ddragon->splashArtUrl($champion['id']),
                 'spells'  => collect($champion['spells'])->map(fn($s) => [

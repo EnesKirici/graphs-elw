@@ -22,10 +22,11 @@ class MetaService
 
     public function getDashboardStats(): array
     {
-        return Cache::remember('meta:dashboard_stats_v4', config('riot.cache_ttl.meta_stats'), function () {
+        return Cache::remember('meta:dashboard_stats_v5', config('riot.cache_ttl.meta_stats'), function () {
             $champions = $this->ddragon->getChampions();
             $version = $this->ddragon->getCurrentVersion();
             $rotation = $this->getFreeRotation();
+            $positionMap = $this->ddragon->getChampionPositions();
             $ddragonBase = config('riot.ddragon_url');
 
             $stats = [];
@@ -50,6 +51,7 @@ class MetaService
                     'name'      => $champ['name'],
                     'title'     => $champ['title'],
                     'tags'      => $champ['tags'],
+                    'positions' => $positionMap[$champ['id']] ?? [],
                     'image'     => $this->ddragon->championIconUrl($champ['id']),
                     'splash'    => $this->ddragon->splashArtUrl($champ['id']),
                     'centered'  => "{$ddragonBase}/cdn/img/champion/centered/{$champ['id']}_0.jpg",

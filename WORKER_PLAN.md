@@ -119,3 +119,100 @@ Rate limit riski:    Yüksek         Düşük (kontrollü)
 - Dev key ile worker ÇALIŞTIRILMAMALI (100/2dk limit yetersiz)
 - Worker başlamadan önce mevcut DB verisi yeterli olmalı
 - İlk deployment'ta aktif oyuncular = son 7 günde profili açılan oyuncular
+
+---
+
+## Aşama 2 — Şampiyon İstatistik Pipeline'ı
+
+### Amaç
+Şu an dashboard'daki win rate, pick rate, ban rate, tier verileri **sahte** (hash tabanlı simülasyon).
+Worker ile gerçek maç verisi toplanarak bunlar gerçek istatistiklere dönüştürülecek.
+
+### Veri Kaynağı
+Riot Match V5 API'den toplanan maç verileri. Her maçta her oyuncu için:
+- `championId` → Hangi şampiyon oynandı
+- `teamPosition` → Hangi koridorda oynandı (TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY)
+- `win` → Kazandı mı
+- Maçtaki ban listesi → Ban rate hesabı
+
+### Hedef Oyuncu Havuzu
+```
+Challenger + Grandmaster + Master oyuncuları → meta istatistikleri
+Diamond+ tüm oyuncular → daha geniş örneklem
+Diğer ranklar → genel istatistik (opsiyonel, çok fazla istek)
+
+League V4 API ile tier bazlı oyuncu listeleri çekilir:
+  GET /lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5
+  GET /lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5
+  GET /lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5
+```
+
+### Hesaplanacak İstatistikler
+```
+Her şampiyon + her koridor için:
+  - Win Rate = wins / totalGames × 100
+  - Pick Rate = champGames / totalGames × 100
+  - Ban Rate = champBans / totalGames × 100
+  - Koridor Dağılımı = positionGames / champTotalGames × 100
+    (örn: Yasuo → Mid %72, Top %18, Bot %10)
+  - Tier = score hesabı (WR + PR ağırlıklı)
+  - Patch bazlı değişim = bu patch WR - önceki patch WR
+```
+
+### Yeni DB Tabloları
+```sql
+-- Şampiyon istatistikleri (patch bazlı, günlük güncelleme)
+champion_stats:
+  id, champion_key, champion_id, patch, position,
+  games, wins, losses, bans,
+  pick_rate, win_rate, ban_rate, tier,
+  sample_size, updated_at
+
+-- Toplanan maçların özet verisi
+match_champion_data:
+  id, match_id, champion_key, position, win, patch,
+  created_at
+```
+
+### Worker Görevleri
+```
+Yeni komutlar:
+  php artisan stats:collect-high-elo    → Challenger/GM/Master oyuncu listesi çek
+  php artisan stats:process-matches     → Maçlardan şampiyon istatistiklerini hesapla
+  php artisan stats:calculate-meta      → champion_stats tablosunu güncelle
+
+Scheduler:
+  $schedule->command('stats:collect-high-elo')->daily();
+  $schedule->command('stats:process-matches')->everyThirtyMinutes();
+  $schedule->command('stats:calculate-meta')->hourly();
+```
+
+### Rate Limit Bütçesi (Ek)
+```
+Mevcut worker bütçesi: %60 = 1.800/dk
+  Oyuncu takibi: %40 = 1.200/dk
+  Meta stats:    %20 = 600/dk
+
+Meta stats istek akışı:
+  1. High elo oyuncu listesi: 3 istek/gün (Challenger+GM+Master)
+  2. Oyuncu maçları: ~1.500 oyuncu × 1 istek = 1.500/gün
+  3. Yeni maç detayları: ~5.000 maç/gün × 1 istek = 5.000/gün
+  Toplam: ~6.500 istek/gün (çok rahat bütçe içinde)
+```
+
+### MetaService Geçişi
+```
+SAHTE (şu an):
+  MetaService → crc32 hash ile win rate üret → frontend'e gönder
+
+GERÇEK (worker sonrası):
+  MetaService → champion_stats tablosundan oku → frontend'e gönder
+  Aynı endpoint, aynı response formatı — frontend değişikliği YOK
+```
+
+### Geçici Çözüm (Worker Öncesi)
+Şampiyon koridor bilgisi için Meraki Analytics CDN kullanılıyor:
+`https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/champions/{name}.json`
+→ `positions` alanı: ["TOP", "MIDDLE", "JUNGLE", "BOTTOM", "SUPPORT"]
+→ Patch bazlı güncelleniyor, 24 saat cache
+→ Worker hazır olunca kendi verimizle değiştirilecek

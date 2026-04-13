@@ -192,4 +192,27 @@ class DataDragonService
     {
         return "{$this->baseUrl}/cdn/img/champion/loading/{$championName}_{$skinNum}.jpg";
     }
+
+    /**
+     * Meraki Analytics'ten şampiyon koridor bilgilerini getir.
+     * Her şampiyon için positions dizisi döner: ["TOP", "MIDDLE", "JUNGLE", ...]
+     * 24 saat cache'lenir. Tek bir HTTP isteği ile tüm şampiyonlar gelir.
+     *
+     * @return array<string, string[]> [championKey => ["TOP", "MIDDLE", ...]]
+     */
+    public function getChampionPositions(): array
+    {
+        return Cache::remember('meraki:champion_positions', config('riot.cache_ttl.ddragon'), function () {
+            $data = Http::timeout(15)
+                ->get('https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/champions.json')
+                ->json();
+
+            $positions = [];
+            foreach ($data as $key => $champion) {
+                $positions[$key] = $champion['positions'] ?? [];
+            }
+
+            return $positions;
+        });
+    }
 }
