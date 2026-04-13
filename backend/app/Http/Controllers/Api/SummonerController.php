@@ -42,6 +42,15 @@ class SummonerController extends Controller
             return $this->buildFullResponse($profile);
         } catch (\Exception $e) {
             $code = $e->getCode() ?: 500;
+            if ($code === 429) {
+                $cooldown = Cache::get('riot:rate_limit_cooldown');
+                $retryAfter = $cooldown ? max(0, $cooldown - time()) : 5;
+                return response()->json([
+                    'error'       => 'Riot API istek limiti aşıldı.',
+                    'rateLimited' => true,
+                    'retryAfter'  => $retryAfter,
+                ], 429);
+            }
             return response()->json([
                 'error' => $code === 404
                     ? "Oyuncu bulunamadı: {$name}#{$tag}"
@@ -57,6 +66,15 @@ class SummonerController extends Controller
             return $this->buildFullResponse($profile);
         } catch (\Exception $e) {
             $code = $e->getCode() ?: 500;
+            if ($code === 429) {
+                $cooldown = Cache::get('riot:rate_limit_cooldown');
+                $retryAfter = $cooldown ? max(0, $cooldown - time()) : 5;
+                return response()->json([
+                    'error'       => 'Riot API istek limiti aşıldı.',
+                    'rateLimited' => true,
+                    'retryAfter'  => $retryAfter,
+                ], 429);
+            }
             return response()->json(['error' => $e->getMessage()], $code >= 100 && $code < 600 ? $code : 500);
         }
     }
@@ -155,10 +173,30 @@ class SummonerController extends Controller
     private function buildFullResponse(array $profile): JsonResponse
     {
         $puuid = $profile['puuid'];
+        $rateLimited = false;
 
-        $ranked = $this->league->getRankedInfo($puuid);
-        $masteries = $this->mastery->getTopMasteries($puuid, 10);
-        $totalScore = $this->mastery->getTotalScore($puuid);
+        // Ranked, mastery — rate limit yerse kısmi veri ile devam et
+        $ranked = ['solo' => null, 'flex' => null];
+        $masteries = [];
+        $totalScore = 0;
+
+        try {
+            $ranked = $this->league->getRankedInfo($puuid);
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
+
+        try {
+            $masteries = $this->mastery->getTopMasteries($puuid, 10);
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
+
+        try {
+            $totalScore = $this->mastery->getTotalScore($puuid);
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
 
         // ────────────────────────────────────────────
         //  AKILLI YÜKLEME:
@@ -167,20 +205,26 @@ class SummonerController extends Controller
         //  3. DB'de olan maçlar tekrar çekilmez (0 istek)
         // ────────────────────────────────────────────
 
-        // Son 10 maç ID + Sezon Solo/Flex ID'lerini topla ve toplu preload
+        // Son 10 maç ID + TÜM sezon maç ID'lerini topla ve toplu preload
+        // Solo(420), Flex(440), Normal(400), Blind(430), Quickplay(490)
+        // Hepsini önceden yükle → istatistik servisleri tek tek API çağrısı yapmaz
         try {
             $preloadIds = [];
             $recentIds = $this->matchData->getMatchIds($puuid, 10, 0);
             $preloadIds = array_merge($preloadIds, $recentIds);
-            foreach ([420, 440] as $queueId) {
+            foreach ([420, 440, 400, 430, 490] as $queueId) {
                 try {
                     $ids = $this->matchData->getSeasonMatchIds($puuid, $queueId);
                     $preloadIds = array_merge($preloadIds, $ids);
-                } catch (\Exception $e) {}
+                } catch (\Exception $e) {
+                    if ($e->getCode() === 429) $rateLimited = true;
+                }
             }
             $preloadIds = array_unique($preloadIds);
             $this->matchData->preloadMatchDetails($preloadIds);
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
 
         $recentMatches = [];
         $recentStats = null;
@@ -190,7 +234,7 @@ class SummonerController extends Controller
         $bannerChampion = null;
         $bannerSkins = [0];
         try {
-            $recentMatches = $this->match->getRecentMatches($puuid, 10);
+            $recentMatches = $this->match->getRecentMatches($puuid, 10, 0, true);
             $recentStats = $this->match->calculateRecentStats($recentMatches, $puuid);
 
             $champId = $recentStats['mostPlayedChampion']['id'] ?? null;
@@ -210,7 +254,9 @@ class SummonerController extends Controller
                     $bannerSkins = [0];
                 }
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
 
         // LP snapshot — mevcut LP'yi en son ranked maçla eşleştirip kaydet
         // Sonra her maça LP değişimini hesaplayıp ekle
@@ -241,7 +287,9 @@ class SummonerController extends Controller
                 }
                 unset($sc);
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
 
         // Sezon verileri boşsa recentMatches'tan fallback
         if (empty($seasonChampions['all'] ?? []) && !empty($recentMatches)) {
@@ -268,7 +316,14 @@ class SummonerController extends Controller
                     $ranked[$q]['winRate'] = $winrateTimeline[$q]['winRate'];
                 }
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
+
+        // Cooldown cache'den kalan süreyi al
+        $cooldown = Cache::get('riot:rate_limit_cooldown');
+        $retryAfter = $cooldown ? max(0, $cooldown - time()) : 0;
+        if ($retryAfter > 0) $rateLimited = true;
 
         // DB'ye kaydet — autocomplete için
         try {
@@ -307,6 +362,8 @@ class SummonerController extends Controller
             'winrateTimeline'   => $winrateTimeline ?? [],
             'bannerChampion'    => $bannerChampion,
             'bannerSkins'       => $bannerSkins,
+            'rateLimited'       => $rateLimited,
+            'retryAfter'        => $retryAfter,
         ]);
     }
 

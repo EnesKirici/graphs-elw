@@ -89,8 +89,8 @@ class MatchService
             $players[] = [
                 'puuid'          => $p['puuid'],
                 'isBot'          => $isBot,
-                'summonerName'   => $isBot ? ($p['championName'] . ' (Bot)') : ($p['riotIdGameName'] ?? $p['summonerName'] ?? '?'),
-                'tagLine'        => $isBot ? '' : ($p['riotIdTagline'] ?? ''),
+                'summonerName'   => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
+                'tagLine'        => $p['riotIdTagline'] ?? '',
                 'champion'       => [
                     'name'  => $p['championName'],
                     'image' => $this->ddragon->championIconUrl($p['championName']),
@@ -254,12 +254,14 @@ class MatchService
         return $this->getRecentMatches($puuid, $count, $start);
     }
 
-    public function getRecentMatches(string $puuid, int $count = 20, int $start = 0): array
+    public function getRecentMatches(string $puuid, int $count = 20, int $start = 0, bool $skipPreload = false): array
     {
         $matchIds = $this->matchData->getMatchIds($puuid, $count, $start);
 
-        // Sadece maç detaylarını paralel preload (timeline yok — maç detayında çekilir)
-        $this->matchData->preloadMatchDetails($matchIds);
+        // buildFullResponse zaten preload yaptıysa tekrar yapma
+        if (!$skipPreload) {
+            $this->matchData->preloadMatchDetails($matchIds);
+        }
 
         $version = $this->ddragon->getCurrentVersion();
         $ddragonBase = config('riot.ddragon_url');

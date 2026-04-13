@@ -309,6 +309,10 @@ class MatchDataService
         $apiKey = config('riot.api_key');
 
         foreach (array_chunk($missing, 20) as $chunk) {
+            // Cooldown aktifse bu chunk'ı atla
+            $cooldown = Cache::get('riot:rate_limit_cooldown');
+            if ($cooldown && time() < $cooldown) break;
+
             $responses = Http::pool(function ($pool) use ($chunk, $regionUrl, $apiKey) {
                 foreach ($chunk as $id) {
                     $pool->as($id)
@@ -320,7 +324,12 @@ class MatchDataService
 
             foreach ($chunk as $id) {
                 $resp = $responses[$id] ?? null;
-                if ($resp && $resp->successful()) {
+                if (!$resp) continue;
+
+                // Pool'da 429 gelirse cooldown ayarla ve kalan chunk'ları atla
+                if (RiotApiService::handlePoolRateLimit($resp)) break 2;
+
+                if ($resp->successful()) {
                     $slim = $this->extractMatchData($resp->json());
                     try {
                         MatchRecord::create([
@@ -350,6 +359,9 @@ class MatchDataService
         $apiKey = config('riot.api_key');
 
         foreach (array_chunk($missing, 20) as $chunk) {
+            $cooldown = Cache::get('riot:rate_limit_cooldown');
+            if ($cooldown && time() < $cooldown) break;
+
             $responses = Http::pool(function ($pool) use ($chunk, $regionUrl, $apiKey) {
                 foreach ($chunk as $id) {
                     $pool->as($id)
@@ -361,7 +373,11 @@ class MatchDataService
 
             foreach ($chunk as $id) {
                 $resp = $responses[$id] ?? null;
-                if ($resp && $resp->successful()) {
+                if (!$resp) continue;
+
+                if (RiotApiService::handlePoolRateLimit($resp)) break 2;
+
+                if ($resp->successful()) {
                     try {
                         MatchTimeline::create([
                             'match_id' => $id,

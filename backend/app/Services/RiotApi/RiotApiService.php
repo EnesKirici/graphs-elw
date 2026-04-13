@@ -18,9 +18,10 @@ class RiotApiService
     }
 
     /**
-     * Temel HTTP isteği — retry logic + rate limit koruması + sayaç.
+     * Temel HTTP isteği — rate limit koruması + sayaç.
+     * 429 gelirse sleep YAPMAZ, anında hata fırlatır (PHP timeout'u önler).
      */
-    private function request(string $url, array $query = [], int $retryCount = 0): mixed
+    private function request(string $url, array $query = []): mixed
     {
         $cooldownKey = 'riot:rate_limit_cooldown';
         $cooldownUntil = Cache::get($cooldownKey);
@@ -34,7 +35,6 @@ class RiotApiService
             ->withHeaders(['X-Riot-Token' => config('riot.api_key')])
             ->get($url, $query);
 
-        // İstek sayısını takip et
         self::track('request');
 
         // Riot'un döndürdüğü rate limit header'larını kaydet
@@ -49,16 +49,10 @@ class RiotApiService
         }
 
         if ($response->status() === 429) {
-            $retryAfter = (int) $response->header('Retry-After', 5);
+            $retryAfter = (int) ($response->header('Retry-After') ?: 5);
             Cache::put($cooldownKey, time() + $retryAfter, $retryAfter);
             self::track('rate_limited');
-
-            if ($retryCount < 2) {
-                sleep(min($retryAfter, 10));
-                return $this->request($url, $query, $retryCount + 1);
-            }
-
-            throw new \Exception("Rate limit aşıldı. {$retryAfter}s bekleyin.", 429);
+            throw new \Exception("Rate limit aşıldı. {$retryAfter} saniye bekleyin.", 429);
         }
 
         if ($response->status() === 404) {
@@ -71,6 +65,21 @@ class RiotApiService
 
         $response->throw();
         return $response->json();
+    }
+
+    /**
+     * Pool response'larından 429 algıla ve cooldown cache'i ayarla.
+     * preloadMatchDetails gibi pool kullanan metodlar bu fonksiyonu çağırmalı.
+     */
+    public static function handlePoolRateLimit($response): bool
+    {
+        if ($response && $response->status() === 429) {
+            $retryAfter = (int) ($response->header('Retry-After') ?: 5);
+            Cache::put('riot:rate_limit_cooldown', time() + $retryAfter, $retryAfter);
+            self::track('rate_limited');
+            return true;
+        }
+        return false;
     }
 
     /**
