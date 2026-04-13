@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Http;
 class MatchDataService
 {
     public const QUEUE_NAMES = [
-        420 => 'Solo/Duo',
+        420 => 'SoloQ',
         440 => 'Flex',
         450 => 'ARAM',
         400 => 'Normal',

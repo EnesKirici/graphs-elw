@@ -53,7 +53,7 @@ function PlayerIcon({ player: p }) {
 
   const img = (
     <img
-      src={p.image} alt={p.name} width={24} height={24}
+      src={p.image} alt={p.name} width={28} height={28}
       className={`rounded-sm ${p.isMe ? "ring-1 ring-blue-400" : ""} ${href ? "cursor-pointer hover:brightness-125 transition-all" : ""}`}
       onMouseEnter={(e) => setAnchor(e.currentTarget)}
       onMouseLeave={() => setAnchor(null)}
@@ -282,7 +282,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <div className="flex flex-col items-center gap-0.5">
             <div className="relative">
-              <img src={m.champion.image} alt="" width={44} height={44} className="rounded-lg" />
+              <img src={m.champion.image} alt="" width={44} height={44} className="rounded-lg" title={m.champion.name} />
               <span className="absolute -bottom-1 -right-1 text-[8px] bg-[#0d1117] text-gray-400 px-0.5 rounded border border-[#1b2230] font-mono">{m.champLevel}</span>
               {/* Sıralama — sol üst */}
               {!remake && m.ranking && (
@@ -310,10 +310,16 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
           <RuneTooltip runes={m.runes} keystoneSize={22} subTreeSize={16} />
         </div>
 
-        {/* SOL SABİT: Name + Role */}
+        {/* SOL SABİT: Result + LP + Perf */}
         <div className="w-24 flex-shrink-0">
-          <p className="text-[11px] font-medium text-gray-200 truncate">{m.champion.name}</p>
-          <p className="text-[9px] text-gray-500">{roles[m.role] || m.role}</p>
+          <p className={`text-[11px] font-bold ${resClr}`}>{resTxt}</p>
+          {m.lpChange != null ? (
+            <p className={`text-[10px] font-bold ${m.lpChange > 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {m.lpChange > 0 ? "+" : ""}{m.lpChange} LP · {m.queueType || ""}
+            </p>
+          ) : (
+            <p className="text-[9px] text-gray-500">{m.queueType || ""}</p>
+          )}
           {!remake && m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} match={m} scoreHistory={scoreHistory} scoreIndex={scoreIndex} />}
         </div>
 
@@ -346,8 +352,8 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
             </div>
           </div>
 
-          {/* Badges — kalan alanı doldurur, badge yoksa boş kalır */}
-          <div className="hidden md:flex flex-col gap-0.5 flex-1 min-w-0">
+          {/* Badges */}
+          <div className="hidden md:flex flex-col gap-0.5 min-w-0">
             {!remake && badges.length > 0 && (
               <>
                 <div className="flex items-center gap-1 flex-nowrap">
@@ -364,25 +370,14 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
           </div>
         </div>
 
-        {/* SAĞ SABİT: Result + Teams */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <div className="w-16 text-center">
-            <p className={`text-[11px] font-bold ${resClr}`}>{resTxt}</p>
-            {m.lpChange != null && (
-              <p className={`text-[10px] font-bold ${m.lpChange > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {m.lpChange > 0 ? "+" : ""}{m.lpChange} LP
-              </p>
-            )}
-            <p className="text-[9px] text-gray-500">{m.queueType || ""}</p>
-            <p className="text-[10px] text-gray-500" suppressHydrationWarning>{fmtDur(m.duration)} · {timeAgo(m.gameCreation)}</p>
+        {/* SAĞ SABİT: Teams */}
+        <div className="hidden lg:block flex-shrink-0">
+          <p className="text-[10px] text-gray-500 text-right mb-0.5" suppressHydrationWarning>{roles[m.role] || m.role} · {fmtDur(m.duration)} · {timeAgo(m.gameCreation)}</p>
+          <div className="flex gap-0.5 mb-0.5">
+            {m.allies?.map((a, i) => <PlayerIcon key={i} player={a} />)}
           </div>
-          <div className="hidden lg:block">
-            <div className="flex gap-0.5 mb-0.5">
-              {m.allies?.map((a, i) => <PlayerIcon key={i} player={a} />)}
-            </div>
-            <div className="flex gap-0.5">
-              {m.enemies?.map((e, i) => <PlayerIcon key={i} player={e} />)}
-            </div>
+          <div className="flex gap-0.5">
+            {m.enemies?.map((e, i) => <PlayerIcon key={i} player={e} />)}
           </div>
         </div>
       </div>

@@ -30,25 +30,14 @@ export default function DuoPartnersCard({ duoPartners }) {
             href={`/summoner/${encodeURIComponent(duo.gameName)}/${encodeURIComponent(duo.tagLine)}`}
             className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
           >
-            {/* Şampiyon ikonları */}
-            <div className="flex -space-x-2 flex-shrink-0">
-              {duo.championImages?.length > 0 ? (
-                duo.championImages.map((img, i) => (
-                  <img
-                    key={i}
-                    src={img}
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="rounded-md border border-[#0d1117]"
-                  />
-                ))
-              ) : (
-                <div className="w-7 h-7 rounded-md bg-gray-800 flex items-center justify-center">
-                  <span className="text-[10px] text-gray-600">?</span>
-                </div>
-              )}
-            </div>
+            {/* Profil ikonu */}
+            <img
+              src={duo.profileIconUrl}
+              alt=""
+              width={36}
+              height={36}
+              className="rounded-lg flex-shrink-0"
+            />
 
             {/* İsim + maç bilgisi */}
             <div className="flex-1 min-w-0">
@@ -66,11 +55,25 @@ export default function DuoPartnersCard({ duoPartners }) {
               </div>
             </div>
 
-            {/* Win Rate */}
+            {/* WR + Şampiyon ikonları */}
             <div className="flex-shrink-0 text-right">
               <span className={`text-sm font-bold ${duo.winRate >= 50 ? "text-emerald-400" : "text-red-400"}`}>
                 {duo.winRate}%
               </span>
+              {duo.championImages?.length > 0 && (
+                <div className="flex justify-end -space-x-1.5 mt-1">
+                  {duo.championImages.map((img, i) => (
+                    <img
+                      key={i}
+                      src={img}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className="rounded-sm border border-[#0d1117]"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </Link>
         ))}

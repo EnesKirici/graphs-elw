@@ -156,7 +156,7 @@ class SummonerController extends Controller
             "match:ids:{$puuid}:10:0",
             "match:ids:{$puuid}:20:0",
             "challenge_avgs:v2:{$puuid}",
-            "duo_partners:v2:{$puuid}",
+            "duo_partners:v3:{$puuid}",
         ];
 
         foreach ($seasonKeys as $key) {
@@ -491,7 +491,7 @@ class SummonerController extends Controller
                 // Bu kuyruk için en son ranked maçı bul
                 $lastRankedMatch = null;
                 foreach ($recentMatches as $m) {
-                    if (($m['queueType'] ?? '') === ($key === 'solo' ? 'Solo/Duo' : 'Flex')) {
+                    if (($m['queueType'] ?? '') === ($key === 'solo' ? 'SoloQ' : 'Flex')) {
                         $lastRankedMatch = $m;
                         break; // İlk bulunan = en yeni
                     }
@@ -560,7 +560,14 @@ class SummonerController extends Controller
             if ($prevSnap) {
                 $currentTotal = $this->lpToAbsolute($snap->tier, $snap->rank, $snap->lp);
                 $prevTotal = $this->lpToAbsolute($prevSnap->tier, $prevSnap->rank, $prevSnap->lp);
-                $m['lpChange'] = $currentTotal - $prevTotal;
+                $diff = $currentTotal - $prevTotal;
+
+                // Tutarlılık kontrolü: galibiyet + negatif LP veya mağlubiyet + pozitif LP → güvenilmez
+                $win = $m['win'] ?? null;
+                if ($win === true && $diff < 0) $diff = null;
+                if ($win === false && $diff > 0) $diff = null;
+
+                $m['lpChange'] = $diff;
             }
         }
         unset($m);

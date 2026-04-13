@@ -452,17 +452,15 @@ class MatchStatisticsService
     /**
      * Sezon maçlarından duo partner tespiti (DB-only, 0 API isteği).
      *
-     * Sadece Solo/Duo queue (420) kullanılır.
-     * Zaman yakınlığı kontrolü: Aynı kişiyle 15dk içinde arka arkaya maça
-     * girmişsen bu bir "duo oturumu" sayılır. Sadece rastgele eşleşme ise
-     * maçlar arasında genelde 20-40dk fark olur (kuyruk + maç süresi).
+     * Sadece Solo/Duo queue (420). Frekans eşiği:
+     * - Minimum 2 maçta aynı takımda olma
+     * - Toplam maç sayısının %5'inden fazla aynı takımda olma (yüksek elo filtresi)
      */
     public function getDuoPartners(string $puuid): array
     {
-        $cacheKey = "duo_partners:v2:{$puuid}";
+        $cacheKey = "duo_partners:v3:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
-            // Sadece Solo/Duo queue — flex/normal'de 5 kişi girebilir, anlamsız
             $matchIds = [];
             try {
                 $matchIds = $this->matchData->getSeasonMatchIds($puuid, 420);
@@ -470,8 +468,8 @@ class MatchStatisticsService
                 return [];
             }
 
-            // Her maçtan: teammate puuid'leri + gameCreation timestamp'ı
-            $matchData = []; // matchId => [gameCreation, myTeamId, myWin, teammates[]]
+            $totalMatches = 0;
+            $teammates = [];
 
             foreach ($matchIds as $matchId) {
                 try {
@@ -483,6 +481,7 @@ class MatchStatisticsService
                 if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
 
                 $gameCreation = $detail['info']['gameCreation'] ?? 0;
+                $totalMatches++;
 
                 $myTeamId = null;
                 $myWin = false;
@@ -495,98 +494,60 @@ class MatchStatisticsService
                 }
                 if (!$myTeamId) continue;
 
-                $teammates = [];
                 foreach ($detail['info']['participants'] as $p) {
                     if ($p['puuid'] === $puuid) continue;
                     if ($p['teamId'] !== $myTeamId) continue;
+
                     $pid = $p['puuid'];
                     if (str_starts_with($pid, 'BOT')) continue;
 
-                    $teammates[] = [
-                        'puuid'    => $pid,
-                        'gameName' => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
-                        'tagLine'  => $p['riotIdTagline'] ?? '',
-                        'champion' => $p['championName'] ?? '',
-                    ];
-                }
-
-                $matchData[$matchId] = [
-                    'time'      => $gameCreation,
-                    'win'       => $myWin,
-                    'teammates' => $teammates,
-                ];
-            }
-
-            // Maçları zamana göre sırala
-            uasort($matchData, fn($a, $b) => $a['time'] <=> $b['time']);
-
-            // Her teammate için: toplam birlikte maç + duo oturumu sayısı
-            $teammates = [];
-            $matchList = array_values($matchData);
-
-            for ($i = 0; $i < count($matchList); $i++) {
-                $match = $matchList[$i];
-
-                foreach ($match['teammates'] as $t) {
-                    $pid = $t['puuid'];
-
                     if (!isset($teammates[$pid])) {
                         $teammates[$pid] = [
-                            'puuid'        => $pid,
-                            'gameName'     => $t['gameName'],
-                            'tagLine'      => $t['tagLine'],
-                            'games'        => 0,
-                            'duoSessions'  => 0, // Arka arkaya 15dk içinde maç
-                            'wins'         => 0,
-                            'losses'       => 0,
-                            'lastPlayed'   => 0,
-                            'champions'    => [],
+                            'puuid'       => $pid,
+                            'gameName'    => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
+                            'tagLine'     => $p['riotIdTagline'] ?? '',
+                            'profileIcon' => $p['profileIcon'] ?? 0,
+                            'games'       => 0,
+                            'wins'        => 0,
+                            'losses'      => 0,
+                            'lastPlayed'  => 0,
+                            'champions'   => [],
                         ];
                     }
 
                     $teammates[$pid]['games']++;
-                    $match['win'] ? $teammates[$pid]['wins']++ : $teammates[$pid]['losses']++;
+                    $myWin ? $teammates[$pid]['wins']++ : $teammates[$pid]['losses']++;
 
-                    if ($match['time'] > $teammates[$pid]['lastPlayed']) {
-                        $teammates[$pid]['lastPlayed'] = $match['time'];
-                        $teammates[$pid]['gameName'] = $t['gameName'];
-                        $teammates[$pid]['tagLine'] = $t['tagLine'];
+                    if ($gameCreation > $teammates[$pid]['lastPlayed']) {
+                        $teammates[$pid]['lastPlayed'] = $gameCreation;
+                        $teammates[$pid]['gameName'] = $p['riotIdGameName'] ?? $p['summonerName'] ?? '?';
+                        $teammates[$pid]['tagLine'] = $p['riotIdTagline'] ?? '';
+                        $teammates[$pid]['profileIcon'] = $p['profileIcon'] ?? $teammates[$pid]['profileIcon'];
                     }
 
-                    if ($t['champion'] && !in_array($t['champion'], $teammates[$pid]['champions'])) {
-                        $teammates[$pid]['champions'][] = $t['champion'];
-                    }
-
-                    // Zaman yakınlığı: önceki maçta da aynı kişi varsa ve 60dk içindeyse → duo oturumu
-                    // Maç ~30-40dk + kuyruk ~5-10dk = arka arkaya duo maçları arası ~35-55dk
-                    // Rastgele eşleşme genelde 1 saat+ fark olur
-                    if ($i > 0) {
-                        $prevMatch = $matchList[$i - 1];
-                        $timeDiff = abs($match['time'] - $prevMatch['time']);
-                        // 60 dakika = 3.600.000ms
-                        if ($timeDiff < 3600000) {
-                            $prevPuuids = array_column($prevMatch['teammates'], 'puuid');
-                            if (in_array($pid, $prevPuuids)) {
-                                $teammates[$pid]['duoSessions']++;
-                            }
-                        }
+                    $champName = $p['championName'] ?? '';
+                    if ($champName && !in_array($champName, $teammates[$pid]['champions'])) {
+                        $teammates[$pid]['champions'][] = $champName;
                     }
                 }
             }
 
-            // Duo oturumu 2+ olan kişiler = gerçek duo partner
-            // Yüksek eloda 5-6 kez aynı takıma düşebilirsin ama arka arkaya 15dk içinde düşmek çok zor
-            $duos = array_filter($teammates, fn($t) => $t['duoSessions'] >= 2);
+            if ($totalMatches === 0) return [];
+
+            // Frekans eşiği: minimum 2 maç VE toplam maçların %5'inden fazla
+            $threshold = max(2, (int) ceil($totalMatches * 0.05));
+            $duos = array_filter($teammates, fn($t) => $t['games'] >= $threshold);
             usort($duos, fn($a, $b) => $b['games'] <=> $a['games']);
 
             $result = [];
             foreach (array_slice(array_values($duos), 0, 10) as $duo) {
                 $duo['winRate'] = $duo['games'] > 0 ? round($duo['wins'] / $duo['games'] * 100, 1) : 0;
+                $duo['profileIconUrl'] = $this->ddragon->profileIconUrl($duo['profileIcon']);
                 $duo['championImages'] = array_map(
                     fn($name) => $this->ddragon->championIconUrl($name),
                     array_slice($duo['champions'], 0, 3)
                 );
-                unset($duo['duoSessions']); // Frontend'e göndermeye gerek yok
+                unset($duo['profileIcon']);
                 $result[] = $duo;
             }
 

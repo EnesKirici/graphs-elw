@@ -115,6 +115,13 @@ Rate limit riski:    Yüksek         Düşük (kontrollü)
 6. Sunucuda supervisor ile `queue:work` çalıştır
 7. Profil açılışını DB-first'e çevir (worker güncellediyse API'ye gitme)
 
+## LP Takibi Sorunu (Worker ile Çözülecek)
+Şu anki snapshot sistemi hatalı: profil her açıldığında mevcut LP → son maç ID'si
+ile kaydediliyor. Ama arada profil açılmadan oynanan maçların snapshot'ı oluşmuyor,
+bu yüzden LP farkı yanlış hesaplanabiliyor (kaybedilen maçta +LP gösterimi gibi).
+Tutarlılık kontrolü eklendi (win+negatif veya loss+pozitif → gösterme) ama gerçek fix:
+Worker her maç sonrası LP'yi otomatik kaydedecek → her maç için doğru LP değişimi.
+
 ## Notlar
 - Dev key ile worker ÇALIŞTIRILMAMALI (100/2dk limit yetersiz)
 - Worker başlamadan önce mevcut DB verisi yeterli olmalı
