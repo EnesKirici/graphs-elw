@@ -8,6 +8,8 @@ import RefreshButton from "@/components/summoner/RefreshButton";
 import ProfileBadge from "@/components/summoner/ProfileBadge";
 import BadgeInfoTooltip from "@/components/summoner/BadgeInfoTooltip";
 import BannerImage from "@/components/summoner/BannerImage";
+import ChallengesCard from "@/components/summoner/ChallengesCard";
+import DuoPartnersCard from "@/components/summoner/DuoPartnersCard";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
@@ -243,6 +245,8 @@ export default async function SummonerPage({ params }) {
               <RankCard title="Flex" data={flex} winrateTimeline={data.winrateTimeline?.flex} />
               <ChampionPool seasonChampions={data.seasonChampions || {}} masteries={masteries} />
               <RoleRadar seasonRoles={data.seasonRoles} />
+              <ChallengesCard challenges={data.challengeAverages} />
+              <DuoPartnersCard duoPartners={data.duoPartners} />
             </>
           }
           rightColumn={

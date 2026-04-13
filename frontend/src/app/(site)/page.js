@@ -6,7 +6,7 @@ import WinRateChanges from "@/components/dashboard/WinRateChanges";
 import TopBanned from "@/components/dashboard/TopBanned";
 import TopPicked from "@/components/dashboard/TopPicked";
 import BackgroundAnimation from "@/components/dashboard/BackgroundAnimation";
-import Link from "next/link";
+import ChampionGrid from "@/components/champion/ChampionGrid";
 
 export default async function Home() {
   let data = null;
@@ -72,23 +72,8 @@ export default async function Home() {
           <TopBanned champions={data.topBanRate} />
         </div>
 
-        {/* Şampiyonlar sayfasına yönlendirme */}
-        <Link
-          href="/champions"
-          className="glass rounded-xl p-5 flex items-center justify-between group hover:border-blue-500/30 transition-all duration-300"
-        >
-          <div>
-            <h3 className="text-base font-semibold text-gray-200 group-hover:text-white transition-colors">
-              Tüm Şampiyonlar
-            </h3>
-            <p className="text-[11px] text-gray-500 mt-0.5">
-              {data.count} şampiyon — koridor, sınıf ve detaylı bilgiler
-            </p>
-          </div>
-          <svg className="w-5 h-5 text-gray-600 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
+        {/* Tüm şampiyonlar */}
+        <ChampionGrid champions={data.champions} showSearch={false} />
       </div>
     </div>
   );

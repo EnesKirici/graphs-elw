@@ -91,12 +91,13 @@ export default async function ChampionDetail({ params }) {
                     <span className="text-gray-600">·</span>
                     {champ.positions.map((pos) => {
                       const cfg = positionConfig[pos];
+                      const rate = champ.positionRates?.[pos];
                       return (
                         <span
                           key={pos}
                           className={`text-xs px-2.5 py-1 rounded-md border ${cfg?.color || "bg-gray-500/10 text-gray-400 border-gray-500/20"}`}
                         >
-                          {cfg?.label || pos}
+                          {cfg?.label || pos}{rate != null && ` ${rate}%`}
                         </span>
                       );
                     })}

@@ -155,6 +155,8 @@ class SummonerController extends Controller
             "season_champs:v3:{$puuid}",
             "match:ids:{$puuid}:10:0",
             "match:ids:{$puuid}:20:0",
+            "challenge_avgs:v2:{$puuid}",
+            "duo_partners:v2:{$puuid}",
         ];
 
         foreach ($seasonKeys as $key) {
@@ -305,6 +307,22 @@ class SummonerController extends Controller
             ];
         }
 
+        // Challenge ortalamaları (DB-only, 0 API isteği)
+        $challengeAverages = [];
+        try {
+            $challengeAverages = $this->match->getChallengeAverages($puuid);
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
+
+        // Duo partner tespiti (DB-only, 0 API isteği)
+        $duoPartners = [];
+        try {
+            $duoPartners = $this->match->getDuoPartners($puuid);
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
+
         // Winrate timeline
         try {
             $winrateTimeline = $this->match->getWinrateTimeline($puuid);
@@ -362,8 +380,10 @@ class SummonerController extends Controller
             'winrateTimeline'   => $winrateTimeline ?? [],
             'bannerChampion'    => $bannerChampion,
             'bannerSkins'       => $bannerSkins,
-            'rateLimited'       => $rateLimited,
-            'retryAfter'        => $retryAfter,
+            'challengeAverages'  => $challengeAverages,
+            'duoPartners'        => $duoPartners,
+            'rateLimited'        => $rateLimited,
+            'retryAfter'         => $retryAfter,
         ]);
     }
 

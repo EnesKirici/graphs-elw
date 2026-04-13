@@ -406,6 +406,16 @@ class MatchService
         return $this->statistics->calculateRecentStats($matches, $puuid);
     }
 
+    public function getChallengeAverages(string $puuid): array
+    {
+        return $this->statistics->getChallengeAverages($puuid);
+    }
+
+    public function getDuoPartners(string $puuid): array
+    {
+        return $this->statistics->getDuoPartners($puuid);
+    }
+
     // ────────────────────────────────────────────
     //  Private helpers
     // ────────────────────────────────────────────
