@@ -89,6 +89,23 @@ export default async function SummonerPage({ params }) {
     data = await fetchApi(`/summoner/search?name=${encodeURIComponent(dn)}&tag=${encodeURIComponent(dt)}`);
   } catch (e) {}
 
+  // Rate limit: profil hiç yüklenemedi
+  if (data?.rateLimited && !data?.profile) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-20 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h1 className="text-xl font-bold text-white mb-2">Sunucu Yoğunluğu</h1>
+        <p className="text-gray-400 mb-1">Riot API istek limiti aşıldı.</p>
+        <p className="text-gray-500 text-sm">Lütfen birkaç dakika sonra tekrar deneyin.</p>
+        <Link href="/" className="inline-block mt-6 text-sm text-blue-400 hover:underline">← Ana Sayfa</Link>
+      </div>
+    );
+  }
+
   if (!data) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-20 text-center">
@@ -201,6 +218,21 @@ export default async function SummonerPage({ params }) {
           </Link>
         </div>
       </div>
+
+      {/* ===== RATE LIMIT BANNER ===== */}
+      {data.rateLimited && (
+        <div className="max-w-7xl mx-auto px-6 pt-4">
+          <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+            <svg className="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-amber-200">Bazı veriler yüklenemedi — Riot API istek limiti aşıldı.</p>
+              <p className="text-xs text-amber-200/60 mt-0.5">Mevcut veriler gösteriliyor. Tam veri için 5 dakika sonra sayfayı yenileyin.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== CONTENT ===== */}
       <div className="max-w-7xl mx-auto px-6 py-6">

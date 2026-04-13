@@ -28,6 +28,17 @@ export async function fetchApi(endpoint) {
     next: { revalidate: 60 },
   });
 
+  // Rate limit (429): JSON body'yi parse et ve döndür (throw etme)
+  // Backend rateLimited flag ile kısmi veya hata verisi döner
+  if (res.status === 429) {
+    try {
+      const data = await res.json();
+      return { ...data, rateLimited: true };
+    } catch {
+      throw new Error(`API Hatası: 429 - ${endpoint}`);
+    }
+  }
+
   if (!res.ok) {
     throw new Error(`API Hatası: ${res.status} - ${endpoint}`);
   }
