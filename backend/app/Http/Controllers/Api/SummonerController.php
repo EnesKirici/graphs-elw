@@ -210,6 +210,7 @@ class SummonerController extends Controller
         // Son 10 maç ID + TÜM sezon maç ID'lerini topla ve toplu preload
         // Solo(420), Flex(440), Normal(400), Blind(430), Quickplay(490)
         // Hepsini önceden yükle → istatistik servisleri tek tek API çağrısı yapmaz
+        $seasonOnlyIds = [];
         try {
             $preloadIds = [];
             $recentIds = $this->matchData->getMatchIds($puuid, 10, 0);
@@ -218,6 +219,7 @@ class SummonerController extends Controller
                 try {
                     $ids = $this->matchData->getSeasonMatchIds($puuid, $queueId);
                     $preloadIds = array_merge($preloadIds, $ids);
+                    $seasonOnlyIds = array_merge($seasonOnlyIds, $ids);
                 } catch (\Exception $e) {
                     if ($e->getCode() === 429) $rateLimited = true;
                 }
@@ -227,6 +229,9 @@ class SummonerController extends Controller
         } catch (\Exception $e) {
             if ($e->getCode() === 429) $rateLimited = true;
         }
+        // Sezon tüm maç sayısı — preload sırasında topladığımız ID'ler.
+        // 5 queue × 100 = 500'e kadar (Riot match-v5 /ids tek istekte max 100)
+        $totalSeasonMatches = count(array_unique($seasonOnlyIds));
 
         $recentMatches = [];
         $recentStats = null;
@@ -289,26 +294,6 @@ class SummonerController extends Controller
                 }
                 unset($sc);
             }
-        } catch (\Exception $e) {
-            if ($e->getCode() === 429) $rateLimited = true;
-        }
-
-        // Sezon tüm maç sayısı — queue-bazlı ID listelerinin union'u (cache'li).
-        // match-v5 /ids tek istekte max 100 döndürür; 5 queue × 100 = 500'e kadar saybiliriz.
-        $totalSeasonMatches = 0;
-        try {
-            $unionIds = [];
-            foreach ([420, 440, 400, 430, 490] as $queueId) {
-                try {
-                    $unionIds = array_merge(
-                        $unionIds,
-                        $this->matchData->getSeasonMatchIds($puuid, $queueId)
-                    );
-                } catch (\Exception $e) {
-                    if ($e->getCode() === 429) $rateLimited = true;
-                }
-            }
-            $totalSeasonMatches = count(array_unique($unionIds));
         } catch (\Exception $e) {
             if ($e->getCode() === 429) $rateLimited = true;
         }

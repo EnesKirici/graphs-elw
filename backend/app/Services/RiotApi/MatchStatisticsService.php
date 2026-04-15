@@ -179,7 +179,7 @@ class MatchStatisticsService
      */
     public function getSeasonChampionStats(string $puuid): array
     {
-        $cacheKey = "season_champs:v3:{$puuid}";
+        $cacheKey = "season_champs:v4:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $queues = [
@@ -188,6 +188,21 @@ class MatchStatisticsService
                 400 => 'normal',
                 430 => 'normal',
                 490 => 'normal',
+            ];
+
+            $emptyChamp = [
+                'games' => 0,
+                'wins' => 0,
+                'kills' => 0,
+                'deaths' => 0,
+                'assists' => 0,
+                'cs' => 0,
+                'gold' => 0,
+                'duration' => 0,
+                'pentaKills' => 0,
+                'quadraKills' => 0,
+                'tripleKills' => 0,
+                'doubleKills' => 0,
             ];
 
             $rawByType = ['ranked' => [], 'normal' => []];
@@ -203,19 +218,27 @@ class MatchStatisticsService
                     try {
                         $detail = $this->matchData->getMatchDetail($matchId);
 
-                        if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
+                        $gameDuration = $detail['info']['gameDuration'] ?? 0;
+                        if ($gameDuration < 300) continue;
 
                         foreach ($detail['info']['participants'] as $p) {
                             if ($p['puuid'] === $puuid) {
                                 $name = $p['championName'];
                                 if (!isset($rawByType[$type][$name])) {
-                                    $rawByType[$type][$name] = ['games' => 0, 'wins' => 0, 'kills' => 0, 'deaths' => 0, 'assists' => 0];
+                                    $rawByType[$type][$name] = $emptyChamp;
                                 }
                                 $rawByType[$type][$name]['games']++;
                                 if ($p['win']) $rawByType[$type][$name]['wins']++;
-                                $rawByType[$type][$name]['kills']   += $p['kills'];
-                                $rawByType[$type][$name]['deaths']  += $p['deaths'];
-                                $rawByType[$type][$name]['assists'] += $p['assists'];
+                                $rawByType[$type][$name]['kills']       += $p['kills'];
+                                $rawByType[$type][$name]['deaths']      += $p['deaths'];
+                                $rawByType[$type][$name]['assists']     += $p['assists'];
+                                $rawByType[$type][$name]['cs']          += ($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0);
+                                $rawByType[$type][$name]['gold']        += $p['goldEarned'] ?? 0;
+                                $rawByType[$type][$name]['duration']    += $gameDuration;
+                                $rawByType[$type][$name]['pentaKills']  += $p['pentaKills'] ?? 0;
+                                $rawByType[$type][$name]['quadraKills'] += $p['quadraKills'] ?? 0;
+                                $rawByType[$type][$name]['tripleKills'] += $p['tripleKills'] ?? 0;
+                                $rawByType[$type][$name]['doubleKills'] += $p['doubleKills'] ?? 0;
                                 break;
                             }
                         }
@@ -230,13 +253,11 @@ class MatchStatisticsService
             foreach (['ranked', 'normal'] as $type) {
                 foreach ($rawByType[$type] as $name => $d) {
                     if (!isset($allData[$name])) {
-                        $allData[$name] = ['games' => 0, 'wins' => 0, 'kills' => 0, 'deaths' => 0, 'assists' => 0];
+                        $allData[$name] = $emptyChamp;
                     }
-                    $allData[$name]['games']   += $d['games'];
-                    $allData[$name]['wins']    += $d['wins'];
-                    $allData[$name]['kills']   += $d['kills'];
-                    $allData[$name]['deaths']  += $d['deaths'];
-                    $allData[$name]['assists'] += $d['assists'];
+                    foreach (array_keys($emptyChamp) as $field) {
+                        $allData[$name][$field] += $d[$field];
+                    }
                 }
             }
 
@@ -246,6 +267,8 @@ class MatchStatisticsService
                 $list = [];
                 foreach ($champData as $name => $d) {
                     $g = $d['games'];
+                    $avgDuration = $g > 0 ? $d['duration'] / $g : 0;
+                    $durationMinutes = $d['duration'] / 60;
                     $list[] = [
                         'championName'  => $name,
                         'championImage' => $this->ddragon->championIconUrl($name),
@@ -261,6 +284,15 @@ class MatchStatisticsService
                                 ? round(($d['kills'] + $d['assists']) / $d['deaths'], 2)
                                 : 'Perfect',
                         ],
+                        'avgDuration'   => round($avgDuration / 60, 1),
+                        'csPerMin'      => $durationMinutes > 0 ? round($d['cs'] / $durationMinutes, 1) : 0,
+                        'goldPerMin'    => $durationMinutes > 0 ? round($d['gold'] / $durationMinutes) : 0,
+                        'totalCs'       => $d['cs'],
+                        'totalGold'     => $d['gold'],
+                        'pentaKills'    => $d['pentaKills'],
+                        'quadraKills'   => $d['quadraKills'],
+                        'tripleKills'   => $d['tripleKills'],
+                        'doubleKills'   => $d['doubleKills'],
                     ];
                 }
                 $result[$key] = $list;
@@ -361,6 +393,9 @@ class MatchStatisticsService
             ];
         }
 
+        // Negatif rozetler — kayıp serisi, kötü şampiyon WR
+        $this->addNegativeProfileBadges($frequentBadges, $matches, $totalGames);
+
         return [
             'mostPlayedChampion' => [
                 'id'    => $topChampName,
@@ -382,8 +417,60 @@ class MatchStatisticsService
             'totalGames' => $totalGames,
             'mainRole'   => $mainRole,
             'roleStats'  => $roleStats,
-            'frequentBadges' => array_slice($frequentBadges, 0, 8),
+            'frequentBadges' => array_slice($frequentBadges, 0, 10),
         ];
+    }
+
+    /**
+     * Profil-seviyesi negatif rozetler.
+     * Kayıp serisi, belirli şampiyonla kötü WR gibi.
+     */
+    private function addNegativeProfileBadges(array &$badges, array $matches, int $totalGames): void
+    {
+        // 1) Kayıp Serisi — Mevcut kayıp serisini hesapla (en sondan başlayarak)
+        $currentLoseStreak = 0;
+        for ($i = 0; $i < count($matches); $i++) {
+            if (!$matches[$i]['win']) {
+                $currentLoseStreak++;
+            } else {
+                break;
+            }
+        }
+        if ($currentLoseStreak >= 3) {
+            $badges[] = [
+                'key'      => 'lose_streak',
+                'label'    => 'Kayıp Serisi',
+                'category' => 'negative',
+                'tier'     => 'silver',
+                'count'    => $currentLoseStreak,
+                'rate'     => round($currentLoseStreak / $totalGames * 100),
+            ];
+        }
+
+        // 2) Kötü Şampiyon WR — Belirli bir şampiyonla %35 altı WR (en az 3 maç)
+        $champStats = [];
+        foreach ($matches as $m) {
+            $name = $m['champion']['name'] ?? '';
+            if (!$name) continue;
+            if (!isset($champStats[$name])) $champStats[$name] = ['games' => 0, 'wins' => 0];
+            $champStats[$name]['games']++;
+            if ($m['win']) $champStats[$name]['wins']++;
+        }
+        foreach ($champStats as $name => $stat) {
+            if ($stat['games'] >= 3) {
+                $wr = round($stat['wins'] / $stat['games'] * 100);
+                if ($wr <= 35) {
+                    $badges[] = [
+                        'key'      => 'bad_champ_' . strtolower(preg_replace('/[^a-zA-Z]/', '', $name)),
+                        'label'    => $name . ' ile Kötü',
+                        'category' => 'negative',
+                        'tier'     => 'silver',
+                        'count'    => $stat['games'],
+                        'rate'     => $wr,
+                    ];
+                }
+            }
+        }
     }
 
     // Support oynarken anlamsız olan laning metrikleri

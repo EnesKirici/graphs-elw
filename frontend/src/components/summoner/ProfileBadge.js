@@ -12,25 +12,59 @@ const TIER_CONFIG = {
   silver:      { color: "#80939e", bg: "bg-[#80939e]/6",  border: "border-[#80939e]/15", glow: null },
 };
 
+/**
+ * Negatif (kötü performans) rozetleri için özel tooltip mesajı üret.
+ */
+function getNegativeTooltipText(badge, totalGames) {
+  if (badge.key === "lose_streak") {
+    return `Art arda ${badge.count} mağlubiyet`;
+  }
+  if (badge.key?.startsWith("bad_champ_")) {
+    return `Bu sezon %${badge.rate} kazanma oranıyla ${badge.count} maç`;
+  }
+  if (badge.key === "early_death") {
+    return `Son ${totalGames} maçın ${badge.count} tanesinde alındı`;
+  }
+  if (badge.key === "gold_loss") {
+    return `Son ${totalGames} maçın ${badge.count} tanesinde alındı`;
+  }
+  return null;
+}
+
 export default function ProfileBadge({ badge, totalGames, size = "md" }) {
   const [anchor, setAnchor] = useState(null);
+  const isNegative = badge.category === "negative";
   const t = TIER_CONFIG[badge.tier] || TIER_CONFIG.silver;
   const hasGradient = !!t.gradient;
   const isSmall = size === "sm";
 
-  const bgClass = hasGradient ? `bg-gradient-to-r ${t.bg}` : t.bg;
+  // Negatif rozetler kırmızımsı stil kullanır
+  const negativeStyle = isNegative ? {
+    color: "#ef4444",
+    bg: "bg-red-500/8",
+    border: "border-red-500/20",
+  } : null;
+
+  const bgClass = isNegative
+    ? negativeStyle.bg
+    : hasGradient ? `bg-gradient-to-r ${t.bg}` : t.bg;
+  const borderClass = isNegative ? negativeStyle.border : t.border;
+
+  const tooltipText = isNegative
+    ? getNegativeTooltipText(badge, totalGames)
+    : `Son ${totalGames} maçın ${badge.count} tanesinde alındı`;
 
   return (
     <>
       <span
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
-        className={`inline-flex items-center border rounded cursor-default ${bgClass} ${t.border} ${isSmall ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"} font-semibold backdrop-blur-sm`}
+        className={`inline-flex items-center border rounded cursor-default ${bgClass} ${borderClass} ${isSmall ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"} font-semibold backdrop-blur-sm`}
         style={{ boxShadow: t.glow || undefined }}
       >
         <span
-          className={hasGradient ? "bg-clip-text text-transparent" : ""}
-          style={hasGradient ? { backgroundImage: t.gradient } : { color: t.color }}
+          className={isNegative ? "" : hasGradient ? "bg-clip-text text-transparent" : ""}
+          style={isNegative ? { color: negativeStyle.color } : hasGradient ? { backgroundImage: t.gradient } : { color: t.color }}
         >
           {badge.label}
         </span>
@@ -39,16 +73,17 @@ export default function ProfileBadge({ badge, totalGames, size = "md" }) {
         <Tooltip anchorEl={anchor}>
           <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
             <span
-              className={`text-xs font-bold ${hasGradient ? "bg-clip-text text-transparent" : ""}`}
-              style={hasGradient ? { backgroundImage: t.gradient } : { color: t.color }}
+              className={`text-xs font-bold ${isNegative ? "" : hasGradient ? "bg-clip-text text-transparent" : ""}`}
+              style={isNegative ? { color: negativeStyle.color } : hasGradient ? { backgroundImage: t.gradient } : { color: t.color }}
             >
               {badge.label}
             </span>
-            <span className="text-[9px] text-gray-500 ml-2 capitalize">{badge.tier}</span>
-            <p className="text-[11px] text-gray-400 mt-1">Son {totalGames} maçın {badge.count} tanesinde alındı</p>
+            {!isNegative && <span className="text-[9px] text-gray-500 ml-2 capitalize">{badge.tier}</span>}
+            <p className="text-[11px] text-gray-400 mt-1">{tooltipText}</p>
           </div>
         </Tooltip>
       )}
     </>
   );
 }
+

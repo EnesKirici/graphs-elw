@@ -122,7 +122,7 @@ function MasteryBadge({ level, points, size = 28 }) {
   );
 }
 
-export default function ChampionPool({ seasonChampions, masteries }) {
+export default function ChampionPool({ seasonChampions, masteries, gameName, tagLine }) {
   const [view, setView] = useState("played");
   const [open, setOpen] = useState(false);
   const [gameType, setGameType] = useState("all");
@@ -202,9 +202,9 @@ export default function ChampionPool({ seasonChampions, masteries }) {
 
       {/* İçerik */}
       {view === "played" ? (
-        <ChampionList champions={champList} sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort} />
+        <ChampionList champions={champList} sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort} championsLink={gameName && tagLine ? `/summoner/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/champions` : null} />
       ) : (
-        <ChampionList champions={masteriesToChampList(masteries, seasonChampions)} sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort} isMastery />
+        <ChampionList champions={masteriesToChampList(masteries, seasonChampions)} sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort} isMastery championsLink={gameName && tagLine ? `/summoner/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/champions` : null} />
       )}
     </div>
   );
@@ -242,7 +242,7 @@ function masteriesToChampList(masteries, seasonChampions) {
 }
 
 /* ===== ORTAK LİSTE ===== */
-function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery }) {
+function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, championsLink }) {
   if (!champions || champions.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
@@ -349,9 +349,14 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery }) {
         })}
       </div>
 
-      {champions.length > 8 && (
+      {champions.length > 8 && championsLink && (
         <div className="px-4 py-2 text-center border-t border-[#1b2230]/20">
-          <span className="text-xs text-gray-500">+{champions.length - 8} şampiyon daha</span>
+          <Link
+            href={championsLink}
+            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            +{champions.length - 8} şampiyon daha — Tümünü Gör
+          </Link>
         </div>
       )}
     </>

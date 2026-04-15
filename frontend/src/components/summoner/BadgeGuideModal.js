@@ -20,7 +20,14 @@ function TierText({ tier, children, className = "" }) {
   return <span className={`font-bold ${className}`} style={{ color: t.color }}>{children}</span>;
 }
 
-function TierPill({ tier, value }) {
+function TierPill({ tier, value, isNegative }) {
+  if (isNegative) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border bg-red-500/10 border-red-500/20">
+        <span className="text-[10px] font-bold text-red-400">{value}</span>
+      </span>
+    );
+  }
   const t = tierStyle(tier);
   const bgClass = t.gradient ? `bg-gradient-to-r ${t.bg}` : t.bg;
   return (
@@ -73,6 +80,15 @@ const BADGE_CATEGORIES = [
     title: "Diğer",
     badges: [
       { label: "????", desc: "Rozet kazanılamadı + 6'dan fazla ölüm", tiers: [{ t: "silver", v: "????" }] },
+    ],
+  },
+  {
+    title: "Negatif / Uyarı",
+    badges: [
+      { label: "Erken Ölüm", desc: "10dk başına ortalama 3+ ölüm", tiers: [{ t: "silver", v: "3+/10dk" }], negative: true },
+      { label: "Altın Kaybı", desc: "Takım goldda önde ama maç kaybedilmiş", tiers: [{ t: "silver", v: "Gold↑ + Kayıp" }], negative: true },
+      { label: "Kayıp Serisi", desc: "Art arda 3+ mağlubiyet", tiers: [{ t: "silver", v: "3+ kayıp" }], negative: true },
+      { label: "[Şampiyon] ile Kötü", desc: "Belirli şampiyonla %35 altı kazanma oranı (3+ maç)", tiers: [{ t: "silver", v: "≤%35 WR" }], negative: true },
     ],
   },
 ];
@@ -185,16 +201,16 @@ export default function BadgeGuideModal({ open, onClose }) {
               </div>
               {BADGE_CATEGORIES.map((cat) => (
                 <div key={cat.title}>
-                  <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3">{cat.title}</h3>
+                  <h3 className={`text-xs font-bold uppercase tracking-wider mb-3 ${cat.badges.some(b => b.negative) ? "text-red-400" : "text-gray-300"}`}>{cat.title}</h3>
                   <div className="space-y-2.5">
                     {cat.badges.map((b) => (
                       <div key={b.label} className="flex items-start gap-3 py-1">
                         <div className="w-28 flex-shrink-0">
-                          <p className="text-[12px] font-semibold text-gray-200">{b.label}</p>
+                          <p className={`text-[12px] font-semibold ${b.negative ? "text-red-400" : "text-gray-200"}`}>{b.label}</p>
                           <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">{b.desc}</p>
                         </div>
                         <div className="flex flex-wrap gap-1.5 flex-1">
-                          {b.tiers.map((t, i) => <TierPill key={i} tier={t.t} value={t.v} />)}
+                          {b.tiers.map((t, i) => <TierPill key={i} tier={t.t} value={t.v} isNegative={b.negative} />)}
                         </div>
                       </div>
                     ))}

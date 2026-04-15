@@ -25,6 +25,7 @@ class BadgeService
         $this->addObjectiveBadges($badges, $c);
         $this->addVisionBadges($badges, $p, $c);
         $this->addTeamplayBadges($badges, $c);
+        $this->addNegativeBadges($badges, $p, $c, $info);
         $this->addFallbackBadge($badges, $p);
 
         return $badges;
@@ -155,6 +156,72 @@ class BadgeService
         if ($kp >= 0.65) {
             $tier = $kp >= 0.90 ? 'challenger' : ($kp >= 0.80 ? 'diamond' : ($kp >= 0.72 ? 'emerald' : 'gold'));
             $badges[] = ['key' => 'team_player', 'label' => 'Takım Oyuncusu', 'desc' => "%" . round($kp * 100) . " kill katılımı", 'category' => 'teamplay', 'tier' => $tier];
+        }
+    }
+
+    /**
+     * Negatif / kötü performans rozetleri.
+     * Oyuncunun zayıf anlarını gösterir.
+     */
+    private function addNegativeBadges(array &$badges, array $p, array $c, array $info): void
+    {
+        // 1) Erken Ölüm — 10dk içinde 3+ ölüm
+        $deathsByEnemyChamps = $c['deathsByEnemyChamps'] ?? 0;
+        $gameDuration = $info['gameDuration'] ?? 0;
+        $gameDurationMin = $gameDuration / 60;
+
+        // challenges'dan erken ölüm bilgisi — killsUnderOwnTurret veya deathsByEnemyChamps
+        // Eğer toplam ölüm 3+ ve maç kısa süre ise veya ortalama 10dk'ya göre hesapla
+        $totalDeaths = $p['deaths'] ?? 0;
+        if ($gameDurationMin > 0 && $totalDeaths >= 3) {
+            $deathsPer10Min = ($totalDeaths / $gameDurationMin) * 10;
+            if ($deathsPer10Min >= 3) {
+                $badges[] = [
+                    'key' => 'early_death',
+                    'label' => 'Erken Ölüm',
+                    'desc' => "10dk'da ort. " . round($deathsPer10Min, 1) . " ölüm",
+                    'category' => 'negative',
+                    'tier' => 'silver',
+                ];
+            }
+        }
+
+        // 2) Altın Kaybı — Takım goldda önde ama maç kaybedilmiş
+        if (!$p['win']) {
+            $myTeamId = $p['teamId'] ?? 0;
+            $teams = $info['teams'] ?? [];
+            $myTeamObj = null;
+            $enemyTeamObj = null;
+            foreach ($teams as $team) {
+                if (($team['teamId'] ?? 0) === $myTeamId) {
+                    $myTeamObj = $team;
+                } else {
+                    $enemyTeamObj = $team;
+                }
+            }
+
+            // Takım altın hesabı — tüm oyuncuların goldEarned toplamı
+            $participants = $info['participants'] ?? [];
+            $myTeamGold = 0;
+            $enemyTeamGold = 0;
+            foreach ($participants as $part) {
+                if (($part['teamId'] ?? 0) === $myTeamId) {
+                    $myTeamGold += $part['goldEarned'] ?? 0;
+                } else {
+                    $enemyTeamGold += $part['goldEarned'] ?? 0;
+                }
+            }
+
+            if ($myTeamGold > $enemyTeamGold && $myTeamGold > 0) {
+                $goldLead = $myTeamGold - $enemyTeamGold;
+                $badges[] = [
+                    'key' => 'gold_loss',
+                    'label' => 'Altın Kaybı',
+                    'desc' => "Takım +" . number_format($goldLead) . " gold önde ama kaybetti",
+                    'category' => 'negative',
+                    'tier' => 'silver',
+                ];
+            }
         }
     }
 
