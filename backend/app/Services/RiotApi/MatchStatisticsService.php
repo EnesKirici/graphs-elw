@@ -275,11 +275,19 @@ class MatchStatisticsService
      */
     public function calculateRecentStats(array $matches, string $puuid): array
     {
+        // Remake maçları (5 dakikadan kısa) istatistiklere dahil edilmez
+        $matches = array_values(array_filter(
+            $matches,
+            fn($m) => ($m['duration'] ?? $m['gameDuration'] ?? 0) >= 300
+        ));
+
         if (empty($matches)) {
             return [
                 'mostPlayedChampion' => null,
                 'avgKDA' => ['kills' => 0, 'deaths' => 0, 'assists' => 0, 'ratio' => 0],
                 'winRate' => 0,
+                'wins' => 0,
+                'losses' => 0,
                 'totalGames' => 0,
             ];
         }
@@ -369,6 +377,8 @@ class MatchStatisticsService
                     : 'Perfect',
             ],
             'winRate'    => round($wins / $totalGames * 100, 1),
+            'wins'       => $wins,
+            'losses'     => $totalGames - $wins,
             'totalGames' => $totalGames,
             'mainRole'   => $mainRole,
             'roleStats'  => $roleStats,
@@ -390,19 +400,17 @@ class MatchStatisticsService
      */
     public function getChallengeAverages(string $puuid): array
     {
-        $cacheKey = "challenge_avgs:v2:{$puuid}";
+        $cacheKey = "challenge_avgs:v3:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
-            $matchIds = [];
-            foreach ([420, 440] as $queueId) {
-                try {
-                    $ids = $this->matchData->getSeasonMatchIds($puuid, $queueId);
-                    $matchIds = array_merge($matchIds, $ids);
-                } catch (\Exception $e) {
-                    continue;
-                }
+            try {
+                $matchIds = $this->matchData->getAllSeasonMatchIds($puuid);
+            } catch (\Exception $e) {
+                return ['averages' => [], 'totalGames' => 0];
             }
-            $matchIds = array_unique($matchIds);
+
+            // Summoner's Rift queue'ları — Arena/ARAM/Bot/özel modları hariç
+            $allowedQueues = [400, 420, 430, 440];
 
             $totals = [];
             $counts = []; // Metrik başına ayrı sayaç (support filtrelemesi için)
@@ -415,6 +423,7 @@ class MatchStatisticsService
                 }
 
                 if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
+                if (!in_array($detail['info']['queueId'] ?? 0, $allowedQueues, true)) continue;
 
                 foreach ($detail['info']['participants'] as $p) {
                     if ($p['puuid'] !== $puuid) continue;
@@ -458,15 +467,18 @@ class MatchStatisticsService
      */
     public function getDuoPartners(string $puuid): array
     {
-        $cacheKey = "duo_partners:v3:{$puuid}";
+        $cacheKey = "duo_partners:v5:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
-            $matchIds = [];
             try {
-                $matchIds = $this->matchData->getSeasonMatchIds($puuid, 420);
+                $matchIds = $this->matchData->getAllSeasonMatchIds($puuid);
             } catch (\Exception $e) {
                 return [];
             }
+            if (empty($matchIds)) return [];
+
+            // Summoner's Rift queue'ları — Arena, ARAM, Bot ve özel modları hariç tut
+            $allowedQueues = [400, 420, 430, 440];
 
             $totalMatches = 0;
             $teammates = [];
@@ -479,6 +491,9 @@ class MatchStatisticsService
                 }
 
                 if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
+
+                $queueId = $detail['info']['queueId'] ?? 0;
+                if (!in_array($queueId, $allowedQueues, true)) continue;
 
                 $gameCreation = $detail['info']['gameCreation'] ?? 0;
                 $totalMatches++;

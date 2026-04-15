@@ -6,6 +6,12 @@ function getToken() {
   return localStorage.getItem("admin_token");
 }
 
+function fireAuthChange() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("admin-auth-change"));
+  }
+}
+
 export function isAuthenticated() {
   return !!getToken();
 }
@@ -21,23 +27,31 @@ export async function logout() {
     } catch {}
   }
   localStorage.removeItem("admin_token");
+  fireAuthChange();
   window.location.href = "/admin/login";
 }
 
 export async function adminLogin(username, password) {
   const res = await fetch(`${API_BASE}/admin/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
     body: JSON.stringify({ username, password }),
   });
 
-  const data = await res.json();
+  // Backend HTML döndürürse (sunucu hatası) anlamlı mesaj göster
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error("Sunucu hatası. Lütfen daha sonra tekrar deneyin.");
+  }
 
   if (!res.ok) {
     throw new Error(data.error || "Giriş başarısız.");
   }
 
   localStorage.setItem("admin_token", data.token);
+  fireAuthChange();
   return data;
 }
 

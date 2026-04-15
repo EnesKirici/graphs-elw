@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MatchCard from "./MatchCard";
 import MatchDetail from "./MatchDetail";
 
-export default function MatchList({ initialMatches, puuid, selectedMatchId, onSelectMatch }) {
+export default function MatchList({ initialMatches, puuid, selectedMatchId, onSelectMatch, onMatchesChange }) {
   const [matches, setMatches] = useState(initialMatches || []);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState((initialMatches || []).length >= 10);
+
+  // Matches değişince parent'a yay (commit fazında — render sırasında değil)
+  useEffect(() => {
+    onMatchesChange?.(matches);
+  }, [matches, onMatchesChange]);
 
   async function loadMore() {
     setLoading(true);

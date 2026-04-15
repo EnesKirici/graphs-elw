@@ -10,6 +10,7 @@ import BadgeInfoTooltip from "@/components/summoner/BadgeInfoTooltip";
 import BannerImage from "@/components/summoner/BannerImage";
 import ChallengesCard from "@/components/summoner/ChallengesCard";
 import DuoPartnersCard from "@/components/summoner/DuoPartnersCard";
+import RateLimitBanner from "@/components/summoner/RateLimitBanner";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
@@ -221,20 +222,8 @@ export default async function SummonerPage({ params }) {
         </div>
       </div>
 
-      {/* ===== RATE LIMIT BANNER ===== */}
-      {data.rateLimited && (
-        <div className="max-w-7xl mx-auto px-6 pt-4">
-          <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
-            <svg className="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-amber-200">Bazı veriler yüklenemedi — Riot API istek limiti aşıldı.</p>
-              <p className="text-xs text-amber-200/60 mt-0.5">Mevcut veriler gösteriliyor. Tam veri için 5 dakika sonra sayfayı yenileyin.</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ===== RATE LIMIT BANNER (sadece admin) ===== */}
+      {data.rateLimited && <RateLimitBanner />}
 
       {/* ===== CONTENT ===== */}
       <div className="max-w-7xl mx-auto px-6 py-6">
@@ -249,87 +238,11 @@ export default async function SummonerPage({ params }) {
               <DuoPartnersCard duoPartners={data.duoPartners} />
             </>
           }
-          rightColumn={
-            <>
-              {/* İstatistikler */}
-              <div className="glass rounded-xl overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-200">İstatistikler</h3>
-                  <span className="text-[11px] text-gray-500">{solo ? "Dereceli" : "Tüm Maçlar"}</span>
-                </div>
-                <div className="p-5">
-                  {(() => {
-                    const totalGames = solo?.games || recentStats?.totalGames || 0;
-                    const winRate = solo?.winRate ?? recentStats?.winRate ?? 0;
-                    const wins = solo?.wins ?? recentStats?.wins ?? 0;
-                    const losses = solo?.losses ?? (totalGames - wins);
-                    return (
-                      <>
-                        <div className="flex items-center justify-around">
-                          {totalGames > 0 && <CircleProgress value={totalGames} max={Math.max(totalGames, 100)} label="Toplam Maç" display={totalGames} color="#3b82f6" />}
-                          {totalGames > 0 && <CircleProgress value={winRate} max={100} label="Kazanma Oranı" display={`${winRate}%`} color={winRate >= 51 ? "#10b981" : winRate >= 45 ? "#f59e0b" : "#ef4444"} />}
-                          {recentStats?.avgKDA && <CircleProgress value={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio : 10} max={6} label="Ort. KDA" display={typeof recentStats.avgKDA.ratio === 'number' ? recentStats.avgKDA.ratio.toFixed(1) : '∞'} color={(recentStats.avgKDA.ratio >= 3) ? "#10b981" : (recentStats.avgKDA.ratio >= 2) ? "#3b82f6" : "#f59e0b"} />}
-                          {recentStats?.winRate !== undefined && <CircleProgress value={recentStats.winRate || 0} max={100} label={`Son ${recentStats.totalGames || 0} Maç`} display={`${recentStats.winRate || 0}%`} color={(recentStats.winRate || 0) >= 51 ? "#10b981" : (recentStats.winRate || 0) >= 45 ? "#f59e0b" : "#ef4444"} />}
-                        </div>
-                        {totalGames > 0 && (
-                          <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[#1b2230]/30">
-                            <div className="text-center">
-                              <span className="text-xs text-emerald-400 font-medium">{wins}W</span>
-                              <span className="text-xs text-gray-600 mx-1">/</span>
-                              <span className="text-xs text-red-400 font-medium">{losses}L</span>
-                            </div>
-                            {recentStats?.avgKDA && (
-                              <span className="text-xs text-gray-300">
-                                {recentStats.avgKDA.kills} / {recentStats.avgKDA.deaths} / {recentStats.avgKDA.assists} <span className="text-[10px] text-gray-500">ort.</span>
-                              </span>
-                            )}
-                            {solo?.hotStreak && <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">Galibiyet Serisi</span>}
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* Son Maçlar Özeti */}
-              <div className="glass rounded-xl overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
-                  <h3 className="text-sm font-semibold text-gray-200">Son Maçlar Özeti</h3>
-                </div>
-                <div className="p-5">
-                  <div className="grid grid-cols-2 gap-3">
-                    {(() => {
-                      const cs = {};
-                      recentMatches.forEach(m => {
-                        const n = m.champion.name;
-                        if (!cs[n]) cs[n] = { name: n, image: m.champion.image, wins: 0, losses: 0, kda: [] };
-                        m.win ? cs[n].wins++ : cs[n].losses++;
-                        if (typeof m.kda === 'number') cs[n].kda.push(m.kda);
-                      });
-                      return Object.values(cs).sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses)).slice(0, 6).map(c => {
-                        const t = c.wins + c.losses;
-                        const wr = Math.round(c.wins / t * 100);
-                        const ak = c.kda.length > 0 ? (c.kda.reduce((a,b) => a+b, 0) / c.kda.length).toFixed(1) : '0';
-                        return (
-                          <div key={c.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.03] transition-colors">
-                            <img src={c.image} alt={c.name} width={36} height={36} className="rounded-lg" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-gray-200">{c.name}</p>
-                              <p className="text-[10px] text-gray-500"><span className="text-emerald-400">{c.wins}W</span> <span className="text-red-400">{c.losses}L</span> · {ak} KDA</p>
-                            </div>
-                            <span className={`text-xs font-bold font-mono ${wr >= 50 ? "text-emerald-400" : "text-red-400"}`}>{wr}%</span>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
-              </div>
-            </>
-          }
           initialMatches={recentMatches}
           puuid={profile.puuid}
+          totalSeasonMatches={data.totalSeasonMatches || 0}
+          seasonChampionsAll={data.seasonChampions?.all || []}
+          solo={solo}
         />
       </div>
     </div>

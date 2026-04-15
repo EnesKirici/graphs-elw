@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useBackground } from "@/context/BackgroundContext";
 import { useAnalytics } from "@/context/AnalyticsContext";
+import { useAdmin } from "@/context/AdminContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -15,10 +17,12 @@ const ROLE_ICONS = {
 };
 
 function RateLimitIndicator() {
+  const { isAdmin } = useAdmin();
   const [data, setData] = useState(null);
   const [hover, setHover] = useState(false);
 
   useEffect(() => {
+    if (!isAdmin) { setData(null); return; }
     let mounted = true;
     const poll = () => {
       fetch(`${API_BASE}/debug/rate-limit`).then(r => r.json()).then(d => { if (mounted) setData(d); }).catch(() => {});
@@ -26,9 +30,9 @@ function RateLimitIndicator() {
     poll();
     const id = setInterval(poll, 3000);
     return () => { mounted = false; clearInterval(id); };
-  }, []);
+  }, [isAdmin]);
 
-  if (!data) return null;
+  if (!isAdmin || !data) return null;
 
   const limitParts = (data.appLimit || "").split(",");
   const countParts = (data.appCount || "").split(",");
@@ -144,6 +148,7 @@ export default function Navbar() {
   const router = useRouter();
   const { background, removeBg } = useBackground();
   const analytics = useAnalytics();
+  const { isAdmin } = useAdmin();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -356,6 +361,18 @@ export default function Navbar() {
           </button>
         )}
         <RateLimitIndicator />
+        {isAdmin && (
+          <Link
+            href="/admin"
+            title="Admin Paneli"
+            className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400/50 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            ADMIN
+          </Link>
+        )}
         <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
         <span className="text-xs text-gray-500">TR1</span>
       </div>

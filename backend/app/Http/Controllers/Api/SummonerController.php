@@ -293,6 +293,26 @@ class SummonerController extends Controller
             if ($e->getCode() === 429) $rateLimited = true;
         }
 
+        // Sezon tüm maç sayısı — queue-bazlı ID listelerinin union'u (cache'li).
+        // match-v5 /ids tek istekte max 100 döndürür; 5 queue × 100 = 500'e kadar saybiliriz.
+        $totalSeasonMatches = 0;
+        try {
+            $unionIds = [];
+            foreach ([420, 440, 400, 430, 490] as $queueId) {
+                try {
+                    $unionIds = array_merge(
+                        $unionIds,
+                        $this->matchData->getSeasonMatchIds($puuid, $queueId)
+                    );
+                } catch (\Exception $e) {
+                    if ($e->getCode() === 429) $rateLimited = true;
+                }
+            }
+            $totalSeasonMatches = count(array_unique($unionIds));
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
+
         // Sezon verileri boşsa recentMatches'tan fallback
         if (empty($seasonChampions['all'] ?? []) && !empty($recentMatches)) {
             $seasonChampions = $this->buildChampionFallback($recentMatches);
@@ -377,6 +397,7 @@ class SummonerController extends Controller
             'recentStats'      => $recentStats,
             'seasonRoles'      => $seasonRoles,
             'seasonChampions'   => $seasonChampions,
+            'totalSeasonMatches' => $totalSeasonMatches,
             'winrateTimeline'   => $winrateTimeline ?? [],
             'bannerChampion'    => $bannerChampion,
             'bannerSkins'       => $bannerSkins,

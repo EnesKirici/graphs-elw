@@ -24,8 +24,20 @@ class MatchDataService
         430 => 'Blind',
         490 => 'Quickplay',
         700 => 'Clash',
+        720 => 'ARAM Clash',
+        830 => 'Bot (Kolay)',
+        840 => 'Bot (Orta)',
+        850 => 'Bot (Zor)',
         900 => 'URF',
+        1020 => 'One for All',
+        1300 => 'Nexus Blitz',
+        1400 => 'Spellbook',
         1700 => 'Arena',
+        1710 => 'Arena',
+        1900 => 'Tam Gaz',
+        2000 => 'Eğitim',
+        2010 => 'Eğitim',
+        2020 => 'Eğitim',
     ];
 
     private const SEASON_START_DAY = '01-08';
@@ -72,6 +84,23 @@ class MatchDataService
             return $this->api->regionRequest(
                 "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
                 ['startTime' => $seasonStart, 'queue' => $queueId, 'count' => 100]
+            );
+        });
+    }
+
+    /**
+     * Sezon başından bu yana TÜM queue'lardaki match ID'leri tek istekle çeker.
+     * Queue filtrelemesi arama sırasında detay içindeki queueId üzerinden yapılır.
+     */
+    public function getAllSeasonMatchIds(string $puuid): array
+    {
+        $cacheKey = "season_match_ids:all:v1:{$puuid}";
+
+        return Cache::remember($cacheKey, config('riot.cache_ttl.match_ids'), function () use ($puuid) {
+            $seasonStart = $this->seasonStartTimestamp();
+            return $this->api->regionRequest(
+                "/lol/match/v5/matches/by-puuid/{$puuid}/ids",
+                ['startTime' => $seasonStart, 'count' => 100]
             );
         });
     }

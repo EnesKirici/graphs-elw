@@ -2,9 +2,19 @@
 
 import { useState } from "react";
 import MatchList from "./MatchList";
+import StatsCard from "./StatsCard";
+import RecentChampionsCard from "./RecentChampionsCard";
 
-export default function SummonerContent({ leftColumn, rightColumn, initialMatches, puuid }) {
+export default function SummonerContent({
+  leftColumn,
+  initialMatches,
+  puuid,
+  totalSeasonMatches,
+  seasonChampionsAll,
+  solo,
+}) {
   const [selectedMatchId, setSelectedMatchId] = useState(null);
+  const [matches, setMatches] = useState(initialMatches || []);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -17,12 +27,23 @@ export default function SummonerContent({ leftColumn, rightColumn, initialMatche
 
       {/* Sağ kolon — maç detayı açıkken tam genişlik */}
       <div className={`${selectedMatchId ? "lg:col-span-12" : "lg:col-span-8"} space-y-4`}>
-        {!selectedMatchId && rightColumn}
+        {!selectedMatchId && (
+          <>
+            <StatsCard
+              totalSeasonMatches={totalSeasonMatches}
+              seasonChampionsAll={seasonChampionsAll}
+              matches={matches}
+              solo={solo}
+            />
+            <RecentChampionsCard matches={matches} />
+          </>
+        )}
         <MatchList
           initialMatches={initialMatches}
           puuid={puuid}
           selectedMatchId={selectedMatchId}
           onSelectMatch={setSelectedMatchId}
+          onMatchesChange={setMatches}
         />
       </div>
     </div>
