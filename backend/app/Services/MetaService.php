@@ -24,7 +24,7 @@ class MetaService
 
     public function getDashboardStats(): array
     {
-        return Cache::remember('meta:dashboard_stats_v5', config('riot.cache_ttl.meta_stats'), function () {
+        return Cache::remember('meta:dashboard_stats_v6', config('riot.cache_ttl.meta_stats'), function () {
             $champions = $this->ddragon->getChampions();
             $version = $this->ddragon->getCurrentVersion();
             $rotation = $this->getFreeRotation();
@@ -105,6 +105,8 @@ class MetaService
                     $entry['sliderCategory'] = $cat['category'];
                     $entry['sliderRank'] = $rank;
                     $entry['sliderValue'] = $champ[$cat['valueKey']] . $cat['suffix'];
+                    // Tüm kostümler (hero'da skin değiştirme için) — ekstra istek olmasın.
+                    $entry['skins'] = $this->ddragon->formatSkins($detail);
 
                     $sliderPool[] = $entry;
                     $seen[] = $champ['id'];

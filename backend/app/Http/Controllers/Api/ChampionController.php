@@ -83,14 +83,7 @@ class ChampionController extends Controller
                     'image'       => "https://ddragon.leagueoflegends.com/cdn/{$version}/img/passive/{$champion['passive']['image']['full']}",
                 ],
                 'stats'   => $champion['stats'],
-                'skins'   => collect($champion['skins'])
-                    ->filter(fn($s) => !str_contains($s['name'], '('))
-                    ->values()
-                    ->map(fn($s) => [
-                        'num'    => $s['num'],
-                        'name'   => $s['name'] === 'default' ? $champion['name'] : $s['name'],
-                        'splash' => $this->ddragon->splashArtUrl($champion['id'], $s['num']),
-                    ]),
+                'skins'   => $this->ddragon->formatSkins($champion),
             ],
         ]);
     }

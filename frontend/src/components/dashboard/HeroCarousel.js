@@ -18,16 +18,24 @@ function selectSlides(pool) {
   return out.length ? out : pool.slice(0, 6);
 }
 
+// Skin'ler dashboard payload'ıyla (sliderPool[].skins) gelir → ekstra istek yok.
+function initSkins(slides) {
+  const m = {};
+  for (const s of slides) if (Array.isArray(s.skins) && s.skins.length) m[s.id] = s.skins;
+  return m;
+}
+
 export default function HeroCarousel({ sliderPool = [], version }) {
   const slides = useMemo(() => selectSlides(sliderPool), [sliderPool]);
   const { setBg } = useBackground();
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  // Skin durumu: id -> [{num,name,splash}], id -> seçili index
-  const [skins, setSkins] = useState({});
+  // Skin durumu: id -> [{num,name,splash}] (payload'dan seed), id -> seçili index
+  const [skins, setSkins] = useState(() => initSkins(slides));
   const [skinIdx, setSkinIdx] = useState({});
-  const skinsRef = useRef({}); // anlık okuma için (stale closure'ı önler)
+  const skinsRef = useRef(null); // anlık okuma için (stale closure'ı önler)
+  if (skinsRef.current === null) skinsRef.current = skins;
   const total = slides.length;
 
   const go = useCallback((n) => setI((p) => (n + total) % total), [total]);
@@ -60,10 +68,21 @@ export default function HeroCarousel({ sliderPool = [], version }) {
     return () => clearInterval(id);
   }, [paused, total, resetKey]);
 
-  // Tüm slaytların skin'lerini mount'ta önden yükle → görseller geç yüklenmesin
-  // ve her şampiyon rastgele kostümle gelsin (aktif slayt dahil).
+  // Mount: her şampiyona rastgele (non-default) kostüm ata. Skin'ler dashboard
+  // payload'ıyla geldiği için EKSTRA İSTEK YOK; eksikse fallback ile çekilir.
   useEffect(() => {
-    slides.forEach((s) => ensureSkins(s.id));
+    setSkinIdx((prev) => {
+      const next = { ...prev };
+      for (const s of slides) {
+        const list = skinsRef.current[s.id];
+        if (list && list.length > 1 && next[s.id] == null) {
+          next[s.id] = 1 + Math.floor(Math.random() * (list.length - 1));
+        }
+      }
+      return next;
+    });
+    // Güvenlik: payload'da skin'i olmayan slayt varsa çek (normalde gerekmez).
+    slides.forEach((s) => { if (!skinsRef.current[s.id]?.length) ensureSkins(s.id); });
   }, [slides, ensureSkins]);
 
   function jump(n) {

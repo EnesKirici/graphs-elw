@@ -194,6 +194,30 @@ class DataDragonService
     }
 
     /**
+     * Şampiyon detayından kostüm (skin) listesini standart formata çevirir.
+     * Chroma'lar (isminde '(' geçenler) hariç tutulur. Splash URL'leri Data Dragon
+     * CDN'inden gelir — sunucuda görsel saklanmaz.
+     *
+     * @param  array  $detail  getChampionDetail() çıktısı (id, name, skins içerir)
+     * @return array<int, array{num:int, name:string, splash:string}>
+     */
+    public function formatSkins(array $detail): array
+    {
+        $champId = $detail['id'];
+        $champName = $detail['name'] ?? $champId;
+
+        return collect($detail['skins'] ?? [])
+            ->reject(fn ($s) => str_contains($s['name'], '('))
+            ->values()
+            ->map(fn ($s) => [
+                'num'    => $s['num'],
+                'name'   => $s['name'] === 'default' ? $champName : $s['name'],
+                'splash' => $this->splashArtUrl($champId, $s['num']),
+            ])
+            ->all();
+    }
+
+    /**
      * Meraki Analytics'ten şampiyon koridor bilgilerini getir.
      * Her şampiyon için positions dizisi döner: ["TOP", "MIDDLE", "JUNGLE", ...]
      * 24 saat cache'lenir. Tek bir HTTP isteği ile tüm şampiyonlar gelir.
