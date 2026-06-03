@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { primaryRole } from "@/lib/roles";
+import { useBackground } from "@/context/BackgroundContext";
 import { pctTR } from "./primitives";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -19,15 +20,34 @@ function selectSlides(pool) {
 
 export default function HeroCarousel({ sliderPool = [], version }) {
   const slides = useMemo(() => selectSlides(sliderPool), [sliderPool]);
+  const { setBg } = useBackground();
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   // Skin durumu: id -> [{num,name,splash}], id -> seçili index
   const [skins, setSkins] = useState({});
   const [skinIdx, setSkinIdx] = useState({});
+  const skinsRef = useRef({}); // anlık okuma için (stale closure'ı önler)
   const total = slides.length;
 
   const go = useCallback((n) => setI((p) => (n + total) % total), [total]);
+
+  // Skin'leri çek (cache'li) — döner: liste
+  const ensureSkins = useCallback(async (id) => {
+    if (!id) return [];
+    if (skinsRef.current[id]) return skinsRef.current[id];
+    let list = [];
+    try {
+      const res = await fetch(`${API_BASE}/champions/${id}`);
+      const data = await res.json();
+      list = Array.isArray(data?.champion?.skins) ? data.champion.skins : [];
+    } catch {
+      list = [];
+    }
+    skinsRef.current = { ...skinsRef.current, [id]: list };
+    setSkins((s) => ({ ...s, [id]: list }));
+    return list;
+  }, []);
 
   useEffect(() => {
     if (paused || total <= 1) return;
@@ -36,33 +56,21 @@ export default function HeroCarousel({ sliderPool = [], version }) {
     return () => clearInterval(id);
   }, [paused, total, resetKey]);
 
+  // Aktif slaytın skin'lerini önden yükle → tıklayınca anında değişsin
+  useEffect(() => {
+    if (slides[i]) ensureSkins(slides[i].id);
+  }, [i, slides, ensureSkins]);
+
   function jump(n) {
     setI(n);
     setResetKey((k) => k + 1);
   }
 
-  async function ensureSkins(id) {
-    if (skins[id]) return skins[id];
-    try {
-      const res = await fetch(`${API_BASE}/champions/${id}`);
-      const data = await res.json();
-      const list = Array.isArray(data?.champion?.skins) ? data.champion.skins : [];
-      setSkins((s) => ({ ...s, [id]: list }));
-      return list;
-    } catch {
-      setSkins((s) => ({ ...s, [id]: [] }));
-      return [];
-    }
-  }
-
-  // Splash'a tıkla → rastgele kostüm
-  async function randomSkin(id) {
-    const list = await ensureSkins(id);
-    if (list.length <= 1) return;
-    const cur = skinIdx[id] ?? 0;
-    let next = cur;
-    while (next === cur) next = Math.floor(Math.random() * list.length);
-    setSkinIdx((m) => ({ ...m, [id]: next }));
+  // Splash'a tıkla → sıradaki kostüm (sağa doğru)
+  async function nextSkin(id) {
+    const list = skinsRef.current[id] || (await ensureSkins(id));
+    if (!list || list.length <= 1) return;
+    setSkinIdx((m) => ({ ...m, [id]: ((m[id] ?? 0) + 1) % list.length }));
   }
 
   function pickSkin(id, idx) {
@@ -99,8 +107,24 @@ export default function HeroCarousel({ sliderPool = [], version }) {
         const activeSkin = skinIdx[s.id] ?? 0;
         return (
           <div key={s.id + s.sliderCategory} className={"hero-slide" + (idx === i ? " active" : "")} aria-hidden={idx !== i}>
-            <div className="hero-art" onClick={() => randomSkin(s.id)} title="Kostümü değiştir (tıkla)">
+            <div className="hero-art" onClick={() => nextSkin(s.id)} title="Kostümü değiştir (tıkla)">
               {splashFor(s) && <img src={splashFor(s)} alt={s.name} />}
+
+              {idx === i && (
+                <button
+                  className="hero-bg-btn"
+                  onClick={(e) => { e.stopPropagation(); setBg(splashFor(s)); }}
+                  title="Bu görseli arka plan yap"
+                  aria-label="Arka plan yap"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                </button>
+              )}
+
               {idx === i && skinList && skinList.length > 1 && (
                 <div className="skin-picker" onClick={(e) => e.stopPropagation()}>
                   <div className="skin-dots">

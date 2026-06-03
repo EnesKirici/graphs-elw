@@ -315,6 +315,17 @@
 .skin-dots button.on { width: 20px; background: var(--accent); }
 .skin-name { font-size: 10.5px; color: rgba(255,255,255,.6); letter-spacing: .04em; text-shadow: 0 1px 6px rgba(0,0,0,.6); white-space: nowrap; }
 
+/* "Arka plan yap" butonu (hero art sağ üst) */
+.hero-bg-btn {
+  position: absolute; z-index: 4; top: 12px; right: 12px;
+  width: 34px; height: 34px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: rgba(8,9,12,.55); border: 1px solid var(--border-strong);
+  backdrop-filter: blur(8px); color: var(--txt);
+  cursor: pointer; transition: background .2s, color .2s, transform .15s;
+}
+.hero-bg-btn:hover { background: rgba(8,9,12,.85); color: var(--accent); transform: translateY(-1px); }
+
 .hero-nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 5; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(8,9,12,.55); border: 1px solid var(--border-strong); backdrop-filter: blur(8px); color: var(--txt); transition: background .2s; }
 .hero-nav:hover { background: rgba(8,9,12,.85); }
 .hero-nav.prev { left: 16px; } .hero-nav.next { right: 16px; }

@@ -29,6 +29,9 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    // sendBeacon (analytics/batch) credentials gönderir → yanıtın
+    // Access-Control-Allow-Credentials: true içermesi gerekir.
+    // allowed_origins spesifik (yıldız değil), bu yüzden güvenli.
+    'supports_credentials' => true,
 
 ];
