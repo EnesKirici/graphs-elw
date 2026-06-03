@@ -13,6 +13,7 @@ class MetaService
     public function __construct(
         private DataDragonService $ddragon,
         private RiotApiService $riot,
+        private ChampionStatsService $stats,
     ) {}
 
     public function getFreeRotation(): array
@@ -24,44 +25,60 @@ class MetaService
 
     public function getDashboardStats(): array
     {
-        return Cache::remember('meta:dashboard_stats_v6', config('riot.cache_ttl.meta_stats'), function () {
+        return Cache::remember('meta:dashboard_stats_v7', config('riot.cache_ttl.meta_stats'), function () {
             $champions = $this->ddragon->getChampions();
             $version = $this->ddragon->getCurrentVersion();
             $rotation = $this->getFreeRotation();
             $positionMap = $this->ddragon->getChampionPositions();
             $ddragonBase = config('riot.ddragon_url');
 
+            // Gerçek istatistikler (yeterli örneklemi olan şampiyonlar). Boşsa simülasyon.
+            $realStats = $this->stats->getMetaStats($this->stats->currentPatchBucket());
+
             $stats = [];
             foreach ($champions as $champ) {
                 $key = (int) $champ['key'];
-                $seed = crc32($champ['id']);
 
-                // Geniş ve dağınık değerler — hash tabanlı
-                $h1 = abs(crc32($champ['id'] . 'wr'));
-                $h2 = abs(crc32($champ['id'] . 'pr'));
-                $h3 = abs(crc32($champ['id'] . 'br'));
+                // Patch win-rate değişimi — çok-patch geçmişi gelene kadar placeholder.
                 $h4 = abs(crc32($champ['id'] . 'ch'));
-
-                $winRate = 44 + ($h1 % 1400) / 100;         // 44.0% - 57.9%
-                $pickRate = 1 + ($h2 % 2800) / 100;          // 1.0% - 29.0%
-                $banRate = 0.5 + ($h3 % 3500) / 100;         // 0.5% - 35.5%
                 $wrChange = round(($h4 % 60 - 30) / 10, 1);  // -3.0 ile +2.9
 
+                // Gerçek veri varsa onu kullan; yoksa hash tabanlı simülasyon.
+                if (isset($realStats[$champ['id']])) {
+                    $r = $realStats[$champ['id']];
+                    $winRate = $r['winRate'];
+                    $pickRate = $r['pickRate'];
+                    $banRate = $r['banRate'];
+                    $dataSource = 'real';
+                    $sampleSize = $r['sampleSize'];
+                } else {
+                    $h1 = abs(crc32($champ['id'] . 'wr'));
+                    $h2 = abs(crc32($champ['id'] . 'pr'));
+                    $h3 = abs(crc32($champ['id'] . 'br'));
+                    $winRate = 44 + ($h1 % 1400) / 100;      // 44.0% - 57.9%
+                    $pickRate = 1 + ($h2 % 2800) / 100;       // 1.0% - 29.0%
+                    $banRate = 0.5 + ($h3 % 3500) / 100;      // 0.5% - 35.5%
+                    $dataSource = 'sim';
+                    $sampleSize = null;
+                }
+
                 $stats[] = [
-                    'id'        => $champ['id'],
-                    'key'       => $key,
-                    'name'      => $champ['name'],
-                    'title'     => $champ['title'],
-                    'tags'      => $champ['tags'],
-                    'positions' => $positionMap[$champ['id']] ?? [],
-                    'image'     => $this->ddragon->championIconUrl($champ['id']),
-                    'splash'    => $this->ddragon->splashArtUrl($champ['id']),
-                    'centered'  => "{$ddragonBase}/cdn/img/champion/centered/{$champ['id']}_0.jpg",
-                    'winRate'   => round($winRate, 1),
-                    'pickRate'  => round($pickRate, 1),
-                    'banRate'   => round($banRate, 1),
-                    'wrChange'  => $wrChange,
-                    'tier'      => $this->calculateTier($winRate, $pickRate),
+                    'id'         => $champ['id'],
+                    'key'        => $key,
+                    'name'       => $champ['name'],
+                    'title'      => $champ['title'],
+                    'tags'       => $champ['tags'],
+                    'positions'  => $positionMap[$champ['id']] ?? [],
+                    'image'      => $this->ddragon->championIconUrl($champ['id']),
+                    'splash'     => $this->ddragon->splashArtUrl($champ['id']),
+                    'centered'   => "{$ddragonBase}/cdn/img/champion/centered/{$champ['id']}_0.jpg",
+                    'winRate'    => round($winRate, 1),
+                    'pickRate'   => round($pickRate, 1),
+                    'banRate'    => round($banRate, 1),
+                    'wrChange'   => $wrChange,
+                    'tier'       => $this->calculateTier($winRate, $pickRate),
+                    'dataSource' => $dataSource,   // 'real' | 'sim'
+                    'sampleSize' => $sampleSize,
                 ];
             }
 
