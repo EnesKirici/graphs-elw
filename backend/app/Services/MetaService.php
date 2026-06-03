@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\CachedPlayer;
+use App\Models\MatchRecord;
 use App\Services\RiotApi\DataDragonService;
 use App\Services\RiotApi\RiotApiService;
 use Illuminate\Support\Facades\Cache;
@@ -125,6 +127,22 @@ class MetaService
                 'topBanRate'  => $topBanRate,
                 'risers'      => array_values($risers),
                 'fallers'     => array_values($fallers),
+            ];
+        });
+    }
+
+    /**
+     * Site geneli canlı sayaçlar (dashboard meta şeridi).
+     * Ucuz DB count'ları — büyük DDragon cache'inden ayrı, kısa süre cache'lenir
+     * ki sayılar güncel kalsın ama her istekte COUNT atılmasın.
+     * GET /api/v1/meta/stats
+     */
+    public function getSiteStats(): array
+    {
+        return Cache::remember('meta:site_stats', 60, function () {
+            return [
+                'matchesAnalyzed' => MatchRecord::count(),
+                'trackedPlayers'  => CachedPlayer::count(),
             ];
         });
     }

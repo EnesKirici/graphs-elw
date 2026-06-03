@@ -44,6 +44,7 @@ Route::prefix('v1')->group(function () {
     // Meta / Dashboard endpoint'leri
     Route::get('/meta/dashboard', [MetaController::class, 'dashboard']);
     Route::get('/meta/rotation', [MetaController::class, 'rotation']);
+    Route::get('/meta/stats', [MetaController::class, 'stats']);
 
     // Oyuncu endpoint'leri
     Route::get('/summoner/autocomplete', [SummonerController::class, 'autocomplete']);

@@ -29,4 +29,13 @@ class MetaController extends Controller
     {
         return response()->json($this->meta->getFreeRotation());
     }
+
+    /**
+     * Site geneli canlı sayaçlar (analiz edilen maç, takip edilen oyuncu).
+     * GET /api/v1/meta/stats
+     */
+    public function stats(): JsonResponse
+    {
+        return response()->json($this->meta->getSiteStats());
+    }
 }

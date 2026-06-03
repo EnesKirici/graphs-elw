@@ -1,16 +1,18 @@
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import MainContent from "@/components/layout/MainContent";
+import BackgroundFX from "@/components/dashboard/BackgroundFX";
 
 export default function SiteLayout({ children }) {
   return (
     <>
+      <BackgroundFX />
       <Sidebar />
       <MainContent>
         <Navbar />
         <main className="relative z-10 flex-1">{children}</main>
-        <footer className="relative z-10 border-t border-[#1b2230]/30 mt-20">
-          <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-gray-600">
+        <footer className="relative z-10 mt-20" style={{ borderTop: "1px solid var(--border)" }}>
+          <div className="flex items-center justify-between text-xs" style={{ maxWidth: "var(--maxw)", margin: "0 auto", padding: "20px 26px", color: "var(--txt-3)" }}>
             <div className="flex items-center gap-2">
               <img src="/logo/white_3.webp" alt="ELW" width={20} height={20} className="rounded opacity-60" />
               <span>GRAPHS.elw — LoL Analytics</span>

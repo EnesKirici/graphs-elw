@@ -12,8 +12,11 @@ export default function MainContent({ children }) {
 
   return (
     <div
-      className="min-h-screen flex flex-col transition-all duration-300"
-      style={{ paddingLeft: collapsed ? "68px" : "200px" }}
+      className="min-h-screen flex flex-col"
+      style={{
+        paddingLeft: collapsed ? "var(--sidebar-w-collapsed)" : "var(--sidebar-w)",
+        transition: "padding-left .35s var(--ease)",
+      }}
     >
       {children}
     </div>
