@@ -246,6 +246,15 @@ ekleniyor → DB maç sayısından bağımsız, sabit boyutta kalıyor (736 maç
   Response şekli aynı, frontend değişmedi. (Şu an 126/172 şampiyon gerçek.)
 - **Cache:** `meta:dashboard_stats_v7`
 
+#### Neden bu dosyalar? (sade özet)
+Amaç: dashboard'daki **sahte** şampiyon WR/pick/ban'ı **gerçek** maçlardan hesaplamak, DB'yi şişirmeden.
+- **migration** → istatistiklerin yaşayacağı 2 tabloyu kurar.
+- **modeller (ChampionStat/StatPatch)** → o tabloları kodda okuyup yazmayı sağlar (Eloquent).
+- **ChampionStatsService** → işin beyni: maçları sayar (aggregate) ve WR/pick/ban'a çevirir.
+- **stats:rebuild komutu** → tetik düğmesi; istatistikleri maçlardan yeniden hesaplar (worker bunu otomatik çağıracak).
+- **MetaService (değişti)** → dashboard'a veriyi dağıtır; yeterli gerçek veri varsa onu, yoksa simülasyonu gösterir.
+- **frontend** → değişmedi; verinin şekli aynı kaldı, sadece sayıların kaynağı sahteden gerçeğe döndü.
+
 ⚠️ Mevcut örneklem `matches` tablosundan (aranan oyuncular) → küçük + yanlı, WR'ler
 gürültülü. Pipeline doğru; gerçek meta için aşağıdaki crawler şart.
 
