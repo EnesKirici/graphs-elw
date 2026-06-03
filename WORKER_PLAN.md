@@ -223,3 +223,43 @@ GERÇEK (worker sonrası):
 → `positions` alanı: ["TOP", "MIDDLE", "JUNGLE", "BOTTOM", "SUPPORT"]
 → Patch bazlı güncelleniyor, 24 saat cache
 → Worker hazır olunca kendi verimizle değiştirilecek
+
+---
+
+## Aşama 2 — DURUM (2026-06-03)
+
+### ✅ YAPILDI — İskelet (compact aggregate storage)
+Maçlar stats için TEK TEK saklanmıyor; her maç işlenip sadece aggregate sayaçlara
+ekleniyor → DB maç sayısından bağımsız, sabit boyutta kalıyor (736 maç → 573 satır).
+
+- **Tablolar:** `champion_stats` (patch, champion_id, position → games/wins/bans) +
+  `stat_patches` (patch → total_games). Migration: `2026_06_03_120000_create_champion_stats_tables.php`
+- **Modeller:** `App\Models\ChampionStat`, `App\Models\StatPatch`
+- **Servis:** `App\Services\ChampionStatsService`
+  - `aggregateFromMatches()` — `matches` tablosunu sayaçlara çevirir. Şampiyon kimliği
+    numeric `championId` → kanonik DDragon id (casing + dashboard join garanti).
+    Kuyruk filtresi: RANKED_QUEUES = [420, 440].
+  - `getMetaStats($patch)` — MIN_SAMPLE=20 guard'ı ile gerçek wr/pick/ban döner.
+- **Komut:** `php artisan stats:rebuild` (tam yeniden hesap)
+- **Entegrasyon:** `MetaService::getDashboardStats()` — yeterli örneklem varsa gerçek
+  veri, yoksa hash simülasyonu; her şampiyona `dataSource` ('real'|'sim') + `sampleSize`.
+  Response şekli aynı, frontend değişmedi. (Şu an 126/172 şampiyon gerçek.)
+- **Cache:** `meta:dashboard_stats_v7`
+
+⚠️ Mevcut örneklem `matches` tablosundan (aranan oyuncular) → küçük + yanlı, WR'ler
+gürültülü. Pipeline doğru; gerçek meta için aşağıdaki crawler şart.
+
+### ⏳ SIRADAKİ ADIMLAR (production key sonrası)
+1. **Yüksek-elo crawler** — `stats:collect-high-elo`: League-V4 ile Challenger/GM/Master
+   listesi → Match-V5 ile maç geçmişleri. Yansız, geniş örneklem.
+2. **Incremental işleme** — `stats:process-matches`: tam rebuild yerine yalnız yeni
+   maçları işle. İşlenmiş maçları küçük bir `processed_matches` set'i (match_id) ya da
+   oyuncu-bazlı zaman imleci ile takip et (çift sayma yok). Sayaçlarda `increment()`/upsert.
+3. **Scheduler** — `stats:collect-high-elo` daily, `stats:process-matches` ~30dk,
+   `stats:calculate-meta` (gerekirse türetilmiş alanlar) hourly. Supervisor + `queue:work`.
+4. **wrChange (patch-delta) gerçeğe** — `champion_stats` patch bazlı tutuyor; 2+ patch
+   verisi birikince önceki patch WR'sinden hesapla (şu an MetaService'te placeholder).
+5. **Frontend `dataSource`/`sampleSize`** — "N maça dayalı" rozeti / düşük-örneklem uyarısı.
+6. **Koridor dağılımı** — `champion_stats`'ta per-position satırlar zaten var; istenirse
+   "Yasuo → Mid %72, Top %18" dağılımı dashboard'a eklenebilir.
+7. **(Ops.) MIN_SAMPLE'ı production'da artır** (ör. 200+) — gürültüyü azalt.
