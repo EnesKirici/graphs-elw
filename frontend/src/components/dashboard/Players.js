@@ -18,7 +18,7 @@ export default function Players({ entries }) {
       <div className="card pad">
         <div className="section-head" style={{ marginBottom: 10 }}>
           <h2><span className="dot-mark" />Öne Çıkan Oyuncular</h2>
-          <span className="tag">TR1 · canlı seri</span>
+          <span className="tag">TR1</span>
         </div>
 
         {list.length === 0 ? (
@@ -31,13 +31,12 @@ export default function Players({ entries }) {
               const name = p.name?.gameName || "Bilinmeyen";
               const tag = p.name?.tagLine;
               const role = p.topRoles?.[0]?.role;
-              const avatar = p.topChamps?.[0]?.image;
               const href = tag ? `/summoner/${encodeURIComponent(name)}/${encodeURIComponent(tag)}` : undefined;
               const Row = href ? "a" : "div";
               return (
                 <Row key={p.puuid || i} className="player-row" {...(href ? { href } : {})}>
                   <span className="rank-no num">{p.rank ?? i + 1}</span>
-                  <ChampPortrait name={name} image={avatar} initials={initialsOf(name) || name[0]?.toUpperCase()} size={40} round />
+                  <ChampPortrait name={name} image={p.profileIcon} initials={initialsOf(name) || name[0]?.toUpperCase()} size={40} round />
                   <div className="player-name">
                     <b>
                       {name} {tag && <span>#{tag}</span>}
@@ -47,9 +46,7 @@ export default function Players({ entries }) {
                   <div className="player-rank">
                     {tierLabel(p.tier)} {p.lp != null && <span className="lp">{p.lp} LP</span>}
                   </div>
-                  <span className={"streak" + (p.hotStreak ? "" : " cold")}>
-                    {p.hotStreak ? "🔥 " : ""}{pctTR(p.winRate)}
-                  </span>
+                  {p.winRate != null && <span className="streak">{pctTR(p.winRate)}</span>}
                 </Row>
               );
             })}

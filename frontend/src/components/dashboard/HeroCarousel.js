@@ -5,7 +5,7 @@ import Link from "next/link";
 import { primaryRole } from "@/lib/roles";
 import { pctTR } from "./primitives";
 
-const CATEGORY_LABEL = (c) => (c.includes("Win") ? "WIN RATE" : c.includes("Popüler") ? "PICK RATE" : "BAN RATE");
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 // Havuzdan deterministik slayt seçimi (her kategoriden 2, sıraya göre serpiştir).
 function selectSlides(pool) {
@@ -22,6 +22,9 @@ export default function HeroCarousel({ sliderPool = [], version }) {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  // Skin durumu: id -> [{num,name,splash}], id -> seçili index
+  const [skins, setSkins] = useState({});
+  const [skinIdx, setSkinIdx] = useState({});
   const total = slides.length;
 
   const go = useCallback((n) => setI((p) => (n + total) % total), [total]);
@@ -35,7 +38,42 @@ export default function HeroCarousel({ sliderPool = [], version }) {
 
   function jump(n) {
     setI(n);
-    setResetKey((k) => k + 1); // manuel geçişte timer'ı sıfırla
+    setResetKey((k) => k + 1);
+  }
+
+  async function ensureSkins(id) {
+    if (skins[id]) return skins[id];
+    try {
+      const res = await fetch(`${API_BASE}/champions/${id}`);
+      const data = await res.json();
+      const list = Array.isArray(data?.champion?.skins) ? data.champion.skins : [];
+      setSkins((s) => ({ ...s, [id]: list }));
+      return list;
+    } catch {
+      setSkins((s) => ({ ...s, [id]: [] }));
+      return [];
+    }
+  }
+
+  // Splash'a tıkla → rastgele kostüm
+  async function randomSkin(id) {
+    const list = await ensureSkins(id);
+    if (list.length <= 1) return;
+    const cur = skinIdx[id] ?? 0;
+    let next = cur;
+    while (next === cur) next = Math.floor(Math.random() * list.length);
+    setSkinIdx((m) => ({ ...m, [id]: next }));
+  }
+
+  function pickSkin(id, idx) {
+    setSkinIdx((m) => ({ ...m, [id]: idx }));
+  }
+
+  function splashFor(s) {
+    const list = skins[s.id];
+    const idx = skinIdx[s.id];
+    if (list && idx != null && list[idx]) return list[idx].splash;
+    return s.latestSkinSplash || s.splash;
   }
 
   if (total === 0) {
@@ -57,10 +95,28 @@ export default function HeroCarousel({ sliderPool = [], version }) {
     >
       {slides.map((s, idx) => {
         const role = primaryRole(s.positions);
+        const skinList = skins[s.id];
+        const activeSkin = skinIdx[s.id] ?? 0;
         return (
           <div key={s.id + s.sliderCategory} className={"hero-slide" + (idx === i ? " active" : "")} aria-hidden={idx !== i}>
-            <div className="hero-art">
-              {(s.latestSkinSplash || s.splash) && <img src={s.latestSkinSplash || s.splash} alt={s.name} />}
+            <div className="hero-art" onClick={() => randomSkin(s.id)} title="Kostümü değiştir (tıkla)">
+              {splashFor(s) && <img src={splashFor(s)} alt={s.name} />}
+              {idx === i && skinList && skinList.length > 1 && (
+                <div className="skin-picker" onClick={(e) => e.stopPropagation()}>
+                  <div className="skin-dots">
+                    {skinList.map((sk, di) => (
+                      <button
+                        key={sk.num}
+                        className={activeSkin === di ? "on" : ""}
+                        onClick={() => pickSkin(s.id, di)}
+                        title={sk.name}
+                        aria-label={sk.name}
+                      />
+                    ))}
+                  </div>
+                  <span className="skin-name mono">{skinList[activeSkin]?.name}</span>
+                </div>
+              )}
             </div>
             <div className="hero-info">
               <span className="hero-tag">

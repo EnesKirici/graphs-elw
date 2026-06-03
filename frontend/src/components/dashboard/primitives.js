@@ -4,7 +4,7 @@
   görselleri (champion.image) + ELW token'larıyla.
 */
 
-import { roleLabel, roleColor } from "@/lib/roles";
+import { roleLabels, ROLE_ICONS } from "@/lib/roles";
 
 const TIER_COLORS = { S: "#ff5470", A: "#e8b44a", B: "#4f8cff", C: "#6b7282", D: "#4b5563" };
 
@@ -52,15 +52,15 @@ export function ChampPortrait({ name = "", image, size = 40, round = false, init
   );
 }
 
-/* Rol rozeti — raw pozisyon ya da TR etiket kabul eder */
-export function RoleBadge({ role }) {
-  const label = roleLabel(role) || role;
-  if (!label) return null;
-  const color = roleColor(label);
+/* Rol rozeti — lane ikon(lar)ı. Çoklu koridor için ayrı ikonlar (max 2). */
+export function RoleBadge({ role, max = 2 }) {
+  const labels = roleLabels(role, max);
+  if (!labels.length) return null;
   return (
-    <span className="role-badge mono" style={{ color }}>
-      <i style={{ background: color }} />
-      {label}
+    <span className="role-badge">
+      {labels.map((l) => (
+        <img key={l} src={ROLE_ICONS[l]} alt={l} title={l} width={15} height={15} />
+      ))}
     </span>
   );
 }

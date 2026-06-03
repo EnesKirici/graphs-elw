@@ -7,6 +7,7 @@ use App\Models\CachedPlayer;
 use App\Services\RiotApi\RiotApiService;
 use App\Services\RiotApi\DataDragonService;
 use App\Services\RiotApi\ChampionMasteryService;
+use App\Services\RiotApi\SummonerService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class LeaderboardController extends Controller
         private RiotApiService $api,
         private DataDragonService $ddragon,
         private ChampionMasteryService $mastery,
+        private SummonerService $summoner,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -29,7 +31,7 @@ class LeaderboardController extends Controller
             return response()->json(['error' => 'tier: challenger, grandmaster veya master'], 400);
         }
 
-        $cacheKey = "leaderboard:v4:{$tier}:{$queue}";
+        $cacheKey = "leaderboard:v5:{$tier}:{$queue}";
 
         $data = Cache::remember($cacheKey, 1800, function () use ($tier, $queue) {
             // 1 API çağrısı — tüm lig
@@ -53,11 +55,12 @@ class LeaderboardController extends Controller
                 }
 
                 return [
-                    'rank'       => $index + 1,
-                    'puuid'      => $puuid,
-                    'name'       => $playerDetail['name'] ?? null,
-                    'topChamps'  => $playerDetail['topChamps'] ?? null,
-                    'topRoles'   => $playerDetail['topRoles'] ?? null,
+                    'rank'        => $index + 1,
+                    'puuid'       => $puuid,
+                    'name'        => $playerDetail['name'] ?? null,
+                    'profileIcon' => $playerDetail['profileIcon'] ?? null,
+                    'topChamps'   => $playerDetail['topChamps'] ?? null,
+                    'topRoles'    => $playerDetail['topRoles'] ?? null,
                     'tier'       => strtoupper($tier),
                     'lp'         => $entry['leaguePoints'],
                     'wins'       => $entry['wins'],
@@ -90,19 +93,32 @@ class LeaderboardController extends Controller
      */
     private function enrichPlayer(string $puuid, string $tier, string $queue, array $leagueEntry): array
     {
-        return Cache::remember("player:enriched:{$puuid}", 86400, function () use ($puuid, $tier, $queue, $leagueEntry) {
+        return Cache::remember("player:enriched:v2:{$puuid}", 86400, function () use ($puuid, $tier, $queue, $leagueEntry) {
             $name = null;
             $topChamps = null;
             $topRoles = null;
+            $profileIcon = null;
+            $profileIconId = null;
 
-            // İsim çek
+            // İsim + profil ikonu (account + summoner, getByPuuid içinde cache'li)
             try {
-                $account = $this->api->regionRequest("/riot/account/v1/accounts/by-puuid/{$puuid}");
+                $sum = $this->summoner->getByPuuid($puuid);
                 $name = [
-                    'gameName' => $account['gameName'] ?? null,
-                    'tagLine'  => $account['tagLine'] ?? null,
+                    'gameName' => $sum['gameName'] ?? null,
+                    'tagLine'  => $sum['tagLine'] ?? null,
                 ];
-            } catch (\Exception $e) {}
+                $profileIcon = $sum['profileIcon'] ?? null;
+                $profileIconId = $sum['profileIconId'] ?? null;
+            } catch (\Exception $e) {
+                // En azından ismi almayı dene
+                try {
+                    $account = $this->api->regionRequest("/riot/account/v1/accounts/by-puuid/{$puuid}");
+                    $name = [
+                        'gameName' => $account['gameName'] ?? null,
+                        'tagLine'  => $account['tagLine'] ?? null,
+                    ];
+                } catch (\Exception $e2) {}
+            }
 
             // Top 5 mastery şampiyonu (1 API çağrısı)
             try {
@@ -136,14 +152,16 @@ class LeaderboardController extends Controller
                         'losses'         => $leagueEntry['losses'],
                         'top_champions'  => $topChamps,
                         'top_roles'      => $topRoles,
+                        'profile_icon_id' => $profileIconId,
                     ]
                 );
             } catch (\Exception $e) {}
 
             return [
-                'name'      => $name,
-                'topChamps' => $topChamps,
-                'topRoles'  => $topRoles,
+                'name'        => $name,
+                'profileIcon' => $profileIcon,
+                'topChamps'   => $topChamps,
+                'topRoles'    => $topRoles,
             ];
         });
     }

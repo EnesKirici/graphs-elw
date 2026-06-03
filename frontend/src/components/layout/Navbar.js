@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useBackground } from "@/context/BackgroundContext";
 import { useAnalytics } from "@/context/AnalyticsContext";
 import { useAdmin } from "@/context/AdminContext";
+import ThemePicker from "@/components/dashboard/ThemePicker";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -318,6 +319,7 @@ export default function Navbar() {
           </button>
         )}
         <RateLimitIndicator />
+        <ThemePicker />
         {isAdmin && (
           <Link href="/admin" title="Admin Paneli" className="tb-pill admin">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

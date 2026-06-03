@@ -25,6 +25,15 @@ export const ROLE_COLORS = {
   Destek: "#b06cff",
 };
 
+// Lane ikonları (public/roles/*.webp)
+export const ROLE_ICONS = {
+  Top: "/roles/top.webp",
+  Orman: "/roles/jungle.webp",
+  Mid: "/roles/mid.webp",
+  ADC: "/roles/bot.webp",
+  Destek: "/roles/support.webp",
+};
+
 /** Herhangi bir rol/pozisyon değerini TR etikete çevirir (eşleşmezse null). */
 export function roleLabel(input) {
   if (!input) return null;
@@ -48,4 +57,20 @@ export function primaryRole(positions) {
     if (label) return label;
   }
   return null;
+}
+
+/**
+ * Birden fazla pozisyonu TR etiket listesine çevirir (tekrarsız, max kadar).
+ * Çoklu koridor şampiyonları için (ör. ["MIDDLE","SUPPORT"] -> ["Mid","Destek"]).
+ */
+export function roleLabels(input, max = 2) {
+  if (!input) return [];
+  const arr = Array.isArray(input) ? input : [input];
+  const out = [];
+  for (const p of arr) {
+    const label = roleLabel(typeof p === "string" ? p : p?.role);
+    if (label && !out.includes(label)) out.push(label);
+    if (out.length >= max) break;
+  }
+  return out;
 }

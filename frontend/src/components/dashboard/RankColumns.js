@@ -2,6 +2,7 @@
   Üçlü sıralama kolonları — Popüler / En Yüksek WR / En Çok Banlanan.
   Kaynak: /meta/dashboard topPickRate, topWinRate, topBanRate (ilk 5).
 */
+import Link from "next/link";
 import { RankRow, pctTR } from "./primitives";
 
 export default function RankColumns({ popular = [], topWinRate = [], topBanned = [] }) {
@@ -34,8 +35,7 @@ export default function RankColumns({ popular = [], topWinRate = [], topBanned =
                 href={`/champions/${c.id}`}
               />
             ))}
-            {/* Şampiyon liste sayfası henüz yok → görsel CTA (navigasyon yok) */}
-            <span className="see-all" style={{ color: col.color }}>Tümünü Gör →</span>
+            <Link href="/champions" className="see-all" style={{ color: col.color }}>Tümünü Gör →</Link>
           </div>
         ))}
       </div>
