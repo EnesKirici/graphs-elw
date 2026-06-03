@@ -46,6 +46,10 @@ export default function HeroCarousel({ sliderPool = [], version }) {
     }
     skinsRef.current = { ...skinsRef.current, [id]: list };
     setSkins((s) => ({ ...s, [id]: list }));
+    // Şampiyon ilk yüklenince default (index 0) değil, rastgele bir kostüm seç.
+    if (list.length > 1) {
+      setSkinIdx((m) => (m[id] != null ? m : { ...m, [id]: 1 + Math.floor(Math.random() * (list.length - 1)) }));
+    }
     return list;
   }, []);
 
@@ -56,10 +60,11 @@ export default function HeroCarousel({ sliderPool = [], version }) {
     return () => clearInterval(id);
   }, [paused, total, resetKey]);
 
-  // Aktif slaytın skin'lerini önden yükle → tıklayınca anında değişsin
+  // Tüm slaytların skin'lerini mount'ta önden yükle → görseller geç yüklenmesin
+  // ve her şampiyon rastgele kostümle gelsin (aktif slayt dahil).
   useEffect(() => {
-    if (slides[i]) ensureSkins(slides[i].id);
-  }, [i, slides, ensureSkins]);
+    slides.forEach((s) => ensureSkins(s.id));
+  }, [slides, ensureSkins]);
 
   function jump(n) {
     setI(n);
@@ -118,9 +123,7 @@ export default function HeroCarousel({ sliderPool = [], version }) {
                   aria-label="Arka plan yap"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <path d="M21 15l-5-5L5 21" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </button>
               )}
