@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import Tooltip from "@/components/shared/Tooltip";
 import WinrateSection from "./WinrateSection";
 
 function rankBadgeUrl(tier) {
@@ -16,8 +18,30 @@ function tierLabel(data) {
   return data.tier.charAt(0) + data.tier.slice(1).toLowerCase();
 }
 
-/* Büyük rank bloğu — Solo/Duo ve Flex aynı görünüm, yeşil/kırmızı bar YOK */
+/*
+  PLACEHOLDER (TEST VERİSİ) — gerçek ladder sıralaması DB/worker ile gelecek.
+  Bkz. PROFILE_RANKINGS_PLAN.md. Tier+rank+LP'den makul bir "Top %X" + dünya/TR
+  sırası üretir (deterministik, gerçekmiş gibi görünsün diye).
+*/
+const TIER_BASE_TOP = { IRON: 95, BRONZE: 80, SILVER: 62, GOLD: 46, PLATINUM: 34, EMERALD: 18, DIAMOND: 7, MASTER: 1.5, GRANDMASTER: 0.4, CHALLENGER: 0.05 };
+const DIV_ADJ = { IV: 3, III: 1.5, II: 0, I: -2 };
+
+function placeholderLeagueRank(data) {
+  const base = TIER_BASE_TOP[(data.tier || "").toUpperCase()] ?? 50;
+  const adj = DIV_ADJ[data.rank] ?? 0;
+  const topPct = Math.max(0.05, Math.round((base + adj - (data.lp || 0) / 100 * 1.4) * 10) / 10);
+  const global = Math.round((topPct / 100) * 9_000_000);
+  const tr = Math.round((topPct / 100) * 470_000);
+  return { topPct, global, tr };
+}
+
+const trNum = (n) => n.toLocaleString("tr-TR");
+
+/* Büyük rank bloğu — büyük ikon, WR%, Top %X (hover'da dünya/TR sırası). Bar YOK. */
 function RankBlock({ data, title }) {
+  const [anchor, setAnchor] = useState(null);
+  const rk = placeholderLeagueRank(data);
+
   return (
     <div>
       <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-3">{title}</p>
@@ -35,7 +59,16 @@ function RankBlock({ data, title }) {
             {data.freshBlood && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">Yeni Yükseldi</span>}
             {data.veteran && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full font-medium">Deneyimli</span>}
           </div>
-          <p className="text-sm text-gray-400 mt-1">{data.lp} LP</p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-sm text-gray-400">{data.lp} LP</span>
+            <span
+              onMouseEnter={(e) => setAnchor(e.currentTarget)}
+              onMouseLeave={() => setAnchor(null)}
+              className="text-[11px] text-blue-300 bg-blue-500/10 border border-blue-500/25 px-1.5 py-0.5 rounded cursor-help"
+            >
+              Top %{rk.topPct}
+            </span>
+          </div>
           <div className="flex items-center gap-3 mt-2">
             <span className="text-sm">
               <span className="text-emerald-400 font-medium">{data.wins}G</span>
@@ -46,6 +79,17 @@ function RankBlock({ data, title }) {
           </div>
         </div>
       </div>
+
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
+            <p className="text-xs text-white font-semibold">Ladder Sıralaması</p>
+            <p className="text-[11px] text-gray-400 mt-1">Dünya: <span className="text-gray-200">#{trNum(rk.global)}</span></p>
+            <p className="text-[11px] text-gray-400">Türkiye: <span className="text-gray-200">#{trNum(rk.tr)}</span></p>
+            <p className="text-[10px] text-blue-300/80 mt-1">≈ En iyi %{rk.topPct}</p>
+          </div>
+        </Tooltip>
+      )}
     </div>
   );
 }
@@ -64,10 +108,41 @@ function UnrankedBlock({ title }) {
   );
 }
 
+/* Ortalama rakip seviyesi (son 10 maç) — TEST VERİSİ, DB/worker ile gelecek. */
+function AvgEnemiesRating() {
+  const [anchor, setAnchor] = useState(null);
+  const tier = "PLATINUM";
+  const label = "Platinum I";
+
+  return (
+    <div className="flex items-center gap-3">
+      <img src={rankBadgeUrl(tier)} alt={tier} width={34} height={34} className="flex-shrink-0" />
+      <div
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+        className="cursor-help"
+      >
+        <p className="text-[10px] text-gray-500 uppercase tracking-wider">Ortalama Rakip Seviyesi</p>
+        <p className="text-sm text-gray-200 font-medium">
+          {label} <span className="text-[10px] text-gray-500 font-normal">· son 10 maç</span>
+        </p>
+      </div>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[220px] text-center">
+            <p className="text-xs text-white font-semibold">Ortalama Rakip Seviyesi</p>
+            <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">Son 10 maçta karşılaştığın rakiplerin ortalama rankı.</p>
+          </div>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
+
 /*
   Büyük birleşik sıralama kartı: Solo/Duo + Flex yan yana belirgin bloklar
-  (büyük rank ikonu, WR%); altında WR geçmişi grafikleri (Solo açık, Flex kapalı).
-  Geniş ana kolonda durur.
+  (büyük rank ikonu, WR%, Top %X). Altında ortalama rakip seviyesi + WR geçmişi
+  grafikleri (Solo açık, Flex kapalı). Geniş ana kolonda durur.
 */
 export default function RankCard({ solo, flex, winrateTimeline }) {
   if (!solo && !flex) {
@@ -92,6 +167,10 @@ export default function RankCard({ solo, flex, winrateTimeline }) {
         <div className="md:border-l md:border-[#1b2230]/50 md:pl-6">
           {flex ? <RankBlock data={flex} title="Flex 5v5" /> : <UnrankedBlock title="Flex 5v5" />}
         </div>
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-[#1b2230]/40">
+        <AvgEnemiesRating />
       </div>
 
       {hasGraph && (

@@ -123,6 +123,45 @@ function MasteryBadge({ level, points, size = 28 }) {
   );
 }
 
+/*
+  PLACEHOLDER (TEST VERİSİ) — şampiyon dünya/TR sıralaması DB/worker ile gelecek.
+  Bkz. PROFILE_RANKINGS_PLAN.md. İsim+oyun sayısından deterministik makul sıra üretir.
+*/
+function placeholderChampRank(name, games) {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const global = Math.max(800, 9000 + (h % 230000) - (games || 0) * 120);
+  const tr = Math.max(60, Math.round(global / 13));
+  return { global, tr };
+}
+
+function ChampRank({ name, games }) {
+  const [anchor, setAnchor] = useState(null);
+  const { global, tr } = placeholderChampRank(name, games);
+  const fmt = (n) => n.toLocaleString("tr-TR");
+
+  return (
+    <>
+      <span
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+        className="text-[10px] text-gray-500 cursor-help hover:text-gray-400"
+      >
+        TR #{fmt(tr)}
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
+            <p className="text-xs text-white font-semibold">{name} sıralaması</p>
+            <p className="text-[11px] text-gray-400 mt-1">Dünya: <span className="text-gray-200">#{fmt(global)}</span></p>
+            <p className="text-[11px] text-gray-400">Türkiye: <span className="text-gray-200">#{fmt(tr)}</span></p>
+          </div>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+
 export default function ChampionPool({ seasonChampions, masteries, gameName, tagLine }) {
   const [view, setView] = useState("played");
   const [open, setOpen] = useState(false);
@@ -291,8 +330,10 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
                 <p className="text-sm text-gray-100 font-medium group-hover:text-white transition-colors truncate">
                   {c.championName}
                 </p>
-                {isMastery && (
+                {isMastery ? (
                   <p className="text-[10px] text-gray-500">{formatPoints(c.masteryPoints)} puan</p>
+                ) : (
+                  !noGames && <ChampRank name={c.championName} games={c.games} />
                 )}
               </div>
 

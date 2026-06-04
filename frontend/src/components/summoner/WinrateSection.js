@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useId } from "react";
+import { useState, useId, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import Tooltip from "@/components/shared/Tooltip";
 
@@ -25,6 +25,20 @@ export default function WinrateSection({ timeline, defaultOpen = false, label = 
   const [hovAnchor, setHovAnchor] = useState(null);
   const [filter, setFilter] = useState("all");
 
+  // Grafik konteyner genişliğini ölç → viewBox = gerçek piksel genişliği,
+  // böylece SVG yatayda esnemez/distort olmaz (geniş kartta da net görünür).
+  const wrapRef = useRef(null);
+  const [chartWidth, setChartWidth] = useState(560);
+  useEffect(() => {
+    if (!open || !wrapRef.current) return;
+    const el = wrapRef.current;
+    const update = () => setChartWidth(Math.max(el.clientWidth, 220));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open]);
+
   if (!timeline || timeline.length < 2) return null;
 
   // Filtreleme
@@ -40,7 +54,7 @@ export default function WinrateSection({ timeline, defaultOpen = false, label = 
   // Filtrelenmiş veri 2'den azsa fallback olarak tümünü göster
   const data = filteredTimeline.length >= 2 ? filteredTimeline : timeline;
 
-  const width = 300;
+  const width = chartWidth;
   const height = 70;
   const pad = { x: 30, y: 10 };
 
@@ -123,6 +137,7 @@ export default function WinrateSection({ timeline, defaultOpen = false, label = 
             ))}
           </div>
 
+          <div ref={wrapRef} className="w-full">
           <svg
             width="100%" height={height + 18}
             viewBox={`0 0 ${width} ${height + 18}`}
@@ -203,6 +218,7 @@ export default function WinrateSection({ timeline, defaultOpen = false, label = 
               </text>
             ))}
           </svg>
+          </div>
 
           {/* Portal Tooltip */}
           {hovData && hovAnchor && (
