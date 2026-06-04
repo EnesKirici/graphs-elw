@@ -20,16 +20,24 @@ function ItemRow({ items, size = 32 }) {
   );
 }
 
-function Card({ title, extra, children, className = "" }) {
+// Birleşik kart (tek glass kutu) — içine birden çok Section gelir, divide-y ile ayrılır.
+function Panel({ children, className = "" }) {
   return (
-    <div className={`glass rounded-xl overflow-hidden ${className}`}>
-      {title && (
-        <div className="px-4 py-2.5 border-b border-[#1b2230]/50 flex items-center justify-between">
-          <h3 className="text-xs font-semibold text-gray-200 uppercase tracking-wider">{title}</h3>
-          {extra}
-        </div>
-      )}
-      <div className="p-4">{children}</div>
+    <div className={`glass rounded-xl overflow-hidden divide-y divide-[#1b2230]/40 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+// Kart içi bölüm (alt başlık + içerik).
+function Section({ title, extra, children }) {
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">{title}</h3>
+        {extra}
+      </div>
+      {children}
     </div>
   );
 }
@@ -68,10 +76,10 @@ export default function ChampionBuild({ champion, version, championList = [], ru
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* SOL — Önerilen buildler + Top players + Matchup */}
-        <div className="lg:col-span-3 space-y-4">
-          <Card title="Önerilen Buildler" extra={<span className="text-[10px] text-gray-600">WR</span>}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        {/* SOL — Önerilen buildler + Top players + Matchup (tek kart) */}
+        <Panel className="lg:col-span-3">
+          <Section title="Önerilen Buildler" extra={<span className="text-[10px] text-gray-600">WR</span>}>
             <div className="space-y-2">
               {data.builds.map((b, i) => (
                 <div key={i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]">
@@ -83,9 +91,9 @@ export default function ChampionBuild({ champion, version, championList = [], ru
                 </div>
               ))}
             </div>
-          </Card>
+          </Section>
 
-          <Card title="En İyi Oyuncular">
+          <Section title="En İyi Oyuncular">
             <div className="space-y-2">
               {data.topPlayers.map((p, i) => (
                 <div key={i} className="flex items-center gap-2.5">
@@ -99,23 +107,21 @@ export default function ChampionBuild({ champion, version, championList = [], ru
                 </div>
               ))}
             </div>
-          </Card>
+          </Section>
 
-          <Card title="Eşleşmeler (Matchup)">
+          <Section title="Eşleşmeler (Matchup)">
             <MatchupCol label="İyi Eşleşmeler" rows={matchups.easy} good />
             <div className="my-3 border-t border-[#1b2230]/40" />
             <MatchupCol label="Zor Eşleşmeler" rows={matchups.hard} />
-          </Card>
-        </div>
+          </Section>
+        </Panel>
 
-        {/* ORTA — Rünler + Yetenek sırası */}
-        <div className="lg:col-span-5 space-y-4">
-          <Card title="Rünler" extra={<span className="text-[10px] text-gray-600">En popüler · {data.builds[0]?.wr}% WR</span>}>
+        {/* ORTA — Rünler + Yetenek sırası (tek kart) */}
+        <Panel className="lg:col-span-5">
+          <Section title="Rünler" extra={<span className="text-[10px] text-gray-600">En popüler · {data.builds[0]?.wr}% WR</span>}>
             {runePage ? (
               <div className="flex gap-6 justify-center">
-                {/* Ana ağaç — tüm rünler, seçili vurgulu */}
                 <RuneTree tree={runePage.primary} selected={runePage.selected} />
-                {/* İkincil ağaç + stat shard'lar */}
                 <div className="border-l border-[#1b2230]/40 pl-6 flex flex-col items-center gap-3">
                   <RuneTree tree={runePage.secondary} selected={runePage.selected} skipKeystone />
                   <div className="flex flex-col items-center gap-2 pt-3 mt-1 border-t border-[#1b2230]/40">
@@ -132,30 +138,30 @@ export default function ChampionBuild({ champion, version, championList = [], ru
             ) : (
               <p className="text-xs text-gray-600 text-center py-6">Rün verisi yüklenemedi</p>
             )}
-          </Card>
+          </Section>
 
-          <Card title="Yetenek Sırası" extra={
+          <Section title="Yetenek Sırası" extra={
             <span className="text-[11px] text-gray-400">
               Max: {data.abilityOrder.maxFirst.map((k, i) => (
                 <span key={i}>{i > 0 && <span className="text-gray-600 mx-0.5">›</span>}<b className="text-gray-200">{k}</b></span>
               ))}
             </span>
           }>
-            <AbilityGrid order={data.abilityOrder.order} />
-          </Card>
-        </div>
+            <AbilityGrid order={data.abilityOrder.order} spells={champion.spells} />
+          </Section>
+        </Panel>
 
-        {/* SAĞ — Spells + Itemler */}
-        <div className="lg:col-span-4 space-y-4">
-          <Card title="Sihirdar Büyüleri">
+        {/* SAĞ — Sihirdar büyüleri + Itemler (tek kart) */}
+        <Panel className="lg:col-span-4">
+          <Section title="Sihirdar Büyüleri">
             <div className="flex items-center gap-2">
               {data.spells.map((s, i) => (
                 <img key={i} src={s} alt="" width={40} height={40} className="rounded-lg border border-[#1b2230]" onError={hideOnError} />
               ))}
             </div>
-          </Card>
+          </Section>
 
-          <Card title="Itemler">
+          <Section title="Itemler">
             <div className="space-y-4">
               {phases.map((ph) => (
                 <div key={ph.label}>
@@ -175,8 +181,8 @@ export default function ChampionBuild({ champion, version, championList = [], ru
                 <ItemRow items={data.situational} size={28} />
               </div>
             </div>
-          </Card>
-        </div>
+          </Section>
+        </Panel>
       </div>
     </div>
   );
@@ -199,7 +205,7 @@ function MatchupCol({ label, rows, good }) {
   );
 }
 
-function AbilityGrid({ order }) {
+function AbilityGrid({ order, spells = [] }) {
   const rows = ["Q", "W", "E", "R"];
   const keyColor = {
     Q: "bg-blue-500/25 text-blue-300", W: "bg-green-500/25 text-green-300",
@@ -209,15 +215,24 @@ function AbilityGrid({ order }) {
     <div className="overflow-x-auto">
       <div className="inline-block">
         {/* Seviye başlıkları */}
-        <div className="flex gap-0.5 mb-1 pl-6">
+        <div className="flex gap-0.5 mb-1" style={{ paddingLeft: 36 }}>
           {order.map((_, i) => (
             <span key={i} className="w-5 text-center text-[8px] text-gray-600">{i + 1}</span>
           ))}
         </div>
-        {rows.map((r) => (
-          <div key={r} className="flex gap-0.5 items-center mb-0.5">
-            <span className={`w-5 text-center text-[10px] font-bold rounded ${keyColor[r]}`}>{r}</span>
-            <span className="w-1" />
+        {rows.map((r, ri) => (
+          <div key={r} className="flex gap-0.5 items-center mb-1">
+            {/* Yetenek görseli (Q/W/E/R harfi yerine gerçek skill ikonu) */}
+            <div className="relative w-7 h-7 flex-shrink-0">
+              {spells[ri]?.image ? (
+                <img src={spells[ri].image} alt={r} width={28} height={28}
+                  className="rounded border border-[#1b2230]" onError={hideOnError} />
+              ) : (
+                <span className={`w-7 h-7 flex items-center justify-center text-[11px] font-bold rounded ${keyColor[r]}`}>{r}</span>
+              )}
+              <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 flex items-center justify-center text-[8px] font-bold rounded ${keyColor[r]}`}>{r}</span>
+            </div>
+            <span className="w-1.5" />
             {order.map((lvl, i) => (
               <span key={i}
                 className={`w-5 h-5 rounded text-center text-[9px] flex items-center justify-center ${
