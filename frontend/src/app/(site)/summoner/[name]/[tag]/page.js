@@ -2,6 +2,8 @@ import { fetchApi } from "@/lib/api";
 import Link from "next/link";
 import ChampionPool from "@/components/summoner/ChampionPool";
 import RankCard from "@/components/summoner/RankCard";
+import StatsCard from "@/components/summoner/StatsCard";
+import RoleRadar from "@/components/summoner/RoleRadar";
 import SummonerContent from "@/components/summoner/SummonerContent";
 import ChallengesCard from "@/components/summoner/ChallengesCard";
 import DuoPartnersCard from "@/components/summoner/DuoPartnersCard";
@@ -81,23 +83,29 @@ export default async function SummonerPage({ params }) {
       {/* ===== CONTENT ===== */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         <SummonerContent
-          leftColumn={
+          rankCard={
+            <RankCard solo={solo} flex={flex} winrateTimeline={data.winrateTimeline} />
+          }
+          sideColumn={
             <>
-              {/* Kompakt birleşik sıralama kartı (Solo/Duo + Flex) */}
-              <RankCard solo={solo} flex={flex} winrateTimeline={data.winrateTimeline} />
-              {/* En Çok Oynanan — artık rank kartının hemen altında, yukarıda görünür */}
+              {/* Kompakt İstatistikler + kişilik rozetleri */}
+              <StatsCard
+                seasonChampions={data.seasonChampions || {}}
+                solo={solo}
+                flex={flex}
+                totalSeasonMatches={data.totalSeasonMatches || 0}
+                personalityBadges={data.personalityBadges || []}
+              />
+              {/* En Çok Oynanan — sidebar üstünde, ilk açılışta görünür */}
               <ChampionPool seasonChampions={data.seasonChampions || {}} masteries={masteries} gameName={profile.gameName} tagLine={profile.tagLine} />
+              {/* Koridorlar — kendi kartında */}
+              <RoleRadar seasonRoles={data.seasonRoles} />
               <ChallengesCard challenges={data.challengeAverages} />
               <DuoPartnersCard duoPartners={data.duoPartners} />
             </>
           }
           initialMatches={recentMatches}
           puuid={profile.puuid}
-          seasonChampions={data.seasonChampions || {}}
-          seasonRoles={data.seasonRoles}
-          totalSeasonMatches={data.totalSeasonMatches || 0}
-          solo={solo}
-          flex={flex}
         />
       </div>
     </div>

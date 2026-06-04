@@ -18,7 +18,7 @@ const TIME_FILTERS = [
   { key: "30d", label: "30 Gün", days: 30 },
 ];
 
-export default function WinrateSection({ timeline, defaultOpen = false }) {
+export default function WinrateSection({ timeline, defaultOpen = false, label = "Win Rate Geçmişi" }) {
   const uid = useId().replace(/:/g, "");
   const [open, setOpen] = useState(defaultOpen);
   const [hovIdx, setHovIdx] = useState(null);
@@ -96,7 +96,7 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
         className="w-full flex items-center justify-between cursor-pointer group"
       >
         <span className="text-[11px] text-gray-400 group-hover:text-gray-200 transition-colors">
-          Win Rate Geçmişi
+          {label}
         </span>
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-gray-500">{data.length} maç</span>

@@ -315,6 +315,206 @@ class MatchStatisticsService
     }
 
     /**
+     * Sezon kişilik rozetleri (op.gg "Personal Ratings" tarzı).
+     * Sezon maçlarını tek geçişte tarayıp davranışsal eğilimleri çıkarır:
+     * en sevilen şampiyon, galibiyet/mağlubiyet sonrası WR, taraf tercihi,
+     * teslim olma, ilk kan, görüş. Hepsi DB'deki maç detaylarından (0 API isteği).
+     *
+     * Dönüş: [['key','label','desc','positive'=>bool], ...] (tetiklenenler).
+     */
+    public function getPersonalityBadges(string $puuid): array
+    {
+        $cacheKey = "season_badges:v2:{$puuid}";
+
+        return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
+            $games = [];
+
+            foreach ([420, 440, 400, 430, 490] as $queueId) {
+                try {
+                    $matchIds = $this->matchData->getSeasonMatchIds($puuid, $queueId);
+                } catch (\Exception $e) {
+                    continue;
+                }
+                foreach ($matchIds as $matchId) {
+                    try {
+                        $detail = $this->matchData->getMatchDetail($matchId);
+                        $info = $detail['info'] ?? [];
+                        if (($info['gameDuration'] ?? 0) < 300) continue;
+                        foreach ($info['participants'] as $p) {
+                            if ($p['puuid'] !== $puuid) continue;
+                            $c = $p['challenges'] ?? [];
+                            $games[] = [
+                                'champ'      => $p['championName'],
+                                'win'        => (bool) $p['win'],
+                                'teamId'     => $p['teamId'] ?? 0,
+                                'surrender'  => (bool) ($p['gameEndedInSurrender'] ?? false),
+                                'firstBlood' => (bool) ($p['firstBloodKill'] ?? false),
+                                'visionPm'   => (float) ($c['visionScorePerMinute'] ?? 0),
+                                'kills'      => (int) ($p['kills'] ?? 0),
+                                'deaths'     => (int) ($p['deaths'] ?? 0),
+                                'assists'    => (int) ($p['assists'] ?? 0),
+                                'dmgPct'     => (float) ($c['teamDamagePercentage'] ?? 0),
+                                'time'       => $info['gameCreation'] ?? 0,
+                            ];
+                            break;
+                        }
+                    } catch (\Exception $e) {
+                        continue;
+                    }
+                }
+            }
+
+            $g = count($games);
+            if ($g < 10) return [];
+
+            usort($games, fn($a, $b) => $a['time'] <=> $b['time']);
+
+            $totalWins = 0;
+            $champCount = [];
+            $blue = ['g' => 0, 'w' => 0];
+            $red  = ['g' => 0, 'w' => 0];
+            $afterWin = ['g' => 0, 'w' => 0];
+            $afterLoss = ['g' => 0, 'w' => 0];
+            $surrenderLosses = 0;
+            $firstBloods = 0;
+            $visionSum = 0;
+            $sumK = 0; $sumD = 0; $sumA = 0; $dmgSum = 0;
+            $prevWin = null;
+
+            foreach ($games as $gm) {
+                if ($gm['win']) $totalWins++;
+                $champCount[$gm['champ']] = ($champCount[$gm['champ']] ?? 0) + 1;
+
+                if ($gm['teamId'] === 100) { $blue['g']++; if ($gm['win']) $blue['w']++; }
+                elseif ($gm['teamId'] === 200) { $red['g']++; if ($gm['win']) $red['w']++; }
+
+                if ($prevWin === true)  { $afterWin['g']++;  if ($gm['win']) $afterWin['w']++; }
+                if ($prevWin === false) { $afterLoss['g']++; if ($gm['win']) $afterLoss['w']++; }
+                $prevWin = $gm['win'];
+
+                if (!$gm['win'] && $gm['surrender']) $surrenderLosses++;
+                if ($gm['firstBlood']) $firstBloods++;
+                $visionSum += $gm['visionPm'];
+                $sumK += $gm['kills']; $sumD += $gm['deaths']; $sumA += $gm['assists'];
+                $dmgSum += $gm['dmgPct'];
+            }
+
+            $overallWr = $totalWins / $g * 100;
+            $losses = $g - $totalWins;
+            $badges = [];
+
+            // 1) En sevilen şampiyon
+            arsort($champCount);
+            $topChamp = array_key_first($champCount);
+            $topGames = $champCount[$topChamp] ?? 0;
+            if ($topGames >= 15 && $topGames >= $g * 0.2) {
+                $badges[] = [
+                    'key' => 'champ_lover', 'positive' => true,
+                    'label' => "{$topChamp} Sevdalısı",
+                    'desc' => "Bu sezon {$topChamp} ile {$topGames} maç oynadı.",
+                ];
+            }
+
+            // 2) Zincir galibiyet — galibiyet sonrası WR belirgin yüksek
+            if ($afterWin['g'] >= 8) {
+                $awWr = $afterWin['w'] / $afterWin['g'] * 100;
+                $delta = $awWr - $overallWr;
+                if ($delta >= 5) {
+                    $badges[] = [
+                        'key' => 'chain_wins', 'positive' => true,
+                        'label' => 'Zincir Galibiyet',
+                        'desc' => 'Bir galibiyetin hemen ardından kazanma oranı ortalamadan %' . round($delta) . ' yüksek.',
+                    ];
+                }
+            }
+
+            // 3) Tilt eğilimi — mağlubiyet sonrası WR belirgin düşük (negatif)
+            if ($afterLoss['g'] >= 8) {
+                $alWr = $afterLoss['w'] / $afterLoss['g'] * 100;
+                $delta = $overallWr - $alWr;
+                if ($delta >= 8) {
+                    $badges[] = [
+                        'key' => 'tilt', 'positive' => false,
+                        'label' => 'Tilt Eğilimi',
+                        'desc' => 'Bir mağlubiyetin ardından kazanma oranı %' . round($delta) . ' düşüyor.',
+                    ];
+                }
+            }
+
+            // 4) Taraf tercihi — kırmızı/mavi WR farkı
+            if ($blue['g'] >= 8 && $red['g'] >= 8) {
+                $blueWr = $blue['w'] / $blue['g'] * 100;
+                $redWr  = $red['w'] / $red['g'] * 100;
+                $diff = $redWr - $blueWr;
+                if (abs($diff) >= 6) {
+                    $side = $diff > 0 ? 'Kırmızı' : 'Mavi';
+                    $badges[] = [
+                        'key' => 'side_lover', 'positive' => true,
+                        'label' => "{$side} Taraf Sevdalısı",
+                        'desc' => "{$side} tarafta kazanma oranı %" . round(abs($diff)) . ' daha yüksek.',
+                    ];
+                }
+            }
+
+            // 5) Teslimci — mağlubiyetlerin büyük kısmı teslimle bitiyor (negatif)
+            if ($losses >= 10) {
+                $rate = $surrenderLosses / $losses;
+                if ($rate >= 0.55) {
+                    $badges[] = [
+                        'key' => 'surrenders', 'positive' => false,
+                        'label' => 'Teslimci',
+                        'desc' => 'Mağlubiyetlerinin %' . round($rate * 100) . "'inde takım teslim oldu.",
+                    ];
+                }
+            }
+
+            // 6) İlk kan avcısı
+            $fbRate = $firstBloods / $g;
+            if ($g >= 15 && $fbRate >= 0.22) {
+                $badges[] = [
+                    'key' => 'first_blood', 'positive' => true,
+                    'label' => 'İlk Kan Avcısı',
+                    'desc' => 'Maçların %' . round($fbRate * 100) . "'inde ilk kanı aldı.",
+                ];
+            }
+
+            // 7) Göz bekçisi — yüksek görüş skoru
+            $avgVision = $visionSum / $g;
+            if ($g >= 15 && $avgVision >= 1.4) {
+                $badges[] = [
+                    'key' => 'vision', 'positive' => true,
+                    'label' => 'Göz Bekçisi',
+                    'desc' => 'Dakika başına ortalama ' . round($avgVision, 1) . ' görüş skoru.',
+                ];
+            }
+
+            // 8) Sağlam KDA — sezon ortalaması yüksek
+            $kdaRatio = $sumD > 0 ? ($sumK + $sumA) / $sumD : ($sumK + $sumA);
+            if ($g >= 15 && $kdaRatio >= 3.0) {
+                $badges[] = [
+                    'key' => 'solid_kda', 'positive' => true,
+                    'label' => 'Sağlam KDA',
+                    'desc' => 'Sezon ortalaması ' . round($kdaRatio, 2) . ' KDA.',
+                ];
+            }
+
+            // 9) Hasar lideri — takım hasarının büyük kısmını yapıyor
+            $avgDmg = $dmgSum / $g;
+            if ($g >= 15 && $avgDmg >= 0.27) {
+                $badges[] = [
+                    'key' => 'damage_carry', 'positive' => true,
+                    'label' => 'Hasar Lideri',
+                    'desc' => 'Takım hasarının ortalama %' . round($avgDmg * 100) . "'ini yapıyor.",
+                ];
+            }
+
+            // Pozitifler önce, en fazla 6 rozet
+            usort($badges, fn($a, $b) => ($b['positive'] <=> $a['positive']));
+            return array_slice($badges, 0, 6);
+        });
+    }
+
+    /**
      * Son maçlardan istatistik hesapla.
      */
     public function calculateRecentStats(array $matches, string $puuid): array

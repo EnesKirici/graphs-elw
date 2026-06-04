@@ -16,114 +16,94 @@ function tierLabel(data) {
   return data.tier.charAt(0) + data.tier.slice(1).toLowerCase();
 }
 
-/* Solo/Duo — belirgin blok */
-function SoloBlock({ data }) {
+/* Büyük rank bloğu — Solo/Duo ve Flex aynı görünüm, yeşil/kırmızı bar YOK */
+function RankBlock({ data, title }) {
   return (
-    <>
-      <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-3">Solo/Duo</p>
-      {/* Rozet ile metin bloğu aynı optik yükseklikte → items-center ortalar */}
-      <div className="flex items-center gap-3">
+    <div>
+      <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-3">{title}</p>
+      <div className="flex items-center gap-4">
         <img
           src={rankBadgeUrl(data.tier)}
           alt={data.tier}
-          width={76}
-          height={76}
-          className="flex-shrink-0"
+          width={92}
+          height={92}
+          className="flex-shrink-0 drop-shadow-[0_4px_14px_rgba(0,0,0,0.5)]"
         />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <p className="text-xl font-bold text-white leading-tight">{tierLabel(data)} {data.rank}</p>
-            <span className="text-xs text-gray-400">{data.lp} LP</span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-1">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-2xl font-bold text-white leading-tight">{tierLabel(data)} {data.rank}</p>
             {data.freshBlood && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">Yeni Yükseldi</span>}
             {data.veteran && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full font-medium">Deneyimli</span>}
-            <span className="text-xs text-emerald-400">{data.wins}W</span>
-            <span className="text-xs text-gray-600">/</span>
-            <span className="text-xs text-red-400">{data.losses}L</span>
+          </div>
+          <p className="text-sm text-gray-400 mt-1">{data.lp} LP</p>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-sm">
+              <span className="text-emerald-400 font-medium">{data.wins}G</span>
+              <span className="text-gray-600 mx-1">/</span>
+              <span className="text-red-400 font-medium">{data.losses}M</span>
+            </span>
+            <span className={`text-lg font-bold ${getWrColor(data.winRate)}`}>{data.winRate}%</span>
           </div>
         </div>
-        <div className="flex-shrink-0 text-right">
-          <p className={`text-2xl font-bold leading-none ${getWrColor(data.winRate)}`}>{data.winRate}%</p>
-          <p className="text-[10px] text-gray-500 mt-1">Win Rate</p>
-        </div>
       </div>
-      <div className="mt-3 h-1.5 rounded-full overflow-hidden flex">
-        <div className="h-full bg-emerald-500" style={{ width: `${data.winRate}%` }} />
-        <div className="h-full bg-red-500" style={{ width: `${100 - data.winRate}%` }} />
-      </div>
-    </>
-  );
-}
-
-/* Flex — ince satır */
-function FlexRow({ data }) {
-  return (
-    <div className="flex items-center gap-3">
-      <img src={rankBadgeUrl(data.tier)} alt={data.tier} width={40} height={40} className="flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Flex</span>
-          <p className="text-sm font-bold text-white truncate">{tierLabel(data)} {data.rank}</p>
-          <span className="text-[11px] text-gray-500">{data.lp} LP</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-emerald-400">{data.wins}W</span>
-          <span className="text-[11px] text-gray-600">/</span>
-          <span className="text-[11px] text-red-400">{data.losses}L</span>
-        </div>
-      </div>
-      <p className={`text-sm font-bold ${getWrColor(data.winRate)} flex-shrink-0`}>{data.winRate}%</p>
     </div>
   );
 }
 
-function UnrankedRow({ title }) {
+function UnrankedBlock({ title }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-[10px] text-gray-500 uppercase tracking-wider">{title}</span>
-      <span className="text-xs text-gray-600">Unranked</span>
+    <div>
+      <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-3">{title}</p>
+      <div className="flex items-center gap-4 opacity-60">
+        <div className="w-[92px] h-[92px] rounded-full bg-[#1b2230]/40 border border-[#1b2230] flex items-center justify-center flex-shrink-0">
+          <span className="text-gray-600 text-sm">?</span>
+        </div>
+        <p className="text-sm text-gray-500">Unranked</p>
+      </div>
     </div>
   );
 }
 
 /*
-  Birleşik kompakt sıralama kartı: Solo/Duo belirgin (WR geçmişi varsayılan AÇIK)
-  + Flex ince satır (WR geçmişi aynı yapıda ama varsayılan KAPALI). Flex'in büyük
-  kartı kaldırıldığı için En Çok Oynanan ekranda yukarı çıkar.
+  Büyük birleşik sıralama kartı: Solo/Duo + Flex yan yana belirgin bloklar
+  (büyük rank ikonu, WR%); altında WR geçmişi grafikleri (Solo açık, Flex kapalı).
+  Geniş ana kolonda durur.
 */
 export default function RankCard({ solo, flex, winrateTimeline }) {
   if (!solo && !flex) {
     return (
-      <div className="glass rounded-xl p-4 text-center">
+      <div className="glass rounded-xl p-6 text-center">
         <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-2">Sıralamalar</p>
-        <p className="text-xs text-gray-600">Unranked</p>
+        <p className="text-sm text-gray-600">Bu oyuncu derecesiz</p>
       </div>
     );
   }
 
   const soloTl = winrateTimeline?.solo?.timeline;
   const flexTl = winrateTimeline?.flex?.timeline;
+  const hasGraph = soloTl?.length >= 2 || flexTl?.length >= 2;
 
   return (
-    <div className="glass rounded-xl p-5">
-      {/* Solo/Duo — belirgin */}
-      {solo ? <SoloBlock data={solo} /> : <UnrankedRow title="Solo/Duo" />}
-
-      {/* Solo/Duo Win Rate Geçmişi — varsayılan AÇIK */}
-      {solo && soloTl?.length >= 2 && <WinrateSection timeline={soloTl} defaultOpen={true} />}
-
-      {/* Flex — ince satır + aynı yapıda WR geçmişi (varsayılan KAPALI) */}
-      <div className="mt-3 pt-3 border-t border-[#1b2230]/40">
-        {flex ? (
-          <>
-            <FlexRow data={flex} />
-            {flexTl?.length >= 2 && <WinrateSection timeline={flexTl} defaultOpen={false} />}
-          </>
-        ) : (
-          <UnrankedRow title="Flex" />
-        )}
+    <div className="glass rounded-xl p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="md:pr-6">
+          {solo ? <RankBlock data={solo} title="Solo/Duo" /> : <UnrankedBlock title="Solo/Duo" />}
+        </div>
+        <div className="md:border-l md:border-[#1b2230]/50 md:pl-6">
+          {flex ? <RankBlock data={flex} title="Flex 5v5" /> : <UnrankedBlock title="Flex 5v5" />}
+        </div>
       </div>
+
+      {hasGraph && (
+        <div className="mt-1">
+          {soloTl?.length >= 2 && (
+            <WinrateSection timeline={soloTl} defaultOpen={true} label="Solo/Duo — Win Rate Geçmişi" />
+          )}
+          {flexTl?.length >= 2 && (
+            <WinrateSection timeline={flexTl} defaultOpen={false} label="Flex — Win Rate Geçmişi" />
+          )}
+        </div>
+      )}
     </div>
   );
 }

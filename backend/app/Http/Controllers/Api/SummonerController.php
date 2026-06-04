@@ -157,6 +157,7 @@ class SummonerController extends Controller
             "match:ids:{$puuid}:20:0",
             "challenge_avgs:v2:{$puuid}",
             "duo_partners:v3:{$puuid}",
+            "season_badges:v2:{$puuid}",
         ];
 
         foreach ($seasonKeys as $key) {
@@ -328,6 +329,14 @@ class SummonerController extends Controller
             if ($e->getCode() === 429) $rateLimited = true;
         }
 
+        // Kişilik rozetleri (DB-only, 0 API isteği)
+        $personalityBadges = [];
+        try {
+            $personalityBadges = $this->match->getPersonalityBadges($puuid);
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
+
         // Winrate timeline
         try {
             $winrateTimeline = $this->match->getWinrateTimeline($puuid);
@@ -388,6 +397,7 @@ class SummonerController extends Controller
             'bannerSkins'       => $bannerSkins,
             'challengeAverages'  => $challengeAverages,
             'duoPartners'        => $duoPartners,
+            'personalityBadges'  => $personalityBadges,
             'rateLimited'        => $rateLimited,
             'retryAfter'         => $retryAfter,
         ]);

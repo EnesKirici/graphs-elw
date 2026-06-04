@@ -401,6 +401,11 @@ class MatchService
         return $this->statistics->getSeasonChampionStats($puuid);
     }
 
+    public function getPersonalityBadges(string $puuid): array
+    {
+        return $this->statistics->getPersonalityBadges($puuid);
+    }
+
     public function calculateRecentStats(array $matches, string $puuid): array
     {
         return $this->statistics->calculateRecentStats($matches, $puuid);

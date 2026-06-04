@@ -2,44 +2,22 @@
 
 import { useState } from "react";
 import MatchList from "./MatchList";
-import StatsCard from "./StatsCard";
 
-export default function SummonerContent({
-  leftColumn,
-  initialMatches,
-  puuid,
-  seasonChampions,
-  seasonRoles,
-  totalSeasonMatches,
-  solo,
-  flex,
-}) {
+/*
+  Profil içerik yerleşimi:
+  - ANA kolon (geniş): büyük Rank kartı + Son Maçlar
+  - SIDEBAR (dar): İstatistikler + En Çok Oynanan + Koridorlar + Challenges + Duo
+  Maç detayı açıkken ana kolon tam genişliğe yayılır, sidebar gizlenir.
+*/
+export default function SummonerContent({ rankCard, sideColumn, initialMatches, puuid }) {
   const [selectedMatchId, setSelectedMatchId] = useState(null);
-  const [matches, setMatches] = useState(initialMatches || []);
+  const [, setMatches] = useState(initialMatches || []);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-      {/* Sol kolon — maç detayı açıkken gizle */}
-      {!selectedMatchId && (
-        <div className="lg:col-span-4 space-y-4">
-          {leftColumn}
-        </div>
-      )}
-
-      {/* Sağ kolon — maç detayı açıkken tam genişlik */}
-      <div className={`${selectedMatchId ? "lg:col-span-12" : "lg:col-span-8"} space-y-4`}>
-        {/* İstatistik merkezi (4 daire + Koridorlar), sekme ile queue filtresi */}
-        {!selectedMatchId && (
-          <StatsCard
-            seasonChampions={seasonChampions}
-            seasonRoles={seasonRoles}
-            matches={matches}
-            solo={solo}
-            flex={flex}
-            totalSeasonMatches={totalSeasonMatches}
-          />
-        )}
-        {/* Son Maçlar — özet kaldırıldı, liste yukarı çıktı */}
+      {/* Ana kolon — Rank + Son Maçlar */}
+      <div className={`${selectedMatchId ? "lg:col-span-12" : "lg:col-span-8"} space-y-5`}>
+        {!selectedMatchId && rankCard}
         <MatchList
           initialMatches={initialMatches}
           puuid={puuid}
@@ -48,6 +26,13 @@ export default function SummonerContent({
           onMatchesChange={setMatches}
         />
       </div>
+
+      {/* Sidebar — maç detayı açıkken gizle */}
+      {!selectedMatchId && (
+        <div className="lg:col-span-4 space-y-5">
+          {sideColumn}
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import QueueTabs from "./QueueTabs";
-import RoleRadar from "./RoleRadar";
+import PersonalityBadges from "./PersonalityBadges";
 
 const QUEUE_OPTIONS = [
   { key: "all", label: "Tümü" },
@@ -10,7 +10,7 @@ const QUEUE_OPTIONS = [
   { key: "flex", label: "Flex" },
 ];
 
-function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 104 }) {
+function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 96 }) {
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.min(value / max, 1);
@@ -39,15 +39,17 @@ function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 
 }
 
 /*
-  İstatistik merkezi: üstte Tümü/SoloQ/Flex sekmesi; solda 2 daire (Toplam Maç,
-  Kazanma Oranı) + altında K/D/A özeti, SAĞDA aynı queue ile Koridorlar radarı.
+  Kompakt istatistik kartı (dar sidebar): üstte Tümü/SoloQ/Flex sekmesi;
+  2 daire (Toplam Maç, Kazanma Oranı) + K/D/A özeti; altında sezon kişilik
+  rozetleri (op.gg "Personal Ratings" tarzı). Rozetler sezon geneli olduğu
+  için sekmeden bağımsız her zaman görünür.
 */
 export default function StatsCard({
   seasonChampions = {},   // { all, ranked, solo, flex, normal }
-  seasonRoles,
   solo,
   flex,
   totalSeasonMatches = 0,
+  personalityBadges = [],
 }) {
   const [queue, setQueue] = useState("all");
 
@@ -84,7 +86,6 @@ export default function StatsCard({
   const kdaRatio = avgD > 0 ? (avgK + avgA) / avgD : avgK + avgA;
   const hasKda = analyzedGames > 0;
 
-  const hotStreak = (queue === "flex" ? flex : solo)?.hotStreak;
   const isEmpty = totalGames === 0 && analyzedGames === 0;
 
   return (
@@ -98,58 +99,51 @@ export default function StatsCard({
         {isEmpty ? (
           <p className="text-xs text-gray-600 text-center py-8">Bu kuyrukta veri yok</p>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-5">
-            {/* SOL — 2 daire (Toplam Maç, Kazanma Oranı) + özet */}
-            <div className="flex-1 flex flex-col justify-center">
-              <div className="flex items-center justify-center gap-8">
-                {totalGames > 0 && (
-                  <CircleProgress
-                    value={totalGames}
-                    max={Math.max(totalGames, 100)}
-                    label="Toplam Maç"
-                    display={totalGames}
-                    color="#3b82f6"
-                  />
-                )}
-                {analyzedGames > 0 && (
-                  <CircleProgress
-                    value={winRate}
-                    max={100}
-                    label="Kazanma Oranı"
-                    display={`${winRate}%`}
-                    color={winRate >= 51 ? "#10b981" : winRate >= 45 ? "#f59e0b" : "#ef4444"}
-                  />
-                )}
-              </div>
+          <>
+            <div className="flex items-center justify-center gap-10">
+              {totalGames > 0 && (
+                <CircleProgress
+                  value={totalGames}
+                  max={Math.max(totalGames, 100)}
+                  label="Toplam Maç"
+                  display={totalGames}
+                  color="#3b82f6"
+                />
+              )}
               {analyzedGames > 0 && (
-                <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[#1b2230]/30">
-                  <div className="text-center">
-                    <span className="text-xs text-emerald-400 font-medium">{wins}W</span>
-                    <span className="text-xs text-gray-600 mx-1">/</span>
-                    <span className="text-xs text-red-400 font-medium">{losses}L</span>
-                  </div>
-                  {hasKda && (
-                    <span className="text-xs text-gray-300">
-                      {avgK.toFixed(1)} / {avgD.toFixed(1)} / {avgA.toFixed(1)}{" "}
-                      <span className="text-[10px] text-gray-500">ort.</span>
-                    </span>
-                  )}
-                  {hotStreak && (
-                    <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
-                      Galibiyet Serisi
-                    </span>
-                  )}
-                </div>
+                <CircleProgress
+                  value={winRate}
+                  max={100}
+                  label="Kazanma Oranı"
+                  display={`${winRate}%`}
+                  color={winRate >= 51 ? "#10b981" : winRate >= 45 ? "#f59e0b" : "#ef4444"}
+                />
               )}
             </div>
 
-            {/* SAĞ — Koridorlar radarı (aynı queue) */}
-            {seasonRoles && (
-              <div className="lg:w-[290px] lg:flex-shrink-0 lg:border-l lg:border-[#1b2230]/40 lg:pl-5">
-                <RoleRadar seasonRoles={seasonRoles} filter={queue} embedded />
+            {analyzedGames > 0 && (
+              <div className="flex items-center justify-center gap-5 mt-4">
+                <div className="text-center">
+                  <span className="text-xs text-emerald-400 font-medium">{wins}G</span>
+                  <span className="text-xs text-gray-600 mx-1">/</span>
+                  <span className="text-xs text-red-400 font-medium">{losses}M</span>
+                </div>
+                {hasKda && (
+                  <span className="text-xs text-gray-300">
+                    {avgK.toFixed(1)} / {avgD.toFixed(1)} / {avgA.toFixed(1)}{" "}
+                    <span className="text-[10px] text-gray-500">({avgD > 0 ? kdaRatio.toFixed(2) : "∞"} KDA)</span>
+                  </span>
+                )}
               </div>
             )}
-          </div>
+
+            {personalityBadges.length > 0 && (
+              <div className="mt-5 pt-4 border-t border-[#1b2230]/40">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2.5">Oyuncu Özellikleri</p>
+                <PersonalityBadges badges={personalityBadges} />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
