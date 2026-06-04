@@ -3,15 +3,16 @@
 import { useState } from "react";
 import MatchList from "./MatchList";
 import StatsCard from "./StatsCard";
-import RecentChampionsCard from "./RecentChampionsCard";
 
 export default function SummonerContent({
   leftColumn,
   initialMatches,
   puuid,
+  seasonChampions,
+  seasonRoles,
   totalSeasonMatches,
-  seasonChampionsAll,
   solo,
+  flex,
 }) {
   const [selectedMatchId, setSelectedMatchId] = useState(null);
   const [matches, setMatches] = useState(initialMatches || []);
@@ -27,17 +28,18 @@ export default function SummonerContent({
 
       {/* Sağ kolon — maç detayı açıkken tam genişlik */}
       <div className={`${selectedMatchId ? "lg:col-span-12" : "lg:col-span-8"} space-y-4`}>
+        {/* İstatistik merkezi (4 daire + Koridorlar), sekme ile queue filtresi */}
         {!selectedMatchId && (
-          <>
-            <StatsCard
-              totalSeasonMatches={totalSeasonMatches}
-              seasonChampionsAll={seasonChampionsAll}
-              matches={matches}
-              solo={solo}
-            />
-            <RecentChampionsCard matches={matches} />
-          </>
+          <StatsCard
+            seasonChampions={seasonChampions}
+            seasonRoles={seasonRoles}
+            matches={matches}
+            solo={solo}
+            flex={flex}
+            totalSeasonMatches={totalSeasonMatches}
+          />
         )}
+        {/* Son Maçlar — özet kaldırıldı, liste yukarı çıktı */}
         <MatchList
           initialMatches={initialMatches}
           puuid={puuid}

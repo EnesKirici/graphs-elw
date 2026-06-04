@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ArrowDownUp } from "lucide-react";
 import ReactDOM from "react-dom";
+import QueueTabs from "./QueueTabs";
 
 const VIEWS = [
   { key: "played", label: "En Çok Oynanan" },
@@ -182,21 +183,9 @@ export default function ChampionPool({ seasonChampions, masteries, gameName, tag
           )}
         </div>
 
-        {/* Filtre butonları — her iki görünümde de göster */}
+        {/* Filtre — En Çok Oynanan görünümünde */}
         {view === "played" && (
-          <div className="flex items-center gap-1">
-            {GAME_TYPES.map((g) => (
-              <button
-                key={g.key}
-                onClick={() => setGameType(g.key)}
-                className={`text-[11px] px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                  gameType === g.key ? "bg-blue-500/15 text-blue-400" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
-                }`}
-              >
-                {g.label}
-              </button>
-            ))}
-          </div>
+          <QueueTabs value={gameType} onChange={setGameType} options={GAME_TYPES} />
         )}
       </div>
 

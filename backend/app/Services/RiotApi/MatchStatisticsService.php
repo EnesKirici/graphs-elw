@@ -179,12 +179,13 @@ class MatchStatisticsService
      */
     public function getSeasonChampionStats(string $puuid): array
     {
-        $cacheKey = "season_champs:v4:{$puuid}";
+        $cacheKey = "season_champs:v5:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
+            // Queue → bucket. solo/flex AYRI tutulur; 'ranked' ve 'all' sonradan birleştirilir.
             $queues = [
-                420 => 'ranked',
-                440 => 'ranked',
+                420 => 'solo',
+                440 => 'flex',
                 400 => 'normal',
                 430 => 'normal',
                 490 => 'normal',
@@ -205,7 +206,7 @@ class MatchStatisticsService
                 'doubleKills' => 0,
             ];
 
-            $rawByType = ['ranked' => [], 'normal' => []];
+            $rawByType = ['solo' => [], 'flex' => [], 'normal' => []];
 
             foreach ($queues as $queueId => $type) {
                 try {
@@ -248,21 +249,32 @@ class MatchStatisticsService
                 }
             }
 
-            // "all" = ranked + normal birleşik
-            $allData = [];
-            foreach (['ranked', 'normal'] as $type) {
-                foreach ($rawByType[$type] as $name => $d) {
-                    if (!isset($allData[$name])) {
-                        $allData[$name] = $emptyChamp;
-                    }
-                    foreach (array_keys($emptyChamp) as $field) {
-                        $allData[$name][$field] += $d[$field];
+            // Bucket birleştirme: ranked = solo+flex; all = solo+flex+normal
+            $merge = function (array $types) use ($emptyChamp, $rawByType) {
+                $out = [];
+                foreach ($types as $type) {
+                    foreach ($rawByType[$type] as $name => $d) {
+                        if (!isset($out[$name])) {
+                            $out[$name] = $emptyChamp;
+                        }
+                        foreach (array_keys($emptyChamp) as $field) {
+                            $out[$name][$field] += $d[$field];
+                        }
                     }
                 }
-            }
+                return $out;
+            };
+
+            $buckets = [
+                'all'    => $merge(['solo', 'flex', 'normal']),
+                'ranked' => $merge(['solo', 'flex']),
+                'solo'   => $rawByType['solo'],
+                'flex'   => $rawByType['flex'],
+                'normal' => $rawByType['normal'],
+            ];
 
             $result = [];
-            foreach (['all' => $allData, 'ranked' => $rawByType['ranked'], 'normal' => $rawByType['normal']] as $key => $champData) {
+            foreach ($buckets as $key => $champData) {
                 uasort($champData, fn($a, $b) => $b['games'] <=> $a['games']);
                 $list = [];
                 foreach ($champData as $name => $d) {
