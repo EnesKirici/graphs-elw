@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/context/SidebarContext";
-import { LayoutDashboard, Trophy, Swords, ChevronsLeft, Menu, Award } from "lucide-react";
+import { LayoutDashboard, Trophy, Swords, ChevronsLeft, Menu, Award, ListOrdered } from "lucide-react";
 import BadgeGuideModal from "@/components/summoner/BadgeGuideModal";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/leaderboard", label: "Sıralama", icon: Trophy },
+  { href: "/tier-list", label: "Tier List", icon: ListOrdered },
   { href: "/champions", label: "Tüm Şampiyonlar", icon: Swords },
 ];
 
