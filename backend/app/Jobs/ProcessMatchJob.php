@@ -27,25 +27,31 @@ class ProcessMatchJob implements ShouldQueue
 
     public function handle(MatchDataService $matchData, BuildAggregationService $agg): void
     {
-        // Zaten işlendiyse atla
-        if (ProcessedMatch::where('match_id', $this->matchId)->exists()) {
-            return;
+        // ATOMİK CLAIM — çift sayımın TEK garantisi burası.
+        // Aynı maç 10 oyuncunun da geçmişinde çıkar; match_id PRIMARY KEY olduğu için
+        // insertOrIgnore yalnızca İLK job'ta 1 döner, diğerlerinde 0 (zaten var) → atlanır.
+        // Eşzamanlı worker'larda bile aynı maç tam olarak BİR kez işlenir.
+        $claimed = ProcessedMatch::query()->insertOrIgnore([
+            'match_id'     => $this->matchId,
+            'processed_at' => Carbon::now(),
+        ]);
+
+        if (! $claimed) {
+            return; // başka bir job zaten işledi/işliyor
         }
 
         try {
             $detail = $matchData->getMatchDetail($this->matchId);
+            $agg->processMatch($detail, $this->region);
+
+            // patch'i claim sonrası güncelle (claim anında maç detayı yoktu)
+            ProcessedMatch::where('match_id', $this->matchId)
+                ->update(['patch' => $this->patchOf($detail)]);
         } catch (\Throwable $e) {
-            return; // geçici hata → tekrar denenebilir (job retry)
+            // İşleme başarısızsa claim'i geri al → maç tekrar denenebilir (yine çift sayılmaz)
+            ProcessedMatch::where('match_id', $this->matchId)->delete();
+            throw $e; // job retry mekanizması devreye girsin
         }
-
-        $agg->processMatch($detail, $this->region);
-
-        // Ranked olmayan/remake maçlar da işlenmiş sayılır (tekrar çekmemek için)
-        ProcessedMatch::create([
-            'match_id'     => $this->matchId,
-            'patch'        => $this->patchOf($detail),
-            'processed_at' => Carbon::now(),
-        ]);
     }
 
     private function patchOf(array $detail): ?string
