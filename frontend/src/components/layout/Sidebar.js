@@ -99,6 +99,14 @@ export default function Sidebar() {
             {!collapsed && <span className="sf-txt">TR1 Sunucu · Çevrimiçi</span>}
           </div>
 
+          {!collapsed && (
+            <div className="flex items-center gap-2 px-3 mt-1 text-[10px] text-gray-600">
+              <Link href="/terms" className="hover:text-gray-400 transition-colors">Koşullar</Link>
+              <span>·</span>
+              <Link href="/privacy" className="hover:text-gray-400 transition-colors">Gizlilik</Link>
+            </div>
+          )}
+
           <button onClick={toggle} className="collapse-btn">
             <ChevronsLeft size={16} className="chev" />
             {!collapsed && <span>Daralt</span>}

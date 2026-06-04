@@ -23,8 +23,9 @@
   pickRate (rol maç sayısı / toplam), banRate (ban verisi maç detayında `bans`'ta var),
   tier skoru. Rol ataması maçtaki teamPosition'dan (şu an DataDragon positions/tags fallback).
 
-## 2. Şampiyon Build / Detay Sayfası — `/champions/[id]` (YAPILACAK)
-op.gg build sayfası tarzı; mevcut detay sayfasına (yetenek/skin/hikaye var) eklenecek:
+## 2. Şampiyon Build / Detay Sayfası — `/champions/[id]` (YAPILDI, test verisi)
+op.gg build sayfası tarzı eklendi (`ChampionBuild.js` + `buildData.js`); mevcut detay
+sayfasının üstünde (yetenek/skin/hikaye altta kaldı). İçerik:
 - **Rünler** (en popüler + alternatifler), **Summoner Spells**
 - **Itemler**: Starter / Early / Core / Full Build (time target'lı) + Situational
 - **Ability order** (Q>E>W max sırası, 1-18 seviye)

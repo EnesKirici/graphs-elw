@@ -12,6 +12,7 @@ import Link from "next/link";
 import ChampionRadar from "@/components/champion/ChampionRadar";
 import StatsTable from "@/components/champion/StatsTable";
 import SkinGallery from "@/components/champion/SkinGallery";
+import ChampionBuild from "@/components/champion/ChampionBuild";
 
 // Dinamik metadata - her şampiyonun kendi title'ı olur (SEO)
 export async function generateMetadata({ params }) {
@@ -42,8 +43,12 @@ const positionConfig = {
 
 export default async function ChampionDetail({ params }) {
   const { id } = await params;
-  const data = await fetchApi(`/champions/${id}`);
+  const [data, listData] = await Promise.all([
+    fetchApi(`/champions/${id}`),
+    fetchApi("/champions").catch(() => null),
+  ]);
   const champ = data.champion;
+  const championList = listData?.champions || [];
 
   return (
     <div>
@@ -129,6 +134,11 @@ export default async function ChampionDetail({ params }) {
             Şampiyonlara Dön
           </Link>
         </div>
+      </div>
+
+      {/* ===== BUILD (op.gg tarzı — rün/item/build/matchup, test verisi) ===== */}
+      <div className="max-w-7xl mx-auto px-6 pt-5">
+        <ChampionBuild champion={champ} version={data.version} championList={championList} />
       </div>
 
       {/* ===== ANA İÇERİK — 2 Kolon ===== */}
