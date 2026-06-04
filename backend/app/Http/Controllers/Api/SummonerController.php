@@ -536,7 +536,15 @@ class SummonerController extends Controller
 
     /**
      * Her maça LP değişimini hesaplayıp ekle.
-     * İki ardışık snapshot arasındaki farkı hesaplar.
+     *
+     * DİKKAT — snapshot'lar SEYREK: saveLpSnapshot yalnızca profil açıldığı andaki
+     * EN SON ranked maça o anki LP'yi yazar. İki profil ziyareti arasında oynanan
+     * maçların snapshot'ı yoktur. Bu yüzden iki ardışık snapshot arasındaki fark,
+     * aralarındaki TÜM maçların toplamı olabilir (ör. 9 maç sonra açılınca "+250 LP").
+     *
+     * Çözüm (worker gelene kadar): farkı sadece iki snapshot BİTİŞİK iki ranked maça
+     * aitse (aralarında snapshot'sız başka ranked maç yoksa) göster; değilse gösterme.
+     * Böylece tek maça ait olmayan, şişmiş LP değerleri ekrana hiç gelmez.
      */
     private function attachLpChanges(string $puuid, array $matches): array
     {
@@ -556,6 +564,15 @@ class SummonerController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
+        // Yüklü maç geçmişinden kuyruk bazında SIRALI (yeni→eski) ranked maç id listesi.
+        // Bitişiklik kontrolü için: prevSnap, bu maçtan hemen önceki ranked maç mı?
+        $rankedOrder = ['RANKED_SOLO_5x5' => [], 'RANKED_FLEX_SR' => []];
+        foreach ($matches as $m) {
+            $qt = $m['queueType'] ?? '';
+            $q  = $qt === 'SoloQ' ? 'RANKED_SOLO_5x5' : ($qt === 'Flex' ? 'RANKED_FLEX_SR' : null);
+            if ($q && isset($m['matchId'])) $rankedOrder[$q][] = $m['matchId'];
+        }
+
         foreach ($matches as &$m) {
             $m['lpChange'] = null;
             $matchId = $m['matchId'] ?? null;
@@ -572,19 +589,30 @@ class SummonerController extends Controller
                 if ($found) { $prevSnap = $s; break; }
                 if ($s->match_id === $matchId) $found = true;
             }
+            if (!$prevSnap) continue;
 
-            if ($prevSnap) {
-                $currentTotal = $this->lpToAbsolute($snap->tier, $snap->rank, $snap->lp);
-                $prevTotal = $this->lpToAbsolute($prevSnap->tier, $prevSnap->rank, $prevSnap->lp);
-                $diff = $currentTotal - $prevTotal;
+            // BİTİŞİKLİK: prevSnap, bu maçtan hemen önceki ranked maç olmalı.
+            // İkisi de yüklü pencerede olmalı ve aralarında snapshot'sız maç olmamalı,
+            // yoksa fark tek maça ait değildir → güvenilmez, gösterme.
+            $order = $rankedOrder[$snap->queue] ?? [];
+            $iCur  = array_search($matchId, $order, true);
+            $iPrev = array_search($prevSnap->match_id, $order, true);
+            if ($iCur === false || $iPrev === false || $iPrev !== $iCur + 1) continue;
 
-                // Tutarlılık kontrolü: galibiyet + negatif LP veya mağlubiyet + pozitif LP → güvenilmez
-                $win = $m['win'] ?? null;
-                if ($win === true && $diff < 0) $diff = null;
-                if ($win === false && $diff > 0) $diff = null;
+            $currentTotal = $this->lpToAbsolute($snap->tier, $snap->rank, $snap->lp);
+            $prevTotal    = $this->lpToAbsolute($prevSnap->tier, $prevSnap->rank, $prevSnap->lp);
+            $diff = $currentTotal - $prevTotal;
 
-                $m['lpChange'] = $diff;
-            }
+            // Tutarlılık: galibiyet + negatif LP veya mağlubiyet + pozitif LP → güvenilmez
+            $win = $m['win'] ?? null;
+            if ($win === true && $diff < 0) continue;
+            if ($win === false && $diff > 0) continue;
+
+            // Son güvenlik kapağı: tek bir maç için makul aralık dışıysa (tier yanlış
+            // okuması, MMR sıçraması vb.) gösterme. Normal bir maç ~15-40 LP'dir.
+            if (abs($diff) > 60) continue;
+
+            $m['lpChange'] = $diff;
         }
         unset($m);
 
