@@ -139,15 +139,14 @@ function ChampRank({ name, games, region = "TR" }) {
   const { global, tr } = placeholderChampRank(name, games);
   const fmt = (n) => n.toLocaleString("tr-TR");
 
-  // Dünya + bölge sırası (önce dünya, sonra bölge). Dar kolonda 2 satıra sarar,
-  // her segment kendi içinde kırılmaz (kırpma/truncate yok).
+  // Dünya + bölge sırası — op.gg tarzı etiketli, # yok, net 2 satır.
   return (
-    <p className="text-[10px] text-gray-400 leading-tight mt-0.5">
-      <span className="whitespace-nowrap text-gray-300 font-medium">#{fmt(global)}</span>{" "}
-      <span className="whitespace-nowrap">
-        {region} <span className="text-gray-300 font-medium">#{fmt(tr)}</span>
-      </span>
-    </p>
+    <div className="mt-1 leading-tight">
+      <p className="text-[10px] text-gray-400">
+        Sıra: <span className="text-gray-200 font-semibold">{fmt(global)}</span>
+      </p>
+      <p className="text-[10px] text-gray-500">({region}: {fmt(tr)})</p>
+    </div>
   );
 }
 

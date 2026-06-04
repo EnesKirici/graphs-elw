@@ -59,13 +59,12 @@ function RankBlock({ data, title, region }) {
             {data.veteran && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full font-medium">Deneyimli</span>}
           </div>
 
-          {/* Sıralama — Dünya → bölge → Top % (op.gg tarzı, düz metin) */}
+          {/* Sıralama — op.gg tarzı: Sıra: dünya (BÖLGE: yerel) + Top %, # YOK, mavi YOK */}
           <p className="text-xs text-gray-400 mt-1.5">
-            Sıra <span className="text-gray-200 font-medium">#{trNum(rk.global)}</span>
-            <span className="text-gray-600 mx-1.5">·</span>
-            {region} <span className="text-gray-200 font-medium">#{trNum(rk.tr)}</span>
+            Sıra: <span className="text-gray-200 font-semibold">{trNum(rk.global)}</span>{" "}
+            <span className="text-gray-500">({region}: {trNum(rk.tr)})</span>
           </p>
-          <p className="text-[11px] text-sky-300 mt-0.5 font-medium">Top %{rk.topPct}</p>
+          <p className="text-[11px] text-gray-500 mt-0.5">Top %{rk.topPct}</p>
 
           <div className="flex items-center gap-3 mt-2">
             <span className="text-sm text-gray-400">{data.lp} LP</span>
