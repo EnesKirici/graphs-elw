@@ -272,3 +272,72 @@ gürültülü. Pipeline doğru; gerçek meta için aşağıdaki crawler şart.
 6. **Koridor dağılımı** — `champion_stats`'ta per-position satırlar zaten var; istenirse
    "Yasuo → Mid %72, Top %18" dağılımı dashboard'a eklenebilir.
 7. **(Ops.) MIN_SAMPLE'ı production'da artır** (ör. 200+) — gürültüyü azalt.
+
+---
+
+## Aşama 3 — Build / Ladder / OTP Pipeline (TASARIM, production key sonrası)
+
+Son eklenen özellikler (tier list, şampiyon build sayfası, profil percentile sıraları,
+en iyi oyuncular) şu an **TEST verisiyle** çalışıyor. Bu aşama o test verilerini gerçeğe
+çevirir. `champion_stats` (Aşama 2) zaten tier list + WR/pick/ban'ı karşılıyor; burada
+eksik kalan **build frekansları, ladder histogramı (percentile), OTP listeleri** eklenir.
+
+### Yeni tablolar (migration: 2026_06_04_140000, hepsi compact aggregate)
+- **champion_builds** — `patch × champion_id × position × category × item_key → games/wins`.
+  category: keystone | rune_minor | shard | spell_pair | item_boots | item_core | item_full | skill_max | starter.
+  Build sayfası en yüksek frekanslı anahtarları + WR'lerini çeker. ~170×5×~30 = küçük.
+- **champion_top_players** — `region × champion_id × puuid → games/wins/tier`. OTP listeleri
+  ve şampiyon "dünya/TR sırası" buradan. Eşik üstü (ör. 30+ maç) oyuncular tutulur.
+- **ladder_buckets** — `region × queue × tier × division → player_count`. Profil "Top %X" ve
+  dünya/TR sırası bu kümülatif dağılımdan. ~10 tier × 4 division × queue = küçük.
+- **processed_matches** — `match_id` (dedup, çift sayım yok).
+- **crawl_players** — ladder taramasından gelen keşif havuzu (puuid + priority + zaman imleci).
+
+### Akış (komutlar / job'lar)
+```
+ladder:crawl   (günlük)   League-V4 apex (Chal/GM/Master) + entries sayfaları (Emerald+)
+                          → ladder_buckets güncelle + crawl_players'a puuid ekle
+matches:collect (sürekli) crawl_players'tan batch → her puuid ranked match-id'leri
+                          → işlenmemiş maçları ProcessMatchJob'a dispatch
+ProcessMatchJob(matchId)  maç detayı (DB cache) → 10 participant için:
+                            • champion_stats   ++ (games/wins/bans)   [mevcut servis]
+                            • champion_builds  ++ (keystone, item slot, spell pair, skill max, starter)
+                            • champion_top_players upsert (o oyuncunun o şampiyonla games/wins)
+                            • processed_matches'e match_id ekle
+meta:recalc    (saatlik)  champion_stats → tier skoru + pick/ban (payda: stat_patches.total_games)
+                          champion_builds → "en popüler" kombinasyonları cache'le
+```
+
+### Build verisi çıkarımı (her participant'tan)
+- Rünler: `perks.styles` (primary/sub stil) + `perks.styles[].selections[].perk` (keystone + minor) + `perks.statPerks` (shard).
+- Itemler: `item0..item6` → boots/core/full slotları (timeline'dan satın alma sırası istenirse `matches/{id}/timeline`).
+- Spell: `summoner1Id` + `summoner2Id` → çift olarak.
+- Skill max: timeline `SKILL_LEVEL_UP` event'lerinden ilk maxlanan (timeline gerekirse; yoksa atlanır).
+- Rank bracket: oyuncunun o anki tier'ı (crawl_players.tier) → istenirse bracket bazlı build.
+
+### Frontend bağlama (placeholder → gerçek, response şekli aynı kalır)
+| Özellik | Şu an (test) | Gerçek kaynak |
+|---|---|---|
+| Tier list | `tierData.js` | `champion_stats` → `/api/v1/meta/tier-list?role=&patch=` |
+| Şampiyon build | `buildData.js` | `champion_builds` → `/api/v1/champions/{id}/build?role=` |
+| Profil Top %X / dünya-TR | `placeholderLeagueRank` | `ladder_buckets` kümülatif percentile |
+| Şampiyon dünya/TR sırası | `placeholderChampRank` | `champion_top_players` sıralaması |
+| Ort. rakip seviyesi | sabit | son 10 maç rakip puuid'lerinin rank'ı (League-V4 + cache) |
+| Build top players | `buildData.js` | `champion_top_players` |
+
+### Rate limit bütçesi (Production 30k/10dk)
+- Worker payı ~%60. `ladder:crawl` günde birkaç bin istek (apex + entries sayfaları).
+- En büyük kalem `matches:collect`/process → throttle ile bütçe altında. processed_matches
+  sayesinde tekrar işleme yok.
+
+### Dedup / incremental / patch
+- `processed_matches` ile her maç bir kez işlenir.
+- Patch sınırı: tüm tablolarda `patch` alanı var; patch değişince yeni satırlar başlar,
+  eski patch tarihsel kalır (wrChange/patch-delta için).
+
+### Uygulama sırası (production key gelince)
+1. `php artisan migrate` (yeni tablolar — şema hazır).
+2. `ladder:crawl` komutu + ProcessMatchJob'u yaz (yukarıdaki çıkarımla).
+3. Scheduler + supervisor `queue:work`.
+4. Backend endpoint'leri (`/meta/tier-list`, `/champions/{id}/build`, percentile) → frontend'deki
+   `tierData/buildData/placeholder*`'ı bu endpoint'lerle değiştir.
