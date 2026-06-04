@@ -10,9 +10,6 @@ const QUEUE_OPTIONS = [
   { key: "flex", label: "Flex" },
 ];
 
-// queue → maç queueType adı (Son N Maç filtresi için)
-const QUEUE_TYPE_NAME = { solo: "SoloQ", flex: "Flex" };
-
 function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 104 }) {
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
@@ -42,13 +39,12 @@ function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 
 }
 
 /*
-  İstatistik merkezi: üstte Tümü/SoloQ/Flex sekmesi; solda 4 daire (Toplam Maç,
-  Kazanma Oranı, Ort. KDA, Son N Maç), SAĞDA aynı queue ile Koridorlar radarı.
+  İstatistik merkezi: üstte Tümü/SoloQ/Flex sekmesi; solda 2 daire (Toplam Maç,
+  Kazanma Oranı) + altında K/D/A özeti, SAĞDA aynı queue ile Koridorlar radarı.
 */
 export default function StatsCard({
   seasonChampions = {},   // { all, ranked, solo, flex, normal }
   seasonRoles,
-  matches = [],
   solo,
   flex,
   totalSeasonMatches = 0,
@@ -88,14 +84,8 @@ export default function StatsCard({
   const kdaRatio = avgD > 0 ? (avgK + avgA) / avgD : avgK + avgA;
   const hasKda = analyzedGames > 0;
 
-  const qName = QUEUE_TYPE_NAME[queue];
-  const loadedMatches = qName ? matches.filter((m) => m.queueType === qName) : matches;
-  const loadedGames = loadedMatches.length;
-  const loadedWins = loadedMatches.filter((m) => m.win).length;
-  const loadedWinRate = loadedGames > 0 ? Math.round((loadedWins / loadedGames) * 100) : 0;
-
   const hotStreak = (queue === "flex" ? flex : solo)?.hotStreak;
-  const isEmpty = totalGames === 0 && analyzedGames === 0 && loadedGames === 0;
+  const isEmpty = totalGames === 0 && analyzedGames === 0;
 
   return (
     <div className="glass rounded-xl overflow-hidden">
@@ -109,9 +99,9 @@ export default function StatsCard({
           <p className="text-xs text-gray-600 text-center py-8">Bu kuyrukta veri yok</p>
         ) : (
           <div className="flex flex-col lg:flex-row gap-5">
-            {/* SOL — daireler (2x2) + özet */}
+            {/* SOL — 2 daire (Toplam Maç, Kazanma Oranı) + özet */}
             <div className="flex-1 flex flex-col justify-center">
-              <div className="grid grid-cols-2 gap-x-2 gap-y-5 justify-items-center">
+              <div className="flex items-center justify-center gap-8">
                 {totalGames > 0 && (
                   <CircleProgress
                     value={totalGames}
@@ -128,24 +118,6 @@ export default function StatsCard({
                     label="Kazanma Oranı"
                     display={`${winRate}%`}
                     color={winRate >= 51 ? "#10b981" : winRate >= 45 ? "#f59e0b" : "#ef4444"}
-                  />
-                )}
-                {hasKda && (
-                  <CircleProgress
-                    value={kdaRatio}
-                    max={6}
-                    label="Ort. KDA"
-                    display={avgD > 0 ? kdaRatio.toFixed(1) : "∞"}
-                    color={kdaRatio >= 3 ? "#10b981" : kdaRatio >= 2 ? "#3b82f6" : "#f59e0b"}
-                  />
-                )}
-                {loadedGames > 0 && (
-                  <CircleProgress
-                    value={loadedWinRate}
-                    max={100}
-                    label={`Son ${loadedGames} Maç`}
-                    display={`${loadedWinRate}%`}
-                    color={loadedWinRate >= 51 ? "#10b981" : loadedWinRate >= 45 ? "#f59e0b" : "#ef4444"}
                   />
                 )}
               </div>

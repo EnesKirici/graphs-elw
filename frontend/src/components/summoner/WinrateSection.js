@@ -58,6 +58,10 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
   const ref50Y = (50 >= minWr && 50 <= maxWr) ? getY(50) : null;
   const lastWr = data[data.length - 1].winRate;
 
+  // Min/Max etiketleri %50 referans çizgisine çok yakınsa gizle (üst üste binmesin)
+  const showMaxLabel = ref50Y === null || Math.abs(getY(maxWr) - ref50Y) > 9;
+  const showMinLabel = ref50Y === null || Math.abs(getY(minWr) - ref50Y) > 9;
+
   // Çizgiyi segment segment çiz — her segment'in rengi WR'a göre
   const segments = [];
   for (let i = 0; i < data.length - 1; i++) {
@@ -134,13 +138,17 @@ export default function WinrateSection({ timeline, defaultOpen = false }) {
               ))}
             </defs>
 
-            {/* Min/Max WR etiketleri */}
-            <text x={pad.x - 4} y={pad.y + 4} textAnchor="end" className="fill-gray-600" style={{ fontSize: "8px" }}>
-              {Math.round(maxWr)}%
-            </text>
-            <text x={pad.x - 4} y={pad.y + chartH + 2} textAnchor="end" className="fill-gray-600" style={{ fontSize: "8px" }}>
-              {Math.round(minWr)}%
-            </text>
+            {/* Min/Max WR etiketleri (50% çizgisine yakınsa gizlenir) */}
+            {showMaxLabel && (
+              <text x={pad.x - 4} y={pad.y + 4} textAnchor="end" className="fill-gray-600" style={{ fontSize: "8px" }}>
+                {Math.round(maxWr)}%
+              </text>
+            )}
+            {showMinLabel && (
+              <text x={pad.x - 4} y={pad.y + chartH + 2} textAnchor="end" className="fill-gray-600" style={{ fontSize: "8px" }}>
+                {Math.round(minWr)}%
+              </text>
+            )}
 
             {/* %50 referans çizgisi */}
             {ref50Y !== null && (

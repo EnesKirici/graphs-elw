@@ -21,24 +21,31 @@ function SoloBlock({ data }) {
   return (
     <>
       <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-3">Solo/Duo</p>
-      <div className="flex items-center gap-4">
-        <img src={rankBadgeUrl(data.tier)} alt={data.tier} width={96} height={96} className="flex-shrink-0" />
+      {/* Rozet ile metin bloğu aynı optik yükseklikte → items-center ortalar */}
+      <div className="flex items-center gap-3">
+        <img
+          src={rankBadgeUrl(data.tier)}
+          alt={data.tier}
+          width={76}
+          height={76}
+          className="flex-shrink-0"
+        />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-lg font-bold text-white">{tierLabel(data)} {data.rank}</p>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <p className="text-xl font-bold text-white leading-tight">{tierLabel(data)} {data.rank}</p>
+            <span className="text-xs text-gray-400">{data.lp} LP</span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
             {data.freshBlood && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">Yeni Yükseldi</span>}
             {data.veteran && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full font-medium">Deneyimli</span>}
-          </div>
-          <p className="text-xs text-gray-400">{data.lp} LP</p>
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className="text-xs text-emerald-400">{data.wins} Win</span>
+            <span className="text-xs text-emerald-400">{data.wins}W</span>
             <span className="text-xs text-gray-600">/</span>
-            <span className="text-xs text-red-400">{data.losses} Lose</span>
+            <span className="text-xs text-red-400">{data.losses}L</span>
           </div>
         </div>
         <div className="flex-shrink-0 text-right">
-          <p className={`text-xl font-bold ${getWrColor(data.winRate)}`}>{data.winRate}%</p>
-          <p className="text-[10px] text-gray-500">Win Rate</p>
+          <p className={`text-2xl font-bold leading-none ${getWrColor(data.winRate)}`}>{data.winRate}%</p>
+          <p className="text-[10px] text-gray-500 mt-1">Win Rate</p>
         </div>
       </div>
       <div className="mt-3 h-1.5 rounded-full overflow-hidden flex">
@@ -81,9 +88,9 @@ function UnrankedRow({ title }) {
 }
 
 /*
-  Birleşik kompakt sıralama kartı: Solo/Duo belirgin + Flex ince satır +
-  kapalı "Win Rate Geçmişi" toggle. Flex'in büyük kartı kaldırıldığı için
-  En Çok Oynanan ekranda yukarı çıkar.
+  Birleşik kompakt sıralama kartı: Solo/Duo belirgin (WR geçmişi varsayılan AÇIK)
+  + Flex ince satır (WR geçmişi aynı yapıda ama varsayılan KAPALI). Flex'in büyük
+  kartı kaldırıldığı için En Çok Oynanan ekranda yukarı çıkar.
 */
 export default function RankCard({ solo, flex, winrateTimeline }) {
   if (!solo && !flex) {
@@ -95,10 +102,8 @@ export default function RankCard({ solo, flex, winrateTimeline }) {
     );
   }
 
-  // Win Rate Geçmişi: Solo/Duo tercih edilir, yoksa Flex
   const soloTl = winrateTimeline?.solo?.timeline;
   const flexTl = winrateTimeline?.flex?.timeline;
-  const graphTimeline = (soloTl?.length >= 2) ? soloTl : (flexTl?.length >= 2 ? flexTl : null);
 
   return (
     <div className="glass rounded-xl p-5">
@@ -106,11 +111,18 @@ export default function RankCard({ solo, flex, winrateTimeline }) {
       {solo ? <SoloBlock data={solo} /> : <UnrankedRow title="Solo/Duo" />}
 
       {/* Solo/Duo Win Rate Geçmişi — varsayılan AÇIK */}
-      {graphTimeline && <WinrateSection timeline={graphTimeline} defaultOpen={true} />}
+      {solo && soloTl?.length >= 2 && <WinrateSection timeline={soloTl} defaultOpen={true} />}
 
-      {/* Flex — ince satır, en altta */}
+      {/* Flex — ince satır + aynı yapıda WR geçmişi (varsayılan KAPALI) */}
       <div className="mt-3 pt-3 border-t border-[#1b2230]/40">
-        {flex ? <FlexRow data={flex} /> : <UnrankedRow title="Flex" />}
+        {flex ? (
+          <>
+            <FlexRow data={flex} />
+            {flexTl?.length >= 2 && <WinrateSection timeline={flexTl} defaultOpen={false} />}
+          </>
+        ) : (
+          <UnrankedRow title="Flex" />
+        )}
       </div>
     </div>
   );
