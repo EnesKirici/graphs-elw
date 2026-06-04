@@ -44,12 +44,14 @@ const positionConfig = {
 
 export default async function ChampionDetail({ params }) {
   const { id } = await params;
-  const [data, listData] = await Promise.all([
+  const [data, listData, runesResp] = await Promise.all([
     fetchApi(`/champions/${id}`),
     fetchApi("/champions").catch(() => null),
+    fetchApi("/runes").catch(() => null),
   ]);
   const champ = data.champion;
   const championList = listData?.champions || [];
+  const runesData = runesResp?.runes || [];
 
   return (
     <div>
@@ -145,7 +147,7 @@ export default async function ChampionDetail({ params }) {
             label: "Build & İstatistik",
             content: (
               <div className="max-w-7xl mx-auto px-6 py-6">
-                <ChampionBuild champion={champ} version={data.version} championList={championList} />
+                <ChampionBuild champion={champ} version={data.version} championList={championList} runesData={runesData} />
               </div>
             ),
           },

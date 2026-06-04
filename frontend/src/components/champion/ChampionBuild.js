@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { buildChampionData, buildMatchups } from "@/lib/buildData";
+import { buildChampionData, buildMatchups, pickRunePage, runeIcon, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", SUPPORT: "Support" };
 const ROLE_ICON = { TOP: "/roles/top.svg", JUNGLE: "/roles/jungle.svg", MIDDLE: "/roles/mid.svg", BOTTOM: "/roles/bot.svg", SUPPORT: "/roles/support.svg" };
@@ -34,14 +34,14 @@ function Card({ title, extra, children, className = "" }) {
   );
 }
 
-export default function ChampionBuild({ champion, version, championList = [] }) {
+export default function ChampionBuild({ champion, version, championList = [], runesData = [] }) {
   const positions = champion.positions?.length ? champion.positions : ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "SUPPORT"];
   const [role, setRole] = useState(positions[0]);
 
-  const data = useMemo(() => buildChampionData(champion, role, version), [champion, role, version]);
+  const data = useMemo(() => buildChampionData(champion, role, version, championList), [champion, role, version, championList]);
   const matchups = useMemo(() => buildMatchups(champion, role, championList, version), [champion, role, championList, version]);
+  const runePage = useMemo(() => pickRunePage(champion, role, runesData), [champion, role, runesData]);
 
-  const rp = data.runePage;
   const phases = [
     { label: "Başlangıç", items: data.starter, time: "@ 0:00" },
     { label: "Ayakkabı", items: data.boots, time: "@ 4:00" },
@@ -111,28 +111,27 @@ export default function ChampionBuild({ champion, version, championList = [] }) 
         {/* ORTA — Rünler + Yetenek sırası */}
         <div className="lg:col-span-5 space-y-4">
           <Card title="Rünler" extra={<span className="text-[10px] text-gray-600">En popüler · {data.builds[0]?.wr}% WR</span>}>
-            <div className="flex gap-6">
-              {/* Ana ağaç */}
-              <div className="flex flex-col items-center gap-3">
-                <img src={rp.primaryStyle} alt="" width={26} height={26} onError={hideOnError} />
-                <img src={rp.keystone} alt="keystone" width={52} height={52} className="rounded-full" onError={hideOnError} />
-                {rp.primaryMinors.map((m, i) => (
-                  <img key={i} src={m} alt="" width={34} height={34} className="rounded-full opacity-90" onError={hideOnError} />
-                ))}
-              </div>
-              {/* İkincil ağaç + shard */}
-              <div className="flex flex-col items-center gap-3 border-l border-[#1b2230]/40 pl-6">
-                <img src={rp.secondaryStyle} alt="" width={26} height={26} onError={hideOnError} />
-                {rp.secondaryMinors.map((m, i) => (
-                  <img key={i} src={m} alt="" width={34} height={34} className="rounded-full opacity-90" onError={hideOnError} />
-                ))}
-                <div className="flex flex-col items-center gap-2 mt-1 pt-3 border-t border-[#1b2230]/40">
-                  {rp.shards.map((s, i) => (
-                    <img key={i} src={s} alt="" width={22} height={22} className="rounded-full" onError={hideOnError} />
-                  ))}
+            {runePage ? (
+              <div className="flex gap-6 justify-center">
+                {/* Ana ağaç — tüm rünler, seçili vurgulu */}
+                <RuneTree tree={runePage.primary} selected={runePage.selected} />
+                {/* İkincil ağaç + stat shard'lar */}
+                <div className="border-l border-[#1b2230]/40 pl-6 flex flex-col items-center gap-3">
+                  <RuneTree tree={runePage.secondary} selected={runePage.selected} skipKeystone />
+                  <div className="flex flex-col items-center gap-2 pt-3 mt-1 border-t border-[#1b2230]/40">
+                    {SHARD_ROWS.map((row, ri) => (
+                      <div key={ri} className="flex items-center gap-2">
+                        {row.map((sh, ci) => (
+                          <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={20} title={sh.name} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <p className="text-xs text-gray-600 text-center py-6">Rün verisi yüklenemedi</p>
+            )}
           </Card>
 
           <Card title="Yetenek Sırası" extra={
@@ -230,5 +229,44 @@ function AbilityGrid({ order }) {
         ))}
       </div>
     </div>
+  );
+}
+
+/* Tam rün ağacı — tüm rünler gösterilir, seçili (önerilen) olanlar vurgulu. */
+function RuneTree({ tree, selected, skipKeystone }) {
+  if (!tree) return null;
+  const slots = skipKeystone ? tree.slots.slice(1) : tree.slots;
+  return (
+    <div className="flex flex-col items-center gap-2.5">
+      <div className="flex items-center gap-1.5 mb-1">
+        <img src={runeIcon(tree.icon)} alt="" width={20} height={20} onError={hideOnError} />
+        <span className="text-xs font-semibold text-gray-300">{TREE_TR[tree.key] || tree.key}</span>
+      </div>
+      {slots.map((slot, i) => {
+        const isKeystoneRow = !skipKeystone && i === 0;
+        return (
+          <div key={i} className="flex items-center justify-center gap-2">
+            {slot.runes.map((r) => (
+              <RuneDot key={r.id} src={runeIcon(r.icon)} on={selected.has(r.id)} size={isKeystoneRow ? 36 : 28} title={r.name} />
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RuneDot({ src, on, size = 28, title }) {
+  return (
+    <img
+      src={src}
+      alt={title || ""}
+      title={title || ""}
+      width={size}
+      height={size}
+      onError={hideOnError}
+      className={`rounded-full transition ${on ? "" : "grayscale opacity-25"}`}
+      style={on ? { boxShadow: "0 0 0 2px rgba(96,165,250,.85)" } : undefined}
+    />
   );
 }

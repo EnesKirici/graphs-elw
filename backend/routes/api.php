@@ -60,6 +60,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/leaderboard', [LeaderboardController::class, 'index']);
 
     // Şampiyon endpoint'leri
+    Route::get('/runes', [ChampionController::class, 'runes']);
     Route::get('/champions', [ChampionController::class, 'index']);
     Route::get('/champions/{id}', [ChampionController::class, 'show']);
 

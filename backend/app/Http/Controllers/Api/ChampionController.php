@@ -89,6 +89,18 @@ class ChampionController extends Controller
     }
 
     /**
+     * Rün ağaçları (runesReforged) — build sayfasında tam ağaç gösterimi için.
+     * GET /api/v1/runes
+     */
+    public function runes(): JsonResponse
+    {
+        return response()->json([
+            'version' => $this->ddragon->getCurrentVersion(),
+            'runes'   => $this->ddragon->getRunes(),
+        ]);
+    }
+
+    /**
      * Güncel DDragon versiyon bilgisi.
      * GET /api/v1/version
      */
