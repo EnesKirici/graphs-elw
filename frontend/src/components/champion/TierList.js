@@ -215,10 +215,6 @@ export default function TierList({ champions = [], version }) {
         ))}
       </div>
 
-      <p className="text-[11px] text-gray-600 text-center">
-        İstatistikler şu an temsilî (test) verisidir — gerçek meta verisi Match-V5 agregasyonu ile gelecek.
-      </p>
-
       {hover && (
         <HoverCard
           data={hover.data}

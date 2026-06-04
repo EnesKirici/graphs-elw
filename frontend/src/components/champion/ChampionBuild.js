@@ -179,10 +179,6 @@ export default function ChampionBuild({ champion, version, championList = [] }) 
           </Card>
         </div>
       </div>
-
-      <p className="text-[11px] text-gray-600 text-center">
-        Build, rün ve eşleşme verileri şu an temsilî (test) verisidir — gerçek veri Match-V5 agregasyonu ile gelecek.
-      </p>
     </div>
   );
 }

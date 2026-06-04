@@ -13,6 +13,7 @@ import ChampionRadar from "@/components/champion/ChampionRadar";
 import StatsTable from "@/components/champion/StatsTable";
 import SkinGallery from "@/components/champion/SkinGallery";
 import ChampionBuild from "@/components/champion/ChampionBuild";
+import ChampionTabs from "@/components/champion/ChampionTabs";
 
 // Dinamik metadata - her şampiyonun kendi title'ı olur (SEO)
 export async function generateMetadata({ params }) {
@@ -136,14 +137,24 @@ export default async function ChampionDetail({ params }) {
         </div>
       </div>
 
-      {/* ===== BUILD (op.gg tarzı — rün/item/build/matchup, test verisi) ===== */}
-      <div className="max-w-7xl mx-auto px-6 pt-5">
-        <ChampionBuild champion={champ} version={data.version} championList={championList} />
-      </div>
-
-      {/* ===== ANA İÇERİK — 2 Kolon ===== */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      {/* ===== SEKMELER: Build & İstatistik | Şampiyon Detayı ===== */}
+      <ChampionTabs
+        tabs={[
+          {
+            key: "build",
+            label: "Build & İstatistik",
+            content: (
+              <div className="max-w-7xl mx-auto px-6 py-6">
+                <ChampionBuild champion={champ} version={data.version} championList={championList} />
+              </div>
+            ),
+          },
+          {
+            key: "detail",
+            label: "Şampiyon Detayı",
+            content: (
+              <div className="max-w-7xl mx-auto px-6 py-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
           {/* Sol kolon — Radar + Base Stats */}
           <div className="lg:col-span-4 space-y-4">
@@ -318,6 +329,10 @@ export default async function ChampionDetail({ params }) {
           </div>
         </div>
       </div>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
