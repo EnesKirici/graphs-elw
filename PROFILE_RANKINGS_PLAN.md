@@ -52,6 +52,11 @@ oyuncunun yeri (mastery puanı / oynanış bazlı).
 ---
 
 ## Notlar
+- **Bölge dinamik:** Sıralama, hesabın bulunduğu sunucuya göre olmalı (TR hesabı → TR,
+  EUW hesabı → EUW...). Frontend'de bölge etiketi `profile.platform`'dan türetiliyor
+  (`frontend/src/lib/region.js` → `regionLabel`), `tr1→TR`, `euw1→EUW` vb. Gerçek
+  sıralama hesabı da o bölgenin ladder'ı üzerinden yapılmalı. Şu an backend tek platform
+  (`config('riot.platform')`); çok bölge desteği gelince platform parametrik olmalı.
 - Hepsi **DB + periyodik worker** ister (canlı API ile her istekte hesaplanamaz, pahalı).
 - Placeholder fonksiyonları `placeholder*` adıyla ve "TEST VERİSİ" yorumuyla işaretli →
   gerçek veri gelince bu fonksiyonları gerçek kaynakla değiştir.

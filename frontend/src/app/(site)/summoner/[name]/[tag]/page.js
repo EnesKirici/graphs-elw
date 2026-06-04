@@ -1,4 +1,5 @@
 import { fetchApi } from "@/lib/api";
+import { regionLabel } from "@/lib/region";
 import Link from "next/link";
 import ChampionPool from "@/components/summoner/ChampionPool";
 import RankCard from "@/components/summoner/RankCard";
@@ -64,6 +65,7 @@ export default async function SummonerPage({ params }) {
   const recentStats = data.recentStats || {};
   const solo = ranked?.solo;
   const flex = ranked?.flex;
+  const region = regionLabel(profile.platform);
 
   // Banner: en çok oynanan şampiyonun rastgele skin centered splash'ı
   const bannerChamp = data.bannerChampion || recentStats?.mostPlayedChampion?.id || (masteries[0]?.championName);
@@ -84,7 +86,7 @@ export default async function SummonerPage({ params }) {
       <div className="max-w-7xl mx-auto px-6 py-6">
         <SummonerContent
           rankCard={
-            <RankCard solo={solo} flex={flex} winrateTimeline={data.winrateTimeline} />
+            <RankCard solo={solo} flex={flex} winrateTimeline={data.winrateTimeline} region={region} />
           }
           sideColumn={
             <>
@@ -97,7 +99,7 @@ export default async function SummonerPage({ params }) {
                 personalityBadges={data.personalityBadges || []}
               />
               {/* En Çok Oynanan — sidebar üstünde, ilk açılışta görünür */}
-              <ChampionPool seasonChampions={data.seasonChampions || {}} masteries={masteries} gameName={profile.gameName} tagLine={profile.tagLine} />
+              <ChampionPool seasonChampions={data.seasonChampions || {}} masteries={masteries} gameName={profile.gameName} tagLine={profile.tagLine} region={region} />
               {/* Koridorlar — kendi kartında */}
               <RoleRadar seasonRoles={data.seasonRoles} />
               <ChallengesCard challenges={data.challengeAverages} />

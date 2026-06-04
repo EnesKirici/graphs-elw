@@ -135,34 +135,23 @@ function placeholderChampRank(name, games) {
   return { global, tr };
 }
 
-function ChampRank({ name, games }) {
-  const [anchor, setAnchor] = useState(null);
+function ChampRank({ name, games, region = "TR" }) {
   const { global, tr } = placeholderChampRank(name, games);
   const fmt = (n) => n.toLocaleString("tr-TR");
 
+  // Dünya + bölge sırası (önce dünya, sonra bölge). Dar kolonda 2 satıra sarar,
+  // her segment kendi içinde kırılmaz (kırpma/truncate yok).
   return (
-    <>
-      <span
-        onMouseEnter={(e) => setAnchor(e.currentTarget)}
-        onMouseLeave={() => setAnchor(null)}
-        className="text-[10px] text-gray-500 cursor-help hover:text-gray-400"
-      >
-        TR #{fmt(tr)}
+    <p className="text-[10px] text-gray-400 leading-tight mt-0.5">
+      <span className="whitespace-nowrap text-gray-300 font-medium">#{fmt(global)}</span>{" "}
+      <span className="whitespace-nowrap">
+        {region} <span className="text-gray-300 font-medium">#{fmt(tr)}</span>
       </span>
-      {anchor && (
-        <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
-            <p className="text-xs text-white font-semibold">{name} sıralaması</p>
-            <p className="text-[11px] text-gray-400 mt-1">Dünya: <span className="text-gray-200">#{fmt(global)}</span></p>
-            <p className="text-[11px] text-gray-400">Türkiye: <span className="text-gray-200">#{fmt(tr)}</span></p>
-          </div>
-        </Tooltip>
-      )}
-    </>
+    </p>
   );
 }
 
-export default function ChampionPool({ seasonChampions, masteries, gameName, tagLine }) {
+export default function ChampionPool({ seasonChampions, masteries, gameName, tagLine, region = "TR" }) {
   const [view, setView] = useState("played");
   const [open, setOpen] = useState(false);
   const [gameType, setGameType] = useState("all");
@@ -230,7 +219,7 @@ export default function ChampionPool({ seasonChampions, masteries, gameName, tag
 
       {/* İçerik */}
       {view === "played" ? (
-        <ChampionList champions={champList} sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort} championsLink={gameName && tagLine ? `/summoner/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/champions` : null} />
+        <ChampionList champions={champList} sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort} region={region} championsLink={gameName && tagLine ? `/summoner/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/champions` : null} />
       ) : (
         <ChampionList champions={masteriesToChampList(masteries, seasonChampions)} sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort} isMastery championsLink={gameName && tagLine ? `/summoner/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/champions` : null} />
       )}
@@ -270,7 +259,7 @@ function masteriesToChampList(masteries, seasonChampions) {
 }
 
 /* ===== ORTAK LİSTE ===== */
-function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, championsLink }) {
+function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, championsLink, region = "TR" }) {
   if (!champions || champions.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
@@ -333,7 +322,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
                 {isMastery ? (
                   <p className="text-[10px] text-gray-500">{formatPoints(c.masteryPoints)} puan</p>
                 ) : (
-                  !noGames && <ChampRank name={c.championName} games={c.games} />
+                  !noGames && <ChampRank name={c.championName} games={c.games} region={region} />
                 )}
               </div>
 

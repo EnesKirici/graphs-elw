@@ -37,9 +37,8 @@ function placeholderLeagueRank(data) {
 
 const trNum = (n) => n.toLocaleString("tr-TR");
 
-/* Büyük rank bloğu — büyük ikon, WR%, Top %X (hover'da dünya/TR sırası). Bar YOK. */
-function RankBlock({ data, title }) {
-  const [anchor, setAnchor] = useState(null);
+/* Büyük rank bloğu — büyük ikon, op.gg tarzı sıralama (Dünya → bölge → Top %), WR%. Bar YOK. */
+function RankBlock({ data, title, region }) {
   const rk = placeholderLeagueRank(data);
 
   return (
@@ -59,37 +58,26 @@ function RankBlock({ data, title }) {
             {data.freshBlood && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">Yeni Yükseldi</span>}
             {data.veteran && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full font-medium">Deneyimli</span>}
           </div>
-          <div className="flex items-center gap-2 mt-1.5">
-            <span className="text-sm text-gray-400">{data.lp} LP</span>
-            <span
-              onMouseEnter={(e) => setAnchor(e.currentTarget)}
-              onMouseLeave={() => setAnchor(null)}
-              className="text-[11px] text-blue-300 bg-blue-500/10 border border-blue-500/25 px-1.5 py-0.5 rounded cursor-help"
-            >
-              Top %{rk.topPct}
-            </span>
-          </div>
+
+          {/* Sıralama — Dünya → bölge → Top % (op.gg tarzı, düz metin) */}
+          <p className="text-xs text-gray-400 mt-1.5">
+            Sıra <span className="text-gray-200 font-medium">#{trNum(rk.global)}</span>
+            <span className="text-gray-600 mx-1.5">·</span>
+            {region} <span className="text-gray-200 font-medium">#{trNum(rk.tr)}</span>
+          </p>
+          <p className="text-[11px] text-sky-300 mt-0.5 font-medium">Top %{rk.topPct}</p>
+
           <div className="flex items-center gap-3 mt-2">
+            <span className="text-sm text-gray-400">{data.lp} LP</span>
             <span className="text-sm">
               <span className="text-emerald-400 font-medium">{data.wins}G</span>
               <span className="text-gray-600 mx-1">/</span>
               <span className="text-red-400 font-medium">{data.losses}M</span>
             </span>
-            <span className={`text-lg font-bold ${getWrColor(data.winRate)}`}>{data.winRate}%</span>
+            <span className={`text-base font-bold ${getWrColor(data.winRate)}`}>{data.winRate}%</span>
           </div>
         </div>
       </div>
-
-      {anchor && (
-        <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
-            <p className="text-xs text-white font-semibold">Ladder Sıralaması</p>
-            <p className="text-[11px] text-gray-400 mt-1">Dünya: <span className="text-gray-200">#{trNum(rk.global)}</span></p>
-            <p className="text-[11px] text-gray-400">Türkiye: <span className="text-gray-200">#{trNum(rk.tr)}</span></p>
-            <p className="text-[10px] text-blue-300/80 mt-1">≈ En iyi %{rk.topPct}</p>
-          </div>
-        </Tooltip>
-      )}
     </div>
   );
 }
@@ -144,7 +132,7 @@ function AvgEnemiesRating() {
   (büyük rank ikonu, WR%, Top %X). Altında ortalama rakip seviyesi + WR geçmişi
   grafikleri (Solo açık, Flex kapalı). Geniş ana kolonda durur.
 */
-export default function RankCard({ solo, flex, winrateTimeline }) {
+export default function RankCard({ solo, flex, winrateTimeline, region = "TR" }) {
   if (!solo && !flex) {
     return (
       <div className="glass rounded-xl p-6 text-center">
@@ -162,10 +150,10 @@ export default function RankCard({ solo, flex, winrateTimeline }) {
     <div className="glass rounded-xl p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="md:pr-6">
-          {solo ? <RankBlock data={solo} title="Solo/Duo" /> : <UnrankedBlock title="Solo/Duo" />}
+          {solo ? <RankBlock data={solo} title="Solo/Duo" region={region} /> : <UnrankedBlock title="Solo/Duo" />}
         </div>
         <div className="md:border-l md:border-[#1b2230]/50 md:pl-6">
-          {flex ? <RankBlock data={flex} title="Flex 5v5" /> : <UnrankedBlock title="Flex 5v5" />}
+          {flex ? <RankBlock data={flex} title="Flex 5v5" region={region} /> : <UnrankedBlock title="Flex 5v5" />}
         </div>
       </div>
 
