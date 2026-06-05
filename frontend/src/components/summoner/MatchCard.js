@@ -333,10 +333,10 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
           {!remake && m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} match={m} scoreHistory={scoreHistory} scoreIndex={scoreIndex} />}
         </div>
 
-        {/* ORTA: KDA + Items + Badges. KDA+Items SOLDA hizalı kalır (badge'siz
-            satırda eşyalar ortalanmasın); badge'ler ml-auto ile sağa (takımlara
-            yakın) → büyük boşluk kapanır, hizalama bozulmaz. */}
-        <div className="flex-1 flex items-center gap-3 min-w-0">
+        {/* ORTA: KDA + Items + Badges EŞİT dağıtılır (justify-between → eşit boşluk).
+            Badge alanına min genişlik verilir ki badge'siz satırda eşyalar kaymasın
+            (her satırda KDA solda, eşyalar ortada, rozetler sağda — tutarlı). */}
+        <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
           {/* KDA — sabit genişlik */}
           <div className="w-[70px] flex-shrink-0 text-center">
             <p className="text-sm font-semibold text-gray-200">{m.kills}<span className="text-gray-600">/</span>{m.deaths}<span className="text-gray-600">/</span>{m.assists}</p>
@@ -366,7 +366,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
 
           {/* Badges — içerik-boyutlu chip'ler, hizalı 2 sütun (max-content) +
               tutarlı yatay/dikey boşluk. */}
-          <div className="hidden md:inline-grid grid-cols-[max-content_max-content] gap-x-2.5 gap-y-1.5 content-start self-center ml-auto pr-2">
+          <div className="hidden md:inline-grid grid-cols-[max-content_max-content] gap-x-2.5 gap-y-1.5 content-start self-center justify-end min-w-[168px]">
             {!remake && badges.length > 0 && (
               <>
                 {badges.slice(0, 4).map((b) => <BadgeTag key={b.key} badge={b} />)}

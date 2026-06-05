@@ -200,9 +200,9 @@ html.light {
   --badge-emerald-text: #157951;
   --badge-emerald-bg: rgba(21, 121, 81, 0.1);
   --badge-emerald-bd: rgba(21, 121, 81, 0.28);
-  --badge-gold-text: #9a6f12;
-  --badge-gold-bg: rgba(202, 138, 4, 0.12);
-  --badge-gold-bd: rgba(202, 138, 4, 0.34);
+  --badge-gold-text: #7a5a06;
+  --badge-gold-bg: rgba(180, 134, 11, 0.14);
+  --badge-gold-bd: rgba(180, 134, 11, 0.42);
   --badge-silver-text: #566570;
   --badge-silver-bg: rgba(86, 101, 112, 0.09);
   --badge-silver-bd: rgba(86, 101, 112, 0.22);
@@ -363,8 +363,8 @@ html.light .elw-rainbow-text     { -webkit-text-fill-color: #b8860b !important; 
 /* Maç rozeti gradient tier'ları (challenger/grandmaster) — light'ta RENGARENK
    kalır ama koyulaştırılmış gradient'le (dark'taki altın-mavi / kırmızı feel'i
    korunur, beyaz zeminde okunur). Inline gradient'i !important ile ezeriz. */
-html.light .mbg-chal { background-image: linear-gradient(90deg, #8a6a0f, #b8860b, #1f6fb0, #b8860b, #8a6a0f) !important; }
-html.light .mbg-gm   { background-image: linear-gradient(90deg, #9b1c1c, #c0392b, #9b1c1c) !important; }
+html.light .mbg-chal { background-image: linear-gradient(90deg, #5e4608, #8a6510, #123f72, #8a6510, #5e4608) !important; }
+html.light .mbg-gm   { background-image: linear-gradient(90deg, #7e1414, #a81f1f, #7e1414) !important; }
 
 /* =============== ANIMASYONLAR =============== */
 

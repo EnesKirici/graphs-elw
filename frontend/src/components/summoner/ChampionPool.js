@@ -295,8 +295,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
         <span className="w-[40px]" />
         <span className="flex-1 text-[11px] text-gray-400 font-medium">Şampiyon</span>
         <SortBtn label="Oyun" field="games" width="w-12" align="center" />
-        <SortBtn label="KDA" field="avgKda" width="w-[72px]" align="center" />
-        <SortBtn label="WR" field="winRate" width="w-14" align="right" />
+        <SortBtn label="WR" field="winRate" width="w-28" align="right" />
       </div>
 
       <div className="divide-y divide-edge/20">
@@ -325,9 +324,15 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
                 </p>
                 {isMastery ? (
                   <p className="text-[10px] text-gray-500">{formatPoints(c.masteryPoints)} puan</p>
-                ) : (
-                  !noGames && <ChampRank name={c.championName} games={c.games} region={region} />
-                )}
+                ) : !noGames ? (
+                  <>
+                    <ChampRank name={c.championName} games={c.games} region={region} />
+                    {/* KDA (oran yok) — TR sıralamasının altında, 4. satır */}
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {c.avgKda.kills} / {c.avgKda.deaths} / {c.avgKda.assists}
+                    </p>
+                  </>
+                ) : null}
               </div>
 
               {/* Oyun */}
@@ -335,30 +340,16 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
                 {noGames ? "—" : c.games}
               </span>
 
-              {/* KDA */}
-              <div className="w-[72px] text-center">
-                {noGames ? (
-                  <p className="text-xs text-gray-600">—</p>
-                ) : (
-                  <>
-                    <p className="text-xs text-gray-300">
-                      {c.avgKda.kills}/{c.avgKda.deaths}/{c.avgKda.assists}
-                    </p>
-                    <KdaValue ratio={kdaRatio} />
-                  </>
-                )}
-              </div>
-
-              {/* WR */}
-              <div className="w-14 text-right">
+              {/* WR — KDA sütunu kalktı, daha geniş + büyük bar */}
+              <div className="w-28 text-right">
                 {noGames ? (
                   <span className="text-xs text-gray-600">—</span>
                 ) : (
                   <>
-                    <span className={`text-xs font-bold font-mono ${getWrColor(c.winRate)}`}>
+                    <span className={`text-sm font-bold font-mono ${getWrColor(c.winRate)}`}>
                       {c.winRate}%
                     </span>
-                    <div className="mt-1 h-2 bg-edge rounded-full overflow-hidden">
+                    <div className="mt-1 h-2.5 bg-edge rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full ${getWrBar(c.winRate)}`}
                         style={{ width: `${c.winRate}%` }}
