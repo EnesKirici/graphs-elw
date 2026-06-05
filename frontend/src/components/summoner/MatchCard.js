@@ -241,6 +241,9 @@ function BadgeTag({ badge }) {
   const chipStyle = solid
     ? { color: `var(--badge-${solid}-text)`, background: `var(--badge-${solid}-bg)`, borderColor: `var(--badge-${solid}-bd)` }
     : (hasGradientText ? { boxShadow: s.glow || undefined } : undefined);
+  // Gradient tier'lar (challenger/grandmaster) light'ta görünmez gradient yerine
+  // solid renge döner (CSS: html.light .mbg-*).
+  const gradLight = badge.tier === "challenger" ? "mbg-chal" : badge.tier === "grandmaster" ? "mbg-gm" : "";
 
   return (
     <>
@@ -251,7 +254,7 @@ function BadgeTag({ badge }) {
         style={chipStyle}
       >
         <span
-          className={hasGradientText ? "bg-clip-text text-transparent font-bold" : ""}
+          className={hasGradientText ? `bg-clip-text text-transparent font-bold ${gradLight}` : ""}
           style={hasGradientText ? { backgroundImage: s.gradient } : undefined}
         >
           {badge.label}
@@ -330,8 +333,9 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
           {!remake && m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} match={m} scoreHistory={scoreHistory} scoreIndex={scoreIndex} />}
         </div>
 
-        {/* ORTA: KDA + Items + Badges — sabit sütun genişlikleri */}
-        <div className="flex-1 flex items-center gap-3 min-w-0">
+        {/* ORTA: KDA + Items + Badges — eşit dağıt (justify-between) ki badge'lerle
+            takımlar arasında kocaman boşluk kalmasın. */}
+        <div className="flex-1 flex items-center justify-between gap-3 min-w-0 pr-2">
           {/* KDA — sabit genişlik */}
           <div className="w-[70px] flex-shrink-0 text-center">
             <p className="text-sm font-semibold text-gray-200">{m.kills}<span className="text-gray-600">/</span>{m.deaths}<span className="text-gray-600">/</span>{m.assists}</p>

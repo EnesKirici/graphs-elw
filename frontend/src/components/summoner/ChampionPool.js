@@ -37,6 +37,14 @@ function getWrColor(wr) {
   return "text-red-400";
 }
 
+// Bar rengi SAYI rengiyle eşleşir (kullanıcı: sayı yeşilse bar yeşil, mavi ise mavi).
+function getWrBar(wr) {
+  if (wr >= 60) return "bg-emerald-500";
+  if (wr >= 50) return "bg-blue-500";
+  if (wr >= 45) return "bg-yellow-500";
+  return "bg-red-500";
+}
+
 function getKdaColor(ratio) {
   if (ratio === "Perfect" || ratio >= 5) return "text-yellow-400";
   if (ratio >= 3) return "text-emerald-400";
@@ -326,7 +334,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
               </div>
 
               {/* Oyun */}
-              <span className={`w-12 text-center text-sm font-bold ${noGames ? "text-gray-600" : "text-white"}`}>
+              <span className={`w-12 text-center text-sm font-bold ${noGames ? "text-gray-600" : "text-gray-100"}`}>
                 {noGames ? "—" : c.games}
               </span>
 
@@ -355,7 +363,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
                     </span>
                     <div className="mt-0.5 h-1 bg-edge rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${c.winRate >= 50 ? "bg-emerald-500" : "bg-red-500"}`}
+                        className={`h-full rounded-full ${getWrBar(c.winRate)}`}
                         style={{ width: `${c.winRate}%` }}
                       />
                     </div>
