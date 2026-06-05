@@ -152,7 +152,7 @@ export default function BansPage() {
             className={`text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
               filter === f.key
                 ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                : "bg-white/5 text-gray-400 border border-edge hover:text-gray-200"
+                : "bg-soft text-gray-400 border border-edge hover:text-gray-200"
             }`}>
             {f.label}
           </button>
@@ -185,7 +185,7 @@ export default function BansPage() {
           bans.data.map((ban) => {
             const isActive = !ban.unbanned_at && (ban.is_permanent || new Date(ban.expires_at) > Date.now());
             return (
-              <div key={ban.id} className={`grid grid-cols-12 gap-3 px-5 py-3 border-b border-edge/20 hover:bg-white/[0.02] transition-colors ${!isActive ? "opacity-50" : ""}`}>
+              <div key={ban.id} className={`grid grid-cols-12 gap-3 px-5 py-3 border-b border-edge/20 hover:bg-hover transition-colors ${!isActive ? "opacity-50" : ""}`}>
                 <div className="col-span-2">
                   <span className="text-sm text-gray-200 font-mono">{ban.ip_address}</span>
                 </div>
@@ -212,7 +212,7 @@ export default function BansPage() {
                 <div className="col-span-2 text-right">
                   {isActive && (
                     <button onClick={() => handleUnban(ban.id)}
-                      className="text-xs text-gray-500 hover:text-emerald-400 bg-white/5 hover:bg-emerald-500/10 px-3 py-1 rounded-lg transition-colors cursor-pointer">
+                      className="text-xs text-gray-500 hover:text-emerald-400 bg-soft hover:bg-emerald-500/10 px-3 py-1 rounded-lg transition-colors cursor-pointer">
                       Ban Kaldir
                     </button>
                   )}

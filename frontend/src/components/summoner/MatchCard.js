@@ -275,7 +275,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
   const badges = sortBadges(m.badges || []);
 
   return (
-    <div className={`border-l-[3px] ${bdr} ${bg} hover:bg-white/[0.03] transition-colors`}>
+    <div className={`border-l-[3px] ${bdr} ${bg} hover:bg-hover transition-colors`}>
       <div className="flex items-center justify-between px-3 py-2.5">
 
         {/* CHAMP + SPELL + RUNE */}

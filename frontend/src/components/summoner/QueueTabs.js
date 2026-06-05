@@ -19,7 +19,7 @@ export default function QueueTabs({ value, onChange, options = [] }) {
           className={`text-[11px] px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
             value === opt.key
               ? "bg-blue-500/15 text-blue-400"
-              : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+              : "text-gray-500 hover:text-gray-300 hover:bg-hover"
           }`}
         >
           {opt.label}

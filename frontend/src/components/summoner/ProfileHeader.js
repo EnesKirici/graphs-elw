@@ -85,7 +85,7 @@ export default function ProfileHeader({
                   const roleIcons = { Top: "/roles/top.webp", Jungle: "/roles/jungle.webp", Mid: "/roles/mid.webp", ADC: "/roles/bot.webp", Support: "/roles/support.webp" };
                   const parts = mainRole.replace(" Main", "").split("/");
                   return (
-                    <span className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm text-gray-200 px-2.5 py-1 rounded-full">
+                    <span className="flex items-center gap-1.5 bg-soft backdrop-blur-sm text-gray-200 px-2.5 py-1 rounded-full">
                       {parts.map((role, i) => (
                         <span key={i} className="flex items-center gap-1">
                           {roleIcons[role] && <img src={roleIcons[role]} alt="" width={16} height={16} />}

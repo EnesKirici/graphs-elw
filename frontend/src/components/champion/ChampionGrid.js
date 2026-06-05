@@ -52,7 +52,7 @@ export default function ChampionGrid({ champions, showSearch = true }) {
           <Link
             key={champ.id}
             href={`/champions/${champ.id}`}
-            className="group rounded-lg p-2 hover:bg-white/5 transition-all duration-200 animate-fade-in-up"
+            className="group rounded-lg p-2 hover:bg-hover transition-all duration-200 animate-fade-in-up"
             style={{
               opacity: 0,
               animationDelay: `${Math.min(i * 10, 300)}ms`,

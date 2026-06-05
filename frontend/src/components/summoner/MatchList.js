@@ -73,7 +73,7 @@ export default function MatchList({ initialMatches, puuid, selectedMatchId, onSe
           <button
             onClick={loadMore}
             disabled={loading}
-            className="w-full py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200 disabled:opacity-50 disabled:cursor-wait"
+            className="w-full py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer bg-soft text-gray-400 hover:bg-hover hover:text-gray-200 disabled:opacity-50 disabled:cursor-wait"
           >
             {loading ? "Yükleniyor..." : "Daha Fazla Göster"}
           </button>

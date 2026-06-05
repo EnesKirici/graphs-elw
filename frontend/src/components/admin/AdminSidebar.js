@@ -57,7 +57,7 @@ export default function AdminSidebar() {
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
                       isActive
                         ? "bg-blue-500/15 text-blue-400 font-medium shadow-sm shadow-blue-500/5"
-                        : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                        : "text-gray-400 hover:text-gray-200 hover:bg-hover"
                     }`}
                   >
                     <svg className="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -76,7 +76,7 @@ export default function AdminSidebar() {
       <div className="px-3 py-3 border-t border-edge/50 space-y-1">
         <Link
           href="/"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-colors"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-gray-500 hover:text-gray-300 hover:bg-hover transition-colors"
         >
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />

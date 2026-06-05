@@ -37,7 +37,7 @@ function ScorePreview({ score, config }) {
   const colorLabel = { emerald: "Yesil", blue: "Mavi", yellow: "Sari", red: "Kirmizi" };
 
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl border border-edge/50 ${isRainbow ? "bg-gradient-to-r from-amber-500/5 via-cyan-500/5 to-emerald-500/5" : isGlow ? "bg-emerald-500/5" : "bg-white/[0.02]"}`}>
+    <div className={`flex items-center gap-3 p-3 rounded-xl border border-edge/50 ${isRainbow ? "bg-gradient-to-r from-amber-500/5 via-cyan-500/5 to-emerald-500/5" : isGlow ? "bg-emerald-500/5" : "bg-soft"}`}>
       <div className="flex flex-col items-center w-14">
         <span className={`text-lg font-bold ${isRainbow ? "elw-rainbow-text bg-clip-text text-transparent" : colorMap[color]}`}>
           {score.toFixed(1)}
@@ -105,7 +105,7 @@ export default function ElwScoreSettingsPage() {
     finally { setSaving(false); }
   }
 
-  if (loading) return <div className="h-64 rounded-2xl bg-white/2 animate-pulse" />;
+  if (loading) return <div className="h-64 rounded-2xl bg-soft animate-pulse" />;
 
   return (
     <>
@@ -147,7 +147,7 @@ export default function ElwScoreSettingsPage() {
             <p className="text-[11px] text-gray-600 mb-4">Skor bu degerin ustundeyse ilgili etiket gosterilir (yukaridan asagiya kontrol edilir)</p>
             <div className="space-y-2.5">
               {config.labels.map((l, idx) => (
-                <div key={idx} className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-edge/30">
+                <div key={idx} className="flex items-center gap-3 bg-soft rounded-xl p-3 border border-edge/30">
                   <div className="flex items-center gap-1.5 shrink-0 w-20">
                     <span className="text-[10px] text-gray-600">{">="}</span>
                     <input type="number" step="0.5" value={l.min}
@@ -197,7 +197,7 @@ export default function ElwScoreSettingsPage() {
             <h3 className="text-sm font-semibold text-gray-200 mb-4">Efekt Ayarlari</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Glow */}
-              <div className="bg-white/[0.02] rounded-xl p-4 border border-emerald-500/10">
+              <div className="bg-soft rounded-xl p-4 border border-emerald-500/10">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-3 h-3 rounded-full bg-emerald-500 perf-glow perf-glow-emerald" />
                   <h4 className="text-sm font-medium text-emerald-400">Glow Efekti</h4>
@@ -221,7 +221,7 @@ export default function ElwScoreSettingsPage() {
               </div>
 
               {/* Rainbow */}
-              <div className="bg-white/[0.02] rounded-xl p-4 border border-amber-500/10">
+              <div className="bg-soft rounded-xl p-4 border border-amber-500/10">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-3 h-3 rounded-full elw-rainbow-bar" />
                   <h4 className="text-sm font-medium text-amber-400">Gokkusagi (MVP)</h4>

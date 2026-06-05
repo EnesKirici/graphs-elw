@@ -75,7 +75,7 @@ export default function RankingCard({ title, champions, valueKey, color = "blue"
       <div className="px-4 pb-3">
         <Link
           href="/champions"
-          className={`block text-center text-xs ${textColors[color]} hover:underline py-2 rounded-lg hover:bg-white/[0.02] transition-colors`}
+          className={`block text-center text-xs ${textColors[color]} hover:underline py-2 rounded-lg hover:bg-hover transition-colors`}
         >
           Tümünü Gör →
         </Link>

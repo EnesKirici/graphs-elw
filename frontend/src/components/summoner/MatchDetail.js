@@ -815,7 +815,7 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side, allPlayers, duration }) {
   const mirrored = side === "red";
 
   return (
-    <div className={`px-4 py-3 hover:bg-white/[0.02] transition-colors ${mirrored ? "pl-3" : ""}`}>
+    <div className={`px-4 py-3 hover:bg-hover transition-colors ${mirrored ? "pl-3" : ""}`}>
       <div className={`flex items-center gap-2.5 ${mirrored ? "flex-row-reverse" : ""}`}>
         {/* Sıralama */}
         <RankBadge rank={p._matchRank} />
@@ -1163,7 +1163,7 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
 function StatsRow({ p, maxVals }) {
   const c = p.challenges || {};
   return (
-    <tr className="border-b border-edge/10 last:border-b-0 hover:bg-white/[0.02]">
+    <tr className="border-b border-edge/10 last:border-b-0 hover:bg-hover">
       <td className="py-2.5 px-3">
         <div className="flex items-center gap-2">
           <img src={p.champion.image} alt="" width={24} height={24} className="rounded-md" />

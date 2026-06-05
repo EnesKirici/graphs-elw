@@ -32,7 +32,7 @@ const SORT_OPTIONS = [
     { key: "goldPerMin", label: "Gold/dk" },
 ];
 
-export default function AllChampionsContent({ seasonChampions }) {
+export default function AllChampionsContent({ seasonChampions, region = "TR" }) {
     const [gameType, setGameType] = useState("all");
     const [sortKey, setSortKey] = useState("games");
     const [sortAsc, setSortAsc] = useState(false);
@@ -92,7 +92,7 @@ export default function AllChampionsContent({ seasonChampions }) {
                                 key={g.key}
                                 onClick={() => setGameType(g.key)}
                                 className={`text-[11px] px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                                    gameType === g.key ? "bg-blue-500/15 text-blue-400" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                                    gameType === g.key ? "bg-blue-500/15 text-blue-400" : "text-gray-500 hover:text-gray-300 hover:bg-hover"
                                 }`}
                             >
                                 {g.label}
@@ -105,7 +105,7 @@ export default function AllChampionsContent({ seasonChampions }) {
                                 key={s.key}
                                 onClick={() => toggleSort(s.key)}
                                 className={`text-[10px] px-2 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
-                                    sortKey === s.key ? "bg-blue-500/15 text-blue-400" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                                    sortKey === s.key ? "bg-blue-500/15 text-blue-400" : "text-gray-500 hover:text-gray-300 hover:bg-hover"
                                 }`}
                             >
                                 {s.label}
@@ -118,18 +118,18 @@ export default function AllChampionsContent({ seasonChampions }) {
                 </div>
 
                 {/* Tablo başlığı */}
-                <div className="hidden md:flex items-center px-5 py-2 gap-2 border-b border-edge/20 bg-[#0a0e14]/30">
-                    <span className="w-5" />
-                    <span className="w-10" />
-                    <span className="flex-1 text-[10px] text-gray-500 font-medium">Şampiyon</span>
-                    <span className="w-12 text-center text-[10px] text-gray-500 font-medium">Oyun</span>
-                    <span className="w-14 text-center text-[10px] text-gray-500 font-medium">W/L</span>
-                    <span className="w-12 text-right text-[10px] text-gray-500 font-medium">WR</span>
-                    <span className="w-24 text-center text-[10px] text-gray-500 font-medium">KDA</span>
-                    <span className="w-14 text-center text-[10px] text-gray-500 font-medium">CS/dk</span>
-                    <span className="w-14 text-center text-[10px] text-gray-500 font-medium">Gold/dk</span>
-                    <span className="w-12 text-center text-[10px] text-gray-500 font-medium">Süre</span>
-                    <span className="w-20 text-center text-[10px] text-gray-500 font-medium">Multi Kill</span>
+                <div className="hidden md:flex items-center px-5 py-2.5 gap-3 border-b border-edge/20 bg-base/40">
+                    <span className="w-6" />
+                    <span className="w-12" />
+                    <span className="flex-1 text-[11px] text-gray-500 font-medium">Şampiyon</span>
+                    <span className="w-16 text-center text-[11px] text-gray-500 font-medium">Oyun</span>
+                    <span className="w-20 text-center text-[11px] text-gray-500 font-medium">W/L</span>
+                    <span className="w-24 text-center text-[11px] text-gray-500 font-medium">WR</span>
+                    <span className="w-36 text-center text-[11px] text-gray-500 font-medium">KDA</span>
+                    <span className="w-16 text-center text-[11px] text-gray-500 font-medium">CS/dk</span>
+                    <span className="w-16 text-center text-[11px] text-gray-500 font-medium">Gold/dk</span>
+                    <span className="w-16 text-center text-[11px] text-gray-500 font-medium">Süre</span>
+                    <span className="w-52 text-center text-[11px] text-gray-500 font-medium">Multi Kill</span>
                 </div>
 
                 {/* Şampiyon listesi */}
@@ -140,7 +140,7 @@ export default function AllChampionsContent({ seasonChampions }) {
                 ) : (
                     <div className="divide-y divide-edge/15">
                         {champions.map((c, i) => (
-                            <ChampionRow key={c.championName + i} champ={c} index={i} />
+                            <ChampionRow key={c.championName + i} champ={c} index={i} region={region} />
                         ))}
                     </div>
                 )}
@@ -169,63 +169,76 @@ function SummaryCard({ label, value, valueColor = "text-white" }) {
     );
 }
 
+/* ===== Multi kill sabit slotları =====
+   Her tip kendi mini kolonunda → satırlar arası hizalı, hiçbiri gizlenmez.
+   Soldan sağa yükselen nadirlik: D → T → Q → P (penta en sağda parlar). */
+const MULTI_KILL_SLOTS = [
+    { key: "doubleKills", label: "D", color: "text-gray-300 bg-gray-500/15" },
+    { key: "tripleKills", label: "T", color: "text-blue-400 bg-blue-500/15" },
+    { key: "quadraKills", label: "Q", color: "text-purple-400 bg-purple-500/15" },
+    { key: "pentaKills", label: "P", color: "text-yellow-400 bg-yellow-500/15" },
+];
+
 /* ===== Tek şampiyon satırı ===== */
-function ChampionRow({ champ: c, index }) {
+function ChampionRow({ champ: c, index, region }) {
     const kdaRatio = c.avgKda?.ratio ?? 0;
     const noGames = !c.games || c.games === 0;
 
-    // Multi kill bilgileri
-    const multiKills = [];
-    if (c.pentaKills > 0) multiKills.push({ label: "P", count: c.pentaKills, color: "text-yellow-400 bg-yellow-500/15" });
-    if (c.quadraKills > 0) multiKills.push({ label: "Q", count: c.quadraKills, color: "text-purple-400 bg-purple-500/15" });
-    if (c.tripleKills > 0) multiKills.push({ label: "T", count: c.tripleKills, color: "text-blue-400 bg-blue-500/15" });
-    if (c.doubleKills > 0) multiKills.push({ label: "D", count: c.doubleKills, color: "text-gray-400 bg-gray-500/10" });
-
     return (
-        <div className="flex items-center gap-2 px-5 py-3 hover:bg-white/[0.02] transition-colors group">
+        <div className="flex items-center gap-3 px-5 py-3.5 hover:bg-hover transition-colors group">
             {/* Sıra */}
-            <span className="text-[11px] text-gray-600 font-mono w-5 text-right flex-shrink-0">{index + 1}</span>
+            <span className="text-xs text-gray-600 font-mono w-6 text-right flex-shrink-0">{index + 1}</span>
 
             {/* Şampiyon resmi */}
-            <div className="flex-shrink-0 w-10 h-10">
-                <img src={c.championImage} alt={c.championName} className="w-10 h-10 rounded-lg" />
+            <div className="flex-shrink-0 w-12 h-12">
+                <img src={c.championImage} alt={c.championName} className="w-12 h-12 rounded-xl" />
             </div>
 
-            {/* İsim */}
+            {/* İsim + (varsa) bölgesel şampiyon sıralaması */}
             <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-100 font-medium group-hover:text-white transition-colors truncate">
+                <p className="text-[15px] text-gray-100 font-semibold group-hover:text-white transition-colors truncate">
                     {c.championName}
                 </p>
+                {/* Backend bu şampiyonda 10+ maçı olan oyuncular arasında sıra hesaplayıp
+                    championRank: { position } gönderirse otomatik görünür (henüz gelmiyor). */}
+                {c.championRank?.position > 0 && (
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                        {region} Sırası{" "}
+                        <span className="text-gray-300 font-semibold">
+                            #{c.championRank.position.toLocaleString("tr-TR")}
+                        </span>
+                    </p>
+                )}
             </div>
 
             {/* Oyun sayısı */}
-            <span className={`w-12 text-center text-sm font-bold ${noGames ? "text-gray-600" : "text-white"}`}>
+            <span className={`w-16 text-center text-[15px] font-bold ${noGames ? "text-gray-600" : "text-white"}`}>
                 {noGames ? "—" : c.games}
             </span>
 
             {/* W/L */}
-            <div className="w-14 text-center">
+            <div className="w-20 text-center">
                 {noGames ? (
                     <span className="text-xs text-gray-600">—</span>
                 ) : (
-                    <span className="text-[11px]">
+                    <span className="text-xs font-medium">
                         <span className="text-emerald-400">{c.wins}</span>
-                        <span className="text-gray-600">/</span>
+                        <span className="text-gray-600 mx-0.5">/</span>
                         <span className="text-red-400">{c.losses}</span>
                     </span>
                 )}
             </div>
 
             {/* WR */}
-            <div className="w-12 text-right">
+            <div className="w-24">
                 {noGames ? (
-                    <span className="text-xs text-gray-600">—</span>
+                    <span className="block text-center text-xs text-gray-600">—</span>
                 ) : (
-                    <div>
-                        <span className={`text-xs font-bold font-mono ${getWrColor(c.winRate)}`}>
+                    <div className="px-1.5">
+                        <span className={`block text-center text-sm font-bold font-mono ${getWrColor(c.winRate)}`}>
                             {c.winRate}%
                         </span>
-                        <div className="mt-0.5 h-1 bg-edge rounded-full overflow-hidden">
+                        <div className="mt-1 h-1 bg-edge rounded-full overflow-hidden">
                             <div
                                 className={`h-full rounded-full ${c.winRate >= 50 ? "bg-emerald-500" : "bg-red-500"}`}
                                 style={{ width: `${c.winRate}%` }}
@@ -236,19 +249,19 @@ function ChampionRow({ champ: c, index }) {
             </div>
 
             {/* KDA — kills yeşil, deaths kırmızı, assists sarı */}
-            <div className="w-24 text-center">
+            <div className="w-36 text-center">
                 {noGames ? (
                     <span className="text-xs text-gray-600">—</span>
                 ) : (
                     <>
-                        <p className="text-[11px]">
+                        <p className="text-xs">
                             <span className="text-emerald-400 font-medium">{c.avgKda.kills}</span>
                             <span className="text-gray-600"> / </span>
                             <span className="text-red-400 font-medium">{c.avgKda.deaths}</span>
                             <span className="text-gray-600"> / </span>
                             <span className="text-yellow-400 font-medium">{c.avgKda.assists}</span>
                         </p>
-                        <p className={`text-[10px] font-semibold ${getKdaColor(kdaRatio)}`}>
+                        <p className={`text-[11px] font-semibold mt-0.5 ${getKdaColor(kdaRatio)}`}>
                             {kdaRatio === "Perfect" ? "Perfect" : typeof kdaRatio === "number" ? kdaRatio.toFixed(2) : "0"}
                         </p>
                     </>
@@ -256,31 +269,37 @@ function ChampionRow({ champ: c, index }) {
             </div>
 
             {/* CS/dk */}
-            <span className="w-14 text-center text-[11px] text-gray-300">
+            <span className="hidden md:block w-16 text-center text-xs text-gray-300">
                 {noGames ? "—" : (c.csPerMin ?? 0).toFixed(1)}
             </span>
 
             {/* Gold/dk */}
-            <span className="w-14 text-center text-[11px] text-amber-400/80">
+            <span className="hidden md:block w-16 text-center text-xs text-amber-400/80">
                 {noGames ? "—" : (c.goldPerMin ?? 0)}
             </span>
 
             {/* Ort. Süre */}
-            <span className="w-12 text-center text-[11px] text-gray-500">
+            <span className="hidden md:block w-16 text-center text-xs text-gray-500">
                 {noGames ? "—" : `${c.avgDuration ?? 0}dk`}
             </span>
 
-            {/* Multi Kill */}
-            <div className="w-20 flex items-center justify-center gap-1">
-                {multiKills.length === 0 ? (
-                    <span className="text-[10px] text-gray-700">—</span>
-                ) : (
-                    multiKills.slice(0, 3).map((mk, i) => (
-                        <span key={i} className={`text-[9px] font-bold px-1 py-0.5 rounded ${mk.color}`}>
-                            {mk.label}×{mk.count}
+            {/* Multi Kill — 4 sabit slot (D/T/Q/P), hepsi her zaman görünür */}
+            <div className="hidden md:grid w-52 grid-cols-4 gap-1.5 flex-shrink-0 items-center">
+                {MULTI_KILL_SLOTS.map((slot) => {
+                    const count = c[slot.key] || 0;
+                    return count > 0 ? (
+                        <span
+                            key={slot.key}
+                            className={`text-[10px] font-bold px-1 py-1 rounded-md text-center ${slot.color}`}
+                        >
+                            {slot.label}×{count}
                         </span>
-                    ))
-                )}
+                    ) : (
+                        <span key={slot.key} className="text-[10px] text-center text-gray-600/50 py-1">
+                            ·
+                        </span>
+                    );
+                })}
             </div>
         </div>
     );

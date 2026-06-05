@@ -55,7 +55,7 @@ const THEME_INIT = `(function(){try{var m=localStorage.getItem('elw-mode');if(m=
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="tr" className={`${geist.variable} ${archivo.variable} ${manrope.variable} ${jetbrains.variable}`}>
+    <html lang="tr" suppressHydrationWarning className={`${geist.variable} ${archivo.variable} ${manrope.variable} ${jetbrains.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>

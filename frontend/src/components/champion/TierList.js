@@ -149,7 +149,7 @@ export default function TierList({ champions = [], version }) {
               key={r.key}
               onClick={() => setRole(r.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                role === r.key ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                role === r.key ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"
               }`}
             >
               <img src={r.icon} alt={r.label} width={16} height={16} className={role === r.key ? "" : "opacity-70"} />

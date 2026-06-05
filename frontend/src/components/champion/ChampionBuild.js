@@ -64,7 +64,7 @@ export default function ChampionBuild({ champion, version, championList = [], ru
           {positions.map((p) => (
             <button key={p} onClick={() => setRole(p)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                role === p ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"}`}>
+                role === p ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"}`}>
               <img src={ROLE_ICON[p]} alt={ROLE_LABELS[p]} width={16} height={16} className={role === p ? "" : "opacity-70"} />
               {ROLE_LABELS[p]}
             </button>
@@ -82,7 +82,7 @@ export default function ChampionBuild({ champion, version, championList = [], ru
           <Section title="Önerilen Buildler" extra={<span className="text-[10px] text-gray-600">WR</span>}>
             <div className="space-y-2">
               {data.builds.map((b, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]">
+                <div key={i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-hover">
                   <ItemRow items={b.items} size={24} />
                   <div className="ml-auto text-right">
                     <p className="text-[11px] text-gray-300 leading-tight">{b.name}</p>

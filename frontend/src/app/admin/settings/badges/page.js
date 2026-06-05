@@ -93,7 +93,7 @@ export default function BadgesSettingsPage() {
     finally { setSaving(false); }
   }
 
-  if (loading) return <div className="h-64 rounded-2xl bg-white/2 animate-pulse" />;
+  if (loading) return <div className="h-64 rounded-2xl bg-soft animate-pulse" />;
 
   const grouped = {};
   Object.entries(badges).forEach(([key, badge]) => {
@@ -177,7 +177,7 @@ export default function BadgesSettingsPage() {
 
                         {/* Label */}
                         <input value={badge.label} onChange={(e) => updateBadge(badge.key, "label", e.target.value)}
-                          className="bg-white/5 border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-200 w-40 focus:outline-none focus:border-blue-500/50" />
+                          className="bg-soft border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-200 w-40 focus:outline-none focus:border-blue-500/50" />
 
                         {/* Stat */}
                         <span className="text-[11px] text-gray-600 font-mono flex-1 truncate">{badge.stat}</span>
@@ -187,7 +187,7 @@ export default function BadgesSettingsPage() {
                           <span className="text-[10px] text-gray-600">Esik:</span>
                           <input type="number" step="any" value={badge.threshold ?? 0}
                             onChange={(e) => updateBadge(badge.key, "threshold", Number(e.target.value))}
-                            className="w-16 bg-white/5 border border-edge rounded-lg px-2 py-1 text-xs text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                            className="w-16 bg-soft border border-edge rounded-lg px-2 py-1 text-xs text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
                         </div>
 
                         {/* Tier badges */}
@@ -217,7 +217,7 @@ export default function BadgesSettingsPage() {
                               const hasValue = tierVal !== undefined && tierVal !== null;
 
                               return (
-                                <div key={tierKey} className={`rounded-xl p-3 border transition-all ${hasValue ? `bg-white/[0.02] border-edge/50` : "bg-transparent border-dashed border-edge/20 opacity-40"}`}>
+                                <div key={tierKey} className={`rounded-xl p-3 border transition-all ${hasValue ? `bg-soft border-edge/50` : "bg-transparent border-dashed border-edge/20 opacity-40"}`}>
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-1.5">
                                       <span className={`w-3 h-3 rounded-full ${tierInfo.bg}`} />

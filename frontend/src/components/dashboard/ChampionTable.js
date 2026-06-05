@@ -61,7 +61,7 @@ export default function ChampionTable({ title, champions, sortBy = "winRate" }) 
           <Link
             key={champ.id}
             href={`/champions/${champ.id}`}
-            className="grid grid-cols-[40px_1fr_130px_70px_70px_50px] gap-2 items-center px-5 py-3 hover:bg-white/[0.02] transition-colors duration-200 group animate-fade-in-up"
+            className="grid grid-cols-[40px_1fr_130px_70px_70px_50px] gap-2 items-center px-5 py-3 hover:bg-hover transition-colors duration-200 group animate-fade-in-up"
             style={{
               opacity: 0,
               animationDelay: `${index * 50}ms`,

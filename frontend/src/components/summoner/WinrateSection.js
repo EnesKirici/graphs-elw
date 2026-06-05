@@ -129,7 +129,7 @@ export default function WinrateSection({ timeline, defaultOpen = false, label = 
                 className={`text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
                   filter === f.key
                     ? "bg-blue-500/15 text-blue-400"
-                    : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                    : "text-gray-500 hover:text-gray-300 hover:bg-hover"
                 }`}
               >
                 {f.label}

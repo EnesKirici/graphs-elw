@@ -37,7 +37,7 @@ export default function RoleStats({ seasonRoles }) {
               className={`text-[11px] px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 filter === f.key
                   ? "bg-blue-500/15 text-blue-400"
-                  : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                  : "text-gray-500 hover:text-gray-300 hover:bg-hover"
               }`}
             >
               {f.label}
@@ -62,7 +62,7 @@ export default function RoleStats({ seasonRoles }) {
           roleStats.map((r) => (
             <div
               key={r.role}
-              className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/[0.03] transition-colors"
+              className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-hover transition-colors"
             >
               <div className="flex items-center gap-2.5 w-[100px]">
                 <img src={r.icon} alt={r.label} width={28} height={28} className="flex-shrink-0" />

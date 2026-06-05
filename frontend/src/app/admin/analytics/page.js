@@ -74,7 +74,7 @@ export default function AnalyticsPage() {
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                 days === d
                   ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                  : "bg-white/5 text-gray-400 border border-edge hover:text-gray-200"
+                  : "bg-soft text-gray-400 border border-edge hover:text-gray-200"
               }`}
             >
               {d} gün

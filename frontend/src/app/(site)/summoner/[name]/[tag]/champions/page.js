@@ -2,6 +2,7 @@ import { fetchApi } from "@/lib/api";
 import Link from "next/link";
 import ProfileHeader from "@/components/summoner/ProfileHeader";
 import AllChampionsContent from "@/components/summoner/AllChampionsContent";
+import { regionLabel } from "@/lib/region";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
@@ -54,7 +55,10 @@ export default async function ChampionsPage({ params }) {
 
       {/* ===== CONTENT ===== */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <AllChampionsContent seasonChampions={data.seasonChampions || {}} />
+        <AllChampionsContent
+          seasonChampions={data.seasonChampions || {}}
+          region={regionLabel(profile.platform)}
+        />
       </div>
     </div>
   );

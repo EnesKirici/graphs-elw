@@ -88,7 +88,7 @@ export default function StatsTable({ stats }) {
           const growth = perLvl ? (current - base) : 0;
 
           return (
-            <div key={cfg.key} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-white/[0.02] transition-colors">
+            <div key={cfg.key} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-hover transition-colors">
               <span className="text-sm w-5 text-center flex-shrink-0">{cfg.icon}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-gray-500 truncate">{cfg.label}</p>

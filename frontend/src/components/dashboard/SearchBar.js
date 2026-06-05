@@ -145,7 +145,7 @@ export default function SearchBar({ champions }) {
                 <button
                   key={p.puuid}
                   onClick={() => handleSelectPlayer(p)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors cursor-pointer text-left"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-hover transition-colors cursor-pointer text-left"
                 >
                   {p.profileIcon ? (
                     <img src={p.profileIcon} alt="" width={32} height={32} className="rounded-lg" />
@@ -185,7 +185,7 @@ export default function SearchBar({ champions }) {
           {isPlayerSearch && !showPlayerSuggestions && (
             <button
               onClick={handleSubmit}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-hover transition-colors cursor-pointer text-left"
             >
               <div className="w-8 h-8 rounded-md bg-blue-500/20 flex items-center justify-center">
                 <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,7 +213,7 @@ export default function SearchBar({ champions }) {
                 <button
                   key={champ.id}
                   onClick={() => handleSelectChamp(champ)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors cursor-pointer text-left"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-hover transition-colors cursor-pointer text-left"
                 >
                   <img src={champ.image} alt={champ.name} width={28} height={28} className="rounded-md" />
                   <div>

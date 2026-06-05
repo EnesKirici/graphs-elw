@@ -200,7 +200,7 @@ export default function ChampionPool({ seasonChampions, masteries, gameName, tag
                   key={v.key}
                   onClick={() => { setView(v.key); setOpen(false); }}
                   className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer ${
-                    view === v.key ? "bg-blue-500/15 text-blue-400" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    view === v.key ? "bg-blue-500/15 text-blue-400" : "text-gray-400 hover:bg-hover hover:text-gray-200"
                   }`}
                 >
                   {v.label}
@@ -303,7 +303,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
             <Link
               key={c.championName + i}
               href={`/champions/${c.championName.replace(/[^a-zA-Z]/g, "") || c.championName}`}
-              className="flex items-center gap-2 px-4 py-2.5 hover:bg-white/[0.03] transition-colors group"
+              className="flex items-center gap-2 px-4 py-2.5 hover:bg-hover transition-colors group"
             >
               <span className="text-xs text-gray-500 font-mono w-5 text-right">{i + 1}</span>
 

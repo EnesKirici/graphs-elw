@@ -99,7 +99,7 @@ export default function LeaderboardPage() {
             {TIERS.map((t) => (
               <button key={t.key} onClick={() => setTier(t.key)}
                 className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                  tier === t.key ? `bg-white/10 ${t.color} font-medium` : "text-gray-500 hover:text-gray-300"
+                  tier === t.key ? `bg-soft ${t.color} font-medium` : "text-gray-500 hover:text-gray-300"
                 }`}>
                 <img src={t.badge} alt="" width={16} height={16} />
                 {t.label}
@@ -144,7 +144,7 @@ export default function LeaderboardPage() {
         {!loading && data?.entries?.map((entry, i) => (
           <div
             key={entry.puuid || i}
-            className={`grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 items-center px-6 py-3 hover:bg-white/[0.03] transition-colors border-b border-edge/15 ${
+            className={`grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 items-center px-6 py-3 hover:bg-hover transition-colors border-b border-edge/15 ${
               i < 3 ? "bg-white/[0.015]" : ""
             }`}
           >

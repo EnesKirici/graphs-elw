@@ -96,7 +96,7 @@ export default function LabelsSettingsPage() {
     }
   }
 
-  if (loading) return <div className="h-64 rounded-2xl bg-white/2 animate-pulse" />;
+  if (loading) return <div className="h-64 rounded-2xl bg-soft animate-pulse" />;
 
   return (
     <>
@@ -153,7 +153,7 @@ export default function LabelsSettingsPage() {
 
                 {/* Isim input */}
                 <input value={l.label} onChange={(e) => updateLabel(idx, "label", e.target.value)}
-                  className="bg-white/5 border border-edge rounded-lg px-3 py-1.5 text-sm text-gray-200 w-40 focus:outline-none focus:border-blue-500/50" />
+                  className="bg-soft border border-edge rounded-lg px-3 py-1.5 text-sm text-gray-200 w-40 focus:outline-none focus:border-blue-500/50" />
 
                 {/* Renk secici */}
                 <div className="flex items-center gap-1">
@@ -190,7 +190,7 @@ export default function LabelsSettingsPage() {
                   <div className="pt-4">
                     <label className="text-[11px] text-gray-500 block mb-1">Aciklama (oyuncuya gosterilir)</label>
                     <input value={l.desc} onChange={(e) => updateLabel(idx, "desc", e.target.value)}
-                      className="w-full bg-white/5 border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50" />
+                      className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50" />
                   </div>
 
                   {/* Kosullar */}
@@ -200,7 +200,7 @@ export default function LabelsSettingsPage() {
                       {CONDITION_FIELDS.map((field) => {
                         const value = l.conditions?.[field.key];
                         return (
-                          <div key={field.key} className="bg-white/[0.02] rounded-xl p-3 border border-edge/50">
+                          <div key={field.key} className="bg-soft rounded-xl p-3 border border-edge/50">
                             <label className="text-[10px] text-gray-500 block mb-1.5">{field.label}</label>
                             {field.type === "select" ? (
                               <select

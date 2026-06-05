@@ -28,7 +28,7 @@ export default function RecentChampionsCard({ matches = [] }) {
             const wr = Math.round(c.wins / t * 100);
             const ak = c.kda.length > 0 ? (c.kda.reduce((a, b) => a + b, 0) / c.kda.length).toFixed(1) : "0";
             return (
-              <div key={c.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.03] transition-colors">
+              <div key={c.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-hover transition-colors">
                 <img src={c.image} alt={c.name} width={36} height={36} className="rounded-lg" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-gray-200">{c.name}</p>

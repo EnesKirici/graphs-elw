@@ -28,7 +28,7 @@ export default function DuoPartnersCard({ duoPartners }) {
           <Link
             key={duo.puuid}
             href={`/summoner/${encodeURIComponent(duo.gameName)}/${encodeURIComponent(duo.tagLine)}`}
-            className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
+            className="flex items-center gap-3 px-4 py-2.5 hover:bg-hover transition-colors"
           >
             {/* Profil ikonu */}
             <img

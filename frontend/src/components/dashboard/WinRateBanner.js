@@ -183,7 +183,7 @@ export default function WinRateBanner({ sliderPool = [], version }) {
                 className={`rounded-full transition-all duration-300 cursor-pointer ${
                   i === current
                     ? "w-5 h-2 bg-white"
-                    : "w-2 h-2 bg-white/25 hover:bg-white/50"
+                    : "w-2 h-2 bg-white/25 hover:bg-hover0"
                 }`}
               />
             ))}

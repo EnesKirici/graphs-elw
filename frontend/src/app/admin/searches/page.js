@@ -48,7 +48,7 @@ export default function SearchesPage() {
             const ip = event.ip_address ? event.ip_address.replace(/^::ffff:/, "") : "—";
 
             return (
-              <div key={event.id} className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-edge/20 hover:bg-white/[0.02] transition-colors">
+              <div key={event.id} className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-edge/20 hover:bg-hover transition-colors">
                 <div className="col-span-3">
                   <span className="text-sm text-gray-300">{dateStr}</span>
                   <span className="text-xs text-gray-600 ml-2">{timeStr}</span>
@@ -77,14 +77,14 @@ export default function SearchesPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="text-xs text-gray-400 hover:text-white disabled:text-gray-700 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                className="text-xs text-gray-400 hover:text-white disabled:text-gray-700 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg bg-soft hover:bg-hover transition-colors cursor-pointer"
               >
                 Önceki
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page >= data.last_page}
-                className="text-xs text-gray-400 hover:text-white disabled:text-gray-700 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                className="text-xs text-gray-400 hover:text-white disabled:text-gray-700 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg bg-soft hover:bg-hover transition-colors cursor-pointer"
               >
                 Sonraki
               </button>

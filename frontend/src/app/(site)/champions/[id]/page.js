@@ -216,7 +216,7 @@ export default async function ChampionDetail({ params }) {
               </div>
               <div className="divide-y divide-edge/30">
                 {/* Pasif */}
-                <div className="flex items-start gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors group">
+                <div className="flex items-start gap-4 px-5 py-4 hover:bg-hover transition-colors group">
                   <div className="relative flex-shrink-0">
                     <img
                       src={champ.passive.image}
@@ -254,7 +254,7 @@ export default async function ChampionDetail({ params }) {
                   return (
                     <div
                       key={spell.id}
-                      className="flex items-start gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors group"
+                      className="flex items-start gap-4 px-5 py-4 hover:bg-hover transition-colors group"
                     >
                       <div className="relative flex-shrink-0">
                         <img
