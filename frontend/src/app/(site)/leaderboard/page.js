@@ -39,7 +39,7 @@ function BadgeIcon({ type, active }) {
       <Icon size={15} className={badge.color} />
       {/* Hover tooltip */}
       <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/badge:block z-[9999] pointer-events-none">
-        <span className="bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-xl shadow-black/80 whitespace-nowrap block">
+        <span className="tip-dark bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-xl shadow-black/80 whitespace-nowrap block">
           <span className={`text-xs font-medium ${badge.color} block`}>{badge.label}</span>
           <span className="text-[10px] text-gray-500 block mt-0.5">{badge.desc}</span>
         </span>

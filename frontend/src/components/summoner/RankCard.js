@@ -116,7 +116,7 @@ function AvgEnemiesRating() {
       </div>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[220px] text-center">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[220px] text-center">
             <p className="text-xs text-white font-semibold">Ortalama Rakip Seviyesi</p>
             <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">Son 10 maçta karşılaştığın rakiplerin ortalama rankı.</p>
           </div>

@@ -33,7 +33,7 @@ function HoverImg({ src, alt, size, className, tooltip }) {
         onMouseEnter={(e) => setA(e.currentTarget)} onMouseLeave={() => setA(null)} />
       {a && tooltip && (
         <Tooltip anchorEl={a}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-2.5 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-2.5 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
             {tooltip}
           </div>
         </Tooltip>
@@ -433,7 +433,7 @@ function HoverBadge({ label, desc, className }) {
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[200px] text-center">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[200px] text-center">
             <p className="text-xs text-white font-medium mb-0.5">{label}</p>
             <p className="text-[10px] text-gray-400 leading-relaxed">{desc}</p>
           </div>
@@ -475,7 +475,7 @@ function AnalysisBadge({ badge }) {
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[220px]">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[220px]">
             <div className="flex items-center gap-2 mb-1">
               <span className={`text-xs font-bold ${hasGrad ? "bg-clip-text text-transparent" : (s.text || "")}`} style={hasGrad ? { backgroundImage: s.gradient } : undefined}>{badge.label}</span>
               <span className={`text-[9px] px-1.5 py-0.5 rounded border ${s.bg} ${s.border} ${!hasGrad ? (s.text || "") : "text-gray-300"}`}>{badge.tier}</span>
@@ -512,7 +512,7 @@ function ScoringModeBar({ scoringMode, setScoringMode }) {
           <Info size={12} /> ELW Score nedir?
         </button>
         {showInfo && (
-          <div className="absolute right-0 top-full mt-1 z-50 w-80 bg-[#0a0e14] border border-[#2a3441] rounded-xl p-4 shadow-2xl shadow-black/90">
+          <div className="absolute right-0 top-full mt-1 z-50 w-80 tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-xl p-4 shadow-2xl shadow-black/90">
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-bold text-gray-200">ELW Score</h4>
               <button onClick={() => setShowInfo(false)} className="text-gray-600 hover:text-gray-400 cursor-pointer text-xs">✕</button>
@@ -624,7 +624,7 @@ function LaneGuideButton() {
       </button>
       {open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-2xl shadow-2xl shadow-black/90 w-[600px] max-h-[80vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-2xl shadow-2xl shadow-black/90 w-[600px] max-h-[80vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-gray-200">Koridor Analizi Nasıl Hesaplanır?</h2>
               <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-gray-300 text-lg cursor-pointer">✕</button>
@@ -734,7 +734,7 @@ function VerdictBadge({ analysis }) {
       </div>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-64">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-64">
             {/* Başlık */}
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-gray-300 font-medium">{roleLabel} Koridor</span>
@@ -943,7 +943,7 @@ function ElwScoreBadge({ p, allPlayers }) {
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14]/95 backdrop-blur-md border border-[#2a3441]/80 rounded-2xl px-5 py-4 shadow-2xl shadow-black/95 w-[280px]">
+          <div className="tip-dark bg-[#0a0e14]/95 backdrop-blur-md border border-[#2a3441]/80 rounded-2xl px-5 py-4 shadow-2xl shadow-black/95 w-[280px]">
             {/* Başlık — Şampiyon + İsim + Skor */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
@@ -1105,7 +1105,7 @@ function StatHeader({ label, desc }) {
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 w-48 text-center">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 w-48 text-center">
             <p className="text-[11px] text-gray-200 font-normal leading-relaxed whitespace-normal">{desc}</p>
           </div>
         </Tooltip>
@@ -1275,7 +1275,7 @@ function AnalysisPanel({ player, t1 }) {
                       <div key={ii} className="relative group">
                         <img src={item.image} alt={item.name} width={32} height={32} className="rounded-md border border-[#2a3441]/50" />
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-50">
-                          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-2.5 py-1.5 shadow-2xl whitespace-nowrap text-center">
+                          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-2.5 py-1.5 shadow-2xl whitespace-nowrap text-center">
                             <p className="text-xs text-white font-medium">{item.name}</p>
                             <p className="text-[10px] text-yellow-500">{item.gold} gold</p>
                           </div>

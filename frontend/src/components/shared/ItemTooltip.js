@@ -23,7 +23,7 @@ export default function ItemTooltip({ item, size = 30 }) {
       />
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-edge rounded-lg p-3 shadow-2xl shadow-black/90 w-60">
+          <div className="tip-dark bg-[#0a0e14] border border-edge rounded-lg p-3 shadow-2xl shadow-black/90 w-60">
             <div className="flex items-start justify-between gap-2 mb-1">
               <p className="text-sm font-bold text-white">{item.name}</p>
               {item.gold > 0 && (

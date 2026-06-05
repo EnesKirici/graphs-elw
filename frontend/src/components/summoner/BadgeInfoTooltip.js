@@ -16,7 +16,7 @@ export default function BadgeInfoTooltip() {
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[220px]">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[220px]">
             <p className="text-[11px] text-gray-300 leading-relaxed">
               Son maçlarda en sık kazanılan rozetler burada listelenir.
             </p>

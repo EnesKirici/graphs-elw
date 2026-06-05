@@ -37,7 +37,7 @@ function Chip({ badge }) {
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[230px] text-center">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[230px] text-center">
             <p className={`text-xs font-bold ${pos ? "text-emerald-400" : "text-amber-400"}`}>{badge.label}</p>
             <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">{badge.desc}</p>
           </div>

@@ -59,7 +59,7 @@ export default function RefreshButton({ puuid }) {
       </button>
       {anchor && lastRefresh && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap">
             <p className="text-[11px] text-gray-400">Son güncelleme: {timeAgo(lastRefresh)}</p>
           </div>
         </Tooltip>

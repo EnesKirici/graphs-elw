@@ -175,7 +175,7 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
 
   const tooltip = hovIdx !== null && hov && anchorEl && (
     <Tooltip anchorEl={anchorEl}>
-      <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
+      <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
         <p className="text-xs text-white font-semibold">{hov.label}</p>
         <p className="text-[11px] text-gray-400 mt-0.5">
           {hov.games > 0

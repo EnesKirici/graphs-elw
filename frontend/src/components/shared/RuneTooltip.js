@@ -36,7 +36,7 @@ export default function RuneTooltip({ runes, keystoneSize = 22, subTreeSize = 16
 
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-edge rounded-lg p-5 shadow-2xl shadow-black/90 w-80">
+          <div className="tip-dark bg-[#0a0e14] border border-edge rounded-lg p-5 shadow-2xl shadow-black/90 w-80">
             <div className="grid grid-cols-2 gap-6">
               {/* Primary tree */}
               <div>

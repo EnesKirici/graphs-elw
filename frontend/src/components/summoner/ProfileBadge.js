@@ -71,7 +71,7 @@ export default function ProfileBadge({ badge, totalGames, size = "md" }) {
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
             <span
               className={`text-xs font-bold ${isNegative ? "" : hasGradient ? "bg-clip-text text-transparent" : ""}`}
               style={isNegative ? { color: negativeStyle.color } : hasGradient ? { backgroundImage: t.gradient } : { color: t.color }}

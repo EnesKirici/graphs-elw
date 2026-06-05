@@ -61,7 +61,7 @@ function KdaValue({ ratio }) {
       </p>
       {isPerfect && anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
+          <div className="tip-dark bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
             <p className="text-xs text-yellow-400 font-bold">Perfect KDA</p>
             <p className="text-[11px] text-gray-400">0 ölüm — mükemmel performans</p>
           </div>
@@ -108,7 +108,7 @@ function MasteryBadge({ level, points, size = 28 }) {
       </div>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
+          <div className="tip-dark bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
             <div className="flex items-center gap-2 mb-1">
               <img src={url} alt="" width={40} height={40} />
               <p className="text-sm text-white font-bold">Mastery Level {level}</p>

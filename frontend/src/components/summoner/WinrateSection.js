@@ -223,7 +223,7 @@ export default function WinrateSection({ timeline, defaultOpen = false, label = 
           {/* Portal Tooltip */}
           {hovData && hovAnchor && (
             <Tooltip anchorEl={hovAnchor}>
-              <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
+              <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
                 <p className={`text-sm font-bold`} style={{ color: wrToColor(hovData.winRate) }}>{hovData.winRate}%</p>
                 <p className="text-[11px] text-gray-400">{hovData.date} · Maç {hovData.game}</p>
               </div>

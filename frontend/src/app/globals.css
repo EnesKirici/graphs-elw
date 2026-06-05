@@ -219,6 +219,21 @@ html.light .glass {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.04);
 }
 
+/* Koyu tooltip/popover (bg-[#0a0e14]) — light modda İÇERİĞİ "darktaki gibi" tutar.
+   Gri rampası + yüzey/metin değişkenleri DARK değerlerine sabitlenir ki tooltip
+   içindeki text-gray-* metinleri koyuya dönüp kaybolmasın. Kullanıcı isteği:
+   tooltip'leri light'a uyarlama, dark kalsın. */
+html.light .tip-dark {
+  --color-gray-50: #f9fafb;  --color-gray-100: #f3f4f6; --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db; --color-gray-400: #9ca3af; --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563; --color-gray-700: #374151; --color-gray-800: #1f2937;
+  --color-gray-900: #111827; --color-gray-950: #030712;
+  --c-base: #060a10; --c-card: #0d1117; --c-edge: #2a3441;
+  --c-soft: rgba(255,255,255,.05); --c-hover: rgba(255,255,255,.06);
+  --c-grid: #1b2230; --c-grid-strong: #2a3441;
+  --txt: #eef1f6; --txt-2: #aab1c0; --txt-3: #6b7282; --border: rgba(255,255,255,.07);
+}
+
 /* =============== ANIMASYONLAR =============== */
 
 /* Yukarıdan kayarak belirme */

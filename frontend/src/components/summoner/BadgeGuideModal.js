@@ -223,7 +223,7 @@ export default function BadgeGuideModal({ open, onClose }) {
           {/* ELW SCORE TAB */}
           {tab === "elw" && (
             <div className="space-y-5">
-              <div className="bg-[#0a0e14] rounded-lg p-4 border border-edge/30">
+              <div className="tip-dark bg-[#0a0e14] rounded-lg p-4 border border-edge/30">
                 <h3 className="text-sm font-bold text-white mb-1">ELW Score Nedir?</h3>
                 <p className="text-[11px] text-gray-400 leading-relaxed">
                   Her maçta 10 oyuncunun performansı 8 farklı metrikle puanlanır. Her metrik 0-1 arası normalize edilir ve koridora özel ağırlıklarla çarpılır. Sonuç Z-score ile 0-10 arasına dönüştürülür. Maç ortalaması = 5.0.
@@ -302,7 +302,7 @@ export default function BadgeGuideModal({ open, onClose }) {
           {/* KORİDOR ANALİZİ TAB */}
           {tab === "lane" && (
             <div className="space-y-5">
-              <div className="bg-[#0a0e14] rounded-lg p-4 border border-edge/30">
+              <div className="tip-dark bg-[#0a0e14] rounded-lg p-4 border border-edge/30">
                 <h3 className="text-sm font-bold text-white mb-1">Koridor Analizi Nedir?</h3>
                 <p className="text-[11px] text-gray-400 leading-relaxed">
                   Her koridor, aynı roldeki iki oyuncuyu <strong className="text-gray-200">9 metrik</strong> üzerinden karşılaştırır. Her metrik -1 ile +1 arası normalize edilir ve rol bazlı ağırlıkla çarpılır. Pozitif skor mavi tarafın, negatif skor kırmızı tarafın üstünlüğünü gösterir.
@@ -379,7 +379,7 @@ export default function BadgeGuideModal({ open, onClose }) {
           {/* PERFORMANS ETİKETLERİ TAB */}
           {tab === "labels" && (
             <div className="space-y-5">
-              <div className="bg-[#0a0e14] rounded-lg p-4 border border-edge/30">
+              <div className="tip-dark bg-[#0a0e14] rounded-lg p-4 border border-edge/30">
                 <p className="text-[11px] text-gray-400 leading-relaxed">
                   Her maç sonunda ELW Score, sıralama ve Timeline verisi analiz edilerek performans etiketi belirlenir. Timeline API maç içi gold/XP değişimini dakika dakika takip eder.
                 </p>

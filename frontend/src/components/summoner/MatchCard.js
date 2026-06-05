@@ -67,7 +67,7 @@ function PlayerIcon({ player: p }) {
       {href ? <Link href={href} onClick={(e) => e.stopPropagation()}>{img}</Link> : img}
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-2.5 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-2.5 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap">
             <p className="text-[11px] text-white font-medium">{p.gameName || p.name}<span className="text-gray-500 text-[9px] ml-0.5">#{p.tagLine}</span></p>
             <p className="text-[9px] text-gray-500">{p.name}</p>
           </div>
@@ -139,7 +139,7 @@ function PerfLabelTag({ perfLabel, ranking, match, scoreHistory, scoreIndex }) {
       </p>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-60">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-60">
             {/* Başlık — ELW Score + değer */}
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[11px] text-gray-500 font-medium">ELW Score</span>
@@ -212,7 +212,7 @@ function MoreBadgesTooltip({ badges }) {
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 space-y-1">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 space-y-1">
             {badges.map((b) => {
               const st = TIER_STYLES[b.tier] || TIER_STYLES.silver;
               const hasGrad = !!st.gradient;
@@ -259,7 +259,7 @@ function BadgeTag({ badge }) {
       </span>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
             <div className="flex items-center gap-2">
               <span className={`text-xs font-bold ${hasGradientText ? "bg-clip-text text-transparent" : (s.text || "")}`} style={hasGradientText ? { backgroundImage: s.gradient } : undefined}>{badge.label}</span>
               <span className={`text-[9px] px-1.5 py-0.5 rounded ${s.bg} ${s.border} border ${!hasGradientText ? (s.text || "") : "text-gray-300"}`}>{badge.tier}</span>
