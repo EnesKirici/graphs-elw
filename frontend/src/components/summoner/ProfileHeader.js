@@ -49,8 +49,11 @@ export default function ProfileHeader({
         {bannerChamp && (
           <BannerImage champion={bannerChamp} skins={bannerSkins} />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-base via-base/40 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-base/50 via-transparent to-transparent" />
+        {/* Banner perdesi HER İKİ temada koyu (scrim) — üstündeki açık renk
+            metin/rozetler okunsun. Light'ta bg-base açılırsa beyaz perde olup
+            içerik kayboluyordu. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-scrim via-scrim/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-scrim/50 via-transparent to-transparent" />
 
         <div className="absolute bottom-0 left-0 right-0">
           <div className="max-w-7xl mx-auto px-6 pb-5 flex items-end gap-4">
@@ -60,8 +63,8 @@ export default function ProfileHeader({
                 width={84} height={84}
                 className="rounded-xl border-2 border-edge shadow-2xl"
               />
-              {/* Level badge */}
-              <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] text-gray-300 font-bold bg-base/80 backdrop-blur-sm px-1.5 py-px rounded">
+              {/* Level badge — koyu scrim üstünde, sabit açık renk */}
+              <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] text-white font-bold bg-scrim/80 backdrop-blur-sm px-1.5 py-px rounded">
                 {profile.summonerLevel}
               </span>
               {/* Bölge bayrağı */}
@@ -76,7 +79,7 @@ export default function ProfileHeader({
             <div>
               <h1 className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-lg">
                 {profile.gameName}
-                <span className="text-gray-400 text-base font-normal ml-1">#{profile.tagLine}</span>
+                <span className="text-white/55 text-base font-normal ml-1">#{profile.tagLine}</span>
               </h1>
               <div className="flex items-center gap-3 mt-1">
                 {(() => {
@@ -85,11 +88,11 @@ export default function ProfileHeader({
                   const roleIcons = { Top: "/roles/top.webp", Jungle: "/roles/jungle.webp", Mid: "/roles/mid.webp", ADC: "/roles/bot.webp", Support: "/roles/support.webp" };
                   const parts = mainRole.replace(" Main", "").split("/");
                   return (
-                    <span className="flex items-center gap-1.5 bg-soft backdrop-blur-sm text-gray-200 px-2.5 py-1 rounded-full">
+                    <span className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white px-2.5 py-1 rounded-full">
                       {parts.map((role, i) => (
                         <span key={i} className="flex items-center gap-1">
                           {roleIcons[role] && <img src={roleIcons[role]} alt="" width={16} height={16} />}
-                          {i < parts.length - 1 && <span className="text-gray-500">/</span>}
+                          {i < parts.length - 1 && <span className="text-white/50">/</span>}
                         </span>
                       ))}
                       <span className="text-xs font-medium">{mainRole}</span>

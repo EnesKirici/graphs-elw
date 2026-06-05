@@ -19,7 +19,7 @@ function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 
   return (
     <div className="flex flex-col items-center gap-2">
       <svg width={size} height={size} viewBox="0 0 96 96">
-        <circle cx="48" cy="48" r={radius} fill="none" stroke="var(--c-edge)" strokeWidth="5" />
+        <circle cx="48" cy="48" r={radius} fill="none" stroke="var(--c-grid)" strokeWidth="5" />
         <circle
           cx="48" cy="48" r={radius}
           fill="none" stroke={color} strokeWidth="5"
@@ -29,7 +29,7 @@ function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 
           className="transition-all duration-1000"
         />
         <text x="48" y="50" textAnchor="middle" dominantBaseline="middle"
-          className="fill-white font-bold" style={{ fontSize: "16px" }}>
+          className="fill-gray-100 font-bold" style={{ fontSize: "16px" }}>
           {display}
         </text>
       </svg>

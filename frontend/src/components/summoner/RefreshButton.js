@@ -52,7 +52,7 @@ export default function RefreshButton({ puuid }) {
         disabled={loading}
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
-        className="flex items-center gap-1.5 bg-soft hover:bg-white/20 backdrop-blur-sm text-gray-300 hover:text-white px-3 py-1.5 rounded-full transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white/90 hover:text-white px-3 py-1.5 rounded-full transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
         <span className="text-xs font-medium">{loading ? "Yenileniyor..." : "Güncelle"}</span>

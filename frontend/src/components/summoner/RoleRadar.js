@@ -95,13 +95,13 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
               const poly = angles.map((a) => pt(a, level)).map((p) => `${p.x},${p.y}`).join(" ");
               return (
                 <polygon key={i} points={poly} fill="none"
-                  stroke={i === 3 ? "#2a3441" : "var(--c-edge)"} strokeWidth={i === 3 ? 1 : 0.5} />
+                  stroke={i === 3 ? "var(--c-grid-strong)" : "var(--c-grid)"} strokeWidth={i === 3 ? 1 : 0.5} />
               );
             })}
 
             {/* Eksen çizgileri */}
             {outerPts.map((p, i) => (
-              <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--c-edge)" strokeWidth={0.5} />
+              <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--c-grid)" strokeWidth={0.5} />
             ))}
 
             {/* Veri alanı */}
@@ -126,8 +126,8 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
                 key={`dot-${i}`}
                 cx={p.x} cy={p.y}
                 r={roles[i].games > 0 ? 4 : 2.5}
-                fill={roles[i].games > 0 ? "#3b82f6" : "var(--c-edge)"}
-                stroke={roles[i].games > 0 ? "#60a5fa" : "#2a3441"}
+                fill={roles[i].games > 0 ? "#3b82f6" : "var(--c-grid)"}
+                stroke={roles[i].games > 0 ? "#60a5fa" : "var(--c-grid-strong)"}
                 strokeWidth={1.5}
                 className="pointer-events-none"
               />

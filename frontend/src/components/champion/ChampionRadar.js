@@ -50,13 +50,13 @@ export default function ChampionRadar({ info }) {
             const poly = angles.map((a) => pt(a, level)).map((p) => `${p.x},${p.y}`).join(" ");
             return (
               <polygon key={i} points={poly} fill="none"
-                stroke={i === 3 ? "#2a3441" : "var(--c-edge)"} strokeWidth={i === 3 ? 1 : 0.5} />
+                stroke={i === 3 ? "var(--c-grid-strong)" : "var(--c-grid)"} strokeWidth={i === 3 ? 1 : 0.5} />
             );
           })}
 
           {/* Eksen çizgileri */}
           {outerPts.map((p, i) => (
-            <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--c-edge)" strokeWidth={0.5} />
+            <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--c-grid)" strokeWidth={0.5} />
           ))}
 
           {/* Veri alanı */}

@@ -12,6 +12,12 @@
      koyu (eskiden her yerde bg-white/x kullanılıyordu → light'ta görünmezdi). */
   --color-soft: var(--c-soft);
   --color-hover: var(--c-hover);
+  /* Grafik/radar ızgara çizgileri — light'ta görünür kalır (c-edge çok açıktı). */
+  --color-grid: var(--c-grid);
+  --color-grid-strong: var(--c-grid-strong);
+  /* Görsel üstü banner perdesi — HER İKİ temada koyu kalır (üstündeki beyaz
+     metin/rozetler okunsun diye). Light'ta override EDİLMEZ. */
+  --color-scrim: var(--c-scrim);
   /* Geriye dönük (kullanılmıyor ama dursun) */
   --color-lol-dark: var(--c-base);
   --color-lol-card: var(--c-card);
@@ -29,6 +35,10 @@
   --c-soft: rgba(255, 255, 255, 0.05);   /* dolgu (bg-soft) */
   --c-hover: rgba(255, 255, 255, 0.06);  /* hover (bg-hover) */
 
+  --c-grid: #1b2230;          /* radar/grafik ince ızgara */
+  --c-grid-strong: #2a3441;   /* radar dış halka / vurgu */
+  --c-scrim: #060a10;         /* görsel üstü banner perdesi (hep koyu) */
+
   --glass-bg: rgba(13, 17, 23, 0.7);
   --glass-border: rgba(27, 34, 48, 0.6);
 
@@ -44,6 +54,16 @@
 
 /* Arka plan görseli (BackgroundContext) üstündeki perde — temaya göre opaklık. */
 .page-veil { background: var(--page-veil); }
+
+/* Maç satırı kazanma/kaybetme tonu — light'ta daha belirgin (dark'ta soluktu). */
+:root {
+  --row-win: rgba(16, 185, 129, 0.045);
+  --row-loss: rgba(239, 68, 68, 0.045);
+  --row-remake: rgba(59, 130, 246, 0.045);
+}
+.row-win { background: var(--row-win); }
+.row-loss { background: var(--row-loss); }
+.row-remake { background: var(--row-remake); }
 
 /* =============== TEMA: LIGHT (white mode) override'ları =============== */
 /* html.light tek noktadan: (1) Tailwind gri rampasını AYNALAR (664 text-gray-*
@@ -65,21 +85,31 @@ html.light {
   --color-gray-900: #f1f5f9;
   --color-gray-950: #f8fafc;
 
-  /* Semantik yüzeyler */
-  --c-base: #eef1f6;
+  /* Semantik yüzeyler — zemin hafif gri, kartlar beyaz → net ayrım (op.gg tarzı) */
+  --c-base: #e8ecf2;
   --c-card: #ffffff;
-  --c-edge: #dfe4ec;
+  --c-edge: #d3dae5;   /* belirgin kenarlık (kartlar düz beyazda kaybolmasın) */
 
   /* Açma/hover dolguları — light'ta koyu ton (beyaz yerine) */
-  --c-soft: rgba(15, 23, 42, 0.045);
-  --c-hover: rgba(15, 23, 42, 0.06);
+  --c-soft: rgba(15, 23, 42, 0.05);
+  --c-hover: rgba(15, 23, 42, 0.07);
+
+  /* Radar/grafik ızgarası — beyaz zeminde görünür ama yumuşak */
+  --c-grid: #ccd4e0;
+  --c-grid-strong: #b3bdcc;
+  /* --c-scrim override YOK → banner perdesi koyu kalır */
 
   /* Cam morfizm — light'ta daha opak ki kart üzerindeki metin okunsun */
-  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-bg: rgba(255, 255, 255, 0.94);
   --glass-border: rgba(15, 23, 42, 0.1);
 
   /* Arka plan görseli perdesi — light'ta yüksek opaklık (sayfa solmasın) */
-  --page-veil: rgba(238, 241, 246, 0.9);
+  --page-veil: rgba(232, 236, 242, 0.95);
+
+  /* Maç satırı tonları — light'ta belirgin kazanma/kaybetme ayrımı */
+  --row-win: rgba(16, 185, 129, 0.09);
+  --row-loss: rgba(244, 63, 94, 0.08);
+  --row-remake: rgba(59, 130, 246, 0.08);
 
   /* Scrollbar + seçim */
   --sb-track: #e9edf3;

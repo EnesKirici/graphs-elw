@@ -269,7 +269,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
 
   const remake = m.duration < 300;
   const bdr = remake ? "border-l-blue-400" : m.win ? "border-l-emerald-500" : "border-l-red-500";
-  const bg = remake ? "bg-blue-500/[0.04]" : m.win ? "bg-emerald-500/[0.04]" : "bg-red-500/[0.04]";
+  const bg = remake ? "row-remake" : m.win ? "row-win" : "row-loss";
   const resTxt = remake ? "Remake" : m.win ? "Zafer" : "Yenilgi";
   const resClr = remake ? "text-blue-400" : m.win ? "text-emerald-400" : "text-red-400";
   const badges = sortBadges(m.badges || []);
