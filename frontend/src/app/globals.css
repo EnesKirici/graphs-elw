@@ -132,37 +132,44 @@ html.light {
 .mk-quadra { color: var(--mk-quadra-t); background: var(--mk-quadra-b); }
 .mk-triple { color: var(--mk-triple-t); background: var(--mk-triple-b); }
 
-/* Son Maçlar multikill ROZETLERİ — ANIMASYONLU pill. Penta'ya özel efsanevi
-   altın/cyan akış + parıltı; quadra mor/kırmızı akış. Solid gradient olduğu için
-   her iki temada da net okunur (tema override gerekmez). */
+/* Son Maçlar multikill ROZETLERİ — renkli akış + CAM (glass) parlaması. Penta
+   altın/cyan/emerald akış, quadra mor-kırmızı. Üstte cam yansıması (gloss) +
+   ışıklı iç kenar; akış yavaş ve zarif, nabız atan glow yok. */
+.badge-penta, .badge-quadra {
+  position: relative;
+  overflow: hidden;
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,.45);
+}
+/* metin cam yansımasının ÜSTÜNDE kalsın */
+.badge-penta > span, .badge-quadra > span { position: relative; z-index: 1; }
+/* cam gloss — üst yarıda parlak yansıma, alt yarıda hafif gölge */
+.badge-penta::before, .badge-quadra::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,.4) 0%, rgba(255,255,255,.12) 40%, rgba(255,255,255,0) 52%, rgba(0,0,0,.12) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+.badge-penta {
+  border-color: rgba(255,255,255,.38) !important;
+  background-image: linear-gradient(90deg, #c8aa6e, #f0e6d2, #78c8e6, #34d399, #3b82f6, #c8aa6e);
+  background-size: 300% 100%;
+  animation: mkFlow 5s linear infinite;
+  box-shadow: 0 0 7px rgba(200,170,110,.35), inset 0 1px 0 rgba(255,255,255,.45);
+}
+.badge-quadra {
+  border-color: rgba(255,255,255,.32) !important;
+  background-image: linear-gradient(90deg, #7c3aed, #a855f7, #e11d48, #a855f7, #7c3aed);
+  background-size: 300% 100%;
+  animation: mkFlow 5s linear infinite;
+  box-shadow: 0 0 7px rgba(168,85,247,.35), inset 0 1px 0 rgba(255,255,255,.4);
+}
 @keyframes mkFlow {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
-}
-@keyframes mkPentaGlow {
-  0%, 100% { box-shadow: 0 0 5px rgba(200,170,110,.55), 0 0 12px rgba(120,200,230,.25); }
-  50%      { box-shadow: 0 0 9px rgba(200,170,110,.9),  0 0 20px rgba(52,211,153,.45); }
-}
-@keyframes mkQuadraGlow {
-  0%, 100% { box-shadow: 0 0 5px rgba(168,85,247,.5),  0 0 12px rgba(225,29,72,.25); }
-  50%      { box-shadow: 0 0 9px rgba(168,85,247,.85), 0 0 20px rgba(225,29,72,.5); }
-}
-.badge-penta {
-  color: #fff !important;
-  border-color: rgba(240,230,210,.65) !important;
-  background-image: linear-gradient(90deg, #c8aa6e, #f0e6d2, #78c8e6, #34d399, #3b82f6, #c8aa6e);
-  background-size: 300% 100%;
-  text-shadow: 0 1px 2px rgba(0,0,0,.55);
-  animation: mkFlow 3s linear infinite, mkPentaGlow 2s ease-in-out infinite;
-}
-.badge-quadra {
-  color: #fff !important;
-  border-color: rgba(168,85,247,.6) !important;
-  background-image: linear-gradient(90deg, #7c3aed, #a855f7, #e11d48, #a855f7, #7c3aed);
-  background-size: 300% 100%;
-  text-shadow: 0 1px 2px rgba(0,0,0,.55);
-  animation: mkFlow 3s linear infinite, mkQuadraGlow 2.2s ease-in-out infinite;
 }
 
 /* =============== TEMA: LIGHT (white mode) override'ları =============== */
