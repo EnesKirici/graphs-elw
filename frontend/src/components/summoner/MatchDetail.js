@@ -13,10 +13,10 @@ function fmtGold(g) { return g >= 1000 ? (g / 1000).toFixed(1) + "k" : g; }
 function fmtDmg(d) { return d >= 1000 ? (d / 1000).toFixed(1) + "k" : d; }
 function fmtTime(s) { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
 function kdaColor(kda) {
-  if (kda === "Perfect" || kda >= 5) return "text-yellow-400";
-  if (kda >= 3) return "text-emerald-400";
-  if (kda >= 2) return "text-blue-400";
-  return "text-gray-400";
+  // Site geneli ile tutarlı: iyi yeşil, orta nötr gri, kötü kırmızı (mavi/altın yok).
+  if (kda === "Perfect" || kda >= 3) return "text-emerald-400";
+  if (kda >= 2) return "text-gray-300";
+  return "text-red-400";
 }
 function rankBadgeUrl(tier) { return tier ? `/ranks/badges/${tier.toLowerCase()}.webp` : null; }
 function formatRank(tier, div) {
@@ -393,7 +393,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
               const sc = p._elwScore ?? 5;
               const isTopRainbow = sc >= 8.5 && rank === 1;
               const isTopGlow = sc >= 8.5 && !isTopRainbow;
-              const clr = isTopRainbow ? "bg-card border border-[#c8aa6e]/40" : isTopGlow ? "bg-card border border-emerald-500/40" : sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
+              const clr = isTopRainbow ? "bg-card border border-[#c8aa6e]/40" : isTopGlow ? "bg-card border border-emerald-500/40" : sc >= 5 ? "bg-emerald-500" : sc >= 3 ? "bg-gray-500" : "bg-red-500";
               return (
                 <React.Fragment key={p.puuid + '-' + idx}>
                   {idx === 5 && <div className="w-4" />}
@@ -911,10 +911,10 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side, allPlayers, duration }) {
 function ElwScoreBadge({ p, allPlayers }) {
   const [anchor, setAnchor] = useState(null);
   const sc = p._elwScore;
-  const color = sc >= 7 ? "emerald" : sc >= 5 ? "blue" : sc >= 3 ? "yellow" : "red";
-  const colorMap = { emerald: "text-emerald-400", blue: "text-blue-400", yellow: "text-yellow-400", red: "text-red-400" };
-  const hexMap = { emerald: "#10b981", blue: "#3b82f6", yellow: "#f59e0b", red: "#ef4444" };
-  const bgMap = { emerald: "bg-emerald-400", blue: "bg-blue-400", yellow: "bg-yellow-400", red: "bg-red-400" };
+  const color = sc >= 5 ? "emerald" : sc >= 3 ? "gray" : "red";
+  const colorMap = { emerald: "text-emerald-400", gray: "text-gray-300", red: "text-red-400" };
+  const hexMap = { emerald: "#10b981", gray: "#9ca3af", red: "#ef4444" };
+  const bgMap = { emerald: "bg-emerald-400", gray: "bg-gray-400", red: "bg-red-400" };
   const label = sc >= 8 ? "Olağanüstü" : sc >= 6.5 ? "Çok İyi" : sc >= 5 ? "İyi" : sc >= 3.5 ? "Mücadele" : "Zor Maç";
 
   // Maçtaki 10 oyuncunun ELW skor barı karşılaştırması
@@ -995,7 +995,7 @@ function ElwScoreBadge({ p, allPlayers }) {
                     const isMe = sp.puuid === p.puuid;
                     const spSc = sp._elwScore || 0;
                     const spRainbow = spSc >= 8.5 && si === 0;
-                    const spColor = spSc >= 7 ? hexMap.emerald : spSc >= 5 ? hexMap.blue : spSc >= 3 ? hexMap.yellow : hexMap.red;
+                    const spColor = spSc >= 5 ? hexMap.emerald : spSc >= 3 ? hexMap.gray : hexMap.red;
                     return (
                       <div key={sp.puuid + '-' + si} className={`flex items-center gap-1.5 ${isMe ? "opacity-100" : "opacity-40"}`}>
                         <img src={sp.champion?.image} alt="" width={16} height={16} className="rounded" />
