@@ -55,15 +55,36 @@
 /* Arka plan görseli (BackgroundContext) üstündeki perde — temaya göre opaklık. */
 .page-veil { background: var(--page-veil); }
 
-/* Maç satırı kazanma/kaybetme tonu — light'ta daha belirgin (dark'ta soluktu). */
+/* Maç satırı kazanma/kaybetme tonu + sonuç metni + rozet renkleri.
+   DARK varsayılanları (mevcut görünümü korur); light override'ları html.light'ta. */
 :root {
   --row-win: rgba(16, 185, 129, 0.045);
   --row-loss: rgba(239, 68, 68, 0.045);
   --row-remake: rgba(59, 130, 246, 0.045);
+
+  --res-win: #34d399;    /* emerald-400 */
+  --res-loss: #f87171;   /* red-400 */
+  --res-remake: #60a5fa; /* blue-400 */
+
+  --badge-emerald-text: #2d9e6e;
+  --badge-emerald-bg: rgba(45, 158, 110, 0.1);
+  --badge-emerald-bd: rgba(45, 158, 110, 0.25);
+  --badge-gold-text: #c89b3c;
+  --badge-gold-bg: rgba(200, 155, 60, 0.08);
+  --badge-gold-bd: rgba(200, 155, 60, 0.2);
+  --badge-silver-text: #80939e;
+  --badge-silver-bg: rgba(128, 147, 158, 0.06);
+  --badge-silver-bd: rgba(128, 147, 158, 0.15);
+  --badge-diamond-text: #4a9bd9;
+  --badge-diamond-bg: rgba(74, 155, 217, 0.1);
+  --badge-diamond-bd: rgba(74, 155, 217, 0.28);
 }
 .row-win { background: var(--row-win); }
 .row-loss { background: var(--row-loss); }
 .row-remake { background: var(--row-remake); }
+.res-win { color: var(--res-win); }
+.res-loss { color: var(--res-loss); }
+.res-remake { color: var(--res-remake); }
 
 /* =============== TEMA: LIGHT (white mode) override'ları =============== */
 /* html.light tek noktadan: (1) Tailwind gri rampasını AYNALAR (664 text-gray-*
@@ -85,10 +106,11 @@ html.light {
   --color-gray-900: #f1f5f9;
   --color-gray-950: #f8fafc;
 
-  /* Semantik yüzeyler — zemin hafif gri, kartlar beyaz → net ayrım (op.gg tarzı) */
-  --c-base: #e8ecf2;
-  --c-card: #ffffff;
-  --c-edge: #d3dae5;   /* belirgin kenarlık (kartlar düz beyazda kaybolmasın) */
+  /* Semantik yüzeyler — yumuşak off-white (saf beyaz göz yoruyordu). Zemin sakin
+     gri, kartlar hafif kırık beyaz → net ama yumuşak ayrım. */
+  --c-base: #e7eaf0;
+  --c-card: #f9fafc;
+  --c-edge: #d7dce6;
 
   /* Açma/hover dolguları — light'ta koyu ton (beyaz yerine) */
   --c-soft: rgba(15, 23, 42, 0.05);
@@ -99,17 +121,40 @@ html.light {
   --c-grid-strong: #b3bdcc;
   /* --c-scrim override YOK → banner perdesi koyu kalır */
 
-  /* Cam morfizm — light'ta daha opak ki kart üzerindeki metin okunsun */
-  --glass-bg: rgba(255, 255, 255, 0.94);
-  --glass-border: rgba(15, 23, 42, 0.1);
+  /* Cam morfizm — yumuşak off-white, hafif gölgeyle ayrışır */
+  --glass-bg: rgba(249, 250, 252, 0.96);
+  --glass-border: rgba(15, 23, 42, 0.09);
 
   /* Arka plan görseli perdesi — light'ta yüksek opaklık (sayfa solmasın) */
-  --page-veil: rgba(232, 236, 242, 0.95);
+  --page-veil: rgba(231, 234, 240, 0.95);
 
-  /* Maç satırı tonları — light'ta belirgin kazanma/kaybetme ayrımı */
-  --row-win: rgba(16, 185, 129, 0.09);
-  --row-loss: rgba(244, 63, 94, 0.08);
-  --row-remake: rgba(59, 130, 246, 0.08);
+  /* Dashboard kartları da off-white */
+  --bg-1: #f9fafc;
+
+  /* Maç satırı tonları — light'ta ÇOK soluk (renkli zemin göz yormasın);
+     kazanma/kaybetme sol kenarlık + sonuç metniyle belli olur. */
+  --row-win: rgba(16, 185, 129, 0.05);
+  --row-loss: rgba(244, 63, 94, 0.045);
+  --row-remake: rgba(59, 130, 246, 0.045);
+
+  /* Sonuç (Zafer/Yenilgi) metni — light'ta koyu/doygun ki belirgin olsun */
+  --res-win: #059669;
+  --res-loss: #dc2626;
+  --res-remake: #2563eb;
+
+  /* Maç rozetleri (gold/silver/emerald) — light'ta koyu metin + belirgin dolgu */
+  --badge-emerald-text: #157951;
+  --badge-emerald-bg: rgba(21, 121, 81, 0.1);
+  --badge-emerald-bd: rgba(21, 121, 81, 0.28);
+  --badge-gold-text: #8a6516;
+  --badge-gold-bg: rgba(138, 101, 22, 0.1);
+  --badge-gold-bd: rgba(138, 101, 22, 0.28);
+  --badge-silver-text: #566570;
+  --badge-silver-bg: rgba(86, 101, 112, 0.09);
+  --badge-silver-bd: rgba(86, 101, 112, 0.22);
+  --badge-diamond-text: #1f5fa0;
+  --badge-diamond-bg: rgba(31, 95, 160, 0.1);
+  --badge-diamond-bd: rgba(31, 95, 160, 0.28);
 
   /* Scrollbar + seçim */
   --sb-track: #e9edf3;

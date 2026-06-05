@@ -41,10 +41,12 @@ function sortBadges(badges) {
 const TIER_STYLES = {
   challenger:  { gradient: "linear-gradient(90deg, #f0e6d2, #c8aa6e, #78c8e6, #c8aa6e, #f0e6d2)", bg: "bg-gradient-to-r from-[#c8aa6e]/20 via-[#78c8e6]/15 to-[#c8aa6e]/20", border: "border-[#c8aa6e]/50", glow: "0 0 8px rgba(200,170,110,0.3)", shimmer: true },
   grandmaster: { gradient: "linear-gradient(90deg, #cd3737, #ff6b6b, #cd3737)", bg: "bg-gradient-to-r from-[#1a0505]/40 via-[#cd3737]/15 to-[#1a0505]/40", border: "border-[#cd3737]/40", glow: "0 0 6px rgba(205,55,55,0.25)", shimmer: true },
-  diamond:     { gradient: "linear-gradient(90deg, #4a9bd9, #78c8e6, #576ece)", bg: "bg-gradient-to-r from-[#576ece]/12 to-[#4a9bd9]/8", border: "border-[#4a9bd9]/30", glow: null, shimmer: false },
-  emerald:     { text: "text-[#2d9e6e]", bg: "bg-[#2d9e6e]/10", border: "border-[#2d9e6e]/25", glow: null, shimmer: false },
-  gold:        { text: "text-[#c89b3c]", bg: "bg-[#c89b3c]/8",  border: "border-[#c89b3c]/20", glow: null, shimmer: false },
-  silver:      { text: "text-[#80939e]", bg: "bg-[#80939e]/6",  border: "border-[#80939e]/15", glow: null, shimmer: false },
+  diamond:     { text: "text-[#4a9bd9]", cssVar: "diamond", glow: null, shimmer: false },
+  // text/bg/border = koyu tooltip için SABİT (her iki temada koyu yüzey üstünde).
+  // cssVar = chip için TEMA-DUYARLI (light'ta koyu metin + belirgin dolgu).
+  emerald:     { text: "text-[#2d9e6e]", bg: "bg-[#2d9e6e]/10", border: "border-[#2d9e6e]/25", cssVar: "emerald", glow: null, shimmer: false },
+  gold:        { text: "text-[#c89b3c]", bg: "bg-[#c89b3c]/8",  border: "border-[#c89b3c]/20", cssVar: "gold", glow: null, shimmer: false },
+  silver:      { text: "text-[#80939e]", bg: "bg-[#80939e]/6",  border: "border-[#80939e]/15", cssVar: "silver", glow: null, shimmer: false },
 };
 
 function PlayerIcon({ player: p }) {
@@ -232,16 +234,21 @@ function BadgeTag({ badge }) {
   const [anchor, setAnchor] = useState(null);
   const s = TIER_STYLES[badge.tier] || TIER_STYLES.silver;
   const hasGradientText = !!s.gradient;
+  const solid = s.cssVar; // 'emerald' | 'gold' | 'silver' | undefined
+
+  // Solid tier'lar tema-duyarlı CSS değişkenleriyle (light'ta okunur); gradient
+  // tier'lar kendi sınıf/gradient'leriyle.
+  const chipStyle = solid
+    ? { color: `var(--badge-${solid}-text)`, background: `var(--badge-${solid}-bg)`, borderColor: `var(--badge-${solid}-bd)` }
+    : (hasGradientText ? { boxShadow: s.glow || undefined } : undefined);
 
   return (
     <>
       <span
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
-        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${s.bg} ${s.border} cursor-default whitespace-nowrap ${!hasGradientText ? (s.text || "") : ""}`}
-        style={hasGradientText ? {
-          boxShadow: s.glow || undefined,
-        } : undefined}
+        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border cursor-default whitespace-nowrap ${solid ? "" : `${s.bg || ""} ${s.border || ""}`}`}
+        style={chipStyle}
       >
         <span
           className={hasGradientText ? "bg-clip-text text-transparent font-bold" : ""}
@@ -271,7 +278,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
   const bdr = remake ? "border-l-blue-400" : m.win ? "border-l-emerald-500" : "border-l-red-500";
   const bg = remake ? "row-remake" : m.win ? "row-win" : "row-loss";
   const resTxt = remake ? "Remake" : m.win ? "Zafer" : "Yenilgi";
-  const resClr = remake ? "text-blue-400" : m.win ? "text-emerald-400" : "text-red-400";
+  const resClr = remake ? "res-remake" : m.win ? "res-win" : "res-loss";
   const badges = sortBadges(m.badges || []);
 
   return (
@@ -312,7 +319,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
 
         {/* SOL SABİT: Result + LP + Perf */}
         <div className="w-24 flex-shrink-0">
-          <p className={`text-[11px] font-bold ${resClr}`}>{resTxt}</p>
+          <p className={`text-[11px] font-extrabold ${resClr}`}>{resTxt}</p>
           {m.lpChange != null ? (
             <p className={`text-[10px] font-bold ${m.lpChange > 0 ? "text-emerald-400" : "text-red-400"}`}>
               {m.lpChange > 0 ? "+" : ""}{m.lpChange} LP · {m.queueType || ""}

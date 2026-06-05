@@ -160,7 +160,7 @@ export default function AllChampionsContent({ seasonChampions, region = "TR" }) 
 }
 
 /* ===== Özet kartı ===== */
-function SummaryCard({ label, value, valueColor = "text-white" }) {
+function SummaryCard({ label, value, valueColor = "text-gray-100" }) {
     return (
         <div className="glass rounded-xl p-4 text-center">
             <p className={`text-xl font-bold ${valueColor}`}>{value}</p>
@@ -196,7 +196,7 @@ function ChampionRow({ champ: c, index, region }) {
 
             {/* İsim + (varsa) bölgesel şampiyon sıralaması */}
             <div className="flex-1 min-w-0">
-                <p className="text-[15px] text-gray-100 font-semibold group-hover:text-white transition-colors truncate">
+                <p className="text-[15px] text-gray-100 font-semibold group-hover:text-blue-400 transition-colors truncate">
                     {c.championName}
                 </p>
                 {/* Backend bu şampiyonda 10+ maçı olan oyuncular arasında sıra hesaplayıp
@@ -212,7 +212,7 @@ function ChampionRow({ champ: c, index, region }) {
             </div>
 
             {/* Oyun sayısı */}
-            <span className={`w-16 text-center text-[15px] font-bold ${noGames ? "text-gray-600" : "text-white"}`}>
+            <span className={`w-16 text-center text-[15px] font-bold ${noGames ? "text-gray-600" : "text-gray-100"}`}>
                 {noGames ? "—" : c.games}
             </span>
 
