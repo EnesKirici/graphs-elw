@@ -27,7 +27,7 @@ export default function ChampionGrid({ champions, showSearch = true }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Şampiyon ara..."
-              className="w-full bg-[#0d1117] border border-[#1b2230] rounded-lg pl-9 pr-3 py-2 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-blue-500/50 transition-colors"
+              className="w-full bg-card border border-edge rounded-lg pl-9 pr-3 py-2 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-blue-500/50 transition-colors"
             />
             {search && (
               <button

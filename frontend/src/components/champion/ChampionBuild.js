@@ -14,7 +14,7 @@ function ItemRow({ items, size = 32 }) {
     <div className="flex items-center gap-1.5 flex-wrap">
       {items.map((it, i) => (
         <img key={i} src={it.icon || it} alt={it.name || ""} width={size} height={size}
-          className="rounded-md border border-[#1b2230]" onError={hideOnError} title={it.name || ""} />
+          className="rounded-md border border-edge" onError={hideOnError} title={it.name || ""} />
       ))}
     </div>
   );
@@ -23,7 +23,7 @@ function ItemRow({ items, size = 32 }) {
 // Birleşik kart (tek glass kutu) — içine birden çok Section gelir, divide-y ile ayrılır.
 function Panel({ children, className = "" }) {
   return (
-    <div className={`glass rounded-xl overflow-hidden divide-y divide-[#1b2230]/40 ${className}`}>
+    <div className={`glass rounded-xl overflow-hidden divide-y divide-edge/40 ${className}`}>
       {children}
     </div>
   );
@@ -71,8 +71,8 @@ export default function ChampionBuild({ champion, version, championList = [], ru
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2 text-[11px]">
-          <span className="px-2.5 py-1 rounded-md bg-[#1b2230]/60 text-gray-400">Emerald +</span>
-          <span className="px-2.5 py-1 rounded-md bg-[#1b2230]/60 text-gray-400">Patch {version}</span>
+          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Emerald +</span>
+          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Patch {version}</span>
         </div>
       </div>
 
@@ -111,7 +111,7 @@ export default function ChampionBuild({ champion, version, championList = [], ru
 
           <Section title="Eşleşmeler (Matchup)">
             <MatchupCol label="İyi Eşleşmeler" rows={matchups.easy} good />
-            <div className="my-3 border-t border-[#1b2230]/40" />
+            <div className="my-3 border-t border-edge/40" />
             <MatchupCol label="Zor Eşleşmeler" rows={matchups.hard} />
           </Section>
         </Panel>
@@ -122,9 +122,9 @@ export default function ChampionBuild({ champion, version, championList = [], ru
             {runePage ? (
               <div className="flex gap-6 justify-center">
                 <RuneTree tree={runePage.primary} selected={runePage.selected} />
-                <div className="border-l border-[#1b2230]/40 pl-6 flex flex-col items-center gap-3">
+                <div className="border-l border-edge/40 pl-6 flex flex-col items-center gap-3">
                   <RuneTree tree={runePage.secondary} selected={runePage.selected} skipKeystone />
-                  <div className="flex flex-col items-center gap-2 pt-3 mt-1 border-t border-[#1b2230]/40">
+                  <div className="flex flex-col items-center gap-2 pt-3 mt-1 border-t border-edge/40">
                     {SHARD_ROWS.map((row, ri) => (
                       <div key={ri} className="flex items-center gap-2">
                         {row.map((sh, ci) => (
@@ -156,7 +156,7 @@ export default function ChampionBuild({ champion, version, championList = [], ru
           <Section title="Sihirdar Büyüleri">
             <div className="flex items-center gap-2">
               {data.spells.map((s, i) => (
-                <img key={i} src={s} alt="" width={40} height={40} className="rounded-lg border border-[#1b2230]" onError={hideOnError} />
+                <img key={i} src={s} alt="" width={40} height={40} className="rounded-lg border border-edge" onError={hideOnError} />
               ))}
             </div>
           </Section>
@@ -172,7 +172,7 @@ export default function ChampionBuild({ champion, version, championList = [], ru
                   <ItemRow items={ph.items} />
                 </div>
               ))}
-              <div className="pt-3 border-t border-[#1b2230]/40">
+              <div className="pt-3 border-t border-edge/40">
                 <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Tam Build</span>
                 <ItemRow items={data.full} />
               </div>
@@ -226,7 +226,7 @@ function AbilityGrid({ order, spells = [] }) {
             <div className="relative w-7 h-7 flex-shrink-0">
               {spells[ri]?.image ? (
                 <img src={spells[ri].image} alt={r} width={28} height={28}
-                  className="rounded border border-[#1b2230]" onError={hideOnError} />
+                  className="rounded border border-edge" onError={hideOnError} />
               ) : (
                 <span className={`w-7 h-7 flex items-center justify-center text-[11px] font-bold rounded ${keyColor[r]}`}>{r}</span>
               )}
@@ -236,7 +236,7 @@ function AbilityGrid({ order, spells = [] }) {
             {order.map((lvl, i) => (
               <span key={i}
                 className={`w-5 h-5 rounded text-center text-[9px] flex items-center justify-center ${
-                  lvl === r ? `${keyColor[r]} font-bold` : "bg-[#1b2230]/40"}`}>
+                  lvl === r ? `${keyColor[r]} font-bold` : "bg-edge/40"}`}>
                 {lvl === r ? r : ""}
               </span>
             ))}

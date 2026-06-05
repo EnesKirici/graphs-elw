@@ -12,7 +12,7 @@ export default function FreeRotation({ champions }) {
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-edge/50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-emerald-400" />
           <h3 className="text-base font-semibold text-gray-200">
@@ -43,7 +43,7 @@ export default function FreeRotation({ champions }) {
                   alt={champ.name}
                   width={52}
                   height={52}
-                  className="relative rounded-lg border border-[#1b2230] group-hover:border-blue-500/40 transition-all duration-300 group-hover:scale-105"
+                  className="relative rounded-lg border border-edge group-hover:border-blue-500/40 transition-all duration-300 group-hover:scale-105"
                 />
               </div>
               <span className="text-[10px] text-gray-500 group-hover:text-gray-300 transition-colors text-center leading-tight truncate w-full">

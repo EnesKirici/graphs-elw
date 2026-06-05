@@ -8,7 +8,7 @@ import Link from "next/link";
 export default function WinRateChanges({ risers, fallers, version }) {
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">
           Patch {version} Win Rate Değişimleri
         </h3>
@@ -48,7 +48,7 @@ export default function WinRateChanges({ risers, fallers, version }) {
                 <span className="text-xs font-mono font-bold text-emerald-400">
                   +{champ.wrChange}%
                 </span>
-                <div className="w-12 h-1.5 bg-[#1b2230] rounded-full overflow-hidden">
+                <div className="w-12 h-1.5 bg-edge rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-emerald-500 animate-fill-bar"
                     style={{ width: `${(champ.wrChange / 3) * 100}%`, animationDelay: `${i * 80 + 200}ms` }}
@@ -92,7 +92,7 @@ export default function WinRateChanges({ risers, fallers, version }) {
                 <span className="text-xs font-mono font-bold text-red-400">
                   {champ.wrChange}%
                 </span>
-                <div className="w-12 h-1.5 bg-[#1b2230] rounded-full overflow-hidden">
+                <div className="w-12 h-1.5 bg-edge rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-red-500 animate-fill-bar"
                     style={{ width: `${(Math.abs(champ.wrChange) / 3) * 100}%`, animationDelay: `${i * 80 + 200}ms` }}

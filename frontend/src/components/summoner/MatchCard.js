@@ -146,7 +146,7 @@ function PerfLabelTag({ perfLabel, ranking, match, scoreHistory, scoreIndex }) {
 
             {/* Mini sparkline grafik */}
             {scoreHistory && scoreHistory.length >= 2 && (
-              <div className="mb-2 rounded-lg bg-[#0d1117] p-1.5 border border-[#1b2230]/30">
+              <div className="mb-2 rounded-lg bg-card p-1.5 border border-edge/30">
                 <MiniSparkline scores={scoreHistory} currentIndex={scoreIndex} color={c.hex} />
                 <div className="flex justify-between mt-0.5 px-1">
                   <span className="text-[8px] text-gray-600">eski</span>
@@ -157,7 +157,7 @@ function PerfLabelTag({ perfLabel, ranking, match, scoreHistory, scoreIndex }) {
 
             {/* Skor barı */}
             {sc != null && (
-              <div className="h-1.5 rounded-full bg-[#1b2230] overflow-hidden mb-2.5">
+              <div className="h-1.5 rounded-full bg-edge overflow-hidden mb-2.5">
                 <div className={`h-full rounded-full transition-all ${isRainbow ? "elw-rainbow-bar" : ""}`} style={{ width: `${sc * 10}%`, background: isRainbow ? undefined : c.hex }} />
               </div>
             )}
@@ -184,7 +184,7 @@ function PerfLabelTag({ perfLabel, ranking, match, scoreHistory, scoreIndex }) {
             <div className="flex items-center gap-2 mb-1">
               <span className={`text-sm font-bold ${c.text}`}>{c.icon} {perfLabel.label}</span>
               {ranking && (
-                <span className="text-[10px] text-gray-400 bg-[#1b2230] px-1.5 py-0.5 rounded font-medium">
+                <span className="text-[10px] text-gray-400 bg-edge px-1.5 py-0.5 rounded font-medium">
                   {ranking.rank === 1 ? "MVP" : `${ranking.rank}.`}
                 </span>
               )}
@@ -283,7 +283,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
           <div className="flex flex-col items-center gap-0.5">
             <div className="relative">
               <img src={m.champion.image} alt="" width={44} height={44} className="rounded-lg" title={m.champion.name} />
-              <span className="absolute -bottom-1 -right-1 text-[8px] bg-[#0d1117] text-gray-400 px-0.5 rounded border border-[#1b2230] font-mono">{m.champLevel}</span>
+              <span className="absolute -bottom-1 -right-1 text-[8px] bg-card text-gray-400 px-0.5 rounded border border-edge font-mono">{m.champLevel}</span>
               {/* Sıralama — sol üst */}
               {!remake && m.ranking && (
                 <span
@@ -291,10 +291,10 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
                     m.ranking.rank === 1
                       ? "mvp-glow border-[#c8aa6e]/60"
                       : m.ranking.rank <= 3
-                        ? "bg-[#0d1117] text-emerald-400 border-emerald-500/50"
+                        ? "bg-card text-emerald-400 border-emerald-500/50"
                         : m.ranking.rank >= 8
-                          ? "bg-[#0d1117] text-red-400 border-red-500/50"
-                          : "bg-[#0d1117] text-gray-300 border-[#2a3441]"
+                          ? "bg-card text-red-400 border-red-500/50"
+                          : "bg-card text-gray-300 border-[#2a3441]"
                   }`}
                   title={`${m.ranking.rank === 1 ? "MVP" : m.ranking.rank + ". sıra"} — ELW Score: ${m.ranking.elwScore}/10`}
                 >
@@ -337,17 +337,17 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
             <div className="flex gap-0.5">
               {[0, 1, 2].map((i) => m.items[i]
                 ? <ItemTooltip key={i} item={m.items[i]} size={26} />
-                : <div key={i} className="w-[26px] h-[26px] rounded-sm bg-[#1b2230]" />
+                : <div key={i} className="w-[26px] h-[26px] rounded-sm bg-edge" />
               )}
             </div>
             <div className="flex gap-0.5 mt-0.5">
               {[3, 4, 5].map((i) => m.items[i]
                 ? <ItemTooltip key={i} item={m.items[i]} size={26} />
-                : <div key={i} className="w-[26px] h-[26px] rounded-sm bg-[#1b2230]" />
+                : <div key={i} className="w-[26px] h-[26px] rounded-sm bg-edge" />
               )}
               {m.items[6]
                 ? <ItemTooltip item={m.items[6]} size={26} />
-                : <div className="w-[26px] h-[26px] rounded-full bg-[#1b2230]" />
+                : <div className="w-[26px] h-[26px] rounded-full bg-edge" />
               }
             </div>
           </div>

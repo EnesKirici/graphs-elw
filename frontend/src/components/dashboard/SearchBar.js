@@ -125,7 +125,7 @@ export default function SearchBar({ champions }) {
               onFocus={() => query.length > 0 && !isSearching && setIsOpen(true)}
               placeholder={isSearching ? "Oyuncu aranıyor..." : "Şampiyon veya oyuncu ara... (isim#tag)"}
               disabled={isSearching}
-              className={`w-full bg-[#0d1117] border border-[#1b2230] rounded-xl pl-12 pr-4 py-4 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 transition-all duration-300 ${isSearching ? "opacity-70 cursor-wait" : ""}`}
+              className={`w-full bg-card border border-edge rounded-xl pl-12 pr-4 py-4 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 transition-all duration-300 ${isSearching ? "opacity-70 cursor-wait" : ""}`}
             />
           </div>
         </div>
@@ -133,12 +133,12 @@ export default function SearchBar({ champions }) {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#0d1117] border border-[#1b2230] rounded-xl overflow-hidden z-50 shadow-xl shadow-black/50">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-edge rounded-xl overflow-hidden z-50 shadow-xl shadow-black/50">
 
           {/* Oyuncu önerileri (autocomplete) */}
           {showPlayerSuggestions && (
             <>
-              <div className="px-3 py-1.5 border-b border-[#1b2230]/50">
+              <div className="px-3 py-1.5 border-b border-edge/50">
                 <span className="text-[10px] text-gray-600 uppercase tracking-wider">Oyuncular</span>
               </div>
               {playerSuggestions.map((p) => (
@@ -205,7 +205,7 @@ export default function SearchBar({ champions }) {
           {filteredChamps.length > 0 && (
             <>
               {showPlayerSuggestions && (
-                <div className="px-3 py-1.5 border-t border-[#1b2230]/50">
+                <div className="px-3 py-1.5 border-t border-edge/50">
                   <span className="text-[10px] text-gray-600 uppercase tracking-wider">Şampiyonlar</span>
                 </div>
               )}

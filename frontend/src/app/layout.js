@@ -50,10 +50,16 @@ export const metadata = {
   manifest: "/site.webmanifest",
 };
 
+// Paint öncesi tema uygula → FOUC/flaş yok. localStorage'tan mod + accent okur.
+const THEME_INIT = `(function(){try{var m=localStorage.getItem('elw-mode');if(m==='light')document.documentElement.classList.add('light');var a=localStorage.getItem('elw-accent');if(a)document.documentElement.style.setProperty('--accent',a);}catch(e){}})();`;
+
 export default function RootLayout({ children }) {
   return (
     <html lang="tr" className={`${geist.variable} ${archivo.variable} ${manrope.variable} ${jetbrains.variable}`}>
-      <body className="min-h-screen bg-[#060a10] text-gray-100 font-sans antialiased">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
+      <body className="min-h-screen bg-base text-gray-100 font-sans antialiased">
         <Providers>
           {children}
         </Providers>

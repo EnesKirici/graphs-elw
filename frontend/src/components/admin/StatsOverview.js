@@ -82,7 +82,7 @@ function RankList({ items, color = "bg-blue-500", emptyText = "Veri yok." }) {
               <span className={`text-sm truncate ${i < 3 ? "text-gray-200" : "text-gray-400"}`}>{item.label}</span>
               <span className="text-xs text-gray-500 font-mono ml-2 shrink-0">{item.count}</span>
             </div>
-            <div className="h-1 rounded-full bg-[#1b2230] overflow-hidden">
+            <div className="h-1 rounded-full bg-edge overflow-hidden">
               <div
                 className={`h-full rounded-full ${color} transition-all duration-500`}
                 style={{ width: `${(item.count / max) * 100}%` }}
@@ -111,12 +111,12 @@ export default function StatsOverview() {
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 rounded-2xl bg-white/[0.02] border border-[#1b2230] animate-pulse" />
+            <div key={i} className="h-28 rounded-2xl bg-white/[0.02] border border-edge animate-pulse" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[...Array(2)].map((_, i) => (
-            <div key={i} className="h-64 rounded-2xl bg-white/[0.02] border border-[#1b2230] animate-pulse" />
+            <div key={i} className="h-64 rounded-2xl bg-white/[0.02] border border-edge animate-pulse" />
           ))}
         </div>
       </div>

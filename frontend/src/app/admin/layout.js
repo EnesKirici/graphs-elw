@@ -22,7 +22,7 @@ export default function AdminLayout({ children }) {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-[#060a10] flex items-center justify-center">
+      <div className="min-h-screen bg-base flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -30,12 +30,12 @@ export default function AdminLayout({ children }) {
 
   // Login sayfası — sidebar yok
   if (isLoginPage) {
-    return <div className="min-h-screen bg-[#060a10]">{children}</div>;
+    return <div className="min-h-screen bg-base">{children}</div>;
   }
 
   // Admin sayfaları — sidebar + content
   return (
-    <div className="min-h-screen bg-[#060a10]">
+    <div className="min-h-screen bg-base">
       <AdminSidebar />
       <main className="ml-60 min-h-screen">
         <div className="max-w-6xl mx-auto px-6 py-6">

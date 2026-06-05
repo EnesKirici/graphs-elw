@@ -219,7 +219,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
   return (
     <div className="glass rounded-xl overflow-hidden">
       {/* HEADER */}
-      <div className="px-6 py-4 flex items-center justify-between border-b border-[#1b2230]/50">
+      <div className="px-6 py-4 flex items-center justify-between border-b border-edge/50">
         <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors cursor-pointer">
           <ArrowLeft size={18} /> Geri Dön
         </button>
@@ -265,7 +265,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
       </div>
 
       {/* OBJECTIVES + BANS */}
-      <div className="px-6 pb-5 flex items-center justify-between border-b border-[#1b2230]/30 pt-1">
+      <div className="px-6 pb-5 flex items-center justify-between border-b border-edge/30 pt-1">
         <div className="flex items-center gap-5">
           <ObjGroup obj={obj1} />
           <BanGroup bans={t1?.info?.bans} />
@@ -277,7 +277,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
       </div>
 
       {/* TABS */}
-      <div className="flex border-b border-[#1b2230]/30">
+      <div className="flex border-b border-edge/30">
         {TABS.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`flex-1 py-3 text-sm font-medium transition-colors cursor-pointer ${tab === t.key ? "text-blue-400 border-b-2 border-blue-400 bg-blue-500/5" : "text-gray-500 hover:text-gray-300"}`}>
@@ -292,13 +292,13 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
       {/* OVERVIEW TAB */}
       {tab === "overview" && (
         <>
-          <div className="grid grid-cols-[1fr_90px_1fr] border-b border-[#1b2230]/30">
+          <div className="grid grid-cols-[1fr_90px_1fr] border-b border-edge/30">
             <div className={`px-5 py-2.5 ${t1?.info?.win ? "bg-blue-500/8" : "bg-red-500/8"}`}>
               <span className={`text-sm font-bold ${t1?.info?.win ? "text-emerald-400" : "text-red-400"}`}>
                 {t1?.info?.win ? "Zafer" : "Yenilgi"} (Mavi)
               </span>
             </div>
-            <div className="flex items-center justify-center bg-[#0d1117]/50 relative">
+            <div className="flex items-center justify-center bg-card/50 relative">
               <LaneGuideButton />
             </div>
             <div className={`px-5 py-2.5 text-right ${t2?.info?.win ? "bg-blue-500/8" : "bg-red-500/8"}`}>
@@ -312,7 +312,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
             const rp = redPlayersM[i];
             const analysis = bp?.role ? analysisMap[bp.role] : null;
             return (
-              <div key={bp.puuid + '-' + i} className="grid grid-cols-[1fr_90px_1fr] border-b border-[#1b2230]/15 last:border-b-0">
+              <div key={bp.puuid + '-' + i} className="grid grid-cols-[1fr_90px_1fr] border-b border-edge/15 last:border-b-0">
                 <PlayerRow p={bp} maxDmg={maxDmg} maxDmgTaken={maxDmgTaken} side="blue" allPlayers={allPlayers} duration={data.duration} />
                 <VerdictBadge analysis={analysis} />
                 {rp ? <PlayerRow p={rp} maxDmg={maxDmg} maxDmgTaken={maxDmgTaken} side="red" allPlayers={allPlayers} duration={data.duration} /> : <div />}
@@ -393,7 +393,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
               const sc = p._elwScore ?? 5;
               const isTopRainbow = sc >= 8.5 && rank === 1;
               const isTopGlow = sc >= 8.5 && !isTopRainbow;
-              const clr = isTopRainbow ? "bg-[#0d1117] border border-[#c8aa6e]/40" : isTopGlow ? "bg-[#0d1117] border border-emerald-500/40" : sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
+              const clr = isTopRainbow ? "bg-card border border-[#c8aa6e]/40" : isTopGlow ? "bg-card border border-emerald-500/40" : sc >= 7 ? "bg-emerald-500" : sc >= 5 ? "bg-blue-500" : sc >= 3 ? "bg-yellow-500" : "bg-red-500";
               return (
                 <React.Fragment key={p.puuid + '-' + idx}>
                   {idx === 5 && <div className="w-4" />}
@@ -492,10 +492,10 @@ function AnalysisBadge({ badge }) {
 function ScoringModeBar({ scoringMode, setScoringMode }) {
   const [showInfo, setShowInfo] = useState(false);
   return (
-    <div className="px-6 py-2 flex items-center justify-between bg-[#0d1117]/30 border-b border-[#1b2230]/20">
+    <div className="px-6 py-2 flex items-center justify-between bg-card/30 border-b border-edge/20">
       <div className="flex items-center gap-2">
         <span className="text-[11px] text-gray-600">Sıralama:</span>
-        <div className="flex items-center gap-0.5 bg-[#0d1117]/60 rounded-lg p-0.5">
+        <div className="flex items-center gap-0.5 bg-card/60 rounded-lg p-0.5">
           <button onClick={() => setScoringMode("individual")}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${scoringMode === "individual" ? "bg-blue-500/20 text-blue-400" : "text-gray-500 hover:text-gray-300"}`}>
             <User size={11} /> Bireysel
@@ -536,7 +536,7 @@ function ScoringModeBar({ scoringMode, setScoringMode }) {
                 </div>
               </div>
             </div>
-            <p className="text-[10px] text-gray-600 border-t border-[#1b2230]/30 pt-2">
+            <p className="text-[10px] text-gray-600 border-t border-edge/30 pt-2">
               Her koridor için ağırlıklar farklıdır. Örneğin destek için görüş skoru daha önemli, ADC için hasar/dk daha önemlidir.
             </p>
           </div>
@@ -584,7 +584,7 @@ function BanGroup({ bans }) {
       <span className="text-xs text-gray-500 mr-0.5">Bans:</span>
       {bans.map((b, i) => b.image
         ? <img key={i} src={b.image} alt="" width={28} height={28} className="rounded opacity-65" />
-        : <div key={i} className="w-7 h-7 rounded bg-[#1b2230]" />
+        : <div key={i} className="w-7 h-7 rounded bg-edge" />
       )}
     </div>
   );
@@ -639,7 +639,7 @@ function LaneGuideButton() {
               {[
                 { label: "◀◀ Baskın", range: "> +5", color: "text-blue-300 bg-blue-500/15 border-blue-500/25" },
                 { label: "◀ Önde", range: "+2 ~ +5", color: "text-blue-400 bg-blue-500/8 border-blue-500/15" },
-                { label: "= Dengeli", range: "-2 ~ +2", color: "text-gray-400 bg-[#0d1117]/50 border-[#1b2230]/30" },
+                { label: "= Dengeli", range: "-2 ~ +2", color: "text-gray-400 bg-card/50 border-edge/30" },
                 { label: "▶ Önde", range: "-2 ~ -5", color: "text-red-400 bg-red-500/8 border-red-500/15" },
                 { label: "▶▶ Baskın", range: "< -5", color: "text-red-300 bg-red-500/15 border-red-500/25" },
               ].map(v => (
@@ -666,7 +666,7 @@ function LaneGuideButton() {
             <div className="overflow-x-auto">
               <table className="w-full text-[10px]">
                 <thead>
-                  <tr className="border-b border-[#1b2230]/50">
+                  <tr className="border-b border-edge/50">
                     <th className="text-left text-gray-500 py-1.5 pr-2">Rol</th>
                     {LANE_GUIDE_METRICS.map(m => (
                       <th key={m.name} className="text-center text-gray-500 py-1.5 px-1">{m.name.split(" ")[0]}</th>
@@ -675,7 +675,7 @@ function LaneGuideButton() {
                 </thead>
                 <tbody>
                   {LANE_GUIDE_WEIGHTS.map(r => (
-                    <tr key={r.role} className="border-b border-[#1b2230]/20">
+                    <tr key={r.role} className="border-b border-edge/20">
                       <td className="text-gray-300 font-medium py-1.5 pr-2">{r.role}</td>
                       {r.vals.map((v, i) => (
                         <td key={i} className="text-center py-1.5 px-1">
@@ -688,7 +688,7 @@ function LaneGuideButton() {
               </table>
             </div>
 
-            <div className="mt-4 p-3 rounded-lg bg-[#0d1117]/50 border border-[#1b2230]/30">
+            <div className="mt-4 p-3 rounded-lg bg-card/50 border border-edge/30">
               <p className="text-[10px] text-gray-500 leading-relaxed">
                 <strong className="text-gray-400">Not:</strong> Koridor analizi sadece 1v1 lane karşılaştırmasıdır. ELW Score ise maçtaki 10 oyuncuya göre z-score normalizasyonu ile hesaplanır — ikisi birbirinden bağımsızdır. Bir oyuncu lane'de dengeli olabilir ama takım katkısı sayesinde yüksek ELW alabilir.
               </p>
@@ -703,15 +703,15 @@ function LaneGuideButton() {
 /* ===== VERDICT BADGE ===== */
 function VerdictBadge({ analysis }) {
   const [anchor, setAnchor] = useState(null);
-  if (!analysis) return <div className="w-[90px] flex items-center justify-center bg-[#0d1117]/30" />;
+  if (!analysis) return <div className="w-[90px] flex items-center justify-center bg-card/30" />;
   const { verdict, highlights, factors, score, label: roleLabel } = analysis;
   const cfg = {
     blue_dominant: { color: "text-blue-300", bg: "bg-blue-500/15", border: "border-blue-500/25", icon: "◀◀", label: "Baskın" },
     blue_ahead:    { color: "text-blue-400", bg: "bg-blue-500/8",  border: "border-blue-500/15", icon: "◀",  label: "Önde" },
-    even:          { color: "text-gray-400", bg: "bg-[#0d1117]/30",border: "border-[#1b2230]/20",icon: "=",  label: "Dengeli" },
+    even:          { color: "text-gray-400", bg: "bg-card/30",border: "border-edge/20",icon: "=",  label: "Dengeli" },
     red_ahead:     { color: "text-red-400",  bg: "bg-red-500/8",   border: "border-red-500/15",  icon: "▶",  label: "Önde" },
     red_dominant:  { color: "text-red-300",  bg: "bg-red-500/15",  border: "border-red-500/25",  icon: "▶▶", label: "Baskın" },
-  }[verdict] || { color: "text-gray-400", bg: "bg-[#0d1117]/30", border: "border-[#1b2230]/20", icon: "=", label: "Dengeli" };
+  }[verdict] || { color: "text-gray-400", bg: "bg-card/30", border: "border-edge/20", icon: "=", label: "Dengeli" };
 
   return (
     <>
@@ -744,7 +744,7 @@ function VerdictBadge({ analysis }) {
               <div className="mb-2.5">
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className="text-[9px] text-blue-400">Mavi</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-[#1b2230] overflow-hidden relative">
+                  <div className="flex-1 h-1.5 rounded-full bg-edge overflow-hidden relative">
                     <div className="absolute inset-0 flex">
                       <div className="w-1/2 flex justify-end">
                         {score > 0 && <div className="h-full bg-blue-500/60 rounded-l-full" style={{ width: `${Math.min(Math.abs(score) / 10 * 100, 100)}%` }} />}
@@ -776,7 +776,7 @@ function VerdictBadge({ analysis }) {
                   <div key={i} className="flex items-center justify-between">
                     <span className="text-[11px] text-gray-300">{f.metric}</span>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-14 h-1.5 rounded-full bg-[#1b2230] overflow-hidden flex" style={{ justifyContent: f.value < 0 ? "flex-end" : "flex-start" }}>
+                      <div className="w-14 h-1.5 rounded-full bg-edge overflow-hidden flex" style={{ justifyContent: f.value < 0 ? "flex-end" : "flex-start" }}>
                         <div className={`h-full rounded-full ${f.value > 0 ? "bg-blue-500" : "bg-red-500"}`} style={{ width: `${Math.min(Math.abs(f.value) / 3 * 100, 100)}%` }} />
                       </div>
                       <span className={`text-[11px] font-bold w-7 text-right ${f.value > 0 ? "text-blue-400" : "text-red-400"}`}>{f.value > 0 ? "+" : ""}{f.value}</span>
@@ -788,7 +788,7 @@ function VerdictBadge({ analysis }) {
 
             {/* Highlights */}
             {highlights.length > 0 && (
-              <div className="pt-2 border-t border-[#1b2230]/50 space-y-0.5">
+              <div className="pt-2 border-t border-edge/50 space-y-0.5">
                 {highlights.map((h, i) => (
                   <p key={i} className={`text-[10px] font-medium ${cfg.color}`}>{h}</p>
                 ))}
@@ -825,7 +825,7 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side, allPlayers, duration }) {
           <div className="flex flex-col items-center gap-0.5">
             <div className="relative">
               <img src={p.champion.image} alt="" width={44} height={44} className="rounded-lg" />
-              <span className={`absolute -bottom-0.5 ${mirrored ? "-left-0.5" : "-right-0.5"} bg-[#0d1117] text-[9px] text-gray-300 font-bold px-1 rounded`}>{p.champLevel}</span>
+              <span className={`absolute -bottom-0.5 ${mirrored ? "-left-0.5" : "-right-0.5"} bg-card text-[9px] text-gray-300 font-bold px-1 rounded`}>{p.champLevel}</span>
             </div>
             <div className="flex gap-0.5">
               {p.spells[0] && <HoverImg src={p.spells[0].image} size={18} className="rounded-sm" tooltip={<p className="text-xs text-white">{p.spells[0].name}</p>} />}
@@ -889,13 +889,13 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side, allPlayers, duration }) {
         <div className="flex-1 min-w-[100px] space-y-1">
           <div className={`flex items-center gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}>
             <span className={`text-xs text-red-400/80 font-mono w-11 ${mirrored ? "text-left" : "text-right"}`}>{fmtDmg(p.damage)}</span>
-            <div className={`flex-1 h-1.5 bg-[#1b2230] rounded-full overflow-hidden ${mirrored ? "flex justify-end" : ""}`}>
+            <div className={`flex-1 h-1.5 bg-edge rounded-full overflow-hidden ${mirrored ? "flex justify-end" : ""}`}>
               <div className="h-full bg-red-500/60 rounded-full" style={{ width: `${dmgPct}%` }} />
             </div>
           </div>
           <div className={`flex items-center gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}>
             <span className={`text-xs text-blue-400/60 font-mono w-11 ${mirrored ? "text-left" : "text-right"}`}>{fmtDmg(p.damageTaken || 0)}</span>
-            <div className={`flex-1 h-1.5 bg-[#1b2230] rounded-full overflow-hidden ${mirrored ? "flex justify-end" : ""}`}>
+            <div className={`flex-1 h-1.5 bg-edge rounded-full overflow-hidden ${mirrored ? "flex justify-end" : ""}`}>
               <div className="h-full bg-blue-500/40 rounded-full" style={{ width: `${dmgTakenPct}%` }} />
             </div>
           </div>
@@ -934,7 +934,7 @@ function ElwScoreBadge({ p, allPlayers }) {
         onMouseEnter={e => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
       >
-        <span className="w-5 h-1.5 rounded-full bg-[#1b2230] overflow-hidden inline-block align-middle">
+        <span className="w-5 h-1.5 rounded-full bg-edge overflow-hidden inline-block align-middle">
           <span className={`block h-full rounded-full ${isRainbow ? "elw-rainbow-bar" : bgMap[color]}`} style={{ width: `${sc * 10}%` }} />
         </span>
         <span className={isRainbow ? "elw-rainbow-text" : isGlow ? "perf-shimmer-text perf-shimmer-emerald" : ""}>{sc.toFixed(1)}</span>
@@ -955,12 +955,12 @@ function ElwScoreBadge({ p, allPlayers }) {
             </div>
 
             {/* Skor barı */}
-            <div className="h-2 rounded-full bg-[#1b2230] overflow-hidden mb-1.5">
+            <div className="h-2 rounded-full bg-edge overflow-hidden mb-1.5">
               <div className={`h-full rounded-full ${isRainbow ? "elw-rainbow-bar" : bgMap[color]}`} style={{ width: `${sc * 10}%` }} />
             </div>
             <div className={`flex items-center gap-2 mb-3 ${isRainbow ? "" : colorMap[color]}`}>
               {p._matchRank && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isRainbow ? "mvp-glow border border-[#c8aa6e]/60" : "bg-[#1b2230] border border-[#2a3441]/50"}`}>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isRainbow ? "mvp-glow border border-[#c8aa6e]/60" : "bg-edge border border-[#2a3441]/50"}`}>
                   <span className={isRainbow ? "mvp-text" : ""}>#{p._matchRank}</span>
                 </span>
               )}
@@ -968,7 +968,7 @@ function ElwScoreBadge({ p, allPlayers }) {
             </div>
 
             {/* Detaylı istatistikler */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 py-2.5 px-3 rounded-xl bg-[#0d1117]/60 border border-[#1b2230]/30">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3 py-2.5 px-3 rounded-xl bg-card/60 border border-edge/30">
               {[
                 { lbl: "KDA", val: `${p.kills}/${p.deaths}/${p.assists}`, sub: typeof p.kda === "number" ? p.kda.toFixed(1) : p.kda },
                 { lbl: "CS", val: p.cs, sub: `${p.csPerMin}/d` },
@@ -986,7 +986,7 @@ function ElwScoreBadge({ p, allPlayers }) {
 
             {/* Maçtaki 10 oyuncu skor karşılaştırması */}
             {sorted.length > 0 && (
-              <div className="pt-2.5 border-t border-[#1b2230]/40">
+              <div className="pt-2.5 border-t border-edge/40">
                 <p className="text-[9px] text-gray-600 mb-2 uppercase tracking-wider font-medium">Maç Sıralaması</p>
                 <div className="space-y-[3px]">
                   {sorted.map((sp, si) => {
@@ -997,7 +997,7 @@ function ElwScoreBadge({ p, allPlayers }) {
                     return (
                       <div key={sp.puuid + '-' + si} className={`flex items-center gap-1.5 ${isMe ? "opacity-100" : "opacity-40"}`}>
                         <img src={sp.champion?.image} alt="" width={16} height={16} className="rounded" />
-                        <div className="flex-1 h-[5px] rounded-full bg-[#1b2230] overflow-hidden">
+                        <div className="flex-1 h-[5px] rounded-full bg-edge overflow-hidden">
                           <div className={`h-full rounded-full ${spRainbow ? "elw-rainbow-bar" : ""}`} style={{ width: `${(spSc / maxScore) * 100}%`, background: spRainbow ? undefined : spColor }} />
                         </div>
                         <span className={`text-[9px] font-mono w-7 text-right ${spRainbow ? "elw-rainbow-text font-bold" : isMe ? "text-white font-bold" : "text-gray-500"}`}>{spSc.toFixed(1)}</span>
@@ -1069,7 +1069,7 @@ function DamageDistribution({ bluePlayers, redPlayers, allPlayers, maxDmg, mode 
           );
         })}
       </div>
-      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[#1b2230]/20">
+      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-edge/20">
         <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" />Fiziksel</span>
         <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Büyü</span>
         <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-gray-400" />Gerçek</span>
@@ -1163,7 +1163,7 @@ function StatsTable({ bluePlayers, redPlayers, allPlayers }) {
 function StatsRow({ p, maxVals }) {
   const c = p.challenges || {};
   return (
-    <tr className="border-b border-[#1b2230]/10 last:border-b-0 hover:bg-white/[0.02]">
+    <tr className="border-b border-edge/10 last:border-b-0 hover:bg-white/[0.02]">
       <td className="py-2.5 px-3">
         <div className="flex items-center gap-2">
           <img src={p.champion.image} alt="" width={24} height={24} className="rounded-md" />
@@ -1244,10 +1244,10 @@ function AnalysisPanel({ player, t1 }) {
             const _glowActive = p._elwScore >= 8.5;
             const _glowKey = p._elwScore >= 7 ? "emerald" : p._elwScore >= 5 ? "blue" : p._elwScore >= 3 ? "yellow" : "emerald";
             return (
-              <div className="mt-4 pt-3 border-t border-[#1b2230]/30">
+              <div className="mt-4 pt-3 border-t border-edge/30">
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-500">ELW Score</span>
-                  <div className="flex-1 h-2 bg-[#1b2230] rounded-full overflow-hidden">
+                  <div className="flex-1 h-2 bg-edge rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${p._elwScore >= 7 ? "bg-emerald-500" : p._elwScore >= 5 ? "bg-blue-500" : p._elwScore >= 3 ? "bg-yellow-500" : "bg-red-500"}`}
                       style={{ width: `${p._elwScore * 10}%` }} />
                   </div>
@@ -1266,7 +1266,7 @@ function AnalysisPanel({ player, t1 }) {
           {itemGroups.length > 0 ? (
             <div className="space-y-2.5">
               {itemGroups.map((g, gi) => (
-                <div key={gi} className="flex items-center gap-3 bg-[#0d1117]/40 rounded-lg px-4 py-2.5">
+                <div key={gi} className="flex items-center gap-3 bg-card/40 rounded-lg px-4 py-2.5">
                   <span className="text-xs text-gray-500 font-mono w-12 flex-shrink-0">{fmtTime(g.timestamp)}</span>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {g.items.map((item, ii) => (
@@ -1305,7 +1305,7 @@ function AnalysisPanel({ player, t1 }) {
         <div>
           <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">Yetenek Sırası</h4>
           {skillOrder.length > 0 ? (
-            <div className="bg-[#0d1117]/40 rounded-xl p-4 overflow-x-auto">
+            <div className="bg-card/40 rounded-xl p-4 overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr>
@@ -1339,7 +1339,7 @@ function AnalysisPanel({ player, t1 }) {
                               {isLeveled ? (
                                 <span className={`inline-block w-5 h-5 rounded text-[10px] font-bold leading-5 ${SKILL_COLORS[skill]}`}>{skill}</span>
                               ) : (
-                                <span className="inline-block w-5 h-5 rounded bg-[#1b2230]/30" />
+                                <span className="inline-block w-5 h-5 rounded bg-edge/30" />
                               )}
                             </td>
                           );
@@ -1358,7 +1358,7 @@ function AnalysisPanel({ player, t1 }) {
         {p.runes && (
           <div>
             <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">Rünler</h4>
-            <div className="bg-[#0d1117]/40 rounded-xl p-4">
+            <div className="bg-card/40 rounded-xl p-4">
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -1389,7 +1389,7 @@ function AnalysisPanel({ player, t1 }) {
                     ))}
                   </div>
                   {p.runes.statShards?.length > 0 && (
-                    <div className="mt-3 pt-2 border-t border-[#1b2230]/40 space-y-1.5">
+                    <div className="mt-3 pt-2 border-t border-edge/40 space-y-1.5">
                       {p.runes.statShards.map((s, i) => (
                         <p key={i} className="text-[10px] text-gray-400 flex items-center gap-1.5">
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${i === 0 ? "bg-red-400" : i === 1 ? "bg-purple-400" : "bg-green-400"}`} />

@@ -95,13 +95,13 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
               const poly = angles.map((a) => pt(a, level)).map((p) => `${p.x},${p.y}`).join(" ");
               return (
                 <polygon key={i} points={poly} fill="none"
-                  stroke={i === 3 ? "#2a3441" : "#1b2230"} strokeWidth={i === 3 ? 1 : 0.5} />
+                  stroke={i === 3 ? "#2a3441" : "var(--c-edge)"} strokeWidth={i === 3 ? 1 : 0.5} />
               );
             })}
 
             {/* Eksen çizgileri */}
             {outerPts.map((p, i) => (
-              <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#1b2230" strokeWidth={0.5} />
+              <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--c-edge)" strokeWidth={0.5} />
             ))}
 
             {/* Veri alanı */}
@@ -126,7 +126,7 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
                 key={`dot-${i}`}
                 cx={p.x} cy={p.y}
                 r={roles[i].games > 0 ? 4 : 2.5}
-                fill={roles[i].games > 0 ? "#3b82f6" : "#1b2230"}
+                fill={roles[i].games > 0 ? "#3b82f6" : "var(--c-edge)"}
                 stroke={roles[i].games > 0 ? "#60a5fa" : "#2a3441"}
                 strokeWidth={1.5}
                 className="pointer-events-none"
@@ -206,7 +206,7 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
   // Standalone kart
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">
           Koridorlar <span className="text-gray-500 font-normal">(Sezon)</span>
         </h3>

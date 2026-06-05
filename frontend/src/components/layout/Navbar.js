@@ -3,10 +3,29 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Sun, Moon } from "lucide-react";
 import { useBackground } from "@/context/BackgroundContext";
 import { useAnalytics } from "@/context/AnalyticsContext";
 import { useAdmin } from "@/context/AdminContext";
+import { useTheme } from "@/context/ThemeContext";
 import ThemePicker from "@/components/dashboard/ThemePicker";
+
+/* Açık/koyu mod geçişi — topbar pill'i (güneş/ay). */
+function ModeToggle() {
+  const { mode, toggleMode } = useTheme();
+  const isLight = mode === "light";
+  return (
+    <button
+      className="tb-pill"
+      onClick={toggleMode}
+      title={isLight ? "Koyu moda geç" : "Açık moda geç"}
+      aria-label="Tema modu"
+      style={{ gap: 7 }}
+    >
+      {isLight ? <Moon size={15} /> : <Sun size={15} />}
+    </button>
+  );
+}
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -319,6 +338,7 @@ export default function Navbar() {
           </button>
         )}
         <RateLimitIndicator />
+        <ModeToggle />
         <ThemePicker />
         {isAdmin && (
           <Link href="/admin" title="Admin Paneli" className="tb-pill admin">

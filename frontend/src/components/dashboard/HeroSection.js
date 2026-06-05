@@ -19,9 +19,9 @@ export default function HeroSection({ version, championCount }) {
         {/* İstatistik badge'leri */}
         <div className="mt-6 flex items-center justify-center gap-8 animate-fade-in-up delay-200" style={{ opacity: 0, animationFillMode: 'forwards' }}>
           <StatBadge label="Patch" value={version} />
-          <div className="w-px h-6 bg-[#1b2230]" />
+          <div className="w-px h-6 bg-edge" />
           <StatBadge label="Şampiyon" value={championCount} />
-          <div className="w-px h-6 bg-[#1b2230]" />
+          <div className="w-px h-6 bg-edge" />
           <StatBadge label="Sunucu" value="TR1" />
         </div>
       </div>

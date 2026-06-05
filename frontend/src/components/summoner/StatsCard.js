@@ -19,7 +19,7 @@ function CircleProgress({ value, max, label, display, color = "#3b82f6", size = 
   return (
     <div className="flex flex-col items-center gap-2">
       <svg width={size} height={size} viewBox="0 0 96 96">
-        <circle cx="48" cy="48" r={radius} fill="none" stroke="#1b2230" strokeWidth="5" />
+        <circle cx="48" cy="48" r={radius} fill="none" stroke="var(--c-edge)" strokeWidth="5" />
         <circle
           cx="48" cy="48" r={radius}
           fill="none" stroke={color} strokeWidth="5"
@@ -90,7 +90,7 @@ export default function StatsCard({
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">İstatistikler</h3>
         <QueueTabs value={queue} onChange={setQueue} options={QUEUE_OPTIONS} />
       </div>
@@ -138,7 +138,7 @@ export default function StatsCard({
             )}
 
             {personalityBadges.length > 0 && (
-              <div className="mt-5 pt-4 border-t border-[#1b2230]/40">
+              <div className="mt-5 pt-4 border-t border-edge/40">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2.5">Oyuncu Özellikleri</p>
                 <PersonalityBadges badges={personalityBadges} />
               </div>

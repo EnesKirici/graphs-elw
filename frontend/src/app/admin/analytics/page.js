@@ -6,7 +6,7 @@ import { fetchAdmin } from "@/lib/adminApi";
 function MiniBar({ value, max, color = "bg-blue-500" }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
-    <div className="h-1.5 rounded-full bg-[#1b2230] overflow-hidden flex-1">
+    <div className="h-1.5 rounded-full bg-edge overflow-hidden flex-1">
       <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
     </div>
   );
@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-64 rounded-xl bg-[#0d1117] animate-pulse" />
+            <div key={i} className="h-64 rounded-xl bg-card animate-pulse" />
           ))}
         </div>
       </>
@@ -74,7 +74,7 @@ export default function AnalyticsPage() {
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                 days === d
                   ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                  : "bg-white/5 text-gray-400 border border-[#1b2230] hover:text-gray-200"
+                  : "bg-white/5 text-gray-400 border border-edge hover:text-gray-200"
               }`}
             >
               {d} gün

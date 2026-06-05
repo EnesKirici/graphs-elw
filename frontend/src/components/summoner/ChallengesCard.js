@@ -20,7 +20,7 @@ export default function ChallengesCard({ challenges }) {
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">Performans Metrikleri</h3>
         <span className="text-[10px] text-gray-600">{totalGames} maç</span>
       </div>
@@ -35,7 +35,7 @@ export default function ChallengesCard({ challenges }) {
             <div key={m.key} className="text-center">
               <p className="text-[10px] text-gray-500 mb-1">{m.label}</p>
               <p className="text-sm font-bold text-gray-200">{m.format(value)}</p>
-              <div className="mt-1.5 h-1 rounded-full bg-[#1b2230] overflow-hidden">
+              <div className="mt-1.5 h-1 rounded-full bg-edge overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{ width: `${pct}%`, backgroundColor: m.color }}

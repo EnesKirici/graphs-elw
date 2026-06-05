@@ -36,7 +36,7 @@ export default function RuneTooltip({ runes, keystoneSize = 22, subTreeSize = 16
 
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg p-5 shadow-2xl shadow-black/90 w-80">
+          <div className="bg-[#0a0e14] border border-edge rounded-lg p-5 shadow-2xl shadow-black/90 w-80">
             <div className="grid grid-cols-2 gap-6">
               {/* Primary tree */}
               <div>
@@ -91,7 +91,7 @@ export default function RuneTooltip({ runes, keystoneSize = 22, subTreeSize = 16
                   ))}
                 </div>
                 {runes.statShards?.length > 0 && (
-                  <div className="mt-3 pt-2.5 border-t border-[#1b2230]/50 space-y-1.5">
+                  <div className="mt-3 pt-2.5 border-t border-edge/50 space-y-1.5">
                     {runes.statShards.map((s, i) => (
                       <p key={i} className="text-[10px] text-gray-400 flex items-center gap-1.5">
                         <span

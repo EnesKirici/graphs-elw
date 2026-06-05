@@ -13,7 +13,7 @@ export default function SkinGallery({ skins, championName }) {
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">
           Kostümler <span className="text-gray-500 font-normal">({skins.length})</span>
         </h3>
@@ -27,7 +27,7 @@ export default function SkinGallery({ skins, championName }) {
           alt={active.name}
           className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060a10] via-transparent to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-base via-transparent to-transparent opacity-60" />
 
         {/* Skin adı overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">

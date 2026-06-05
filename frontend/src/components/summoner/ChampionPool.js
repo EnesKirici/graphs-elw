@@ -61,7 +61,7 @@ function KdaValue({ ratio }) {
       </p>
       {isPerfect && anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
+          <div className="bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap text-center">
             <p className="text-xs text-yellow-400 font-bold">Perfect KDA</p>
             <p className="text-[11px] text-gray-400">0 ölüm — mükemmel performans</p>
           </div>
@@ -108,7 +108,7 @@ function MasteryBadge({ level, points, size = 28 }) {
       </div>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
+          <div className="bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
             <div className="flex items-center gap-2 mb-1">
               <img src={url} alt="" width={40} height={40} />
               <p className="text-sm text-white font-bold">Mastery Level {level}</p>
@@ -183,7 +183,7 @@ export default function ChampionPool({ seasonChampions, masteries, gameName, tag
   return (
     <div className="glass rounded-xl overflow-hidden">
       {/* Başlık + Filtreler */}
-      <div className="px-4 py-3 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-edge/50 flex items-center justify-between">
         <div className="relative">
           <button
             onClick={() => setOpen(!open)}
@@ -194,7 +194,7 @@ export default function ChampionPool({ seasonChampions, masteries, gameName, tag
           </button>
 
           {open && (
-            <div className="absolute top-full left-0 mt-1 w-44 bg-[#1b2230] border border-[#2a3441] rounded-lg shadow-xl z-20 overflow-hidden">
+            <div className="absolute top-full left-0 mt-1 w-44 bg-edge border border-[#2a3441] rounded-lg shadow-xl z-20 overflow-hidden">
               {VIEWS.map((v) => (
                 <button
                   key={v.key}
@@ -294,7 +294,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
         <SortBtn label="WR" field="winRate" width="w-14" align="right" />
       </div>
 
-      <div className="divide-y divide-[#1b2230]/20">
+      <div className="divide-y divide-edge/20">
         {champions.slice(0, 8).map((c, i) => {
           const kdaRatio = c.avgKda?.ratio ?? 0;
           const noGames = !c.games || c.games === 0;
@@ -353,7 +353,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
                     <span className={`text-xs font-bold font-mono ${getWrColor(c.winRate)}`}>
                       {c.winRate}%
                     </span>
-                    <div className="mt-0.5 h-1 bg-[#1b2230] rounded-full overflow-hidden">
+                    <div className="mt-0.5 h-1 bg-edge rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full ${c.winRate >= 50 ? "bg-emerald-500" : "bg-red-500"}`}
                         style={{ width: `${c.winRate}%` }}
@@ -368,7 +368,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
       </div>
 
       {champions.length > 8 && championsLink && (
-        <div className="px-4 py-2 text-center border-t border-[#1b2230]/20">
+        <div className="px-4 py-2 text-center border-t border-edge/20">
           <Link
             href={championsLink}
             className="text-xs text-blue-400 hover:text-blue-300 transition-colors"

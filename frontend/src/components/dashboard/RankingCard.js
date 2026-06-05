@@ -26,7 +26,7 @@ export default function RankingCard({ title, champions, valueKey, color = "blue"
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#1b2230]/50">
+      <div className="px-4 py-3 border-b border-edge/50">
         <h3 className="text-sm font-semibold text-gray-200">{title}</h3>
       </div>
 
@@ -58,7 +58,7 @@ export default function RankingCard({ title, champions, valueKey, color = "blue"
               <span className={`text-xs font-mono font-medium ${textColors[color]} w-11 text-right`}>
                 {champ[valueKey]}%
               </span>
-              <div className="flex-1 h-2 bg-[#1b2230] rounded-full overflow-hidden">
+              <div className="flex-1 h-2 bg-edge rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full ${barColors[color]} animate-fill-bar`}
                   style={{

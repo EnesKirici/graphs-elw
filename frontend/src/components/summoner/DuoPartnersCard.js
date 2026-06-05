@@ -20,10 +20,10 @@ export default function DuoPartnersCard({ duoPartners }) {
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+      <div className="px-5 py-3.5 border-b border-edge/50">
         <h3 className="text-sm font-semibold text-gray-200">Sık Oynanan Duo'lar</h3>
       </div>
-      <div className="divide-y divide-[#1b2230]/30">
+      <div className="divide-y divide-edge/30">
         {duoPartners.map((duo) => (
           <Link
             key={duo.puuid}
@@ -69,7 +69,7 @@ export default function DuoPartnersCard({ duoPartners }) {
                       alt=""
                       width={20}
                       height={20}
-                      className="rounded-sm border border-[#0d1117]"
+                      className="rounded-sm border border-card"
                     />
                   ))}
                 </div>

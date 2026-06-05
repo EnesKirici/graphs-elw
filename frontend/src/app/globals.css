@@ -2,11 +2,91 @@
 
 @theme inline {
   --font-sans: var(--font-geist);
-  --color-lol-dark: #060a10;
-  --color-lol-card: #0d1117;
-  --color-lol-border: #1b2230;
+  /* Tema-duyarlı yüzey token'ları — değerleri --c-* ham değişkenlerinden gelir,
+     bu değişkenler :root (dark) ve html.light (light) ile değişir. Böylece
+     bg-base / bg-card / border-edge gibi sınıflar otomatik temaya uyar. */
+  --color-base: var(--c-base);
+  --color-card: var(--c-card);
+  --color-edge: var(--c-edge);
+  /* Geriye dönük (kullanılmıyor ama dursun) */
+  --color-lol-dark: var(--c-base);
+  --color-lol-card: var(--c-card);
+  --color-lol-border: var(--c-edge);
   --color-lol-gold: #c4a44a;
   --color-lol-blue: #0397ab;
+}
+
+/* =============== TEMA: ham yüzey değişkenleri (DARK = varsayılan) =============== */
+:root {
+  --c-base: #060a10;   /* sayfa zemini */
+  --c-card: #0d1117;   /* kart yüzeyi */
+  --c-edge: #1b2230;   /* kenarlık */
+
+  --glass-bg: rgba(13, 17, 23, 0.7);
+  --glass-border: rgba(27, 34, 48, 0.6);
+
+  --sb-track: #060a10;
+  --sb-thumb: #1b2230;
+  --sb-thumb-h: #2a3444;
+
+  --sel-bg: rgba(59, 130, 246, 0.3);
+  --sel-fg: #ffffff;
+}
+
+/* =============== TEMA: LIGHT (white mode) override'ları =============== */
+/* html.light tek noktadan: (1) Tailwind gri rampasını AYNALAR (664 text-gray-*
+   metni ters çevirir), (2) semantik yüzey token'larını, (3) dashboard-theme.css
+   değişkenlerini, (4) cam/scrollbar/seçim'i light yapar. Dark'a hiç dokunmaz. */
+html.light {
+  color-scheme: light;
+
+  /* Tailwind gri rampası — aynalanmış (dark'ta açık olan light'ta koyu olur) */
+  --color-gray-50:  #0b0f17;
+  --color-gray-100: #111827;
+  --color-gray-200: #1f2937;
+  --color-gray-300: #374151;
+  --color-gray-400: #4b5563;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #94a3b8;
+  --color-gray-700: #cbd5e1;
+  --color-gray-800: #e2e8f0;
+  --color-gray-900: #f1f5f9;
+  --color-gray-950: #f8fafc;
+
+  /* Semantik yüzeyler */
+  --c-base: #eef1f6;
+  --c-card: #ffffff;
+  --c-edge: #dfe4ec;
+
+  /* Cam morfizm */
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(15, 23, 42, 0.08);
+
+  /* Scrollbar + seçim */
+  --sb-track: #e9edf3;
+  --sb-thumb: #c2cad6;
+  --sb-thumb-h: #a8b2c0;
+  --sel-bg: rgba(59, 130, 246, 0.22);
+  --sel-fg: #0b0f17;
+
+  /* dashboard-theme.css token'ları (topbar/sidebar/hero/kartlar) */
+  --bg-0: #f3f5f9;
+  --bg-1: #ffffff;
+  --bg-2: #eef1f6;
+  --surface: rgba(15, 23, 42, 0.026);
+  --surface-2: rgba(15, 23, 42, 0.05);
+  --border: rgba(15, 23, 42, 0.09);
+  --border-strong: rgba(15, 23, 42, 0.15);
+  --txt: #101521;
+  --txt-2: #44505f;
+  --txt-3: #737e8d;
+}
+
+/* Light modda zemin grid çizgileri (dashboard-theme.css'te beyaz literal) */
+html.light .bg-grid {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
 }
 
 /* =============== ANIMASYONLAR =============== */
@@ -81,9 +161,9 @@
 
 /* =============== GLASS MORPHISM =============== */
 .glass {
-  background: rgba(13, 17, 23, 0.7);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(27, 34, 48, 0.6);
+  border: 1px solid var(--glass-border);
 }
 
 /* =============== TIER BADGE RENKLERİ =============== */
@@ -252,12 +332,12 @@ input[type="range"].stat-slider::-moz-range-track {
 
 /* =============== SCROLLBAR =============== */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #060a10; }
-::-webkit-scrollbar-thumb { background: #1b2230; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2a3444; }
+::-webkit-scrollbar-track { background: var(--sb-track); }
+::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-h); }
 
 /* =============== GENEL =============== */
 ::selection {
-  background: rgba(59, 130, 246, 0.3);
-  color: white;
+  background: var(--sel-bg);
+  color: var(--sel-fg);
 }

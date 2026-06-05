@@ -37,7 +37,7 @@ function ScorePreview({ score, config }) {
   const colorLabel = { emerald: "Yesil", blue: "Mavi", yellow: "Sari", red: "Kirmizi" };
 
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl border border-[#1b2230]/50 ${isRainbow ? "bg-gradient-to-r from-amber-500/5 via-cyan-500/5 to-emerald-500/5" : isGlow ? "bg-emerald-500/5" : "bg-white/[0.02]"}`}>
+    <div className={`flex items-center gap-3 p-3 rounded-xl border border-edge/50 ${isRainbow ? "bg-gradient-to-r from-amber-500/5 via-cyan-500/5 to-emerald-500/5" : isGlow ? "bg-emerald-500/5" : "bg-white/[0.02]"}`}>
       <div className="flex flex-col items-center w-14">
         <span className={`text-lg font-bold ${isRainbow ? "elw-rainbow-text bg-clip-text text-transparent" : colorMap[color]}`}>
           {score.toFixed(1)}
@@ -147,15 +147,15 @@ export default function ElwScoreSettingsPage() {
             <p className="text-[11px] text-gray-600 mb-4">Skor bu degerin ustundeyse ilgili etiket gosterilir (yukaridan asagiya kontrol edilir)</p>
             <div className="space-y-2.5">
               {config.labels.map((l, idx) => (
-                <div key={idx} className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-[#1b2230]/30">
+                <div key={idx} className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-edge/30">
                   <div className="flex items-center gap-1.5 shrink-0 w-20">
                     <span className="text-[10px] text-gray-600">{">="}</span>
                     <input type="number" step="0.5" value={l.min}
                       onChange={(e) => updateLabel(idx, "min", Number(e.target.value))}
-                      className="w-14 bg-[#0d1117] border border-[#1b2230] rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                      className="w-14 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
                   </div>
                   <input value={l.label} onChange={(e) => updateLabel(idx, "label", e.target.value)}
-                    className="flex-1 bg-[#0d1117] border border-[#1b2230] rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500/50" />
+                    className="flex-1 bg-card border border-edge rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500/50" />
                 </div>
               ))}
             </div>
@@ -184,7 +184,7 @@ export default function ElwScoreSettingsPage() {
                     <span className="text-[10px] text-gray-600">{">="}</span>
                     <input type="number" step="0.5" value={value}
                       onChange={(e) => updateColor(c.key, Number(e.target.value))}
-                      className="w-16 bg-[#0d1117] border border-[#1b2230] rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                      className="w-16 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
                     <span className="text-[10px] text-gray-600">{c.desc}</span>
                   </div>
                 );
@@ -207,7 +207,7 @@ export default function ElwScoreSettingsPage() {
                     <span className="text-xs text-gray-400">Esik Skoru</span>
                     <input type="number" step="0.5" value={config.glowThreshold}
                       onChange={(e) => update("glowThreshold", Number(e.target.value))}
-                      className="w-16 bg-[#0d1117] border border-[#1b2230] rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                      className="w-16 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-400">Shimmer Metin</span>
@@ -231,13 +231,13 @@ export default function ElwScoreSettingsPage() {
                     <span className="text-xs text-gray-400">Esik Skoru</span>
                     <input type="number" step="0.5" value={config.rainbowThreshold}
                       onChange={(e) => update("rainbowThreshold", Number(e.target.value))}
-                      className="w-16 bg-[#0d1117] border border-[#1b2230] rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                      className="w-16 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-400">Gerekli Siralama</span>
                     <input type="number" value={config.rainbowRankRequired}
                       onChange={(e) => update("rainbowRankRequired", Number(e.target.value))}
-                      className="w-16 bg-[#0d1117] border border-[#1b2230] rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                      className="w-16 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
                   </div>
                   <p className="text-[10px] text-gray-600">Skor esigi + macta {config.rainbowRankRequired}. sirada olan oyuncuya ozel gokkusagi efekti uygulanir</p>
                 </div>

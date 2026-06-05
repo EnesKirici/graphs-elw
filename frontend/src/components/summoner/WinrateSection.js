@@ -104,7 +104,7 @@ export default function WinrateSection({ timeline, defaultOpen = false, label = 
   const hovData = hovIdx !== null ? data[hovIdx] : null;
 
   return (
-    <div className="mt-3 pt-2 border-t border-[#1b2230]/30">
+    <div className="mt-3 pt-2 border-t border-edge/30">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between cursor-pointer group"
@@ -169,7 +169,7 @@ export default function WinrateSection({ timeline, defaultOpen = false, label = 
             {ref50Y !== null && (
               <>
                 <line x1={pad.x} y1={ref50Y} x2={width - pad.x} y2={ref50Y}
-                  stroke="#1b2230" strokeWidth={1} strokeDasharray="4,3" />
+                  stroke="var(--c-edge)" strokeWidth={1} strokeDasharray="4,3" />
                 <text x={pad.x - 4} y={ref50Y + 3} textAnchor="end" className="fill-gray-500" style={{ fontSize: "8px" }}>
                   50%
                 </text>

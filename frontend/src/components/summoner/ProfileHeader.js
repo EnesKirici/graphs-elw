@@ -49,8 +49,8 @@ export default function ProfileHeader({
         {bannerChamp && (
           <BannerImage champion={bannerChamp} skins={bannerSkins} />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060a10] via-[#060a10]/40 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#060a10]/50 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-base via-base/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-base/50 via-transparent to-transparent" />
 
         <div className="absolute bottom-0 left-0 right-0">
           <div className="max-w-7xl mx-auto px-6 pb-5 flex items-end gap-4">
@@ -58,10 +58,10 @@ export default function ProfileHeader({
               <img
                 src={profile.profileIcon} alt=""
                 width={84} height={84}
-                className="rounded-xl border-2 border-[#1b2230] shadow-2xl"
+                className="rounded-xl border-2 border-edge shadow-2xl"
               />
               {/* Level badge */}
-              <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] text-gray-300 font-bold bg-[#060a10]/80 backdrop-blur-sm px-1.5 py-px rounded">
+              <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] text-gray-300 font-bold bg-base/80 backdrop-blur-sm px-1.5 py-px rounded">
                 {profile.summonerLevel}
               </span>
               {/* Bölge bayrağı */}
@@ -113,7 +113,7 @@ export default function ProfileHeader({
       </div>
 
       {/* ===== TAB NAVİGASYONU ===== */}
-      <div className="max-w-7xl mx-auto px-6 border-b border-[#1b2230]/30">
+      <div className="max-w-7xl mx-auto px-6 border-b border-edge/30">
         <div className="flex items-center gap-0">
           {TABS.map((tab) => (
             <Link

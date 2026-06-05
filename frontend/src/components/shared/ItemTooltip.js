@@ -7,7 +7,7 @@ export default function ItemTooltip({ item, size = 30 }) {
   const [anchor, setAnchor] = useState(null);
 
   if (!item) {
-    return <div style={{ width: size, height: size }} className="rounded bg-[#1b2230]" />;
+    return <div style={{ width: size, height: size }} className="rounded bg-edge" />;
   }
 
   return (
@@ -23,7 +23,7 @@ export default function ItemTooltip({ item, size = 30 }) {
       />
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="bg-[#0a0e14] border border-[#1b2230] rounded-lg p-3 shadow-2xl shadow-black/90 w-60">
+          <div className="bg-[#0a0e14] border border-edge rounded-lg p-3 shadow-2xl shadow-black/90 w-60">
             <div className="flex items-start justify-between gap-2 mb-1">
               <p className="text-sm font-bold text-white">{item.name}</p>
               {item.gold > 0 && (
@@ -38,7 +38,7 @@ export default function ItemTooltip({ item, size = 30 }) {
               </div>
             )}
             {item.desc?.passives?.length > 0 && (
-              <div className="space-y-1 border-t border-[#1b2230] pt-1.5">
+              <div className="space-y-1 border-t border-edge pt-1.5">
                 {item.desc.passives.map((p, j) => (
                   <div key={j}>
                     <p className="text-[11px] font-semibold text-yellow-400">{p.name}</p>

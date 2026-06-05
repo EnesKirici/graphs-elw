@@ -153,14 +153,14 @@ export default function LabelsSettingsPage() {
 
                 {/* Isim input */}
                 <input value={l.label} onChange={(e) => updateLabel(idx, "label", e.target.value)}
-                  className="bg-white/5 border border-[#1b2230] rounded-lg px-3 py-1.5 text-sm text-gray-200 w-40 focus:outline-none focus:border-blue-500/50" />
+                  className="bg-white/5 border border-edge rounded-lg px-3 py-1.5 text-sm text-gray-200 w-40 focus:outline-none focus:border-blue-500/50" />
 
                 {/* Renk secici */}
                 <div className="flex items-center gap-1">
                   {COLORS.map((c) => (
                     <button key={c.id} onClick={() => updateLabel(idx, "color", c.id)} title={c.label}
                       className={`w-5 h-5 rounded-full ${c.bg} cursor-pointer transition-all ${
-                        l.color === c.id ? "ring-2 ring-white/70 ring-offset-1 ring-offset-[#0d1117] scale-110" : "opacity-30 hover:opacity-60"
+                        l.color === c.id ? "ring-2 ring-white/70 ring-offset-1 ring-offset-card scale-110" : "opacity-30 hover:opacity-60"
                       }`} />
                   ))}
                 </div>
@@ -185,12 +185,12 @@ export default function LabelsSettingsPage() {
 
               {/* Genisletilmis alan */}
               {isExpanded && (
-                <div className="px-5 pb-5 pt-0 space-y-4 border-t border-[#1b2230]/30">
+                <div className="px-5 pb-5 pt-0 space-y-4 border-t border-edge/30">
                   {/* Aciklama */}
                   <div className="pt-4">
                     <label className="text-[11px] text-gray-500 block mb-1">Aciklama (oyuncuya gosterilir)</label>
                     <input value={l.desc} onChange={(e) => updateLabel(idx, "desc", e.target.value)}
-                      className="w-full bg-white/5 border border-[#1b2230] rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50" />
+                      className="w-full bg-white/5 border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50" />
                   </div>
 
                   {/* Kosullar */}
@@ -200,7 +200,7 @@ export default function LabelsSettingsPage() {
                       {CONDITION_FIELDS.map((field) => {
                         const value = l.conditions?.[field.key];
                         return (
-                          <div key={field.key} className="bg-white/[0.02] rounded-xl p-3 border border-[#1b2230]/50">
+                          <div key={field.key} className="bg-white/[0.02] rounded-xl p-3 border border-edge/50">
                             <label className="text-[10px] text-gray-500 block mb-1.5">{field.label}</label>
                             {field.type === "select" ? (
                               <select
@@ -209,7 +209,7 @@ export default function LabelsSettingsPage() {
                                   const v = e.target.value;
                                   updateCondition(idx, field.key, v === "" ? null : v === "true");
                                 }}
-                                className="w-full bg-[#0d1117] border border-[#1b2230] rounded-lg px-2.5 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50"
+                                className="w-full bg-card border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50"
                               >
                                 <option value="">Farketmez</option>
                                 <option value="true">Evet (Galibiyet)</option>
@@ -221,7 +221,7 @@ export default function LabelsSettingsPage() {
                                 value={value ?? ""}
                                 onChange={(e) => updateCondition(idx, field.key, e.target.value === "" ? undefined : Number(e.target.value))}
                                 placeholder="—"
-                                className="w-full bg-[#0d1117] border border-[#1b2230] rounded-lg px-2.5 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50"
+                                className="w-full bg-card border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50"
                               />
                             )}
                             <p className="text-[9px] text-gray-600 mt-1">{field.help}</p>
@@ -238,7 +238,7 @@ export default function LabelsSettingsPage() {
 
         {/* Yeni ekle */}
         <button onClick={() => { setLabels((p) => [...p, { label: "Yeni Etiket", desc: "", color: "gray", conditions: {} }]); setExpandedIdx(labels.length); }}
-          className="w-full border-2 border-dashed border-[#1b2230] hover:border-blue-500/40 rounded-2xl py-5 text-sm text-gray-600 hover:text-blue-400 transition-all cursor-pointer">
+          className="w-full border-2 border-dashed border-edge hover:border-blue-500/40 rounded-2xl py-5 text-sm text-gray-600 hover:text-blue-400 transition-all cursor-pointer">
           + Yeni Etiket Ekle
         </button>
       </div>

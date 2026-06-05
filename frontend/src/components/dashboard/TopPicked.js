@@ -5,7 +5,7 @@ export default function TopPicked({ champions }) {
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#1b2230]/50 flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-edge/50 flex items-center gap-2">
         <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
         <h3 className="text-sm font-semibold text-gray-200">En Çok Oynanan</h3>
       </div>

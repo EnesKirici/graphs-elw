@@ -27,7 +27,7 @@ export default function RoleStats({ seasonRoles }) {
   return (
     <div className="glass rounded-xl overflow-hidden">
       {/* Başlık + Filtreler */}
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">Koridorlar <span className="text-gray-500 font-normal">(Sezon)</span></h3>
         <div className="flex items-center gap-1">
           {QUEUE_FILTERS.map((f) => (
@@ -71,7 +71,7 @@ export default function RoleStats({ seasonRoles }) {
 
               <span className="text-base font-bold text-white w-10 text-center">{r.games}</span>
 
-              <div className="flex-1 h-7 rounded overflow-hidden flex bg-[#1b2230]">
+              <div className="flex-1 h-7 rounded overflow-hidden flex bg-edge">
                 {r.wins > 0 && (
                   <div
                     className="h-full bg-emerald-600 flex items-center justify-center transition-all"

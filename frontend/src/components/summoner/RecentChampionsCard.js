@@ -17,7 +17,7 @@ export default function RecentChampionsCard({ matches = [] }) {
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">Son Maçlar Özeti</h3>
         <span className="text-[11px] text-gray-500">{matches.length} maç</span>
       </div>

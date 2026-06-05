@@ -29,7 +29,7 @@ export default function StatsTable({ stats }) {
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">Temel İstatistikler</h3>
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-gray-500">Seviye</span>
@@ -42,7 +42,7 @@ export default function StatsTable({ stats }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setLevel(Math.max(1, level - 1))}
-            className="w-6 h-6 rounded bg-[#1b2230] text-gray-400 hover:text-white hover:bg-[#2a3444] flex items-center justify-center text-sm transition-colors cursor-pointer"
+            className="w-6 h-6 rounded bg-edge text-gray-400 hover:text-white hover:bg-[#2a3444] flex items-center justify-center text-sm transition-colors cursor-pointer"
           >
             −
           </button>
@@ -56,7 +56,7 @@ export default function StatsTable({ stats }) {
           />
           <button
             onClick={() => setLevel(Math.min(18, level + 1))}
-            className="w-6 h-6 rounded bg-[#1b2230] text-gray-400 hover:text-white hover:bg-[#2a3444] flex items-center justify-center text-sm transition-colors cursor-pointer"
+            className="w-6 h-6 rounded bg-edge text-gray-400 hover:text-white hover:bg-[#2a3444] flex items-center justify-center text-sm transition-colors cursor-pointer"
           >
             +
           </button>
@@ -103,7 +103,7 @@ export default function StatsTable({ stats }) {
               </div>
               {/* Mini bar */}
               {cfg.perLevel && (
-                <div className="w-8 bg-[#1b2230] rounded-full h-1 flex-shrink-0">
+                <div className="w-8 bg-edge rounded-full h-1 flex-shrink-0">
                   <div
                     className="h-1 rounded-full transition-all duration-300"
                     style={{

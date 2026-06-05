@@ -33,7 +33,7 @@ export function BackgroundProvider({ children }) {
       {background && (
         <div className="fixed inset-0 z-0">
           <img src={background} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-[#060a10]/75" />
+          <div className="absolute inset-0 bg-base/75" />
         </div>
       )}
       {children}

@@ -53,7 +53,7 @@ export default function BanAlerts() {
         : "border-yellow-500/20"
     }`}>
       {/* Header */}
-      <div className="px-5 py-3.5 flex items-center justify-between border-b border-[#1b2230]/50">
+      <div className="px-5 py-3.5 flex items-center justify-between border-b border-edge/50">
         <div className="flex items-center gap-3">
           {alerts.length > 0 && (
             <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
@@ -82,7 +82,7 @@ export default function BanAlerts() {
 
       {/* Alert listesi */}
       {alerts.length > 0 && (
-        <div className="max-h-72 overflow-y-auto divide-y divide-[#1b2230]/20">
+        <div className="max-h-72 overflow-y-auto divide-y divide-edge/20">
           {[...alerts].reverse().map((alert, i) => {
             const time = new Date(alert.time);
             const timeStr = time.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });

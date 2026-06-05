@@ -46,12 +46,12 @@ export default function MatchList({ initialMatches, puuid, selectedMatchId, onSe
   // Liste görünümü
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
+      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">Son Maçlar</h3>
         <span className="text-[11px] text-gray-500">{matches.length} maç</span>
       </div>
 
-      <div className="divide-y divide-[#1b2230]/20">
+      <div className="divide-y divide-edge/20">
         {matches.map((match, idx) => {
           // Son maçlardan ELW skor geçmişi — sparkline için (ters sırada: eskiden yeniye)
           const scoreHistory = [...matches].reverse().map(m => m.ranking?.elwScore ?? null).filter(s => s !== null);

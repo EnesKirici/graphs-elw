@@ -41,12 +41,12 @@ export default function ChampionTable({ title, champions, sortBy = "winRate" }) 
   return (
     <div className="glass rounded-xl overflow-hidden">
       {/* Tablo başlığı */}
-      <div className="px-5 py-4 border-b border-[#1b2230]/50">
+      <div className="px-5 py-4 border-b border-edge/50">
         <h3 className="text-base font-semibold text-gray-200">{title}</h3>
       </div>
 
       {/* Tablo header */}
-      <div className="grid grid-cols-[40px_1fr_130px_70px_70px_50px] gap-2 px-5 py-2 text-[11px] text-gray-500 uppercase tracking-wider border-b border-[#1b2230]/30">
+      <div className="grid grid-cols-[40px_1fr_130px_70px_70px_50px] gap-2 px-5 py-2 text-[11px] text-gray-500 uppercase tracking-wider border-b border-edge/30">
         <span>#</span>
         <span>Şampiyon</span>
         <span>Win Rate</span>
@@ -56,7 +56,7 @@ export default function ChampionTable({ title, champions, sortBy = "winRate" }) 
       </div>
 
       {/* Satırlar */}
-      <div className="divide-y divide-[#1b2230]/30">
+      <div className="divide-y divide-edge/30">
         {champions.map((champ, index) => (
           <Link
             key={champ.id}
@@ -94,7 +94,7 @@ export default function ChampionTable({ title, champions, sortBy = "winRate" }) 
 
             {/* Win Rate + bar */}
             <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-[#1b2230] rounded-full overflow-hidden">
+              <div className="flex-1 h-1.5 bg-edge rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full bg-gradient-to-r ${getWinRateColor(champ.winRate)} animate-fill-bar`}
                   style={{

@@ -149,7 +149,7 @@ export default function BadgesSettingsPage() {
           return (
             <div key={catKey} className="glass rounded-2xl overflow-hidden">
               {/* Kategori baslik */}
-              <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center gap-2.5">
+              <div className="px-5 py-3.5 border-b border-edge/50 flex items-center gap-2.5">
                 <svg className={`w-4 h-4 ${cat.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={cat.icon} />
                 </svg>
@@ -158,7 +158,7 @@ export default function BadgesSettingsPage() {
               </div>
 
               {/* Rozet listesi */}
-              <div className="divide-y divide-[#1b2230]/20">
+              <div className="divide-y divide-edge/20">
                 {items.map((badge) => {
                   const isExpanded = expandedKey === badge.key;
                   const tierEntries = Object.entries(badge.tiers || {}).sort((a, b) => {
@@ -177,7 +177,7 @@ export default function BadgesSettingsPage() {
 
                         {/* Label */}
                         <input value={badge.label} onChange={(e) => updateBadge(badge.key, "label", e.target.value)}
-                          className="bg-white/5 border border-[#1b2230] rounded-lg px-2.5 py-1.5 text-sm text-gray-200 w-40 focus:outline-none focus:border-blue-500/50" />
+                          className="bg-white/5 border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-200 w-40 focus:outline-none focus:border-blue-500/50" />
 
                         {/* Stat */}
                         <span className="text-[11px] text-gray-600 font-mono flex-1 truncate">{badge.stat}</span>
@@ -187,7 +187,7 @@ export default function BadgesSettingsPage() {
                           <span className="text-[10px] text-gray-600">Esik:</span>
                           <input type="number" step="any" value={badge.threshold ?? 0}
                             onChange={(e) => updateBadge(badge.key, "threshold", Number(e.target.value))}
-                            className="w-16 bg-white/5 border border-[#1b2230] rounded-lg px-2 py-1 text-xs text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                            className="w-16 bg-white/5 border border-edge rounded-lg px-2 py-1 text-xs text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
                         </div>
 
                         {/* Tier badges */}
@@ -208,7 +208,7 @@ export default function BadgesSettingsPage() {
 
                       {/* Genisletilmis: Tier duzenle */}
                       {isExpanded && (
-                        <div className="px-5 pb-5 pt-2 border-t border-[#1b2230]/20">
+                        <div className="px-5 pb-5 pt-2 border-t border-edge/20">
                           <p className="text-[11px] text-gray-500 mb-3">Tier sinirlari — deger ne kadar yuksekse tier o kadar iyi. Kullanilmayan tier&apos;leri kaldirabilirsiniz.</p>
                           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
                             {TIER_ORDER.map((tierKey) => {
@@ -217,7 +217,7 @@ export default function BadgesSettingsPage() {
                               const hasValue = tierVal !== undefined && tierVal !== null;
 
                               return (
-                                <div key={tierKey} className={`rounded-xl p-3 border transition-all ${hasValue ? `bg-white/[0.02] border-[#1b2230]/50` : "bg-transparent border-dashed border-[#1b2230]/20 opacity-40"}`}>
+                                <div key={tierKey} className={`rounded-xl p-3 border transition-all ${hasValue ? `bg-white/[0.02] border-edge/50` : "bg-transparent border-dashed border-edge/20 opacity-40"}`}>
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-1.5">
                                       <span className={`w-3 h-3 rounded-full ${tierInfo.bg}`} />
@@ -232,7 +232,7 @@ export default function BadgesSettingsPage() {
                                   {hasValue && (
                                     <input type="number" step="any" value={tierVal}
                                       onChange={(e) => updateTier(badge.key, tierKey, e.target.value)}
-                                      className="w-full bg-[#0d1117] border border-[#1b2230] rounded-lg px-2.5 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                                      className="w-full bg-card border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
                                   )}
                                 </div>
                               );

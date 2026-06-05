@@ -32,7 +32,7 @@ export default function ChampionRadar({ info }) {
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+      <div className="px-5 py-3.5 border-b border-edge/50">
         <h3 className="text-sm font-semibold text-gray-200">Şampiyon Profili</h3>
       </div>
 
@@ -50,13 +50,13 @@ export default function ChampionRadar({ info }) {
             const poly = angles.map((a) => pt(a, level)).map((p) => `${p.x},${p.y}`).join(" ");
             return (
               <polygon key={i} points={poly} fill="none"
-                stroke={i === 3 ? "#2a3441" : "#1b2230"} strokeWidth={i === 3 ? 1 : 0.5} />
+                stroke={i === 3 ? "#2a3441" : "var(--c-edge)"} strokeWidth={i === 3 ? 1 : 0.5} />
             );
           })}
 
           {/* Eksen çizgileri */}
           {outerPts.map((p, i) => (
-            <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#1b2230" strokeWidth={0.5} />
+            <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--c-edge)" strokeWidth={0.5} />
           ))}
 
           {/* Veri alanı */}
@@ -112,7 +112,7 @@ export default function ChampionRadar({ info }) {
             return (
               <div key={stat.key} className="flex items-center gap-3">
                 <span className="text-[11px] text-gray-500 w-14 text-right">{stat.label}</span>
-                <div className="flex-1 bg-[#1b2230] rounded-full h-1.5">
+                <div className="flex-1 bg-edge rounded-full h-1.5">
                   <div
                     className="h-1.5 rounded-full animate-fill-bar"
                     style={{ width: `${val * 10}%`, backgroundColor: stat.color }}

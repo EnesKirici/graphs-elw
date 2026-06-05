@@ -110,20 +110,20 @@ export default function BansPage() {
               <label className="text-[10px] text-gray-500 block mb-1">IP Adresi</label>
               <input value={form.ip_address} onChange={(e) => setForm((f) => ({ ...f, ip_address: e.target.value }))}
                 placeholder="192.168.1.1" required
-                className="w-full bg-[#0d1117] border border-[#1b2230] rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-red-500/50" />
+                className="w-full bg-card border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-red-500/50" />
             </div>
             <div>
               <label className="text-[10px] text-gray-500 block mb-1">Sebep</label>
               <input value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
                 placeholder="Brute force, Bot, Spam..." required
-                className="w-full bg-[#0d1117] border border-[#1b2230] rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-red-500/50" />
+                className="w-full bg-card border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-red-500/50" />
             </div>
             <div>
               <label className="text-[10px] text-gray-500 block mb-1">Sure (dakika)</label>
               <div className="flex items-center gap-2">
                 <input type="number" value={form.minutes} onChange={(e) => setForm((f) => ({ ...f, minutes: Number(e.target.value) }))}
                   disabled={form.permanent} min={1}
-                  className="flex-1 bg-[#0d1117] border border-[#1b2230] rounded-lg px-3 py-2 text-sm text-gray-300 disabled:opacity-30 focus:outline-none focus:border-red-500/50" />
+                  className="flex-1 bg-card border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 disabled:opacity-30 focus:outline-none focus:border-red-500/50" />
                 <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
                   <input type="checkbox" checked={form.permanent} onChange={(e) => setForm((f) => ({ ...f, permanent: e.target.checked }))}
                     className="rounded border-gray-600" />
@@ -152,7 +152,7 @@ export default function BansPage() {
             className={`text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
               filter === f.key
                 ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                : "bg-white/5 text-gray-400 border border-[#1b2230] hover:text-gray-200"
+                : "bg-white/5 text-gray-400 border border-edge hover:text-gray-200"
             }`}>
             {f.label}
           </button>
@@ -161,7 +161,7 @@ export default function BansPage() {
 
       {/* Tablo */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-[#1b2230]/50 text-[10px] text-gray-600 uppercase tracking-wider">
+        <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-edge/50 text-[10px] text-gray-600 uppercase tracking-wider">
           <div className="col-span-2">IP Adresi</div>
           <div className="col-span-3">Sebep</div>
           <div className="col-span-1">Deneme</div>
@@ -185,7 +185,7 @@ export default function BansPage() {
           bans.data.map((ban) => {
             const isActive = !ban.unbanned_at && (ban.is_permanent || new Date(ban.expires_at) > Date.now());
             return (
-              <div key={ban.id} className={`grid grid-cols-12 gap-3 px-5 py-3 border-b border-[#1b2230]/20 hover:bg-white/[0.02] transition-colors ${!isActive ? "opacity-50" : ""}`}>
+              <div key={ban.id} className={`grid grid-cols-12 gap-3 px-5 py-3 border-b border-edge/20 hover:bg-white/[0.02] transition-colors ${!isActive ? "opacity-50" : ""}`}>
                 <div className="col-span-2">
                   <span className="text-sm text-gray-200 font-mono">{ban.ip_address}</span>
                 </div>
@@ -223,7 +223,7 @@ export default function BansPage() {
         )}
 
         {bans?.last_page > 1 && (
-          <div className="px-5 py-3 border-t border-[#1b2230]/50 text-xs text-gray-600 text-center">
+          <div className="px-5 py-3 border-t border-edge/50 text-xs text-gray-600 text-center">
             Toplam {bans.total} kayit
           </div>
         )}

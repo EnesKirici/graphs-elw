@@ -38,7 +38,7 @@ function HoverCard({ data, role, pool, rect, onEnter, onLeave }) {
       style={{ top, left, width: W }}
     >
       <div className="glass rounded-xl border border-[#2a3441] shadow-2xl shadow-black/80 overflow-hidden">
-        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-[#1b2230]/60 to-transparent">
+        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-edge/60 to-transparent">
           <img src={data.image} alt={data.name} width={44} height={44} className="rounded-lg" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white truncate">{data.name}</p>
@@ -47,7 +47,7 @@ function HoverCard({ data, role, pool, rect, onEnter, onLeave }) {
           <span className={`text-base font-extrabold ${TIER_META[data.tier].text}`}>{data.tier}</span>
         </div>
 
-        <div className="grid grid-cols-3 divide-x divide-[#1b2230]/60 border-y border-[#1b2230]/60">
+        <div className="grid grid-cols-3 divide-x divide-edge/60 border-y border-edge/60">
           <Stat label="Kazanma" value={data.stats.wr} color={wrColor(data.stats.wr)} />
           <Stat label="Seçilme" value={data.stats.pick} />
           <Stat label="Banlanma" value={data.stats.ban} />
@@ -65,7 +65,7 @@ function HoverCard({ data, role, pool, rect, onEnter, onLeave }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-1 px-3 py-2.5 border-t border-[#1b2230]/60 text-[11px]">
+        <div className="flex items-center justify-center gap-1 px-3 py-2.5 border-t border-edge/60 text-[11px]">
           <Link href={`/champions/${data.id}`} className="text-blue-400 hover:text-blue-300 transition-colors">Build</Link>
           <span className="text-gray-700">·</span>
           <Link href={`/champions/${data.id}`} className="text-blue-400 hover:text-blue-300 transition-colors">Rehber</Link>
@@ -158,9 +158,9 @@ export default function TierList({ champions = [], version }) {
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2 text-[11px]">
-          <span className="px-2.5 py-1 rounded-md bg-[#1b2230]/60 text-gray-400">Emerald +</span>
-          <span className="px-2.5 py-1 rounded-md bg-[#1b2230]/60 text-gray-400">Ranked Solo</span>
-          <span className="px-2.5 py-1 rounded-md bg-[#1b2230]/60 text-gray-400">Patch {version || PATCH}</span>
+          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Emerald +</span>
+          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Ranked Solo</span>
+          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Patch {version || PATCH}</span>
         </div>
       </div>
 
@@ -193,9 +193,9 @@ export default function TierList({ champions = [], version }) {
       {/* Tier satırları */}
       <div className="glass rounded-xl overflow-hidden">
         {["S", "A", "B", "C", "D"].map((t) => (
-          <div key={t} className="flex border-b border-[#1b2230]/40 last:border-0">
+          <div key={t} className="flex border-b border-edge/40 last:border-0">
             <div
-              className="w-14 flex-shrink-0 flex items-center justify-center border-r border-[#1b2230]/40"
+              className="w-14 flex-shrink-0 flex items-center justify-center border-r border-edge/40"
               style={{ background: `${TIER_META[t].color}14` }}
             >
               <span className={`text-2xl font-extrabold ${TIER_META[t].text}`}>{t}</span>

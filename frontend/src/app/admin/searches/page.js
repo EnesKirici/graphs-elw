@@ -25,7 +25,7 @@ export default function SearchesPage() {
 
       <div className="glass rounded-xl overflow-hidden">
         {/* Tablo başlık */}
-        <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-[#1b2230]/50 text-[11px] text-gray-500 uppercase tracking-wider">
+        <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-edge/50 text-[11px] text-gray-500 uppercase tracking-wider">
           <div className="col-span-3">Tarih</div>
           <div className="col-span-4">Arama</div>
           <div className="col-span-3">Sayfa</div>
@@ -48,7 +48,7 @@ export default function SearchesPage() {
             const ip = event.ip_address ? event.ip_address.replace(/^::ffff:/, "") : "—";
 
             return (
-              <div key={event.id} className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-[#1b2230]/20 hover:bg-white/[0.02] transition-colors">
+              <div key={event.id} className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-edge/20 hover:bg-white/[0.02] transition-colors">
                 <div className="col-span-3">
                   <span className="text-sm text-gray-300">{dateStr}</span>
                   <span className="text-xs text-gray-600 ml-2">{timeStr}</span>
@@ -69,7 +69,7 @@ export default function SearchesPage() {
 
         {/* Sayfalama */}
         {data?.last_page > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-[#1b2230]/50">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-edge/50">
             <span className="text-xs text-gray-500">
               Toplam {data.total} arama — Sayfa {data.current_page}/{data.last_page}
             </span>

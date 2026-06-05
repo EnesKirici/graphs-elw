@@ -86,7 +86,7 @@ function UnrankedBlock({ title }) {
     <div>
       <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-3">{title}</p>
       <div className="flex items-center gap-4 opacity-60">
-        <div className="w-[92px] h-[92px] rounded-full bg-[#1b2230]/40 border border-[#1b2230] flex items-center justify-center flex-shrink-0">
+        <div className="w-[92px] h-[92px] rounded-full bg-edge/40 border border-edge flex items-center justify-center flex-shrink-0">
           <span className="text-gray-600 text-sm">?</span>
         </div>
         <p className="text-sm text-gray-500">Unranked</p>
@@ -151,12 +151,12 @@ export default function RankCard({ solo, flex, winrateTimeline, region = "TR" })
         <div className="md:pr-6">
           {solo ? <RankBlock data={solo} title="Solo/Duo" region={region} /> : <UnrankedBlock title="Solo/Duo" />}
         </div>
-        <div className="md:border-l md:border-[#1b2230]/50 md:pl-6">
+        <div className="md:border-l md:border-edge/50 md:pl-6">
           {flex ? <RankBlock data={flex} title="Flex 5v5" region={region} /> : <UnrankedBlock title="Flex 5v5" />}
         </div>
       </div>
 
-      <div className="mt-5 pt-4 border-t border-[#1b2230]/40">
+      <div className="mt-5 pt-4 border-t border-edge/40">
         <AvgEnemiesRating />
       </div>
 

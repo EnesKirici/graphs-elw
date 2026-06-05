@@ -62,8 +62,8 @@ export default async function ChampionDetail({ params }) {
           alt={champ.name}
           className="w-full h-full object-cover object-top"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060a10] via-[#060a10]/50 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#060a10]/60 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-base via-base/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-base/60 via-transparent to-transparent" />
 
         {/* Şampiyon bilgisi overlay */}
         <div className="absolute bottom-0 left-0 right-0">
@@ -74,7 +74,7 @@ export default async function ChampionDetail({ params }) {
                 alt={champ.name}
                 width={84}
                 height={84}
-                className="rounded-xl border-2 border-[#1b2230] shadow-2xl"
+                className="rounded-xl border-2 border-edge shadow-2xl"
               />
             </div>
             <div>
@@ -118,7 +118,7 @@ export default async function ChampionDetail({ params }) {
       </div>
 
       {/* ===== BREADCRUMB ===== */}
-      <div className="max-w-7xl mx-auto px-6 py-2.5 border-b border-[#1b2230]/30">
+      <div className="max-w-7xl mx-auto px-6 py-2.5 border-b border-edge/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
@@ -166,7 +166,7 @@ export default async function ChampionDetail({ params }) {
             {/* İpuçları */}
             {(champ.allytips?.length > 0 || champ.enemytips?.length > 0) && (
               <div className="glass rounded-xl overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[#1b2230]/50 flex items-center justify-between">
+                <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-200">İpuçları</h3>
                   <span className="text-[10px] text-gray-600 italic">Riot verisi — güncel olmayabilir</span>
                 </div>
@@ -179,7 +179,7 @@ export default async function ChampionDetail({ params }) {
                       </p>
                       <ul className="space-y-1.5">
                         {champ.allytips.map((tip, i) => (
-                          <li key={i} className="text-xs text-gray-400 leading-relaxed pl-3 border-l border-[#1b2230]">
+                          <li key={i} className="text-xs text-gray-400 leading-relaxed pl-3 border-l border-edge">
                             {tip}
                           </li>
                         ))}
@@ -194,7 +194,7 @@ export default async function ChampionDetail({ params }) {
                       </p>
                       <ul className="space-y-1.5">
                         {champ.enemytips.map((tip, i) => (
-                          <li key={i} className="text-xs text-gray-400 leading-relaxed pl-3 border-l border-[#1b2230]">
+                          <li key={i} className="text-xs text-gray-400 leading-relaxed pl-3 border-l border-edge">
                             {tip}
                           </li>
                         ))}
@@ -211,10 +211,10 @@ export default async function ChampionDetail({ params }) {
 
             {/* Yetenekler */}
             <div className="glass rounded-xl overflow-hidden animate-fade-in-up">
-              <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+              <div className="px-5 py-3.5 border-b border-edge/50">
                 <h3 className="text-sm font-semibold text-gray-200">Yetenekler</h3>
               </div>
-              <div className="divide-y divide-[#1b2230]/30">
+              <div className="divide-y divide-edge/30">
                 {/* Pasif */}
                 <div className="flex items-start gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors group">
                   <div className="relative flex-shrink-0">
@@ -223,7 +223,7 @@ export default async function ChampionDetail({ params }) {
                       alt={champ.passive.name}
                       width={48}
                       height={48}
-                      className="rounded-lg border border-[#1b2230] group-hover:border-gray-600 transition-colors"
+                      className="rounded-lg border border-edge group-hover:border-gray-600 transition-colors"
                     />
                     <span className="absolute -top-1.5 -right-1.5 text-[9px] bg-gray-700/90 text-gray-300 px-1.5 py-0.5 rounded font-mono font-bold">
                       P
@@ -262,7 +262,7 @@ export default async function ChampionDetail({ params }) {
                           alt={spell.name}
                           width={48}
                           height={48}
-                          className="rounded-lg border border-[#1b2230] group-hover:border-gray-600 transition-colors"
+                          className="rounded-lg border border-edge group-hover:border-gray-600 transition-colors"
                         />
                         <span className={`absolute -top-1.5 -right-1.5 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold border ${keyColors[index]}`}>
                           {keys[index]}
@@ -321,7 +321,7 @@ export default async function ChampionDetail({ params }) {
 
             {/* Hikaye */}
             <div className="glass rounded-xl overflow-hidden animate-fade-in-up">
-              <div className="px-5 py-3.5 border-b border-[#1b2230]/50">
+              <div className="px-5 py-3.5 border-b border-edge/50">
                 <h3 className="text-sm font-semibold text-gray-200">Hikaye</h3>
               </div>
               <div className="p-5">

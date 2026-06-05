@@ -39,7 +39,7 @@ function BadgeIcon({ type, active }) {
       <Icon size={15} className={badge.color} />
       {/* Hover tooltip */}
       <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/badge:block z-[9999] pointer-events-none">
-        <span className="bg-[#0a0e14] border border-[#1b2230] rounded-lg px-3 py-2 shadow-xl shadow-black/80 whitespace-nowrap block">
+        <span className="bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-xl shadow-black/80 whitespace-nowrap block">
           <span className={`text-xs font-medium ${badge.color} block`}>{badge.label}</span>
           <span className="text-[10px] text-gray-500 block mt-0.5">{badge.desc}</span>
         </span>
@@ -95,7 +95,7 @@ export default function LeaderboardPage() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1 bg-[#0d1117] border border-[#1b2230] rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-card border border-edge rounded-lg p-1">
             {TIERS.map((t) => (
               <button key={t.key} onClick={() => setTier(t.key)}
                 className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
@@ -106,7 +106,7 @@ export default function LeaderboardPage() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1 bg-[#0d1117] border border-[#1b2230] rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-card border border-edge rounded-lg p-1">
             {QUEUES.map((q) => (
               <button key={q.key} onClick={() => setQueue(q.key)}
                 className={`text-xs px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
@@ -122,7 +122,7 @@ export default function LeaderboardPage() {
       {/* Tablo — overflow-visible for tooltips */}
       <div className="glass rounded-xl overflow-visible">
         {/* Header */}
-        <div className="grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 px-6 py-3.5 text-[11px] text-gray-500 uppercase tracking-wider border-b border-[#1b2230]/50 font-medium">
+        <div className="grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 px-6 py-3.5 text-[11px] text-gray-500 uppercase tracking-wider border-b border-edge/50 font-medium">
           <span>#</span>
           <span>Oyuncu</span>
           <span className="text-center">Şampiyonlar</span>
@@ -144,7 +144,7 @@ export default function LeaderboardPage() {
         {!loading && data?.entries?.map((entry, i) => (
           <div
             key={entry.puuid || i}
-            className={`grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 items-center px-6 py-3 hover:bg-white/[0.03] transition-colors border-b border-[#1b2230]/15 ${
+            className={`grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 items-center px-6 py-3 hover:bg-white/[0.03] transition-colors border-b border-edge/15 ${
               i < 3 ? "bg-white/[0.015]" : ""
             }`}
           >

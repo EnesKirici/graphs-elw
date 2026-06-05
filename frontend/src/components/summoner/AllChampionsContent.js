@@ -85,7 +85,7 @@ export default function AllChampionsContent({ seasonChampions }) {
 
             {/* Filtre + Sıralama */}
             <div className="glass rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-[#1b2230]/50">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-edge/50">
                     <div className="flex items-center gap-1">
                         {GAME_TYPES.map((g) => (
                             <button
@@ -118,7 +118,7 @@ export default function AllChampionsContent({ seasonChampions }) {
                 </div>
 
                 {/* Tablo başlığı */}
-                <div className="hidden md:flex items-center px-5 py-2 gap-2 border-b border-[#1b2230]/20 bg-[#0a0e14]/30">
+                <div className="hidden md:flex items-center px-5 py-2 gap-2 border-b border-edge/20 bg-[#0a0e14]/30">
                     <span className="w-5" />
                     <span className="w-10" />
                     <span className="flex-1 text-[10px] text-gray-500 font-medium">Şampiyon</span>
@@ -138,7 +138,7 @@ export default function AllChampionsContent({ seasonChampions }) {
                         <p className="text-sm text-gray-500">Bu sezon henüz maç verisi bulunamadı</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-[#1b2230]/15">
+                    <div className="divide-y divide-edge/15">
                         {champions.map((c, i) => (
                             <ChampionRow key={c.championName + i} champ={c} index={i} />
                         ))}
@@ -146,7 +146,7 @@ export default function AllChampionsContent({ seasonChampions }) {
                 )}
 
                 {/* Alt bilgi */}
-                <div className="px-5 py-3 border-t border-[#1b2230]/30 flex items-center justify-between">
+                <div className="px-5 py-3 border-t border-edge/30 flex items-center justify-between">
                     <span className="text-[11px] text-gray-500">
                         Toplam {champions.length} şampiyon · {totalGames} maç
                     </span>
@@ -225,7 +225,7 @@ function ChampionRow({ champ: c, index }) {
                         <span className={`text-xs font-bold font-mono ${getWrColor(c.winRate)}`}>
                             {c.winRate}%
                         </span>
-                        <div className="mt-0.5 h-1 bg-[#1b2230] rounded-full overflow-hidden">
+                        <div className="mt-0.5 h-1 bg-edge rounded-full overflow-hidden">
                             <div
                                 className={`h-full rounded-full ${c.winRate >= 50 ? "bg-emerald-500" : "bg-red-500"}`}
                                 style={{ width: `${c.winRate}%` }}
