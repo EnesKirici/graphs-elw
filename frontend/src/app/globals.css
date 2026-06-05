@@ -276,8 +276,9 @@ html.light .theme-pop { box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18); }
 html.light input[type="range"].stat-slider { background: #d7dce6; }
 html.light input[type="range"].stat-slider::-moz-range-track { background: #d7dce6; }
 
-/* Yazı logosu (koyu ince serif, şeffaf PNG) — light'ta olduğu gibi, invert yok */
-html.light .brand-word { filter: none; opacity: .85; }
+/* Yazı logosu BEYAZ serif (şeffaf PNG, koyu zemin için) — light'ta invert ile
+   koyuya çevrilir; parlaması yumuşak gölgeye döner. */
+html.light .brand-word { filter: invert(1); opacity: .9; }
 
 /* ===== Light modda HERO slider =====
    1) Görsel üstündeki beyaz yıkama: hero-art::before'un radial perdesi tüm
@@ -355,10 +356,12 @@ html.light .tip-dark {
 
 /* Perf etiketi shimmer/rainbow (Durdurulamaz/Lider 8.5+) — gradient metin ışıkta
    yıkanıyordu. Light'ta solid okunur renge sabitle (animasyon kalkar). */
-html.light .perf-shimmer-emerald { -webkit-text-fill-color: #059669 !important; background: none; animation: none; }
-html.light .perf-shimmer-blue    { -webkit-text-fill-color: #2563eb !important; background: none; animation: none; }
-html.light .perf-shimmer-yellow  { -webkit-text-fill-color: #a16207 !important; background: none; animation: none; }
-html.light .elw-rainbow-text     { -webkit-text-fill-color: #b8860b !important; background: none; animation: none; }
+/* Perf etiketi shimmer/rainbow — light'ta ANİMASYON + RENGARENK KORUNUR (dark'taki
+   gibi), sadece gradient KOYULAŞTIRILIR (beyaz zeminde okunur). Solid yapma! */
+html.light .perf-shimmer-emerald { background-image: linear-gradient(90deg, #065f46, #059669, #10b981, #059669, #065f46) !important; }
+html.light .perf-shimmer-blue    { background-image: linear-gradient(90deg, #1e40af, #2563eb, #3b82f6, #2563eb, #1e40af) !important; }
+html.light .perf-shimmer-yellow  { background-image: linear-gradient(90deg, #854d0e, #a16207, #ca8a04, #a16207, #854d0e) !important; }
+html.light .elw-rainbow-text     { background-image: linear-gradient(90deg, #b45309, #047857, #1d4ed8, #7c3aed, #c0392b, #b45309) !important; }
 
 /* Maç rozeti gradient tier'ları (challenger/grandmaster) — light'ta RENGARENK
    kalır ama koyulaştırılmış gradient'le (dark'taki altın-mavi / kırmızı feel'i
