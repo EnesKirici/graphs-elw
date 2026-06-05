@@ -333,10 +333,11 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
           {!remake && m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} match={m} scoreHistory={scoreHistory} scoreIndex={scoreIndex} />}
         </div>
 
-        {/* ORTA: KDA + Items + Badges EŞİT dağıtılır (justify-between → eşit boşluk).
-            Badge alanına min genişlik verilir ki badge'siz satırda eşyalar kaymasın
-            (her satırda KDA solda, eşyalar ortada, rozetler sağda — tutarlı). */}
-        <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+        {/* ORTA: KDA + Items + Badges EŞİT dağıtılır. justify-evenly → üç içerik
+            arasında VE iki uçta eşit boşluk; böylece rozetler en sağdaki takım
+            avatarlarına yapışmaz (justify-between son öğeyi kenara yapıştırıyordu).
+            Badge alanına min genişlik verilir ki rozetsiz satırda eşyalar kaymasın. */}
+        <div className="flex-1 flex items-center justify-evenly min-w-0">
           {/* KDA — sabit genişlik */}
           <div className="w-[70px] flex-shrink-0 text-center">
             <p className="text-sm font-semibold text-gray-200">{m.kills}<span className="text-gray-600">/</span>{m.deaths}<span className="text-gray-600">/</span>{m.assists}</p>
