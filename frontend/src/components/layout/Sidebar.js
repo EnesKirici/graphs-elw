@@ -52,14 +52,15 @@ export default function Sidebar() {
           transition: "width .35s var(--ease), transform .35s var(--ease)",
         }}
       >
-        {/* Marka */}
+        {/* Marka — sayfa içi logo: ELW GRAPHS yazı logosu (beyaz serif).
+            Daraltılmış rayda sığmadığı için küçük EL işareti gösterilir. */}
         <Link href="/" className="brand">
-          <div className="brand-mark">E</div>
-          {!collapsed && (
-            <div className="brand-txt">
-              <b>ELW</b>
-              <span>GRAPHS</span>
+          {collapsed ? (
+            <div className="brand-mark">
+              <img src="/logo/elw-mark.png" alt="ELW Graphs" />
             </div>
+          ) : (
+            <img src="/logo/elw-wordmark.png" alt="ELW GRAPHS" className="brand-word" />
           )}
         </Link>
 

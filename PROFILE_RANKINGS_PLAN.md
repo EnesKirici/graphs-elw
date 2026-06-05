@@ -49,6 +49,57 @@ oyuncunun yeri (mastery puanı / oynanış bazlı).
     beslenen. Oyuncunun o şampiyondaki mastery puanını bu sıralamada ara.
   - Alternatif: kendi DB'mizdeki taranan oyuncular üzerinden yaklaşık sıra (örneklem).
 
+## 4. Şampiyon performans sıralaması (Şampiyonlar sekmesi tablosu)
+**İstenen:** Profil → Şampiyonlar sekmesindeki tabloda, oyuncunun o şampiyonla **10+ maçı
+varsa** bölgesel sırası ("TR Sırası #1.234"). Sıra; oyuncunun rankı, WR'si, KDA'sı ve maç
+içi başarısından hesaplanan **performans skoruna** göre. (Madde 3'ten farkı: 3 mastery
+bazlıydı, bu **sezon performansı** bazlı.)
+
+- **Şu an:** Frontend HAZIR — `frontend/src/components/summoner/AllChampionsContent.js`
+  şampiyon objesinde `championRank: { position }` görürse otomatik gösteriyor (bölge
+  etiketi `regionLabel(profile.platform)`'dan). Backend henüz bu alanı GÖNDERMİYOR →
+  hiçbir şey görünmüyor. Placeholder bile yok (bilinçli: yanıltıcı olurdu).
+
+- **Tablo şeması (öneri):** `player_champion_stats`
+  - `puuid`, `region` (platform), `champion_id`, `queue_bucket` (ranked: 420+440)
+  - Sayaçlar (increment dostu **toplamlar**, ortalama değil):
+    `games`, `wins`, `sum_kills`, `sum_deaths`, `sum_assists`, `sum_cs`, `sum_gold`,
+    `sum_duration`, `double_kills`, `triple_kills`, `quadra_kills`, `penta_kills`,
+    `sum_kill_participation`, `sum_damage_share` (Match-V5 `challenges.killParticipation`
+    / `teamDamagePercentage`)
+  - Rank kopyası: `tier`, `division`, `lp` (skor job'ı çalışırken `cached_players` /
+    `lp_snapshots`'tan en güncel değerle tazelenir)
+  - Hesaplananlar: `score`, `score_rank` (periyodik job yazar), `last_match_at`
+  - Unique: (`puuid`, `champion_id`, `queue_bucket`) · Index: (`champion_id`, `region`,
+    `score` desc)
+
+- **Worker entegrasyonu:** Maç işlenirken (dedup zaten `processed_matches`'te) 10
+  katılımcının her biri için upsert + increment. Laravel karşılığı: `DB::upsert()` ya da
+  `firstOrCreate` + `increment` — maç başına ~10 ucuz yazma. **Bu yüzden veri birikimi
+  crawler'la birlikte bedavaya başlar; tablo erken kurulursa sıralama erken anlamlanır.**
+
+- **Skor formülü (taslak — ağırlıklar admin panelden ayarlanabilir olmalı, elw-score gibi):**
+  - `rank_puan` (%40): `lpToAbsolute(tier, division, lp)` → 0–100 normalize
+  - `wr_puan` (%25): **Bayesian WR** = `(wins + 5) / (games + 10)` → düşük maç sayısında
+    %100 WR şişmesini engeller
+  - `kda_puan` (%20): `min(kda, 6) / 6 × 100`
+  - `performans_puan` (%15): kill participation ort. + damage share ort. + multikill/maç
+  - Ön filtre: `games >= 10` olmayan satır skora hiç girmez.
+
+- **Sıralama hesabı:** Periyodik job (`champion:rank-rebuild`) şampiyon+bölge başına
+  score'a göre `RANK()` yazar (`score_rank`). Okuma anında COUNT yerine job tercih:
+  profil açılışı ucuz kalır.
+
+- **Örneklem eşiği (dürüstlük kuralı):** Bir şampiyon+bölgede 10+ maçlı oyuncu sayısı
+  **< 50** ise endpoint `championRank: null` döner → frontend otomatik gizler. Riot tüm
+  oyuncu listesini vermez; op.gg dahil herkes kendi DB'sindeki oyuncular arasında
+  sıralar. Crawler (WORKER_PLAN Aşama 3) büyüdükçe evren büyür, eşik geçilince
+  sıralamalar kendiliğinden görünmeye başlar.
+
+- **Endpoint sözleşmesi:** `seasonChampions.*[].championRank = { position, total } | null`
+  (`total` = o evrendeki 10+ maçlı oyuncu sayısı; frontend şu an `position` kullanıyor,
+  `total` ileride "#12 / 340 oyuncu" tooltip'i için).
+
 ---
 
 ## Notlar

@@ -306,7 +306,23 @@ ProcessMatchJob(matchId)  maç detayı (DB cache) → 10 participant için:
                             • processed_matches'e match_id ekle
 meta:recalc    (saatlik)  champion_stats → tier skoru + pick/ban (payda: stat_patches.total_games)
                           champion_builds → "en popüler" kombinasyonları cache'le
+slider:rotate  (haftalık) dashboard hero slider havuzunu (öne çıkan şampiyonlar) metaya
+                          göre yeniden seç → tabloya yaz; hafta boyunca SABİT kalır
 ```
+
+### Dashboard slider havuzu — haftalık sabit (2026-06-05 notu)
+Şu an slider havuzu `/meta/dashboard` hesabında üretiliyor ve 1 saatlik cache
+(`meta:dashboard_stats_v7`) yenilendikçe değişebiliyor. Gerçek veri gelince:
+
+- **Havuz seçimi worker'a taşınır** (`slider:rotate`, haftalık): "öne çıkanlar"
+  metaya göre haftada bir hesaplanıp yazılır. Endpoint cache'i kısa (1 saat)
+  kalabilir — kaynak haftada bir değiştiği için sonuç zaten hafta boyunca aynı.
+- **Neden TTL=7 gün DEĞİL:** patch ortası hotfix/ban furyasında 6 gün bayat havuz
+  gösterme riski olur; job yaklaşımında havuz istenildiği an yeniden hesaplatılır.
+- **Yan kazanç:** havuz hafta boyunca sabit kalınca kullanıcı tarayıcısı splash
+  görsellerini önbellekten açar (ddragon ETag/CDN ile zaten cache'leniyor; havuz
+  değişmedikçe yeni indirme olmaz). Frontend'de HeroCarousel zaten aktif slaytın
+  kostümlerini + sıradaki slaytı preload ediyor (2026-06-05).
 
 ### Build verisi çıkarımı (her participant'tan)
 - Rünler: `perks.styles` (primary/sub stil) + `perks.styles[].selections[].perk` (keystone + minor) + `perks.statPerks` (shard).

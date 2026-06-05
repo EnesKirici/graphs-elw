@@ -322,9 +322,16 @@ class MatchStatisticsService
      *
      * Dönüş: [['key','label','desc','positive'=>bool], ...] (tetiklenenler).
      */
+    /** Heal/kalkan özelliklerinde ("Yürüyen Base" / "Bencil İyileştirici")
+     *  healer sayılan şampiyonlar (DDragon id). */
+    private const HEALER_CHAMPS = [
+        'Soraka', 'Sona', 'Yuumi', 'Nami', 'Janna', 'Lulu', 'Milio',
+        'Seraphine', 'Karma', 'Taric', 'Rakan', 'Renata', 'Ivern',
+    ];
+
     public function getPersonalityBadges(string $puuid): array
     {
-        $cacheKey = "season_badges:v2:{$puuid}";
+        $cacheKey = "season_badges:v3:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $games = [];
@@ -343,6 +350,7 @@ class MatchStatisticsService
                         foreach ($info['participants'] as $p) {
                             if ($p['puuid'] !== $puuid) continue;
                             $c = $p['challenges'] ?? [];
+                            $mins = max(1, ($info['gameDuration'] ?? 0) / 60);
                             $games[] = [
                                 'champ'      => $p['championName'],
                                 'win'        => (bool) $p['win'],
@@ -355,6 +363,15 @@ class MatchStatisticsService
                                 'assists'    => (int) ($p['assists'] ?? 0),
                                 'dmgPct'     => (float) ($c['teamDamagePercentage'] ?? 0),
                                 'time'       => $info['gameCreation'] ?? 0,
+                                // Oyuncu Özellikleri (vision/heal/KP/CS/objektif) için:
+                                'wards'      => (int) ($p['wardsPlaced'] ?? 0),
+                                'healPm'     => (float) ($c['effectiveHealAndShielding'] ?? 0) / $mins,
+                                'kp'         => (float) ($c['killParticipation'] ?? 0),
+                                'cspm'       => (($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0)) / $mins,
+                                'pos'        => $p['teamPosition'] ?? '',
+                                'obj'        => (float) (($c['baronTakedowns'] ?? 0) + ($c['dragonTakedowns'] ?? 0)),
+                                'penta'      => (int) ($p['pentaKills'] ?? 0),
+                                'mins'       => $mins,
                             ];
                             break;
                         }
@@ -379,6 +396,9 @@ class MatchStatisticsService
             $firstBloods = 0;
             $visionSum = 0;
             $sumK = 0; $sumD = 0; $sumA = 0; $dmgSum = 0;
+            $wardSum = 0; $kpSum = 0; $objSum = 0;
+            $nonSup = ['g' => 0, 'dmg' => 0, 'cspm' => 0]; // support dışı maçlar (CS/hasar adil olsun)
+            $healer = ['g' => 0, 'hpm' => 0];              // healer şampiyon maçları
             $prevWin = null;
 
             foreach ($games as $gm) {
@@ -397,6 +417,13 @@ class MatchStatisticsService
                 $visionSum += $gm['visionPm'];
                 $sumK += $gm['kills']; $sumD += $gm['deaths']; $sumA += $gm['assists'];
                 $dmgSum += $gm['dmgPct'];
+                $wardSum += $gm['wards']; $kpSum += $gm['kp']; $objSum += $gm['obj'];
+                if ($gm['pos'] !== '' && $gm['pos'] !== 'UTILITY') {
+                    $nonSup['g']++; $nonSup['dmg'] += $gm['dmgPct']; $nonSup['cspm'] += $gm['cspm'];
+                }
+                if (in_array($gm['champ'], self::HEALER_CHAMPS, true)) {
+                    $healer['g']++; $healer['hpm'] += $gm['healPm'];
+                }
             }
 
             $overallWr = $totalWins / $g * 100;
@@ -478,9 +505,15 @@ class MatchStatisticsService
                 ];
             }
 
-            // 7) Göz bekçisi — yüksek görüş skoru
+            // 7) Kartograf / Göz Bekçisi — görüş skoru (Kartograf üst seviye, nadir)
             $avgVision = $visionSum / $g;
-            if ($g >= 15 && $avgVision >= 1.4) {
+            if ($g >= 15 && $avgVision >= 2.0) {
+                $badges[] = [
+                    'key' => 'cartographer', 'positive' => true,
+                    'label' => 'Kartograf',
+                    'desc' => 'Dakika başına ' . round($avgVision, 1) . ' görüş skoru — harita onun eseri.',
+                ];
+            } elseif ($g >= 15 && $avgVision >= 1.4) {
                 $badges[] = [
                     'key' => 'vision', 'positive' => true,
                     'label' => 'Göz Bekçisi',
@@ -508,9 +541,163 @@ class MatchStatisticsService
                 ];
             }
 
-            // Pozitifler önce, en fazla 6 rozet
+            /* ===== Yeni Oyuncu Özellikleri (2026-06-05) =====
+               Eşikler bilinçli SIKI: bu bölüm "gerçekten hak eden almalı" diye
+               tasarlandı (maç içi rozetlerden farklı). Negatifler tatlı sataşma
+               tonunda ve veriye dayalı — hakaret değil espri. */
+
+            // 10) Yürüyen Totem — maç başına 1'den az ward (10 maçta <10 kuralının oranı)
+            $avgWards = $wardSum / $g;
+            if ($avgWards < 1.0) {
+                $badges[] = [
+                    'key' => 'walking_ward', 'positive' => false,
+                    'label' => 'Yürüyen Totem',
+                    'desc' => 'Maç başına ortalama ' . round($avgWards, 1) . ' ward — haritadaki tek göz kendisi.',
+                ];
+            }
+
+            // 11) Yürüyen Base / Bencil İyileştirici — healer şampiyonlarda heal+kalkan/dk
+            if ($healer['g'] >= 10) {
+                $hpm = $healer['hpm'] / $healer['g'];
+                if ($hpm >= 600) {
+                    $badges[] = [
+                        'key' => 'walking_base', 'positive' => true,
+                        'label' => 'Yürüyen Base',
+                        'desc' => 'Healer maçlarında dakikada ortalama ' . round($hpm) . ' iyileştirme/kalkan.',
+                    ];
+                } elseif ($hpm > 0 && $hpm < 200) {
+                    $badges[] = [
+                        'key' => 'selfish_healer', 'positive' => false,
+                        'label' => 'Bencil İyileştirici',
+                        'desc' => 'Healer oynuyor ama dakikada sadece ' . round($hpm) . ' iyileştirme/kalkan atıyor.',
+                    ];
+                }
+            }
+
+            // 12) Her Fight'ta Var / Turist — kill katılımı
+            $avgKp = $kpSum / $g;
+            if ($g >= 15 && $avgKp >= 0.72) {
+                $badges[] = [
+                    'key' => 'every_fight', 'positive' => true,
+                    'label' => "Her Fight'ta Var",
+                    'desc' => 'Ortalama %' . round($avgKp * 100) . ' kill katılımı.',
+                ];
+            } elseif ($g >= 15 && $avgKp > 0 && $avgKp < 0.33) {
+                $badges[] = [
+                    'key' => 'tourist', 'positive' => false,
+                    'label' => 'Turist',
+                    'desc' => 'Ortalama %' . round($avgKp * 100) . ' kill katılımı — maçları gezmeye geliyor.',
+                ];
+            }
+
+            // 13) Çiftçi / Vejetaryen + 14) Pasifist — support maçları HARİÇ (adil olsun)
+            if ($nonSup['g'] >= 15) {
+                $cspm = $nonSup['cspm'] / $nonSup['g'];
+                if ($cspm >= 8.0) {
+                    $badges[] = [
+                        'key' => 'farmer', 'positive' => true,
+                        'label' => 'Çiftçi',
+                        'desc' => 'Dakikada ortalama ' . round($cspm, 1) . ' CS.',
+                    ];
+                } elseif ($cspm > 0 && $cspm < 4.0) {
+                    $badges[] = [
+                        'key' => 'vegetarian', 'positive' => false,
+                        'label' => 'Vejetaryen',
+                        'desc' => 'Dakikada sadece ' . round($cspm, 1) . ' CS — minyonlar kendisine minnettar.',
+                    ];
+                }
+
+                $nsDmg = $nonSup['dmg'] / $nonSup['g'];
+                if ($nsDmg > 0 && $nsDmg < 0.13) {
+                    $badges[] = [
+                        'key' => 'pacifist', 'positive' => false,
+                        'label' => 'Pasifist',
+                        'desc' => 'Hasar payı ortalama %' . round($nsDmg * 100) . ' — barış elçisi.',
+                    ];
+                }
+            }
+
+            // 15) Hayırsever — maç başına çok ölüm
+            $avgDeaths = $sumD / $g;
+            if ($g >= 15 && $avgDeaths >= 7.5) {
+                $badges[] = [
+                    'key' => 'philanthropist', 'positive' => false,
+                    'label' => 'Hayırsever',
+                    'desc' => 'Maç başına ortalama ' . round($avgDeaths, 1) . ' ölüm — rakibe düzenli gold bağışı.',
+                ];
+            }
+
+            // 16) Objektif Canavarı / Baron da Ne? — baron+ejder katılımı
+            $avgObj = $objSum / $g;
+            if ($g >= 15 && $avgObj >= 3.5) {
+                $badges[] = [
+                    'key' => 'objective_beast', 'positive' => true,
+                    'label' => 'Objektif Canavarı',
+                    'desc' => 'Maç başına ortalama ' . round($avgObj, 1) . ' baron/ejder katılımı.',
+                ];
+            } elseif ($g >= 15 && $avgObj < 0.7) {
+                $badges[] = [
+                    'key' => 'baron_who', 'positive' => false,
+                    'label' => 'Baron da Ne?',
+                    'desc' => 'Maç başına ' . round($avgObj, 1) . ' baron/ejder katılımı — haritanın o köşesini hiç görmedi.',
+                ];
+            }
+
+            /* ===== Prestij özellikleri — zor kazanılır, "gerçekten hak eden" =====
+               Dördü de SON 20 MAÇ penceresinde (güncel form ödüllendirilir).
+               $games zamana göre sıralı → son 20 = dilim sonu. */
+            $last20 = array_slice($games, -20);
+
+            // 17) Penta Koleksiyoncusu — son 20 maçta 2+ pentakill
+            $penta20 = array_sum(array_column($last20, 'penta'));
+            if ($penta20 >= 2) {
+                $badges[] = [
+                    'key' => 'penta_collector', 'positive' => true,
+                    'label' => 'Penta Koleksiyoncusu',
+                    'desc' => "Son 20 maçta {$penta20} pentakill.",
+                ];
+            }
+
+            // 18) Kusursuz — son 20 maçta 3+ kez 0 ölümle galibiyet
+            $perfect20 = count(array_filter($last20, fn($x) => $x['deaths'] === 0 && $x['win']));
+            if ($perfect20 >= 3) {
+                $badges[] = [
+                    'key' => 'flawless', 'positive' => true,
+                    'label' => 'Kusursuz',
+                    'desc' => "Son 20 maçta {$perfect20} kez hiç ölmeden kazandı.",
+                ];
+            }
+
+            // 19) Solo Carry — son 20 maçta %35+ takım hasarı VE %70+ KP ile 5+ galibiyet
+            $carry20 = count(array_filter(
+                $last20,
+                fn($x) => $x['win'] && $x['dmgPct'] >= 0.35 && $x['kp'] >= 0.70
+            ));
+            if ($carry20 >= 5) {
+                $badges[] = [
+                    'key' => 'solo_carry', 'positive' => true,
+                    'label' => 'Solo Carry',
+                    'desc' => "Son 20 maçta %35+ takım hasarı ve %70+ kill katılımıyla {$carry20} galibiyet.",
+                ];
+            }
+
+            // 20) Maraton Savaşçısı — son 20 maçtaki 40dk+ maçlarda (5+) %60+ galibiyet
+            $long20 = array_filter($last20, fn($x) => $x['mins'] >= 40);
+            if (count($long20) >= 5) {
+                $longWins = count(array_filter($long20, fn($x) => $x['win']));
+                $mwr = $longWins / count($long20) * 100;
+                if ($mwr >= 60) {
+                    $badges[] = [
+                        'key' => 'marathon', 'positive' => true,
+                        'label' => 'Maraton Savaşçısı',
+                        'desc' => 'Son 20 maçın 40dk+ olan ' . count($long20) . " tanesinde %" . round($mwr) . ' galibiyet.',
+                    ];
+                }
+            }
+
+            // Pozitifler önce, en fazla 8 özellik
             usort($badges, fn($a, $b) => ($b['positive'] <=> $a['positive']));
-            return array_slice($badges, 0, 6);
+            return array_slice($badges, 0, 8);
         });
     }
 

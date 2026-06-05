@@ -68,6 +68,45 @@ export default function HeroCarousel({ sliderPool = [], version }) {
     return () => clearInterval(id);
   }, [paused, total, resetKey]);
 
+  // === Splash ön-yükleme ===
+  // Kostüm değiştirme/slayt geçişi yavaştı: yeni splash ancak src değişince
+  // indirilmeye başlıyordu. Aktif slaytın TÜM kostümlerini arka planda kademeli
+  // ısıt (bant genişliğini tek seferde yememek için 250ms arayla, seçili
+  // kostümden ileriye doğru) + sıradaki slaytın seçili görselini hemen çek.
+  const preloadedRef = useRef(new Set());
+  const preload = useCallback((url) => {
+    if (!url || preloadedRef.current.has(url)) return;
+    preloadedRef.current.add(url);
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+  }, []);
+
+  useEffect(() => {
+    const s = slides[i];
+    if (!s) return;
+    const timers = [];
+
+    // Sıradaki slaytın görüneceği splash — geçiş anında hazır olsun
+    const nxt = slides[(i + 1) % total];
+    if (nxt && nxt !== s) {
+      const nl = skins[nxt.id];
+      const nidx = skinIdx[nxt.id];
+      const url = nl && nidx != null && nl[nidx] ? nl[nidx].splash : (nxt.latestSkinSplash || nxt.splash);
+      timers.push(setTimeout(() => preload(url), 100));
+    }
+
+    // Aktif slaytın kostümleri — seçiliden ileriye doğru sırayla
+    const list = skins[s.id] || [];
+    const start = (skinIdx[s.id] ?? 0) + 1;
+    list.forEach((_, n) => {
+      const sk = list[(start + n) % list.length];
+      timers.push(setTimeout(() => preload(sk.splash), 300 + n * 250));
+    });
+
+    return () => timers.forEach(clearTimeout);
+  }, [i, slides, skins, skinIdx, total, preload]);
+
   // Mount: her şampiyona rastgele (non-default) kostüm ata. Skin'ler dashboard
   // payload'ıyla geldiği için EKSTRA İSTEK YOK; eksikse fallback ile çekilir.
   useEffect(() => {

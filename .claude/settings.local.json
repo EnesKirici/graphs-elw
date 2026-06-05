@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:hextechdocs.dev)"
+      "WebFetch(domain:hextechdocs.dev)",
+      "PowerShell(php artisan tinker --execute=\"echo substr\\(env\\('RIOT_API_KEY'\\), 0, 22\\);\")"
     ]
   }
 }

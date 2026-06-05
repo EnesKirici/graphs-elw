@@ -31,14 +31,10 @@ export default function AdminSidebar() {
     <aside className="fixed left-0 top-0 bottom-0 w-60 tip-dark bg-[#0a0e14] border-r border-edge flex flex-col z-40">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-edge/50">
-        <Link href="/admin" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-base shadow-lg shadow-blue-500/20">
-            G
-          </div>
-          <div>
-            <span className="text-sm font-bold text-white tracking-wide">GRAPHS</span>
-            <span className="text-[10px] text-gray-500 block -mt-0.5">Admin Panel</span>
-          </div>
+        {/* Admin sidebar her temada koyu (tip-dark) → wordmark filtresiz beyaz kalır */}
+        <Link href="/admin" className="block">
+          <img src="/logo/elw-wordmark.png" alt="ELW GRAPHS" style={{ height: 16 }} />
+          <span className="text-[10px] text-gray-500 block mt-1.5">Admin Panel</span>
         </Link>
       </div>
 

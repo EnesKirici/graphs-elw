@@ -24,6 +24,13 @@ export function ThemeProvider({ children }) {
   // Gerçek class layout'taki no-flash script ile paint öncesi set edilir;
   // burada yalnız React state'i senkronlarız.
   const [mode, setModeState] = useState("dark");
+  // Arka plan bulanıklığı (px, 0=kapalı) + saydam kartlar. Kullanıcı tercihi,
+  // tarayıcıya özel (localStorage). Gerçek uygulama no-flash script'te;
+  // burada React state senkronu + canlı değişiklik.
+  const [bgBlur, setBgBlurState] = useState(0);
+  const [glassCards, setGlassCardsState] = useState(false);
+  // Zemin perdesi (arka plan görseli üstündeki örtü). Varsayılan AÇIK.
+  const [bgVeil, setBgVeilState] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem("elw-accent");
@@ -33,6 +40,10 @@ export function ThemeProvider({ children }) {
     }
     const savedMode = document.documentElement.classList.contains("light") ? "light" : "dark";
     setModeState(savedMode);
+    const savedBlur = parseInt(localStorage.getItem("elw-bg-blur") || "0", 10);
+    if (savedBlur > 0) setBgBlurState(savedBlur);
+    if (localStorage.getItem("elw-glass-cards") === "1") setGlassCardsState(true);
+    if (localStorage.getItem("elw-bg-veil") === "0") setBgVeilState(false);
   }, []);
 
   function setAccent(value) {
@@ -51,8 +62,41 @@ export function ThemeProvider({ children }) {
     applyMode(mode === "light" ? "dark" : "light");
   }
 
+  function setBgBlur(px) {
+    setBgBlurState(px);
+    if (px > 0) {
+      document.documentElement.style.setProperty("--bg-blur", `${px}px`);
+      localStorage.setItem("elw-bg-blur", String(px));
+    } else {
+      document.documentElement.style.removeProperty("--bg-blur");
+      localStorage.removeItem("elw-bg-blur");
+    }
+  }
+
+  function setGlassCards(on) {
+    setGlassCardsState(on);
+    document.documentElement.classList.toggle("glass-cards", on);
+    if (on) localStorage.setItem("elw-glass-cards", "1");
+    else localStorage.removeItem("elw-glass-cards");
+  }
+
+  function setBgVeil(on) {
+    setBgVeilState(on);
+    document.documentElement.classList.toggle("no-veil", !on);
+    if (on) localStorage.removeItem("elw-bg-veil");
+    else localStorage.setItem("elw-bg-veil", "0");
+  }
+
   return (
-    <ThemeContext.Provider value={{ accent, setAccent, accents: ACCENTS, mode, setMode: applyMode, toggleMode }}>
+    <ThemeContext.Provider
+      value={{
+        accent, setAccent, accents: ACCENTS,
+        mode, setMode: applyMode, toggleMode,
+        bgBlur, setBgBlur,
+        glassCards, setGlassCards,
+        bgVeil, setBgVeil,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

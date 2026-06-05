@@ -40,18 +40,20 @@ export const metadata = {
     type: "website",
   },
   icons: {
+    // ?v=2: marka yenilendi (mavi EL) — tarayıcının eski favicon önbelleğini kırar
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon.ico?v=2", sizes: "any" },
+      { url: "/favicon-32x32.png?v=2", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png?v=2", sizes: "16x16", type: "image/png" },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: "/apple-touch-icon.png?v=2",
   },
   manifest: "/site.webmanifest",
 };
 
-// Paint öncesi tema uygula → FOUC/flaş yok. localStorage'tan mod + accent okur.
-const THEME_INIT = `(function(){try{var m=localStorage.getItem('elw-mode');if(m==='light')document.documentElement.classList.add('light');var a=localStorage.getItem('elw-accent');if(a)document.documentElement.style.setProperty('--accent',a);}catch(e){}})();`;
+// Paint öncesi tema uygula → FOUC/flaş yok. localStorage'tan mod + accent +
+// arka plan bulanıklığı + saydam kart tercihini okur (hepsi tarayıcıya özel).
+const THEME_INIT = `(function(){try{var m=localStorage.getItem('elw-mode');if(m==='light')document.documentElement.classList.add('light');var a=localStorage.getItem('elw-accent');if(a)document.documentElement.style.setProperty('--accent',a);var b=localStorage.getItem('elw-bg-blur');if(b&&b!=='0')document.documentElement.style.setProperty('--bg-blur',b+'px');var g=localStorage.getItem('elw-glass-cards');if(g==='1')document.documentElement.classList.add('glass-cards');var v=localStorage.getItem('elw-bg-veil');if(v==='0')document.documentElement.classList.add('no-veil');}catch(e){}})();`;
 
 export default function RootLayout({ children }) {
   return (

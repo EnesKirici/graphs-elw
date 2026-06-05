@@ -13,9 +13,9 @@ export default function SiteLayout({ children }) {
         <main className="relative z-10 flex-1">{children}</main>
         <footer className="relative z-10 mt-20" style={{ borderTop: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between text-xs" style={{ maxWidth: "var(--maxw)", margin: "0 auto", padding: "20px 26px", color: "var(--txt-3)" }}>
-            <div className="flex items-center gap-2">
-              <img src="/logo/white_3.webp" alt="ELW" width={20} height={20} className="rounded opacity-60" />
-              <span>GRAPHS.elw — LoL Analytics</span>
+            <div className="flex items-center gap-2.5">
+              <img src="/logo/elw-wordmark.png" alt="ELW GRAPHS" className="brand-word" style={{ height: 14, opacity: 0.7 }} />
+              <span>— LoL Analytics</span>
             </div>
             <span>Riot Games ile bağlantılı değildir</span>
           </div>
