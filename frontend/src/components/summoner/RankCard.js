@@ -9,8 +9,9 @@ function rankBadgeUrl(tier) {
 }
 
 function getWrColor(wr) {
+  // MAVİ/SARI YOK: ≥51 yeşil, 45-50 nötr gri, <45 kırmızı.
   if (wr >= 51) return "text-emerald-400";
-  if (wr >= 45) return "text-yellow-400";
+  if (wr >= 45) return "text-gray-300";
   return "text-red-400";
 }
 

@@ -30,26 +30,23 @@ function getMasteryCrestUrl(level) {
   return `/masteries/level${level}.webp`;
 }
 
+// MAVİ YOK. ≥51 yeşil (kazanç), 45-50 nötr gri, <45 kırmızı. Bar = sayı rengiyle aynı.
 function getWrColor(wr) {
-  if (wr >= 60) return "text-emerald-400";
-  if (wr >= 50) return "text-blue-400";
-  if (wr >= 45) return "text-yellow-400";
+  if (wr >= 51) return "text-emerald-400";
+  if (wr >= 45) return "text-gray-300";
   return "text-red-400";
 }
-
-// Bar rengi SAYI rengiyle eşleşir (kullanıcı: sayı yeşilse bar yeşil, mavi ise mavi).
 function getWrBar(wr) {
-  if (wr >= 60) return "bg-emerald-500";
-  if (wr >= 50) return "bg-blue-500";
-  if (wr >= 45) return "bg-yellow-500";
+  if (wr >= 51) return "bg-emerald-500";
+  if (wr >= 45) return "bg-gray-400";
   return "bg-red-500";
 }
 
+// KDA da aynı mantık (mavi yok): iyi yeşil, orta nötr gri, kötü kırmızı.
 function getKdaColor(ratio) {
-  if (ratio === "Perfect" || ratio >= 5) return "text-yellow-400";
-  if (ratio >= 3) return "text-emerald-400";
-  if (ratio >= 2) return "text-blue-400";
-  return "text-gray-400";
+  if (ratio === "Perfect" || ratio >= 3) return "text-emerald-400";
+  if (ratio >= 2) return "text-gray-300";
+  return "text-red-400";
 }
 
 /* KDA değeri — Perfect ise portal tooltip ile açıklama */
@@ -361,7 +358,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
                     <span className={`text-xs font-bold font-mono ${getWrColor(c.winRate)}`}>
                       {c.winRate}%
                     </span>
-                    <div className="mt-0.5 h-1 bg-edge rounded-full overflow-hidden">
+                    <div className="mt-1 h-2 bg-edge rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full ${getWrBar(c.winRate)}`}
                         style={{ width: `${c.winRate}%` }}

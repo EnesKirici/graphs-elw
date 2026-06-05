@@ -21,10 +21,10 @@ function timeAgo(ts) {
 }
 
 function kdaColor(k) {
-  if (k === "Perfect" || k >= 5) return "text-yellow-400";
-  if (k >= 3) return "text-emerald-400";
-  if (k >= 2) return "text-blue-400";
-  return "text-gray-400";
+  // MAVİ YOK: iyi yeşil, orta nötr gri, kötü kırmızı.
+  if (k === "Perfect" || k >= 3) return "text-emerald-400";
+  if (k >= 2) return "text-gray-300";
+  return "text-red-400";
 }
 
 const roles = { TOP: "Top", JUNGLE: "JG", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Sup" };
@@ -333,9 +333,10 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
           {!remake && m.perfLabel && <PerfLabelTag perfLabel={m.perfLabel} ranking={m.ranking} match={m} scoreHistory={scoreHistory} scoreIndex={scoreIndex} />}
         </div>
 
-        {/* ORTA: KDA + Items + Badges — eşit dağıt (justify-between) ki badge'lerle
-            takımlar arasında kocaman boşluk kalmasın. */}
-        <div className="flex-1 flex items-center justify-between gap-3 min-w-0 pr-2">
+        {/* ORTA: KDA + Items + Badges. KDA+Items SOLDA hizalı kalır (badge'siz
+            satırda eşyalar ortalanmasın); badge'ler ml-auto ile sağa (takımlara
+            yakın) → büyük boşluk kapanır, hizalama bozulmaz. */}
+        <div className="flex-1 flex items-center gap-3 min-w-0">
           {/* KDA — sabit genişlik */}
           <div className="w-[70px] flex-shrink-0 text-center">
             <p className="text-sm font-semibold text-gray-200">{m.kills}<span className="text-gray-600">/</span>{m.deaths}<span className="text-gray-600">/</span>{m.assists}</p>
@@ -365,7 +366,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
 
           {/* Badges — içerik-boyutlu chip'ler, hizalı 2 sütun (max-content) +
               tutarlı yatay/dikey boşluk. */}
-          <div className="hidden md:inline-grid grid-cols-[max-content_max-content] gap-x-2.5 gap-y-1.5 content-start self-center">
+          <div className="hidden md:inline-grid grid-cols-[max-content_max-content] gap-x-2.5 gap-y-1.5 content-start self-center ml-auto pr-2">
             {!remake && badges.length > 0 && (
               <>
                 {badges.slice(0, 4).map((b) => <BadgeTag key={b.key} badge={b} />)}

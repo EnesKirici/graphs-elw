@@ -360,10 +360,11 @@ html.light .perf-shimmer-blue    { -webkit-text-fill-color: #2563eb !important; 
 html.light .perf-shimmer-yellow  { -webkit-text-fill-color: #a16207 !important; background: none; animation: none; }
 html.light .elw-rainbow-text     { -webkit-text-fill-color: #b8860b !important; background: none; animation: none; }
 
-/* Maç rozeti gradient tier'ları (challenger/grandmaster) — light'ta solid renk
-   (gradient metin beyaz zeminde görünmüyordu). */
-html.light .mbg-chal { -webkit-text-fill-color: #9a6f12 !important; }
-html.light .mbg-gm   { -webkit-text-fill-color: #b03328 !important; }
+/* Maç rozeti gradient tier'ları (challenger/grandmaster) — light'ta RENGARENK
+   kalır ama koyulaştırılmış gradient'le (dark'taki altın-mavi / kırmızı feel'i
+   korunur, beyaz zeminde okunur). Inline gradient'i !important ile ezeriz. */
+html.light .mbg-chal { background-image: linear-gradient(90deg, #8a6a0f, #b8860b, #1f6fb0, #b8860b, #8a6a0f) !important; }
+html.light .mbg-gm   { background-image: linear-gradient(90deg, #9b1c1c, #c0392b, #9b1c1c) !important; }
 
 /* =============== ANIMASYONLAR =============== */
 

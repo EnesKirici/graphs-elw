@@ -5,17 +5,16 @@ import { ArrowDownUp } from "lucide-react";
 
 /* ===== Yardımcı fonksiyonlar ===== */
 function getWrColor(wr) {
-    if (wr >= 60) return "text-emerald-400";
-    if (wr >= 50) return "text-blue-400";
-    if (wr >= 45) return "text-yellow-400";
+    // MAVİ YOK: ≥51 yeşil, 45-50 nötr gri, <45 kırmızı.
+    if (wr >= 51) return "text-emerald-400";
+    if (wr >= 45) return "text-gray-300";
     return "text-red-400";
 }
 
 function getKdaColor(ratio) {
-    if (ratio === "Perfect" || ratio >= 5) return "text-yellow-400";
-    if (ratio >= 3) return "text-emerald-400";
-    if (ratio >= 2) return "text-blue-400";
-    return "text-gray-400";
+    if (ratio === "Perfect" || ratio >= 3) return "text-emerald-400";
+    if (ratio >= 2) return "text-gray-300";
+    return "text-red-400";
 }
 
 const GAME_TYPES = [
