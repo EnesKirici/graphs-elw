@@ -206,7 +206,7 @@ function MoreBadgesTooltip({ badges }) {
       <span
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
-        className="text-[9px] text-gray-500 cursor-default hover:text-gray-300"
+        className="inline-flex items-center text-[9px] text-gray-500 cursor-default hover:text-gray-300"
       >
         +{badges.length}
       </span>
@@ -247,7 +247,7 @@ function BadgeTag({ badge }) {
       <span
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
-        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border cursor-default whitespace-nowrap ${solid ? "" : `${s.bg || ""} ${s.border || ""}`}`}
+        className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold border cursor-default whitespace-nowrap ${solid ? "" : `${s.bg || ""} ${s.border || ""}`}`}
         style={chipStyle}
       >
         <span
@@ -319,7 +319,7 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
 
         {/* SOL SABİT: Result + LP + Perf */}
         <div className="w-24 flex-shrink-0">
-          <p className={`text-[11px] font-extrabold ${resClr}`}>{resTxt}</p>
+          <p className={`text-[13px] font-bold ${resClr}`}>{resTxt}</p>
           {m.lpChange != null ? (
             <p className={`text-[10px] font-bold ${m.lpChange > 0 ? "text-emerald-400" : "text-red-400"}`}>
               {m.lpChange > 0 ? "+" : ""}{m.lpChange} LP · {m.queueType || ""}
@@ -359,19 +359,13 @@ export default function MatchCard({ match: m, scoreHistory, scoreIndex }) {
             </div>
           </div>
 
-          {/* Badges */}
-          <div className="hidden md:flex flex-col gap-0.5 min-w-0">
+          {/* Badges — içerik-boyutlu chip'ler, hizalı 2 sütun (max-content) +
+              tutarlı yatay/dikey boşluk. */}
+          <div className="hidden md:inline-grid grid-cols-[max-content_max-content] gap-x-2.5 gap-y-1.5 content-start self-center">
             {!remake && badges.length > 0 && (
               <>
-                <div className="flex items-center gap-1 flex-nowrap">
-                  {badges.slice(0, 2).map((b) => <BadgeTag key={b.key} badge={b} />)}
-                </div>
-                {badges.length > 2 && (
-                  <div className="flex items-center gap-1 flex-nowrap">
-                    {badges.slice(2, 4).map((b) => <BadgeTag key={b.key} badge={b} />)}
-                    {badges.length > 4 && <MoreBadgesTooltip badges={badges.slice(4)} />}
-                  </div>
-                )}
+                {badges.slice(0, 4).map((b) => <BadgeTag key={b.key} badge={b} />)}
+                {badges.length > 4 && <MoreBadgesTooltip badges={badges.slice(4)} />}
               </>
             )}
           </div>

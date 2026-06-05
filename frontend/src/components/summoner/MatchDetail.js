@@ -705,13 +705,15 @@ function VerdictBadge({ analysis }) {
   const [anchor, setAnchor] = useState(null);
   if (!analysis) return <div className="w-[90px] flex items-center justify-center bg-card/30" />;
   const { verdict, highlights, factors, score, label: roleLabel } = analysis;
+  // color → koyu tooltip için (sabit, dark tonlu). cls → VS kolonu için
+  // (tema-duyarlı; light'ta koyu/doygun mavi-kırmızı, "Baskın" belirgin olsun).
   const cfg = {
-    blue_dominant: { color: "text-blue-300", bg: "bg-blue-500/15", border: "border-blue-500/25", icon: "◀◀", label: "Baskın" },
-    blue_ahead:    { color: "text-blue-400", bg: "bg-blue-500/8",  border: "border-blue-500/15", icon: "◀",  label: "Önde" },
-    even:          { color: "text-gray-400", bg: "bg-card/30",border: "border-edge/20",icon: "=",  label: "Dengeli" },
-    red_ahead:     { color: "text-red-400",  bg: "bg-red-500/8",   border: "border-red-500/15",  icon: "▶",  label: "Önde" },
-    red_dominant:  { color: "text-red-300",  bg: "bg-red-500/15",  border: "border-red-500/25",  icon: "▶▶", label: "Baskın" },
-  }[verdict] || { color: "text-gray-400", bg: "bg-card/30", border: "border-edge/20", icon: "=", label: "Dengeli" };
+    blue_dominant: { color: "text-blue-300", cls: "vd-blue-strong", bg: "bg-blue-500/15", border: "border-blue-500/25", icon: "◀◀", label: "Baskın" },
+    blue_ahead:    { color: "text-blue-400", cls: "vd-blue",        bg: "bg-blue-500/8",  border: "border-blue-500/15", icon: "◀",  label: "Önde" },
+    even:          { color: "text-gray-400", cls: "vd-even",        bg: "bg-card/30",border: "border-edge/20",icon: "=",  label: "Dengeli" },
+    red_ahead:     { color: "text-red-400",  cls: "vd-red",         bg: "bg-red-500/8",   border: "border-red-500/15",  icon: "▶",  label: "Önde" },
+    red_dominant:  { color: "text-red-300",  cls: "vd-red-strong",  bg: "bg-red-500/15",  border: "border-red-500/25",  icon: "▶▶", label: "Baskın" },
+  }[verdict] || { color: "text-gray-400", cls: "vd-even", bg: "bg-card/30", border: "border-edge/20", icon: "=", label: "Dengeli" };
 
   return (
     <>
@@ -720,12 +722,12 @@ function VerdictBadge({ analysis }) {
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
       >
-        <span className={`text-base font-bold ${cfg.color}`}>{cfg.icon}</span>
-        <span className={`text-xs ${cfg.color} font-bold`}>{cfg.label}</span>
+        <span className={`text-base font-bold ${cfg.cls}`}>{cfg.icon}</span>
+        <span className={`text-xs ${cfg.cls} font-bold`}>{cfg.label}</span>
         {highlights.length > 0 && (
           <div className="mt-1 space-y-0.5">
             {highlights.slice(0, 2).map((h, i) => (
-              <p key={i} className={`text-[9px] text-center leading-snug font-semibold ${cfg.color}`}>{h}</p>
+              <p key={i} className={`text-[9px] text-center leading-snug font-semibold ${cfg.cls}`}>{h}</p>
             ))}
           </div>
         )}
@@ -846,9 +848,9 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side, allPlayers, duration }) {
               <span className="text-[10px] text-gray-600 bg-gray-500/10 px-1.5 py-0.5 rounded">BOT</span>
             ) : (
               <>
-                {!mirrored && p.tier && <img src={rankBadgeUrl(p.tier)} alt="" width={16} height={16} />}
-                <span className="text-[10px] text-gray-500">{rank}</span>
-                {mirrored && p.tier && <img src={rankBadgeUrl(p.tier)} alt="" width={16} height={16} />}
+                {!mirrored && p.tier && <img src={rankBadgeUrl(p.tier)} alt="" width={18} height={18} />}
+                <span className="text-[11.5px] text-gray-400 font-medium">{rank}</span>
+                {mirrored && p.tier && <img src={rankBadgeUrl(p.tier)} alt="" width={18} height={18} />}
               </>
             )}
           </div>

@@ -55,8 +55,8 @@ function RankBlock({ data, title, region }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-2xl font-bold text-gray-100 leading-tight">{tierLabel(data)} {data.rank}</p>
-            {data.freshBlood && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">Yeni Yükseldi</span>}
-            {data.veteran && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full font-medium">Deneyimli</span>}
+            {data.freshBlood && <span className="text-[9px] border tag-emerald px-1.5 py-0.5 rounded-full font-medium">Yeni Yükseldi</span>}
+            {data.veteran && <span className="text-[9px] border tag-purple px-1.5 py-0.5 rounded-full font-medium">Deneyimli</span>}
           </div>
 
           {/* Sıralama — op.gg tarzı: Sıra: dünya (BÖLGE: yerel) + Top %, # YOK, mavi YOK */}

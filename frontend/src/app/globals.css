@@ -78,6 +78,13 @@
   --badge-diamond-text: #4a9bd9;
   --badge-diamond-bg: rgba(74, 155, 217, 0.1);
   --badge-diamond-bd: rgba(74, 155, 217, 0.28);
+
+  --tag-emerald-text: #6ee7b7; --tag-emerald-bg: rgba(16,185,129,.08); --tag-emerald-bd: rgba(16,185,129,.4); --tag-emerald-bg-h: rgba(16,185,129,.14);
+  --tag-amber-text: #fcd34d;   --tag-amber-bg: rgba(245,158,11,.08);   --tag-amber-bd: rgba(245,158,11,.4);   --tag-amber-bg-h: rgba(245,158,11,.14);
+  --tag-purple-text: #c4b5fd;  --tag-purple-bg: rgba(139,92,246,.12);  --tag-purple-bd: rgba(139,92,246,.4);  --tag-purple-bg-h: rgba(139,92,246,.18);
+
+  /* Maç detayı "Baskın/Önde" verdict renkleri — DARK (açık mavi/kırmızı) */
+  --vd-blue-strong: #93c5fd; --vd-blue: #60a5fa; --vd-red-strong: #fca5a5; --vd-red: #f87171; --vd-even: #9ca3af;
 }
 .row-win { background: var(--row-win); }
 .row-loss { background: var(--row-loss); }
@@ -85,6 +92,21 @@
 .res-win { color: var(--res-win); }
 .res-loss { color: var(--res-loss); }
 .res-remake { color: var(--res-remake); }
+
+/* Tema-duyarlı soft tag chip'leri (kişilik rozeti, "Yeni Yükseldi", "Deneyimli") */
+.tag-emerald { color: var(--tag-emerald-text); background: var(--tag-emerald-bg); border-color: var(--tag-emerald-bd); }
+.tag-amber   { color: var(--tag-amber-text);   background: var(--tag-amber-bg);   border-color: var(--tag-amber-bd); }
+.tag-purple  { color: var(--tag-purple-text);  background: var(--tag-purple-bg);  border-color: var(--tag-purple-bd); }
+.tag-emerald.tag-hover:hover { background: var(--tag-emerald-bg-h); }
+.tag-amber.tag-hover:hover   { background: var(--tag-amber-bg-h); }
+.tag-purple.tag-hover:hover  { background: var(--tag-purple-bg-h); }
+
+/* Maç detayı verdict (Baskın/Önde) — tema-duyarlı metin rengi */
+.vd-blue-strong { color: var(--vd-blue-strong); }
+.vd-blue { color: var(--vd-blue); }
+.vd-red-strong { color: var(--vd-red-strong); }
+.vd-red { color: var(--vd-red); }
+.vd-even { color: var(--vd-even); }
 
 /* =============== TEMA: LIGHT (white mode) override'ları =============== */
 /* html.light tek noktadan: (1) Tailwind gri rampasını AYNALAR (664 text-gray-*
@@ -125,8 +147,9 @@ html.light {
   --glass-bg: rgba(249, 250, 252, 0.96);
   --glass-border: rgba(15, 23, 42, 0.09);
 
-  /* Arka plan görseli perdesi — light'ta yüksek opaklık (sayfa solmasın) */
-  --page-veil: rgba(231, 234, 240, 0.95);
+  /* Arka plan görseli perdesi — light'ta da görsel görünsün (kullanıcı kostüm
+     koyduğunda zeminde belli olmalı). Kartlar opak olduğu için içerik okunur. */
+  --page-veil: rgba(231, 234, 240, 0.78);
 
   /* Dashboard kartları da off-white */
   --bg-1: #f9fafc;
@@ -155,6 +178,14 @@ html.light {
   --badge-diamond-text: #1f5fa0;
   --badge-diamond-bg: rgba(31, 95, 160, 0.1);
   --badge-diamond-bd: rgba(31, 95, 160, 0.28);
+
+  /* Soft tag chip'leri — LIGHT (koyu metin + belirgin dolgu, ışıkta okunur) */
+  --tag-emerald-text: #047857; --tag-emerald-bg: rgba(5,150,105,.1);  --tag-emerald-bd: rgba(5,150,105,.45); --tag-emerald-bg-h: rgba(5,150,105,.16);
+  --tag-amber-text: #b45309;   --tag-amber-bg: rgba(180,83,9,.1);     --tag-amber-bd: rgba(180,83,9,.42);    --tag-amber-bg-h: rgba(180,83,9,.16);
+  --tag-purple-text: #6d28d9;  --tag-purple-bg: rgba(109,40,217,.1);  --tag-purple-bd: rgba(109,40,217,.42); --tag-purple-bg-h: rgba(109,40,217,.16);
+
+  /* Verdict — LIGHT (koyu/doygun mavi-kırmızı ki "Baskın" belirgin olsun) */
+  --vd-blue-strong: #1d4ed8; --vd-blue: #2563eb; --vd-red-strong: #b91c1c; --vd-red: #dc2626; --vd-even: #64748b;
 
   /* Scrollbar + seçim */
   --sb-track: #e9edf3;

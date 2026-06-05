@@ -29,10 +29,8 @@ function Chip({ badge }) {
       <span
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
-        className={`text-[11px] font-medium px-2.5 py-1 rounded-md border cursor-help transition-colors ${
-          pos
-            ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/[0.06] hover:bg-emerald-500/[0.12]"
-            : "border-amber-500/40 text-amber-300 bg-amber-500/[0.06] hover:bg-amber-500/[0.12]"
+        className={`text-[11px] font-medium px-2.5 py-1 rounded-md border cursor-help transition-colors tag-hover ${
+          pos ? "tag-emerald" : "tag-amber"
         }`}
       >
         {badge.label}
