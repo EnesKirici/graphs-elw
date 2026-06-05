@@ -132,9 +132,9 @@ html.light {
 .mk-quadra { color: var(--mk-quadra-t); background: var(--mk-quadra-b); }
 .mk-triple { color: var(--mk-triple-t); background: var(--mk-triple-b); }
 
-/* Son Maçlar multikill ROZETLERİ — renkli akış + CAM (glass) parlaması. Penta
-   altın/cyan/emerald akış, quadra mor-kırmızı. Üstte cam yansıması (gloss) +
-   ışıklı iç kenar; akış yavaş ve zarif, nabız atan glow yok. */
+/* Son Maçlar multikill ROZETLERİ — ORİJİNAL renk kimliği (challenger altın/mavi,
+   grandmaster kırmızı) + statik CAM (glass) parlaması. Renk akışı/animasyon YOK;
+   sade ve şık. Cam gloss üst yarıda parlak yansıma, alt yarıda hafif gölge verir. */
 .badge-penta, .badge-quadra {
   position: relative;
   overflow: hidden;
@@ -143,33 +143,26 @@ html.light {
 }
 /* metin cam yansımasının ÜSTÜNDE kalsın */
 .badge-penta > span, .badge-quadra > span { position: relative; z-index: 1; }
-/* cam gloss — üst yarıda parlak yansıma, alt yarıda hafif gölge */
+/* cam gloss — statik */
 .badge-penta::before, .badge-quadra::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(255,255,255,.4) 0%, rgba(255,255,255,.12) 40%, rgba(255,255,255,0) 52%, rgba(0,0,0,.12) 100%);
+  background: linear-gradient(to bottom, rgba(255,255,255,.42) 0%, rgba(255,255,255,.12) 42%, rgba(255,255,255,0) 52%, rgba(0,0,0,.14) 100%);
   pointer-events: none;
   z-index: 0;
 }
 .badge-penta {
-  border-color: rgba(255,255,255,.38) !important;
-  background-image: linear-gradient(90deg, #c8aa6e, #f0e6d2, #78c8e6, #34d399, #3b82f6, #c8aa6e);
-  background-size: 300% 100%;
-  animation: mkFlow 5s linear infinite;
+  /* challenger kimliği: altın → mavi (statik) */
+  border-color: rgba(255,255,255,.4) !important;
+  background-image: linear-gradient(105deg, #8a6510, #c19a3e, #2f6e9c, #8a6510);
   box-shadow: 0 0 7px rgba(200,170,110,.35), inset 0 1px 0 rgba(255,255,255,.45);
 }
 .badge-quadra {
-  border-color: rgba(255,255,255,.32) !important;
-  background-image: linear-gradient(90deg, #7c3aed, #a855f7, #e11d48, #a855f7, #7c3aed);
-  background-size: 300% 100%;
-  animation: mkFlow 5s linear infinite;
-  box-shadow: 0 0 7px rgba(168,85,247,.35), inset 0 1px 0 rgba(255,255,255,.4);
-}
-@keyframes mkFlow {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  /* grandmaster kimliği: kırmızı (statik) */
+  border-color: rgba(255,255,255,.34) !important;
+  background-image: linear-gradient(105deg, #7e1414, #c0392b, #7e1414);
+  box-shadow: 0 0 7px rgba(205,55,55,.35), inset 0 1px 0 rgba(255,255,255,.4);
 }
 
 /* =============== TEMA: LIGHT (white mode) override'ları =============== */
