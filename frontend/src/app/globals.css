@@ -132,37 +132,33 @@ html.light {
 .mk-quadra { color: var(--mk-quadra-t); background: var(--mk-quadra-b); }
 .mk-triple { color: var(--mk-triple-t); background: var(--mk-triple-b); }
 
-/* Son Maçlar multikill ROZETLERİ — ORİJİNAL renk kimliği (challenger altın/mavi,
-   grandmaster kırmızı) + statik CAM (glass) parlaması. Renk akışı/animasyon YOK;
-   sade ve şık. Cam gloss üst yarıda parlak yansıma, alt yarıda hafif gölge verir. */
-.badge-penta, .badge-quadra {
+/* Son Maçlar penta/quadra ROZETLERİ — ORİJİNAL tier renkleri KORUNUR (penta
+   challenger rengarenk altın/mavi, quadra grandmaster kırmızı). Üzerine yalnızca
+   soldan sağa süzülen CAM (glass) parlaması eklenir; periyodik, zarif. */
+.badge-shine {
   position: relative;
   overflow: hidden;
-  color: #fff !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,.45);
+  isolation: isolate;
 }
-/* metin cam yansımasının ÜSTÜNDE kalsın */
-.badge-penta > span, .badge-quadra > span { position: relative; z-index: 1; }
-/* cam gloss — statik */
-.badge-penta::before, .badge-quadra::before {
+/* metin parlamanın altında kalsın, üzerinden cam yansıması geçsin */
+.badge-shine > span { position: relative; z-index: 1; }
+.badge-shine::after {
   content: "";
   position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(255,255,255,.42) 0%, rgba(255,255,255,.12) 42%, rgba(255,255,255,0) 52%, rgba(0,0,0,.14) 100%);
+  top: 0; bottom: 0;
+  left: -75%;
+  width: 60%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,.12) 38%, rgba(255,255,255,.72) 50%, rgba(255,255,255,.12) 62%, transparent 100%);
+  transform: skewX(-20deg);
+  z-index: 2;
   pointer-events: none;
-  z-index: 0;
+  animation: badgeShine 3.5s ease-in-out infinite;
 }
-.badge-penta {
-  /* challenger kimliği: altın → mavi (statik) */
-  border-color: rgba(255,255,255,.4) !important;
-  background-image: linear-gradient(105deg, #8a6510, #c19a3e, #2f6e9c, #8a6510);
-  box-shadow: 0 0 7px rgba(200,170,110,.35), inset 0 1px 0 rgba(255,255,255,.45);
-}
-.badge-quadra {
-  /* grandmaster kimliği: kırmızı (statik) */
-  border-color: rgba(255,255,255,.34) !important;
-  background-image: linear-gradient(105deg, #7e1414, #c0392b, #7e1414);
-  box-shadow: 0 0 7px rgba(205,55,55,.35), inset 0 1px 0 rgba(255,255,255,.4);
+/* soldan sağa süzülür, sonra kadraj dışında bekler (periyodik glint) */
+@keyframes badgeShine {
+  0%   { left: -75%; }
+  30%  { left: 130%; }
+  100% { left: 130%; }
 }
 
 /* =============== TEMA: LIGHT (white mode) override'ları =============== */
