@@ -286,6 +286,9 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
         ))}
       </div>
 
+      {/* SCORING MODE BAR — Bireysel / Takım Katkısı */}
+      <ScoringModeBar scoringMode={scoringMode} setScoringMode={setScoringMode} />
+
       {/* OVERVIEW TAB */}
       {tab === "overview" && (
         <>
