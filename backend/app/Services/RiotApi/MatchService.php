@@ -291,20 +291,19 @@ class MatchService
                 $timeline = $this->matchData->getMatchTimelineIfExists($matchId);
                 $perfLabel = $this->elw->calculatePerformanceLabel($ranking, $player, $info, $timeline);
 
-                // Items
+                // Items — 7 sabit slot KORUNUR (boş slot = null). Aksi halde dizi
+                // sıkışır ve totem (item6) boş yuvalara kayar; slot 7 yerine ortada durur.
                 $items = [];
                 for ($i = 0; $i <= 6; $i++) {
                     $itemId = $player["item{$i}"] ?? 0;
-                    if ($itemId > 0) {
-                        $itemData = $allItems[(string) $itemId] ?? null;
-                        $items[] = [
-                            'id'    => $itemId,
-                            'name'  => $itemData['name'] ?? '',
-                            'desc'  => $this->formatter->parseItemDescription($itemData['description'] ?? ''),
-                            'gold'  => $itemData['gold']['total'] ?? 0,
-                            'image' => "{$ddragonBase}/cdn/{$version}/img/item/{$itemId}.png",
-                        ];
-                    }
+                    $itemData = $itemId > 0 ? ($allItems[(string) $itemId] ?? null) : null;
+                    $items[] = $itemId > 0 ? [
+                        'id'    => $itemId,
+                        'name'  => $itemData['name'] ?? '',
+                        'desc'  => $this->formatter->parseItemDescription($itemData['description'] ?? ''),
+                        'gold'  => $itemData['gold']['total'] ?? 0,
+                        'image' => "{$ddragonBase}/cdn/{$version}/img/item/{$itemId}.png",
+                    ] : null;
                 }
 
                 // Spells
