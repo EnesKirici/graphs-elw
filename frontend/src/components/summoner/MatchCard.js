@@ -232,13 +232,18 @@ function MoreBadgesTooltip({ badges }) {
 
 function BadgeTag({ badge }) {
   const [anchor, setAnchor] = useState(null);
+  // Multikill rozetleri (penta/quadra) — ANIMASYONLU özel pill (tier'a değil
+  // key'e bakılır ki diğer challenger/grandmaster rozetler animasyon almasın).
+  const mk = badge.key === "penta" ? "badge-penta" : badge.key === "quadra" ? "badge-quadra" : "";
   const s = TIER_STYLES[badge.tier] || TIER_STYLES.silver;
   const hasGradientText = !!s.gradient;
   const solid = s.cssVar; // 'emerald' | 'gold' | 'silver' | undefined
 
   // Solid tier'lar tema-duyarlı CSS değişkenleriyle (light'ta okunur); gradient
-  // tier'lar kendi sınıf/gradient'leriyle.
-  const chipStyle = solid
+  // tier'lar kendi sınıf/gradient'leriyle. Multikill ise stil tamamen .badge-* class'ından.
+  const chipStyle = mk
+    ? undefined
+    : solid
     ? { color: `var(--badge-${solid}-text)`, background: `var(--badge-${solid}-bg)`, borderColor: `var(--badge-${solid}-bd)` }
     : (hasGradientText ? { boxShadow: s.glow || undefined } : undefined);
   // Gradient tier'lar (challenger/grandmaster) light'ta görünmez gradient yerine
@@ -250,12 +255,12 @@ function BadgeTag({ badge }) {
       <span
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
-        className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold border cursor-default whitespace-nowrap ${solid ? "" : `${s.bg || ""} ${s.border || ""}`}`}
+        className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold border cursor-default whitespace-nowrap ${mk || (solid ? "" : `${s.bg || ""} ${s.border || ""}`)}`}
         style={chipStyle}
       >
         <span
-          className={hasGradientText ? `bg-clip-text text-transparent font-bold ${gradLight}` : ""}
-          style={hasGradientText ? { backgroundImage: s.gradient } : undefined}
+          className={mk ? "font-bold" : (hasGradientText ? `bg-clip-text text-transparent font-bold ${gradLight}` : "")}
+          style={!mk && hasGradientText ? { backgroundImage: s.gradient } : undefined}
         >
           {badge.label}
         </span>
