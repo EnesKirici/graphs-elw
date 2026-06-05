@@ -77,14 +77,14 @@ export default function SearchesPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="text-xs text-gray-400 hover:text-white disabled:text-gray-700 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg bg-soft hover:bg-hover transition-colors cursor-pointer"
+                className="text-xs text-gray-400 hover:text-gray-100 disabled:text-gray-700 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg bg-soft hover:bg-hover transition-colors cursor-pointer"
               >
                 Önceki
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page >= data.last_page}
-                className="text-xs text-gray-400 hover:text-white disabled:text-gray-700 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg bg-soft hover:bg-hover transition-colors cursor-pointer"
+                className="text-xs text-gray-400 hover:text-gray-100 disabled:text-gray-700 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg bg-soft hover:bg-hover transition-colors cursor-pointer"
               >
                 Sonraki
               </button>

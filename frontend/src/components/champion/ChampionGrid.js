@@ -68,7 +68,7 @@ export default function ChampionGrid({ champions, showSearch = true }) {
                 className="rounded-lg group-hover:scale-105 transition-transform duration-200"
               />
               <div className="text-center">
-                <p className="text-xs font-medium text-gray-300 group-hover:text-white transition-colors truncate w-full">
+                <p className="text-xs font-medium text-gray-300 group-hover:text-gray-100 transition-colors truncate w-full">
                   {champ.name}
                 </p>
               </div>

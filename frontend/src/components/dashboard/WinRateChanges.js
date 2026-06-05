@@ -42,7 +42,7 @@ export default function WinRateChanges({ risers, fallers, version }) {
                   height={28}
                   className="rounded-md"
                 />
-                <span className="text-sm text-gray-300 group-hover:text-white transition-colors flex-1">
+                <span className="text-sm text-gray-300 group-hover:text-gray-100 transition-colors flex-1">
                   {champ.name}
                 </span>
                 <span className="text-xs font-mono font-bold text-emerald-400">
@@ -86,7 +86,7 @@ export default function WinRateChanges({ risers, fallers, version }) {
                   height={28}
                   className="rounded-md"
                 />
-                <span className="text-sm text-gray-300 group-hover:text-white transition-colors flex-1">
+                <span className="text-sm text-gray-300 group-hover:text-gray-100 transition-colors flex-1">
                   {champ.name}
                 </span>
                 <span className="text-xs font-mono font-bold text-red-400">

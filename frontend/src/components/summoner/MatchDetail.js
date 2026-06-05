@@ -220,7 +220,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
     <div className="glass rounded-xl overflow-hidden">
       {/* HEADER */}
       <div className="px-6 py-4 flex items-center justify-between border-b border-edge/50">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors cursor-pointer">
+        <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-100 transition-colors cursor-pointer">
           <ArrowLeft size={18} /> Geri Dön
         </button>
         <div className="text-center">
@@ -285,9 +285,6 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
           </button>
         ))}
       </div>
-
-      {/* SCORING MODE BAR */}
-      <ScoringModeBar scoringMode={scoringMode} setScoringMode={setScoringMode} />
 
       {/* OVERVIEW TAB */}
       {tab === "overview" && (
@@ -798,7 +795,7 @@ function VerdictBadge({ analysis }) {
             )}
 
             {/* Kısa açıklama */}
-            <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+            <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
               9 metrik (KDA, CS, Gold, Hasar, Alınan Hasar, Kule, Objektif, Görüş, İyileştirme) rol ağırlıklarıyla hesaplanır.
             </p>
           </div>
@@ -868,7 +865,7 @@ function PlayerRow({ p, maxDmg, maxDmgTaken, side, allPlayers, duration }) {
           <p className={`text-[10px] font-bold ${kdaColor(p.kda)}`}>
             {p.kda === "Perfect" ? "Perfect" : `${p.kda.toFixed(2)}:1`}
           </p>
-          {multiKill && <span className={`text-[8px] px-1.5 py-px rounded-full font-bold ${multiKill === "PENTA" ? "bg-red-500/20 text-red-400" : multiKill === "QUADRA" ? "bg-purple-500/20 text-purple-400" : "bg-yellow-500/20 text-yellow-400"}`}>{multiKill}</span>}
+          {multiKill && <span className={`text-[8px] px-1.5 py-px rounded-full font-bold ${multiKill === "PENTA" ? "mk-penta" : multiKill === "QUADRA" ? "mk-quadra" : "mk-triple"}`}>{multiKill}</span>}
         </div>
 
         {/* Items */}

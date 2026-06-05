@@ -108,6 +108,22 @@
 .vd-red { color: var(--vd-red); }
 .vd-even { color: var(--vd-even); }
 
+/* Multi-kill rozetleri (PENTA/QUADRA/TRIPLE) — light'ta koyu/doygun (sarı ışıkta
+   kayboluyordu). Dark değerleri eski görünümü korur. */
+:root {
+  --mk-penta-t: #f87171;  --mk-penta-b: rgba(239,68,68,.2);
+  --mk-quadra-t: #c4b5fd; --mk-quadra-b: rgba(168,85,247,.2);
+  --mk-triple-t: #facc15; --mk-triple-b: rgba(234,179,8,.2);
+}
+html.light {
+  --mk-penta-t: #dc2626;  --mk-penta-b: rgba(220,38,38,.12);
+  --mk-quadra-t: #7c3aed; --mk-quadra-b: rgba(124,58,237,.12);
+  --mk-triple-t: #b45309; --mk-triple-b: rgba(180,83,9,.14);
+}
+.mk-penta  { color: var(--mk-penta-t);  background: var(--mk-penta-b); }
+.mk-quadra { color: var(--mk-quadra-t); background: var(--mk-quadra-b); }
+.mk-triple { color: var(--mk-triple-t); background: var(--mk-triple-b); }
+
 /* =============== TEMA: LIGHT (white mode) override'ları =============== */
 /* html.light tek noktadan: (1) Tailwind gri rampasını AYNALAR (664 text-gray-*
    metni ters çevirir), (2) semantik yüzey token'larını, (3) dashboard-theme.css
@@ -151,9 +167,6 @@ html.light {
      koyduğunda zeminde belli olmalı). Kartlar opak olduğu için içerik okunur. */
   --page-veil: rgba(231, 234, 240, 0.78);
 
-  /* Dashboard kartları da off-white */
-  --bg-1: #f9fafc;
-
   /* Maç satırı tonları — light'ta ÇOK soluk (renkli zemin göz yormasın);
      kazanma/kaybetme sol kenarlık + sonuç metniyle belli olur. */
   --row-win: rgba(16, 185, 129, 0.05);
@@ -194,9 +207,10 @@ html.light {
   --sel-bg: rgba(59, 130, 246, 0.22);
   --sel-fg: #0b0f17;
 
-  /* dashboard-theme.css token'ları (topbar/sidebar/hero/kartlar) */
+  /* dashboard-theme.css token'ları (topbar/sidebar/hero/kartlar).
+     --bg-1 off-white: saf beyaz göz yoruyordu, kartlar/hero kırık beyaz. */
   --bg-0: #f3f5f9;
-  --bg-1: #ffffff;
+  --bg-1: #f9fafc;
   --bg-2: #eef1f6;
   --surface: rgba(15, 23, 42, 0.026);
   --surface-2: rgba(15, 23, 42, 0.05);
@@ -218,6 +232,27 @@ html.light .bg-grid {
 html.light .glass {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.04);
 }
+
+/* ===== Light modda DASHBOARD (ana sayfa) kartları =====
+   .card dark'ta saydam yüzey (--surface) kullanır; light'ta zemin gradyanı
+   içinden görünüp göz yoruyordu. Diğer sayfalardaki .glass gibi OPAK off-white
+   yap (saf beyaz değil) + aynı yumuşak gölge. Kart İÇİ dolgular (--surface-2
+   hover'ları vb.) koyu-ton rgba olduğu için opak kartın üstünde zaten düzgün. */
+html.light .card {
+  background: var(--c-card); /* #f9fafc — kırık beyaz */
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+html.light .bigsearch {
+  background: var(--c-card);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+/* Beyaz-literal bar zeminleri light'ta görünmez kalıyordu → koyu-ton dolgu */
+html.light .statbar { background: rgba(15, 23, 42, 0.08); }
+html.light .xp-bar { background: rgba(15, 23, 42, 0.08); }
+
+/* Tema popover'ı — light'ta simsiyah gölge yerine yumuşak gölge */
+html.light .theme-pop { box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18); }
 
 /* Koyu tooltip/popover (bg-[#0a0e14]) — light modda İÇERİĞİ "darktaki gibi" tutar.
    Gri rampası + yüzey/metin değişkenleri DARK değerlerine sabitlenir ki tooltip

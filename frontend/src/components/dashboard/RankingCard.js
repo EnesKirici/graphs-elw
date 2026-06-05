@@ -50,7 +50,7 @@ export default function RankingCard({ title, champions, valueKey, color = "blue"
               className="rounded-md group-hover:ring-1 ring-white/20 transition-all"
             />
 
-            <span className="text-sm text-gray-300 group-hover:text-white transition-colors w-20 truncate">
+            <span className="text-sm text-gray-300 group-hover:text-gray-100 transition-colors w-20 truncate">
               {champ.name}
             </span>
 

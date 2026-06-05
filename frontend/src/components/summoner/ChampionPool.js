@@ -187,7 +187,7 @@ export default function ChampionPool({ seasonChampions, masteries, gameName, tag
         <div className="relative">
           <button
             onClick={() => setOpen(!open)}
-            className="flex items-center gap-1.5 text-sm font-semibold text-gray-200 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-sm font-semibold text-gray-200 hover:text-gray-100 transition-colors cursor-pointer"
           >
             {currentLabel}
             <ChevronDown size={14} className={`text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -315,7 +315,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
 
               {/* İsim */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-100 font-medium group-hover:text-white transition-colors truncate">
+                <p className="text-sm text-gray-100 font-medium group-hover:text-gray-100 transition-colors truncate">
                   {c.championName}
                 </p>
                 {isMastery ? (

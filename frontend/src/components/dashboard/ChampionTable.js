@@ -83,7 +83,7 @@ export default function ChampionTable({ title, champions, sortBy = "winRate" }) 
                 className="rounded-md group-hover:ring-1 ring-blue-500/50 transition-all duration-200"
               />
               <div className="min-w-0">
-                <p className="text-sm text-gray-200 font-medium truncate group-hover:text-white transition-colors">
+                <p className="text-sm text-gray-200 font-medium truncate group-hover:text-gray-100 transition-colors">
                   {champ.name}
                 </p>
                 <p className="text-[10px] text-gray-600 truncate">

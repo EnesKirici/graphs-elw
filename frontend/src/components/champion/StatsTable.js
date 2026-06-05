@@ -42,7 +42,7 @@ export default function StatsTable({ stats }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setLevel(Math.max(1, level - 1))}
-            className="w-6 h-6 rounded bg-edge text-gray-400 hover:text-white hover:bg-[#2a3444] flex items-center justify-center text-sm transition-colors cursor-pointer"
+            className="w-6 h-6 rounded bg-edge text-gray-400 hover:text-gray-100 hover:bg-[#2a3444] flex items-center justify-center text-sm transition-colors cursor-pointer"
           >
             −
           </button>
@@ -56,7 +56,7 @@ export default function StatsTable({ stats }) {
           />
           <button
             onClick={() => setLevel(Math.min(18, level + 1))}
-            className="w-6 h-6 rounded bg-edge text-gray-400 hover:text-white hover:bg-[#2a3444] flex items-center justify-center text-sm transition-colors cursor-pointer"
+            className="w-6 h-6 rounded bg-edge text-gray-400 hover:text-gray-100 hover:bg-[#2a3444] flex items-center justify-center text-sm transition-colors cursor-pointer"
           >
             +
           </button>
