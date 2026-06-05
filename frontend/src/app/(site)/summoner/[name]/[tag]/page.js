@@ -15,7 +15,7 @@ export async function generateMetadata({ params }) {
   const dn = decodeURIComponent(name);
   const dt = decodeURIComponent(tag);
   return {
-    title: `${dn}#${dt} — Oyuncu Profili`,
+    title: `${dn}#${dt}`,
     description: `${dn}#${dt} League of Legends oyuncu profili, maç geçmişi, ELW Score ve istatistikler.`,
   };
 }

@@ -19,7 +19,7 @@ import ChampionTabs from "@/components/champion/ChampionTabs";
 export async function generateMetadata({ params }) {
   const { id } = await params;
   return {
-    title: `${id} — Şampiyon Detayı`,
+    title: id,
     description: `${id} şampiyon yetenekleri, skinleri ve istatistikleri.`,
   };
 }
