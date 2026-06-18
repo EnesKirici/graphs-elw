@@ -2,6 +2,7 @@
 
 namespace App\Services\RiotApi;
 
+use App\Models\LpSnapshot;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -16,7 +17,68 @@ class MatchStatisticsService
     public function __construct(
         private MatchDataService $matchData,
         private DataDragonService $ddragon,
+        private LeagueService $league,
     ) {}
+
+    /**
+     * Tahmini MMR — son N maçtaki RAKİP oyuncuların ortalama solo rankı.
+     * Riot MMR vermez; bu, oynanan maçların ortalama seviyesinden bir tahmindir.
+     *
+     * Maliyet: her benzersiz rakip için League-V4 (cache'li). Rate-limit'i korumak
+     * için benzersiz rakip sayısı 25 ile sınırlı; 429'da elimizdekiyle yetinir.
+     * Tüm sonuç summoner TTL'i boyunca cache'lenir (bir kez hesaplanır).
+     */
+    public function getAvgGameRank(string $puuid, int $matchCount = 20): ?array
+    {
+        return Cache::remember("avg_game_rank:v1:{$puuid}", config('riot.cache_ttl.summoner'), function () use ($puuid, $matchCount) {
+            try {
+                $matchIds = $this->matchData->getMatchIds($puuid, $matchCount, 0);
+            } catch (\Exception $e) {
+                return null;
+            }
+            if (empty($matchIds)) return null;
+
+            // Rakip puuid'lerini topla (oyuncunun takımı hariç)
+            $opp = [];
+            foreach ($matchIds as $matchId) {
+                try {
+                    $info = $this->matchData->getMatchDetail($matchId)['info'];
+                    $myTeam = null;
+                    foreach ($info['participants'] as $p) {
+                        if ($p['puuid'] === $puuid) { $myTeam = $p['teamId']; break; }
+                    }
+                    if ($myTeam === null) continue;
+                    foreach ($info['participants'] as $p) {
+                        if (($p['teamId'] ?? null) !== $myTeam && !empty($p['puuid'])) {
+                            $opp[$p['puuid']] = true;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+            // Rate-limit bütçesi düşük tutuldu (mevcut API key). Tüm sonuç cache'lenir →
+            // profil başına tek sefer hesaplanır; gerisi gerçek key + worker ile.
+            $oppPuuids = array_slice(array_keys($opp), 0, 15);
+
+            $sum = 0; $count = 0;
+            foreach ($oppPuuids as $pid) {
+                try {
+                    $solo = $this->league->getRankedInfo($pid)['solo'] ?? null;
+                    if ($solo && isset($solo['tier'], $solo['rank'], $solo['lp'])) {
+                        $sum += $this->rankToAbsolute($solo['tier'], $solo['rank'], $solo['lp']);
+                        $count++;
+                    }
+                } catch (\Exception $e) {
+                    if ($e->getCode() === 429) break; // rate limit → elimizdekiyle yetin
+                }
+            }
+            if ($count === 0) return null;
+
+            $disp = $this->absoluteToDisplay((int) round($sum / $count));
+            return ['tier' => $disp['tier'], 'rank' => $disp['rank'], 'lp' => $disp['lp'], 'sampleSize' => $count];
+        });
+    }
 
     /**
      * Sezon boyunca oynanmış ranked maçlardan koridor istatistikleri.
@@ -172,6 +234,160 @@ class MatchStatisticsService
 
             return $result;
         });
+    }
+
+    /**
+     * LP yükseliş/azalış zaman serisi (Pro tasarım — profil sol kutusu).
+     *
+     * DİKKAT — TAHMİNİ: lp_snapshots seyrek ve timestamp'siz olduğundan gerçek
+     * maç-bazlı LP geçmişi yok. Bunun yerine eğriyi şöyle kuruyoruz:
+     *   - Bitiş noktası GERÇEK (oyuncunun şu anki LP'si).
+     *   - Şekil GERÇEK (sezonun gerçek galibiyet/mağlubiyet dizisi).
+     *   - Büyüklük TAHMİNİ (maç başına ~+20 galibiyet / -18 mağlubiyet).
+     * Geriye doğru demirleme: son maç = şu anki LP, oradan geriye yürünür.
+     * Worker periyodik gerçek snapshot toplamaya başlayınca bu gerçek veriyle
+     * değiştirilecek. `estimated: true` ile işaretlenir.
+     *
+     * Maç detayları buildFullResponse'ta preload edildiği için 0 ekstra API isteği.
+     */
+    public function getLpTimeline(string $puuid, array $ranked): array
+    {
+        $soloKey = ($ranked['solo']['tier'] ?? '') . ($ranked['solo']['rank'] ?? '') . ($ranked['solo']['lp'] ?? '');
+        $flexKey = ($ranked['flex']['tier'] ?? '') . ($ranked['flex']['rank'] ?? '') . ($ranked['flex']['lp'] ?? '');
+        $cacheKey = "lp_timeline:v2:{$puuid}:{$soloKey}:{$flexKey}";
+
+        return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid, $ranked) {
+            $result = ['solo' => null, 'flex' => null];
+            $deltaWin = 20;
+            $deltaLoss = 18;
+
+            foreach ([420 => 'solo', 440 => 'flex'] as $queueId => $key) {
+                $cur = $ranked[$key] ?? null;
+                if (!$cur || !isset($cur['tier'], $cur['rank'], $cur['lp'])) continue;
+
+                try {
+                    $matchIds = $this->matchData->getSeasonMatchIds($puuid, $queueId);
+                } catch (\Exception $e) {
+                    continue;
+                }
+
+                // Kronolojik galibiyet/mağlubiyet listesi (sadece tamamlanmış maçlar)
+                $games = [];
+                foreach ($matchIds as $matchId) {
+                    try {
+                        $detail = $this->matchData->getMatchDetail($matchId);
+                        if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
+                        foreach ($detail['info']['participants'] as $p) {
+                            if ($p['puuid'] === $puuid) {
+                                $games[] = ['time' => $detail['info']['gameCreation'], 'win' => $p['win'], 'matchId' => $matchId];
+                                break;
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        continue;
+                    }
+                }
+                if (count($games) < 2) continue;
+                usort($games, fn($a, $b) => $a['time'] <=> $b['time']); // eski → yeni
+
+                $n = count($games);
+                $curAbs = $this->rankToAbsolute($cur['tier'], $cur['rank'], $cur['lp']);
+
+                // GERÇEK snapshot LP'leri (match_id => mutlak LP) — varsa demir nokta.
+                // Riot maç-başı LP vermez; yalnız bu snapshot anlarında gerçek LP biliyoruz.
+                $queueName = $queueId === 420 ? 'RANKED_SOLO_5x5' : 'RANKED_FLEX_SR';
+                $realByMatch = [];
+                foreach (LpSnapshot::where('puuid', $puuid)->where('queue', $queueName)->get() as $sn) {
+                    $realByMatch[$sn->match_id] = $this->rankToAbsolute($sn->tier, $sn->rank, $sn->lp);
+                }
+
+                // Demir noktalar: gerçek snapshot olan maçlar + en yeni maç (şu anki gerçek LP).
+                // Aradaki noktalar gerçek galip/mağlup dizisinden tahmin (±~LP) edilir.
+                $abs = array_fill(0, $n, null);
+                $anchored = array_fill(0, $n, false);
+                $realCount = 0;
+                foreach ($games as $i => $g) {
+                    if (isset($realByMatch[$g['matchId']])) {
+                        $abs[$i] = $realByMatch[$g['matchId']];
+                        $anchored[$i] = true;
+                        $realCount++;
+                    }
+                }
+                $abs[$n - 1] = $curAbs;       // en yeni maç = gerçek mevcut LP
+                $anchored[$n - 1] = true;
+
+                // Demir noktaları koruyarak aradakileri geriye doğru tahmini doldur
+                for ($i = $n - 1; $i >= 1; $i--) {
+                    if ($anchored[$i - 1]) continue;
+                    $delta = $games[$i]['win'] ? $deltaWin : -$deltaLoss;
+                    $abs[$i - 1] = max(0, ($abs[$i] ?? $curAbs) - $delta);
+                }
+
+                $peakAbs = max($abs);
+                $peakDisp = $this->absoluteToDisplay($peakAbs);
+
+                $timeline = [];
+                foreach ($games as $i => $g) {
+                    $d = $this->absoluteToDisplay($abs[$i]);
+                    $timeline[] = [
+                        'game'      => $i + 1,
+                        'lp'        => $abs[$i],          // mutlak LP (grafik ekseni)
+                        'tier'      => $d['tier'],
+                        'rank'      => $d['rank'],
+                        'divLp'     => $d['lp'],           // bölüm içi LP (tooltip)
+                        'date'      => date('d M', (int) ($g['time'] / 1000)),
+                        'timestamp' => $g['time'],
+                    ];
+                }
+
+                // Okunabilirlik için son 60 maç (peak tüm seri üzerinden hesaplandı)
+                if (count($timeline) > 60) $timeline = array_slice($timeline, -60);
+
+                $result[$key] = [
+                    'timeline'  => $timeline,
+                    'peak'      => ['lp' => $peakAbs, 'tier' => $peakDisp['tier'], 'rank' => $peakDisp['rank'], 'divLp' => $peakDisp['lp']],
+                    // Aradaki noktalar tahmin edildiyse işaretle (gerçek snapshot azsa true).
+                    'estimated' => $realCount < $n,
+                    'realPoints' => $realCount,
+                ];
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * Tier+rank+LP → mutlak sayı (LP eğrisi için). Iron IV 0LP = 0.
+     */
+    private function rankToAbsolute(string $tier, string $rank, int $lp): int
+    {
+        $tiers = ['IRON' => 0, 'BRONZE' => 400, 'SILVER' => 800, 'GOLD' => 1200, 'PLATINUM' => 1600, 'EMERALD' => 2000, 'DIAMOND' => 2400, 'MASTER' => 2800, 'GRANDMASTER' => 2800, 'CHALLENGER' => 2800];
+        $ranks = ['IV' => 0, 'III' => 100, 'II' => 200, 'I' => 300];
+        $base = $tiers[strtoupper($tier)] ?? 0;
+        if (in_array(strtoupper($tier), ['MASTER', 'GRANDMASTER', 'CHALLENGER'])) {
+            return $base + $lp;
+        }
+        return $base + ($ranks[$rank] ?? 0) + $lp;
+    }
+
+    /**
+     * Mutlak LP → tier/rank/bölüm-LP (eğri noktalarını etikete çevirmek için).
+     */
+    private function absoluteToDisplay(int $abs): array
+    {
+        if ($abs >= 2800) {
+            return ['tier' => 'MASTER', 'rank' => '', 'lp' => $abs - 2800];
+        }
+        $order = ['IRON' => 0, 'BRONZE' => 400, 'SILVER' => 800, 'GOLD' => 1200, 'PLATINUM' => 1600, 'EMERALD' => 2000, 'DIAMOND' => 2400];
+        $tier = 'IRON';
+        $base = 0;
+        foreach ($order as $t => $b) {
+            if ($abs >= $b) { $tier = $t; $base = $b; }
+        }
+        $within = $abs - $base;            // 0..399
+        $divIdx = min(3, intdiv($within, 100)); // 0..3
+        $rankNames = ['IV', 'III', 'II', 'I'];
+        return ['tier' => $tier, 'rank' => $rankNames[$divIdx], 'lp' => $within - $divIdx * 100];
     }
 
     /**

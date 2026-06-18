@@ -22,4 +22,7 @@ frontend/out/
 # Logs
 *.log
 
+# Geçici tasarım/screenshot iterasyonu (Claude)
+.shots/
+
 RIOT_API_ENDPOINTS.md

@@ -352,6 +352,25 @@ class SummonerController extends Controller
             if ($e->getCode() === 429) $rateLimited = true;
         }
 
+        // LP zaman serisi (Pro tasarım — tahmini, mevcut LP'ye demirli)
+        $lpTimeline = [];
+        try {
+            $lpTimeline = $this->match->getLpTimeline($puuid, $ranked);
+        } catch (\Exception $e) {
+            if ($e->getCode() === 429) $rateLimited = true;
+        }
+
+        // Tahmini MMR — son 20 maçtaki rakip ranklarının ortalaması (cache'li, sınırlı).
+        // Rate-limit'i kötüleştirmemek için yalnız henüz limitlenmediysek dene.
+        $avgGameRank = null;
+        if (!$rateLimited) {
+            try {
+                $avgGameRank = $this->match->getAvgGameRank($puuid);
+            } catch (\Exception $e) {
+                if ($e->getCode() === 429) $rateLimited = true;
+            }
+        }
+
         // Cooldown cache'den kalan süreyi al
         $cooldown = Cache::get('riot:rate_limit_cooldown');
         $retryAfter = $cooldown ? max(0, $cooldown - time()) : 0;
@@ -393,6 +412,8 @@ class SummonerController extends Controller
             'seasonChampions'   => $seasonChampions,
             'totalSeasonMatches' => $totalSeasonMatches,
             'winrateTimeline'   => $winrateTimeline ?? [],
+            'lpTimeline'        => $lpTimeline ?? [],
+            'avgGameRank'       => $avgGameRank,
             'bannerChampion'    => $bannerChampion,
             'bannerSkins'       => $bannerSkins,
             'challengeAverages'  => $challengeAverages,

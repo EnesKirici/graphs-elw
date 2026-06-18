@@ -47,6 +47,18 @@ export async function fetchApi(endpoint) {
 }
 
 /**
+ * Public ayarları getir (profil tasarımı, ELW eşikleri vb.).
+ * Hata durumunda boş obje döner — sayfa yine de render olsun.
+ */
+export async function getPublicSettings() {
+  try {
+    return await fetchApi("/settings/public");
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Analytics event'i backend'e POST et.
  */
 export async function postAnalytics(endpoint, data) {

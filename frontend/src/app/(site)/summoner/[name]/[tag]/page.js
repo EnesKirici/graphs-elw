@@ -1,4 +1,4 @@
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getPublicSettings } from "@/lib/api";
 import { regionLabel } from "@/lib/region";
 import Link from "next/link";
 import ChampionPool from "@/components/summoner/ChampionPool";
@@ -6,6 +6,7 @@ import RankCard from "@/components/summoner/RankCard";
 import StatsCard from "@/components/summoner/StatsCard";
 import RoleRadar from "@/components/summoner/RoleRadar";
 import SummonerContent from "@/components/summoner/SummonerContent";
+import SummonerContentPro from "@/components/summoner/pro/SummonerContentPro";
 import ChallengesCard from "@/components/summoner/ChallengesCard";
 import DuoPartnersCard from "@/components/summoner/DuoPartnersCard";
 import ProfileHeader from "@/components/summoner/ProfileHeader";
@@ -71,8 +72,12 @@ export default async function SummonerPage({ params }) {
   const bannerChamp = data.bannerChampion || recentStats?.mostPlayedChampion?.id || (masteries[0]?.championName);
   const bannerSkins = data.bannerSkins || [0];
 
+  // Admin ayarına göre tasarım seç: "pro" (dpm-stili sabit koyu) veya "classic".
+  const settings = await getPublicSettings();
+  const design = settings?.profile_design === "pro" ? "pro" : "classic";
+
   return (
-    <div>
+    <div className={design === "pro" ? "dpm-scope min-h-screen" : undefined}>
       <ProfileHeader
         profile={profile}
         data={data}
@@ -84,31 +89,41 @@ export default async function SummonerPage({ params }) {
 
       {/* ===== CONTENT ===== */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <SummonerContent
-          rankCard={
-            <RankCard solo={solo} flex={flex} winrateTimeline={data.winrateTimeline} region={region} />
-          }
-          sideColumn={
-            <>
-              {/* Kompakt İstatistikler + kişilik rozetleri */}
-              <StatsCard
-                seasonChampions={data.seasonChampions || {}}
-                solo={solo}
-                flex={flex}
-                totalSeasonMatches={data.totalSeasonMatches || 0}
-                personalityBadges={data.personalityBadges || []}
-              />
-              {/* En Çok Oynanan — sidebar üstünde, ilk açılışta görünür */}
-              <ChampionPool seasonChampions={data.seasonChampions || {}} masteries={masteries} gameName={profile.gameName} tagLine={profile.tagLine} region={region} />
-              {/* Koridorlar — kendi kartında */}
-              <RoleRadar seasonRoles={data.seasonRoles} />
-              <ChallengesCard challenges={data.challengeAverages} />
-              <DuoPartnersCard duoPartners={data.duoPartners} />
-            </>
-          }
-          initialMatches={recentMatches}
-          puuid={profile.puuid}
-        />
+        {design === "pro" ? (
+          <SummonerContentPro
+            data={data}
+            profile={profile}
+            region={region}
+            initialMatches={recentMatches}
+            puuid={profile.puuid}
+          />
+        ) : (
+          <SummonerContent
+            rankCard={
+              <RankCard solo={solo} flex={flex} winrateTimeline={data.winrateTimeline} region={region} />
+            }
+            sideColumn={
+              <>
+                {/* Kompakt İstatistikler + kişilik rozetleri */}
+                <StatsCard
+                  seasonChampions={data.seasonChampions || {}}
+                  solo={solo}
+                  flex={flex}
+                  totalSeasonMatches={data.totalSeasonMatches || 0}
+                  personalityBadges={data.personalityBadges || []}
+                />
+                {/* En Çok Oynanan — sidebar üstünde, ilk açılışta görünür */}
+                <ChampionPool seasonChampions={data.seasonChampions || {}} masteries={masteries} gameName={profile.gameName} tagLine={profile.tagLine} region={region} />
+                {/* Koridorlar — kendi kartında */}
+                <RoleRadar seasonRoles={data.seasonRoles} />
+                <ChallengesCard challenges={data.challengeAverages} />
+                <DuoPartnersCard duoPartners={data.duoPartners} />
+              </>
+            }
+            initialMatches={recentMatches}
+            puuid={profile.puuid}
+          />
+        )}
       </div>
     </div>
   );

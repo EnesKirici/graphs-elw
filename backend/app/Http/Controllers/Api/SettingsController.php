@@ -19,6 +19,7 @@ class SettingsController extends Controller
             'elw_score'          => AdminSetting::getValue('elw_score', self::DEFAULT_ELW_SCORE),
             'performance_labels' => AdminSetting::getValue('performance_labels'),
             'badge_config'       => AdminSetting::getValue('badge_config'),
+            'profile_design'     => AdminSetting::getValue('profile_design', 'classic'),
         ]);
     }
 
@@ -44,13 +45,18 @@ class SettingsController extends Controller
      */
     public function update(string $key, Request $request): JsonResponse
     {
-        $allowed = ['performance_labels', 'badge_config', 'elw_score'];
+        $allowed = ['performance_labels', 'badge_config', 'elw_score', 'profile_design'];
 
         if (!in_array($key, $allowed)) {
             return response()->json(['error' => 'Geçersiz ayar anahtarı.'], 422);
         }
 
-        $request->validate(['value' => 'required|array']);
+        // profile_design tek bir string ('classic' | 'pro'); diğerleri yapılandırma dizisi.
+        if ($key === 'profile_design') {
+            $request->validate(['value' => 'required|string|in:classic,pro']);
+        } else {
+            $request->validate(['value' => 'required|array']);
+        }
 
         AdminSetting::setValue($key, $request->input('value'));
 
@@ -63,7 +69,8 @@ class SettingsController extends Controller
     private function getDefaults(): array
     {
         return [
-            'elw_score' => self::DEFAULT_ELW_SCORE,
+            'elw_score'      => self::DEFAULT_ELW_SCORE,
+            'profile_design' => 'classic',
         ];
     }
 

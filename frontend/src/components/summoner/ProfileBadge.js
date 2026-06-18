@@ -31,12 +31,44 @@ function getNegativeTooltipText(badge, totalGames) {
   return null;
 }
 
-export default function ProfileBadge({ badge, totalGames, size = "md" }) {
+export default function ProfileBadge({ badge, totalGames, size = "md", muted = false }) {
   const [anchor, setAnchor] = useState(null);
   const isNegative = badge.category === "negative";
   const t = TIER_CONFIG[badge.tier] || TIER_CONFIG.silver;
   const hasGradient = !!t.gradient;
   const isSmall = size === "sm";
+
+  // Sakin (muted) varyant: banner üstünde tek tonlu yarı saydam çip — rengarenk
+  // tier renkleri yerine rol pill'iyle uyumlu nötr görünüm. Tooltip renkli kalır.
+  if (muted) {
+    return (
+      <>
+        <span
+          onMouseEnter={(e) => setAnchor(e.currentTarget)}
+          onMouseLeave={() => setAnchor(null)}
+          className="inline-flex items-center rounded-full bg-white/10 border border-white/15 backdrop-blur-sm text-white/85 px-2 py-0.5 text-[10px] font-medium cursor-default"
+        >
+          {badge.label}
+        </span>
+        {anchor && (
+          <Tooltip anchorEl={anchor}>
+            <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 whitespace-nowrap">
+              <span
+                className={`text-xs font-bold ${isNegative ? "" : hasGradient ? "bg-clip-text text-transparent" : ""}`}
+                style={isNegative ? { color: "#ef4444" } : hasGradient ? { backgroundImage: t.gradient } : { color: t.color }}
+              >
+                {badge.label}
+              </span>
+              {!isNegative && <span className="text-[9px] text-gray-500 ml-2 capitalize">{badge.tier}</span>}
+              <p className="text-[11px] text-gray-400 mt-1">
+                {isNegative ? getNegativeTooltipText(badge, totalGames) : `Son ${totalGames} maçın ${badge.count} tanesinde alındı`}
+              </p>
+            </div>
+          </Tooltip>
+        )}
+      </>
+    );
+  }
 
   // Negatif rozetler kırmızımsı stil kullanır
   const negativeStyle = isNegative ? {

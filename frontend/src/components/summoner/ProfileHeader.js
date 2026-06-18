@@ -45,7 +45,7 @@ export default function ProfileHeader({
   return (
     <>
       {/* ===== BANNER ===== */}
-      <div className="relative h-48 md:h-56 overflow-hidden">
+      <div className="relative h-36 md:h-44 overflow-hidden">
         {bannerChamp && (
           <BannerImage champion={bannerChamp} skins={bannerSkins} />
         )}
@@ -101,11 +101,11 @@ export default function ProfileHeader({
                 })()}
                 <RefreshButton puuid={profile.puuid} />
               </div>
-              {/* Top rozetler */}
+              {/* Top rozetler — sakin/tek tonlu (banner üstünde rengarenk durmasın) */}
               {recentStats?.frequentBadges?.length > 0 && (
                 <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                   {recentStats.frequentBadges.slice(0, 4).map((b) => (
-                    <ProfileBadge key={b.key} badge={b} totalGames={recentStats.totalGames} />
+                    <ProfileBadge key={b.key} badge={b} totalGames={recentStats.totalGames} muted />
                   ))}
                   <BadgeInfoTooltip />
                 </div>

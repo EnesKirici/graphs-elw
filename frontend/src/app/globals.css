@@ -650,3 +650,81 @@ input[type="range"].stat-slider::-moz-range-track {
   background: var(--sel-bg);
   color: var(--sel-fg);
 }
+
+/* =============== DPM "PRO" SCOPED KOYU TEMA ===============
+   Profil + leaderboard "Pro" tasarımı. Site light modda olsa bile bu alt-ağaç
+   sabit koyu (navy) kalır — .tip-dark ile aynı teknik: --c-* yüzey değişkenleri,
+   Tailwind gri rampası ve parlak accent'ler DARK değerlerine sabitlenir.
+   :root / html.light HİÇ değişmez → site geneli light/dark + accent korunur. */
+.dpm-scope {
+  color-scheme: dark;
+
+  /* Navy yüzeyler — dark kalır ama referanslara göre biraz açık (kartlar zeminden
+     net ayrılsın, "fazla koyu" görünmesin). */
+  --c-base: #0c111f;
+  --c-card: #161c30;
+  --c-edge: #29324e;
+  --c-soft: rgba(255, 255, 255, 0.05);
+  --c-hover: rgba(255, 255, 255, 0.07);
+  --c-grid: #29324e;
+  --c-grid-strong: #3a466a;
+  --c-scrim: #0c111f;
+  --glass-bg: rgba(22, 28, 48, 0.82);
+  --glass-border: rgba(52, 64, 98, 0.6);
+
+  /* Tailwind gri rampası — DARK'a sabit (tip-dark'tan) */
+  --color-gray-50: #f9fafb;  --color-gray-100: #f3f4f6; --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db; --color-gray-400: #9ca3af; --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563; --color-gray-700: #374151; --color-gray-800: #1f2937;
+  --color-gray-900: #111827; --color-gray-950: #030712;
+
+  /* Parlak accent'ler — DARK'a sabit (tip-dark'tan) */
+  --color-emerald-400: #34d399; --color-emerald-300: #6ee7b7;
+  --color-blue-400:    #60a5fa; --color-blue-300:    #93c5fd;
+  --color-red-400:     #f87171; --color-red-300:     #fca5a5;
+  --color-yellow-400:  #facc15; --color-yellow-300:  #fde047;
+  --color-amber-400:   #fbbf24;
+  --color-purple-400:  #c084fc; --color-purple-300:  #d8b4fe;
+
+  /* Maç satırı tonu — dpm: kazanç MAVİ, kayıp KIRMIZI */
+  --row-win: rgba(59, 130, 246, 0.07);
+  --row-loss: rgba(239, 68, 68, 0.07);
+  --row-remake: rgba(148, 163, 184, 0.05);
+  --res-win: #60a5fa;
+  --res-loss: #f87171;
+  --res-remake: #94a3b8;
+
+  /* Maç rozeti / tag token'ları — DARK'a sabit */
+  --badge-emerald-text: #2d9e6e; --badge-emerald-bg: rgba(45, 158, 110, 0.1);  --badge-emerald-bd: rgba(45, 158, 110, 0.25);
+  --badge-gold-text:    #c89b3c; --badge-gold-bg:    rgba(200, 155, 60, 0.08);  --badge-gold-bd:    rgba(200, 155, 60, 0.2);
+  --badge-silver-text:  #80939e; --badge-silver-bg:  rgba(128, 147, 158, 0.06); --badge-silver-bd:  rgba(128, 147, 158, 0.15);
+  --badge-diamond-text: #4a9bd9; --badge-diamond-bg: rgba(74, 155, 217, 0.1);   --badge-diamond-bd: rgba(74, 155, 217, 0.28);
+  --tag-emerald-text: #6ee7b7; --tag-emerald-bg: rgba(16,185,129,.08); --tag-emerald-bd: rgba(16,185,129,.4); --tag-emerald-bg-h: rgba(16,185,129,.14);
+  --tag-amber-text:   #fcd34d; --tag-amber-bg:   rgba(245,158,11,.08); --tag-amber-bd:   rgba(245,158,11,.4); --tag-amber-bg-h:   rgba(245,158,11,.14);
+  --tag-purple-text:  #c4b5fd; --tag-purple-bg:  rgba(139,92,246,.12); --tag-purple-bd:  rgba(139,92,246,.4); --tag-purple-bg-h:  rgba(139,92,246,.18);
+
+  /* dpm'e ÖZEL yeni değişkenler */
+  --dpm-lp-from:   #22d3ee;  /* LP grafik başlangıç (cyan) */
+  --dpm-lp-to:     #facc15;  /* LP grafik bitiş (sarı) */
+  --dpm-mmr-line:  #a78bfa;  /* ikincil MMR çizgisi (mor) */
+  --dpm-good-team: #3b82f6;  /* iyi takım (mavi) */
+  --dpm-bad-team:  #ef4444;  /* kötü takım (kırmızı) */
+  --dpm-avg-team:  #94a3b8;  /* ortalama takım (gri) */
+  --dpm-panel:     #0d1224;  /* iç panel zemini */
+  --dpm-accent:    #22d3ee;  /* dpm vurgu (cyan) */
+
+  background: var(--c-base);
+}
+
+/* Light modda .glass'a eklenen açık gölge navy üstünde yanlış durur → kaldır. */
+html.light .dpm-scope .glass { box-shadow: none; }
+
+/* dpm satır kenar şeridi (win mavi / loss kırmızı) — dpm.lol'deki sol kenar vurgusu */
+.dpm-scope .dpm-row-win  { border-left: 2px solid var(--dpm-good-team); }
+.dpm-scope .dpm-row-loss { border-left: 2px solid var(--dpm-bad-team); }
+.dpm-scope .dpm-row-remake { border-left: 2px solid var(--dpm-avg-team); }
+
+/* dpm takım kalite etiketi renkleri */
+.dpm-team-good { color: var(--dpm-good-team); }
+.dpm-team-bad  { color: var(--dpm-bad-team); }
+.dpm-team-avg  { color: var(--dpm-avg-team); }

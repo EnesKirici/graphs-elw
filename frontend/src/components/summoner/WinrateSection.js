@@ -18,9 +18,9 @@ const TIME_FILTERS = [
   { key: "30d", label: "30 Gün", days: 30 },
 ];
 
-export default function WinrateSection({ timeline, defaultOpen = false, label = "Win Rate Geçmişi" }) {
+export default function WinrateSection({ timeline, defaultOpen = false, label = "Win Rate Geçmişi", alwaysOpen = false }) {
   const uid = useId().replace(/:/g, "");
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(defaultOpen || alwaysOpen);
   const [hovIdx, setHovIdx] = useState(null);
   const [hovAnchor, setHovAnchor] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -104,19 +104,21 @@ export default function WinrateSection({ timeline, defaultOpen = false, label = 
   const hovData = hovIdx !== null ? data[hovIdx] : null;
 
   return (
-    <div className="mt-3 pt-2 border-t border-edge/30">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between cursor-pointer group"
-      >
-        <span className="text-[11px] text-gray-400 group-hover:text-gray-200 transition-colors">
-          {label}
-        </span>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-gray-500">{data.length} maç</span>
-          <ChevronDown size={14} className={`text-gray-600 transition-transform ${open ? "rotate-180" : ""}`} />
-        </div>
-      </button>
+    <div className={alwaysOpen ? "" : "mt-3 pt-2 border-t border-edge/30"}>
+      {!alwaysOpen && (
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full flex items-center justify-between cursor-pointer group"
+        >
+          <span className="text-[11px] text-gray-400 group-hover:text-gray-200 transition-colors">
+            {label}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-gray-500">{data.length} maç</span>
+            <ChevronDown size={14} className={`text-gray-600 transition-transform ${open ? "rotate-180" : ""}`} />
+          </div>
+        </button>
+      )}
 
       {open && (
         <div className="mt-2">

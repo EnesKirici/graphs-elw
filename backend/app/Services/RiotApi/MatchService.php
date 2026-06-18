@@ -334,6 +334,83 @@ class MatchService
                     }
                 }
 
+                // ── Pro tasarım alanları: koridor rakibi + takım kalite + KP ──
+                // Takım ağırlıklı ELW skorları (10 oyuncu, puuid => 0-10)
+                $teamScores = $this->elw->calculateAllElwScores($info['participants'], $info['gameDuration'] ?? 0, 'team');
+
+                // Koridor için yalnız teamPosition güvenilir (ARAM/eski maçta boş olabilir).
+                // Sinerji eşi (kendi takımından): Top↔Orman, Mid↔Orman, ADC↔Destek, Orman↔Mid.
+                $myRole = $player['teamPosition'] ?? '';
+                $partnerRoleMap = ['TOP' => 'JUNGLE', 'MIDDLE' => 'JUNGLE', 'JUNGLE' => 'MIDDLE', 'BOTTOM' => 'UTILITY', 'UTILITY' => 'BOTTOM'];
+                $partnerRole = $partnerRoleMap[$myRole] ?? '';
+                $laneOpponent = null;
+                $laneOpponentCs = null;
+                $laneDuo = null;
+                $enemyDuo = null;
+                $myTeamSum = 0; $myTeamCount = 0;
+                $enemySum = 0;  $enemyCount = 0;
+                $teamKills = 0;
+
+                $champEntry = function ($p, $role) {
+                    return [
+                        'name'     => $p['championName'],
+                        'image'    => $this->ddragon->championIconUrl($p['championName']),
+                        'gameName' => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
+                        'tagLine'  => $p['riotIdTagline'] ?? '',
+                        'role'     => $role,
+                    ];
+                };
+
+                foreach ($info['participants'] as $p) {
+                    $pPos = $p['teamPosition'] ?? '';
+                    if ($p['teamId'] === $playerTeam) {
+                        $teamKills += $p['kills'];
+                        if ($p['puuid'] !== $puuid) {
+                            $myTeamSum += $teamScores[$p['puuid']] ?? 5;
+                            $myTeamCount++;
+                            // Sinerji koridor eşi (kendi takımından)
+                            if ($partnerRole && !$laneDuo && $pPos === $partnerRole) {
+                                $laneDuo = $champEntry($p, $partnerRole);
+                            }
+                        }
+                    } else {
+                        $enemySum += $teamScores[$p['puuid']] ?? 5;
+                        $enemyCount++;
+                        // Rakip koridor (aynı rol) + rakip eş (sinerji rolü)
+                        if ($myRole && !$laneOpponent && $pPos === $myRole) {
+                            $laneOpponent = $champEntry($p, $myRole);
+                            $laneOpponentCs = ($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0);
+                        }
+                        if ($partnerRole && !$enemyDuo && $pPos === $partnerRole) {
+                            $enemyDuo = $champEntry($p, $partnerRole);
+                        }
+                    }
+                }
+
+                // Takım kalite: takım arkadaşları (kendisi hariç) ort. ELW − rakip ort. ELW
+                $teamQuality = null;
+                if ($myTeamCount > 0 && $enemyCount > 0) {
+                    $diff = ($myTeamSum / $myTeamCount) - ($enemySum / $enemyCount);
+                    if ($diff >= 1.2) {
+                        $teamQuality = ['key' => 'great', 'label' => 'Çok iyi takım'];
+                    } elseif ($diff >= 0.5) {
+                        $teamQuality = ['key' => 'good', 'label' => 'İyi takım'];
+                    } elseif ($diff > -0.5) {
+                        $teamQuality = ['key' => 'avg', 'label' => 'Ort. takım'];
+                    } elseif ($diff > -1.2) {
+                        $teamQuality = ['key' => 'bad', 'label' => 'Kötü takım'];
+                    } else {
+                        $teamQuality = ['key' => 'terrible', 'label' => 'Çok kötü takım'];
+                    }
+                    $teamQuality['diff'] = round($diff, 2);
+                }
+
+                // Kill participation %
+                $kp = $teamKills > 0 ? (int) round(($player['kills'] + $player['assists']) / $teamKills * 100) : 0;
+                // CS / dakika
+                $totalCs = $player['totalMinionsKilled'] + ($player['neutralMinionsKilled'] ?? 0);
+                $csPerMin = ($info['gameDuration'] ?? 0) > 0 ? round($totalCs / ($info['gameDuration'] / 60), 1) : 0;
+
                 $matches[] = [
                     'matchId'      => $matchId,
                     'champion'     => [
@@ -369,6 +446,16 @@ class MatchService
                     'ranking'      => $ranking,
                     'perfLabel'    => $perfLabel,
                     'missions'     => $player['missions'] ?? null,
+                    // Pro tasarım alanları (eski MatchCard bunları yok sayar)
+                    'laneOpponent' => $laneOpponent,
+                    'laneDuo'      => $laneDuo,
+                    'enemyDuo'     => $enemyDuo,
+                    'partnerRole'  => $partnerRole,
+                    'teamQuality'  => $teamQuality,
+                    'kp'           => $kp,
+                    'csPerMin'     => $csPerMin,
+                    // Koridor rakibine karşı toplam CS farkı (rol eşleşince)
+                    'csDiff'       => ($laneOpponent && $laneOpponentCs !== null) ? ($totalCs - $laneOpponentCs) : null,
                 ];
             } catch (\Exception $e) {
                 continue;
@@ -393,6 +480,16 @@ class MatchService
     public function getWinrateTimeline(string $puuid): array
     {
         return $this->statistics->getWinrateTimeline($puuid);
+    }
+
+    public function getLpTimeline(string $puuid, array $ranked): array
+    {
+        return $this->statistics->getLpTimeline($puuid, $ranked);
+    }
+
+    public function getAvgGameRank(string $puuid): ?array
+    {
+        return $this->statistics->getAvgGameRank($puuid);
     }
 
     public function getSeasonChampionStats(string $puuid): array
