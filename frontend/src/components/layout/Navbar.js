@@ -2,13 +2,22 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Sun, Moon } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { Sun, Moon, LayoutDashboard, Trophy, ListOrdered, Swords, Award, Menu, X } from "lucide-react";
 import { useBackground } from "@/context/BackgroundContext";
 import { useAnalytics } from "@/context/AnalyticsContext";
 import { useAdmin } from "@/context/AdminContext";
 import { useTheme } from "@/context/ThemeContext";
 import ThemePicker from "@/components/dashboard/ThemePicker";
+import BadgeGuideModal from "@/components/summoner/BadgeGuideModal";
+
+// Site navigasyonu — eskiden sol sidebar'daydı, header'a taşındı.
+const NAV_ITEMS = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/leaderboard", label: "Sıralama", icon: Trophy },
+  { href: "/tier-list", label: "Tier List", icon: ListOrdered },
+  { href: "/champions", label: "Tüm Şampiyonlar", icon: Swords },
+];
 
 /* Açık/koyu mod geçişi — topbar pill'i (güneş/ay). */
 function ModeToggle() {
@@ -143,6 +152,7 @@ function RateLimitIndicator() {
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { background, removeBg } = useBackground();
   const analytics = useAnalytics();
   const { isAdmin } = useAdmin();
@@ -150,6 +160,8 @@ export default function Navbar() {
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(-1);
+  const [navOpen, setNavOpen] = useState(false);
+  const [badgeGuideOpen, setBadgeGuideOpen] = useState(false);
   const ref = useRef(null);
   const debounceRef = useRef(null);
 
@@ -160,6 +172,13 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  // Rota değişince mobil menüyü kapat
+  useEffect(() => { setNavOpen(false); }, [pathname]);
+
+  function isActive(href) {
+    return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  }
 
   function handleChange(value) {
     setQuery(value);
@@ -232,11 +251,26 @@ export default function Navbar() {
 
   return (
     <nav className="elw-topbar">
-      {/* Mobilde hamburger için boşluk */}
-      <div className="lg:hidden" style={{ width: 40, flex: "none" }} />
+      {/* Marka — sidebar yerine artık header'da */}
+      <Link href="/" className="tb-brand" aria-label="ELW GRAPHS">
+        <img src="/logo/elw-wordmark.png" alt="ELW GRAPHS" className="brand-word" />
+      </Link>
+
+      {/* Masaüstü nav linkleri */}
+      <div className="tb-nav">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link key={item.href} href={item.href} className={`tb-link ${isActive(item.href) ? "active" : ""}`}>
+              <Icon size={17} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
 
       {/* Arama */}
-      <div ref={ref} style={{ flex: 1, maxWidth: 560, position: "relative" }}>
+      <div ref={ref} className="tb-search-wrap" style={{ flex: 1, maxWidth: 460, position: "relative" }}>
         <form onSubmit={handleSubmit}>
           <div className="tb-search">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -337,6 +371,10 @@ export default function Navbar() {
             BG Kaldır
           </button>
         )}
+        <button onClick={() => setBadgeGuideOpen(true)} className="tb-pill tb-badge-btn" style={{ gap: 7 }} title="Rozet & Skor rehberi">
+          <Award size={15} />
+          <span className="tb-badge-label">Rozet & Skor</span>
+        </button>
         <RateLimitIndicator />
         <ModeToggle />
         <ThemePicker />
@@ -348,11 +386,37 @@ export default function Navbar() {
             ADMIN
           </Link>
         )}
-        <span className="tb-pill" style={{ gap: 7 }}>
+        <span className="tb-pill tb-server" style={{ gap: 7 }}>
           <span className="sf-dot" />
           TR1
         </span>
+
+        {/* Mobil nav aç/kapa — nav linkleri dar ekranda gizli */}
+        <button onClick={() => setNavOpen((v) => !v)} className="tb-pill tb-menu-btn" aria-label="Menü" title="Menü">
+          {navOpen ? <X size={16} /> : <Menu size={16} />}
+        </button>
       </div>
+
+      {/* Mobil nav dropdown */}
+      {navOpen && (
+        <div className="tb-mobile-nav">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href} className={`tb-link ${isActive(item.href) ? "active" : ""}`}>
+                <Icon size={18} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+          <button onClick={() => { setBadgeGuideOpen(true); setNavOpen(false); }} className="tb-link" style={{ width: "100%", textAlign: "left" }}>
+            <Award size={18} />
+            <span>Rozet & Skor</span>
+          </button>
+        </div>
+      )}
+
+      <BadgeGuideModal open={badgeGuideOpen} onClose={() => setBadgeGuideOpen(false)} />
     </nav>
   );
 }

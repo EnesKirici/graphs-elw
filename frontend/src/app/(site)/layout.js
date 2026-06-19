@@ -1,4 +1,3 @@
-import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import MainContent from "@/components/layout/MainContent";
 import BackgroundFX from "@/components/dashboard/BackgroundFX";
@@ -7,7 +6,6 @@ export default function SiteLayout({ children }) {
   return (
     <>
       <BackgroundFX />
-      <Sidebar />
       <MainContent>
         <Navbar />
         <main className="relative z-10 flex-1">{children}</main>

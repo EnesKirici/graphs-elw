@@ -88,7 +88,7 @@ export default async function SummonerPage({ params }) {
       />
 
       {/* ===== CONTENT ===== */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-[1180px] mx-auto px-6 py-6">
         {design === "pro" ? (
           <SummonerContentPro
             data={data}

@@ -159,6 +159,39 @@
 .tb-search input::placeholder { color: var(--txt-3); }
 .tb-spacer { flex: 1; }
 
+/* Header marka + nav linkleri (sol sidebar'dan taşındı) */
+.tb-brand { display: flex; align-items: center; flex: none; margin-right: 6px; }
+.tb-brand .brand-word { height: 18px; }
+.tb-nav { display: flex; align-items: center; gap: 2px; flex: none; }
+.tb-link {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-radius: 9px; color: var(--txt-2); font-weight: 600; font-size: 13.5px;
+  white-space: nowrap; transition: background .18s, color .18s; cursor: pointer;
+}
+.tb-link svg { flex: none; }
+.tb-link:hover { background: var(--surface-2); color: var(--txt); }
+.tb-link.active { color: var(--txt); background: var(--accent-soft); }
+.tb-badge-btn { cursor: pointer; }
+/* .tb-pill display:flex'i ezmek için .elw-topbar ile scope (specificity) */
+.tb-menu-btn { padding: 0 10px; }
+.elw-topbar .tb-menu-btn { display: none; }
+.tb-mobile-nav {
+  position: absolute; top: var(--topbar-h); left: 0; right: 0; z-index: 40;
+  display: flex; flex-direction: column; gap: 4px; padding: 12px 16px;
+  background: var(--bg-1); border-bottom: 1px solid var(--border);
+  box-shadow: 0 18px 40px rgba(0,0,0,.45);
+}
+/* Dar ekran: önce rozet etiketini, sonra nav linklerini gizle → hamburger */
+@media (max-width: 1180px) { .tb-badge-label { display: none; } }
+@media (max-width: 1080px) {
+  .tb-nav { display: none; }
+  .elw-topbar .tb-menu-btn { display: flex; }
+}
+@media (max-width: 560px) {
+  .elw-topbar .tb-server { display: none; }
+  .tb-brand .brand-word { height: 16px; }
+}
+
 .tb-pill {
   display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px;
   border-radius: 9px; font-size: 12.5px; font-weight: 700; border: 1px solid var(--border);
