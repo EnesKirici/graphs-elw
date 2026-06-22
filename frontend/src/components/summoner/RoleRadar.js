@@ -24,7 +24,7 @@ const RADAR_ROLES = [
   embedded=true  → kart chrome'u yok; İstatistik merkezi içinde gömülü çalışır.
   filter (kontrollü) verilirse dışarıdan sürülür (StatsHub queue'su); yoksa kendi sekmesi.
 */
-export default function RoleRadar({ seasonRoles, filter: controlledFilter, embedded = false }) {
+export default function RoleRadar({ seasonRoles, filter: controlledFilter, embedded = false, hideHeading = false, hideLegend = false }) {
   const [internalFilter, setInternalFilter] = useState("all");
   const filter = controlledFilter ?? internalFilter;
   const [hovIdx, setHovIdx] = useState(null);
@@ -157,17 +157,19 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
           </svg>
 
           {/* Alt legend */}
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 -mt-2">
-            {roles.filter((r) => r.games > 0).sort((a, b) => b.games - a.games).map((r) => (
-              <div key={r.role} className="flex items-center gap-1.5">
-                <img src={r.icon} alt={r.label} width={14} height={14} />
-                <span className="text-[11px] text-gray-400">{r.label}</span>
-                <span className={`text-[11px] font-bold ${r.winRate >= 50 ? "text-emerald-400" : "text-red-400"}`}>
-                  {r.winRate}%
-                </span>
-              </div>
-            ))}
-          </div>
+          {!hideLegend && (
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 -mt-2">
+              {roles.filter((r) => r.games > 0).sort((a, b) => b.games - a.games).map((r) => (
+                <div key={r.role} className="flex items-center gap-1.5">
+                  <img src={r.icon} alt={r.label} width={14} height={14} />
+                  <span className="text-[11px] text-gray-400">{r.label}</span>
+                  <span className={`text-[11px] font-bold ${r.winRate >= 50 ? "text-emerald-400" : "text-red-400"}`}>
+                    {r.winRate}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>
@@ -196,7 +198,7 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
   if (embedded) {
     return (
       <div>
-        <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Koridorlar</h3>
+        {!hideHeading && <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Koridorlar</h3>}
         {content}
         {tooltip}
       </div>

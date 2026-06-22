@@ -1,7 +1,6 @@
 import Link from "next/link";
 import RefreshButton from "@/components/summoner/RefreshButton";
-import ProfileBadge from "@/components/summoner/ProfileBadge";
-import BadgeInfoTooltip from "@/components/summoner/BadgeInfoTooltip";
+import LiveGameButton from "@/components/live/LiveGameButton";
 import BannerImage from "@/components/summoner/BannerImage";
 import RateLimitBanner from "@/components/summoner/RateLimitBanner";
 
@@ -101,15 +100,6 @@ export default function ProfileHeader({
                 })()}
                 <RefreshButton puuid={profile.puuid} />
               </div>
-              {/* Top rozetler — sakin/tek tonlu (banner üstünde rengarenk durmasın) */}
-              {recentStats?.frequentBadges?.length > 0 && (
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                  {recentStats.frequentBadges.slice(0, 4).map((b) => (
-                    <ProfileBadge key={b.key} badge={b} totalGames={recentStats.totalGames} muted />
-                  ))}
-                  <BadgeInfoTooltip />
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -134,6 +124,12 @@ export default function ProfileHeader({
               )}
             </Link>
           ))}
+          <LiveGameButton
+            puuid={profile.puuid}
+            name={profile.gameName}
+            tag={profile.tagLine}
+            className="ml-auto self-center"
+          />
         </div>
       </div>
 

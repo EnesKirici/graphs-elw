@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
+import { scoreColor } from "./scoreColor";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -17,17 +18,10 @@ function formatRank(tier, div) {
 }
 function rankBadgeUrl(tier) { return tier ? `/ranks/badges/${tier.toLowerCase()}.webp` : null; }
 function kdaColor(k) {
-  if (k === "Perfect" || k >= 4) return "text-emerald-400";
+  if (k === "Perfect" || k >= 4) return "text-sky-300";
   if (k >= 2.5) return "text-blue-400";
   if (k >= 1.5) return "text-gray-300";
   return "text-red-400";
-}
-// Sakin palet — MatchCardPro ile tutarlı (yüksek mavi, orta nötr, düşük kırmızı).
-function scoreColor(s) {
-  if (s == null) return "#6b7280";
-  if (s >= 7) return "#60a5fa";
-  if (s >= 5) return "#94a3b8";
-  return "#f87171";
 }
 
 function PlayerRow({ p, isMe, maxDmg }) {
@@ -39,7 +33,7 @@ function PlayerRow({ p, isMe, maxDmg }) {
   return (
     <div className={`flex items-center gap-1.5 px-2 py-1.5 ${isMe ? "bg-cyan-500/5" : ""} hover:bg-hover transition-colors`}>
       {/* Sıra */}
-      <span className={`w-6 text-center text-[9px] font-bold flex-shrink-0 ${p.matchRank === 1 ? "text-amber-400" : p.matchRank <= 3 ? "text-emerald-400" : p.matchRank >= 8 ? "text-red-400" : "text-gray-500"}`}>
+      <span className={`w-6 text-center text-[9px] font-bold flex-shrink-0 ${p.matchRank === 1 ? "text-amber-400" : p.matchRank <= 3 ? "text-blue-400" : p.matchRank >= 8 ? "text-red-400" : "text-gray-500"}`}>
         {p.matchRank === 1 ? "MVP" : p.matchRank}
       </span>
 

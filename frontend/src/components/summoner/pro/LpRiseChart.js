@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useId, useRef, useEffect } from "react";
-import { TIER_TR, tierColor, miniCrestUrl, absoluteToDisplay } from "./rankUtils";
+import { TIER_TR, tierColor, miniCrestUrl } from "./rankUtils";
 
 const TIME_FILTERS = [
   { key: "all", label: "Tümü" },
@@ -11,23 +11,10 @@ const TIME_FILTERS = [
 ];
 
 function wrColor(wr) {
-  if (wr >= 51) return "#10b981";
-  if (wr >= 45) return "#9ca3af";
-  return "#ef4444";
-}
-
-// Görünür LP aralığındaki bölüm/tier sınırları (sol eksen emblemleri için)
-function levelBoundaries(yMin, yMax) {
-  const lo = Math.ceil(yMin / 100) * 100;
-  const hi = Math.floor(yMax / 100) * 100;
-  let bs = [];
-  for (let b = lo; b <= hi; b += 100) bs.push(b);
-  if (bs.length > 5) {
-    bs = [];
-    const lo4 = Math.ceil(yMin / 400) * 400, hi4 = Math.floor(yMax / 400) * 400;
-    for (let b = lo4; b <= hi4; b += 400) bs.push(b);
-  }
-  return bs;
+  if (wr >= 60) return "#22d3ee"; // cyan
+  if (wr >= 50) return "#60a5fa"; // mavi
+  if (wr >= 44) return "#a855f7"; // mor
+  return "#ef4444";               // kırmızı
 }
 
 /*
@@ -36,7 +23,7 @@ function levelBoundaries(yMin, yMax) {
   variant="wr": winRate, yeşil/kırmızı çizgi, %50 referans çizgisi.
   Grafiğin her yerine gelince tooltip + dikey kılavuz.
 */
-export default function LpRiseChart({ timeline, peak, estimated, showHeaderLabel = true, variant = "lp" }) {
+export default function LpRiseChart({ timeline, peak, estimated, showHeaderLabel = true, variant = "lp", tier }) {
   const uid = useId().replace(/:/g, "");
   const [filter, setFilter] = useState("all");
   const [hovIdx, setHovIdx] = useState(null);
@@ -68,7 +55,13 @@ export default function LpRiseChart({ timeline, peak, estimated, showHeaderLabel
   const data = filtered;
 
   const val = (d) => (isWr ? d.winRate : d.lp);
-  const segColor = (d) => (isWr ? wrColor(d.winRate) : tierColor(d.tier));
+  // Apex (Master+) noktaları oyuncunun GÜNCEL apex tier'ı (Challenger/GM) — LP'den apex tier
+  // türetilemez (absoluteToDisplay hepsini Master yapar). Apex DIŞI noktalar (Diamond, Emerald…)
+  // KENDİ tier'ında kalır → çizgi geçmişte hangi tier'daysan o renkte (Diamond mavi vb.).
+  const APEX = ["MASTER", "GRANDMASTER", "CHALLENGER"];
+  const curTier = (tier || "").toUpperCase();
+  const apexTier = (t) => (t === "MASTER" && APEX.includes(curTier) ? curTier : t);
+  const segColor = (d) => (isWr ? wrColor(d.winRate) : tierColor(apexTier(d.tier)));
 
   const width = chartWidth;
   const height = 78;
@@ -95,12 +88,19 @@ export default function LpRiseChart({ timeline, peak, estimated, showHeaderLabel
   const getX = (i) => pad.l + (i / (data.length - 1)) * chartW;
   const getY = (v) => pad.y + chartH - ((v - yMin) / range) * chartH;
 
-  // Sol eksen tier emblemleri (yalnız LP)
+  // Sol eksen tier emblemleri — verideki HER distinct tier için bir emblem, o tier'ın
+  // noktalarının ortalama y'sinde. Geçmişte Diamond'san Diamond emblemi görünür; hep
+  // Master'san tek Master. (LP sınırına değil, gerçek tier geçmişine göre.)
   let levels = [];
   if (!isWr) {
-    let bs = levelBoundaries(yMin, yMax);
-    if (bs.length === 0) bs = [Math.round((yMin + yMax) / 2 / 100) * 100];
-    levels = bs.map((b) => ({ b, y: getY(b), tier: absoluteToDisplay(b).tier }));
+    const acc = {};
+    for (const d of data) {
+      const t = apexTier(d.tier);
+      if (!t) continue;
+      if (!acc[t]) acc[t] = { tier: t, sum: 0, n: 0 };
+      acc[t].sum += getY(val(d)); acc[t].n++;
+    }
+    levels = Object.values(acc).map((o) => ({ tier: o.tier, y: o.sum / o.n }));
   }
 
   // Referans çizgisi: LP → peak; WR → %50
@@ -168,12 +168,9 @@ export default function LpRiseChart({ timeline, peak, estimated, showHeaderLabel
             ))}
           </defs>
 
-          {/* Tier emblemleri + bölüm çizgileri (LP) */}
+          {/* Tier emblemleri (sol eksen) — verideki her tier için, o tier'ın ortalama y'sinde */}
           {levels.map((lv, i) => (
-            <g key={`lv${i}`}>
-              <line x1={pad.l} y1={lv.y} x2={width - pad.r} y2={lv.y} stroke="var(--c-grid)" strokeWidth="0.75" strokeDasharray="3,3" strokeOpacity="0.5" />
-              <image href={miniCrestUrl(lv.tier)} x={1} y={lv.y - 8} width={16} height={16} preserveAspectRatio="xMidYMid meet" opacity="0.95" />
-            </g>
+            <image key={`lv${i}`} href={miniCrestUrl(lv.tier)} x={1} y={lv.y - 8} width={16} height={16} preserveAspectRatio="xMidYMid meet" opacity="0.95" />
           ))}
 
           {/* Referans çizgisi */}
@@ -213,9 +210,9 @@ export default function LpRiseChart({ timeline, peak, estimated, showHeaderLabel
                 <span className="text-[13px] font-bold leading-none" style={{ color: hovColor }}>{hov.winRate}% WR</span>
               ) : (
                 <div className="flex items-center justify-center gap-1.5">
-                  <img src={miniCrestUrl(hov.tier)} alt="" width={18} height={18} />
+                  <img src={miniCrestUrl(apexTier(hov.tier))} alt="" width={18} height={18} />
                   <span className="text-[13px] font-bold leading-none" style={{ color: hovColor }}>
-                    {TIER_TR[hov.tier] || hov.tier}{hov.rank ? ` ${hov.rank}` : ""} · {hov.divLp} LP
+                    {TIER_TR[apexTier(hov.tier)] || apexTier(hov.tier)}{hov.rank ? ` ${hov.rank}` : ""} · {hov.divLp} LP
                   </span>
                 </div>
               )}

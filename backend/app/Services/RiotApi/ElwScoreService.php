@@ -10,9 +10,9 @@ namespace App\Services\RiotApi;
  * 9 Metrik (her biri normalize edilir: 0.0–1.0 arası):
  *   KDA, DPM, GPM, KP, Görüş/dk, Kule Hasarı, Obj Hasarı, Tank Katkısı, İyileştirme
  *
- * Z-Score Normalizasyon:
- *   Ham skorlar maç ortalamasına göre normalize edilir.
- *   Final = 5.0 + (z-score × 1.8), 0–10 arası sınırlandırılır.
+ * Z-Score Normalizasyon (asimetrik eğri):
+ *   Ham skorlar maç ortalamasına göre normalize edilir (z-score).
+ *   zToElw(): base 5.4; iyi tarafta cömert (10'a sature, MVP ~9.5), kötü tarafta düşük.
  */
 class ElwScoreService
 {
@@ -27,6 +27,8 @@ class ElwScoreService
         'UTILITY_ENCHANTER' => ['kda' => 2.0, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.0, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 2.0],
         // Hasar support (Brand, Zyra, Vel'Koz...) — hasar ve KP ön planda
         'UTILITY_DAMAGE'    => ['kda' => 2.0, 'dpm' => 2.0, 'gpm' => 0.5, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 0.5, 'healing' => 2.0],
+        // Tank support (Leona, Alistar, Nautilus...) — tank katkısı (CC/önde durma) heal kadar değerli
+        'UTILITY_TANK'      => ['kda' => 2.0, 'dpm' => 1.0, 'gpm' => 0.5, 'kp' => 2.5, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 2.0, 'healing' => 0.5],
     ];
 
     // ===== TAKIM KATKISI — KP/Vision/Tank ön planda =====
@@ -38,6 +40,7 @@ class ElwScoreService
         'BOTTOM'  => ['kda' => 1.5, 'dpm' => 2.5, 'gpm' => 1.5, 'kp' => 3.0, 'vision' => 1.0, 'towerDmg' => 2.0, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
         'UTILITY_ENCHANTER' => ['kda' => 1.5, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 3.0, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.0, 'healing' => 2.0],
         'UTILITY_DAMAGE'    => ['kda' => 1.5, 'dpm' => 2.0, 'gpm' => 0.5, 'kp' => 3.0, 'vision' => 2.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 0.5, 'healing' => 2.0],
+        'UTILITY_TANK'      => ['kda' => 1.5, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 3.0, 'vision' => 2.5, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 3.0, 'healing' => 0.5],
     ];
 
     private const DEFAULT_INDIVIDUAL_W = ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.5];
@@ -60,10 +63,16 @@ class ElwScoreService
             $role = ($p['teamPosition'] ?: $p['individualPosition'] ?: '');
             if ($role === 'BOT') $role = 'BOTTOM';
 
-            // Support alt-tip: hasar > heal+shield ise damage support
+            // Support alt-tip: tank (çok hasar yer + az heal) / damage / enchanter
             if ($role === 'UTILITY') {
                 $hs = ($p['totalHealsOnTeammates'] ?? 0) + ($p['totalDamageShieldedOnTeammates'] ?? 0);
-                $role = (($p['totalDamageDealtToChampions'] ?? 0) > $hs) ? 'UTILITY_DAMAGE' : 'UTILITY_ENCHANTER';
+                $dmg = $p['totalDamageDealtToChampions'] ?? 0;
+                $tankShare = $c['damageTakenOnTeamPercentage'] ?? 0;
+                if ($tankShare >= 0.18 && $hs < $dmg) {
+                    $role = 'UTILITY_TANK';          // Leona, Alistar, Nautilus, Thresh...
+                } else {
+                    $role = ($dmg > $hs) ? 'UTILITY_DAMAGE' : 'UTILITY_ENCHANTER';
+                }
             }
 
             $w = $roleWeights[$role] ?? $defaultW;
@@ -106,10 +115,16 @@ class ElwScoreService
             $role = ($p['teamPosition'] ?: $p['individualPosition'] ?: '');
             if ($role === 'BOT') $role = 'BOTTOM';
 
-            // Support alt-tip: hasar > heal+shield ise damage support
+            // Support alt-tip: tank (çok hasar yer + az heal) / damage / enchanter
             if ($role === 'UTILITY') {
                 $hs = ($p['totalHealsOnTeammates'] ?? 0) + ($p['totalDamageShieldedOnTeammates'] ?? 0);
-                $role = (($p['totalDamageDealtToChampions'] ?? 0) > $hs) ? 'UTILITY_DAMAGE' : 'UTILITY_ENCHANTER';
+                $dmg = $p['totalDamageDealtToChampions'] ?? 0;
+                $tankShare = $c['damageTakenOnTeamPercentage'] ?? 0;
+                if ($tankShare >= 0.18 && $hs < $dmg) {
+                    $role = 'UTILITY_TANK';          // Leona, Alistar, Nautilus, Thresh...
+                } else {
+                    $role = ($dmg > $hs) ? 'UTILITY_DAMAGE' : 'UTILITY_ENCHANTER';
+                }
             }
 
             $w = $roleWeights[$role] ?? $defaultW;
@@ -141,7 +156,7 @@ class ElwScoreService
 
         foreach ($scores as &$s) {
             $z = ($s['score'] - $avg) / $stdDev;
-            $s['elwScore'] = round(max(0, min(10, 5 + $z * 1.8)), 1);
+            $s['elwScore'] = $this->zToElw($z);
         }
         unset($s);
 
@@ -240,6 +255,19 @@ class ElwScoreService
     }
 
     /**
+     * Z-score → 0-10 ELW skoru. Asimetrik eğri (kullanıcı tercihi): iyi tarafta cömert
+     * (10'a doğru sature, ortalama z=0 → 5.4, MVP z≈2.5 → ~9.5), kötü tarafta lineer/düşük.
+     */
+    private function zToElw(float $z): float
+    {
+        $base = 5.4;
+        $elw = $z >= 0
+            ? $base + (10 - $base) * (1 - exp(-$z / 1.09))
+            : $base + $z * 1.6;
+        return round(max(0, min(10, $elw)), 1);
+    }
+
+    /**
      * Z-score normalizasyon — ham skorları 0-10 arası puanlama.
      */
     private function normalizeScores(array $scores): array
@@ -250,6 +278,8 @@ class ElwScoreService
         foreach ($rawScores as $rs) { $variance += ($rs - $avg) ** 2; }
         $stdDev = max(sqrt($variance / max(count($rawScores), 1)), 0.5);
 
+        // Takım skorları (teamQuality diff sınıflandırması) eski lineer ölçekte —
+        // eşikler (great/good/avg/bad/terrible) bu ölçeğe göre ayarlı; 5 = lobi ortalaması.
         $result = [];
         foreach ($scores as $s) {
             $z = ($s['score'] - $avg) / $stdDev;

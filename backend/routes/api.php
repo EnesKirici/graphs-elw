@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ChampionController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\SummonerController;
+use App\Http\Controllers\Api\LiveGameController;
 use App\Http\Controllers\Api\LeaderboardController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AnalyticsController;
@@ -55,6 +56,13 @@ Route::prefix('v1')->group(function () {
 
     // Maç detay
     Route::get('/matches/{matchId}', [SummonerController::class, 'matchDetail']);
+
+    // Canlı maç (Spectator-V5)
+    // Sıralama önemli: search/player {puuid} yakalamasından ÖNCE tanımlanmalı.
+    Route::get('/live/search', [LiveGameController::class, 'search']);
+    Route::get('/live/player/{puuid}', [LiveGameController::class, 'player']);
+    Route::get('/live/{puuid}/status', [LiveGameController::class, 'status']);
+    Route::get('/live/{puuid}', [LiveGameController::class, 'activeGame']);
 
     // Leaderboard
     Route::get('/leaderboard', [LeaderboardController::class, 'index']);

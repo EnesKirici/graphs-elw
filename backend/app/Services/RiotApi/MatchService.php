@@ -403,6 +403,9 @@ class MatchService
                         $teamQuality = ['key' => 'terrible', 'label' => 'Çok kötü takım'];
                     }
                     $teamQuality['diff'] = round($diff, 2);
+                    // Karşılaştırma grafiği için iki takımın ortalama ELW gücü (0-10).
+                    $teamQuality['myAvg'] = round($myTeamSum / $myTeamCount, 1);
+                    $teamQuality['enemyAvg'] = round($enemySum / $enemyCount, 1);
                 }
 
                 // Kill participation %

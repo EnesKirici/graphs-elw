@@ -89,7 +89,7 @@ export default function MatchListPro({ initialMatches, puuid, onMatchesChange })
                     ELW Skor <span className="font-bold" style={{ color: "var(--dpm-accent)" }}>{avg}</span>
                   </span>
                 )}
-                <span className="text-emerald-400 font-medium">{g.wins}G</span>
+                <span className="text-blue-400 font-medium">{g.wins}G</span>
                 <span className="text-gray-600">·</span>
                 <span className="text-red-400 font-medium">{g.losses}M</span>
               </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 const TIERS = [
@@ -94,26 +95,33 @@ const BADGE_CATEGORIES = [
 ];
 
 const ELW_METRICS = [
-  { key: "kda",      label: "KDA",           desc: "(Kill + Assist) / Death oranı",     max: "6.0 = max" },
-  { key: "dpm",      label: "Hasar/dk",      desc: "Dakika başı şampiyonlara verilen hasar", max: "1200 DPM = max" },
-  { key: "gpm",      label: "Gold/dk",       desc: "Dakika başı kazanılan gold",         max: "600 GPM = max" },
+  { key: "kda",      label: "KDA",           desc: "(Kill + Assist) / Death oranı (log ölçek)", max: "≈9 = max" },
+  { key: "dpm",      label: "Hasar/dk",      desc: "Dakika başı şampiyonlara verilen hasar", max: "1500 DPM = max" },
+  { key: "gpm",      label: "Gold/dk",       desc: "Dakika başı kazanılan gold",         max: "700 GPM = max" },
   { key: "kp",       label: "Kill Katılımı", desc: "Takım kill'lerine katılım oranı",    max: "%100 = max" },
-  { key: "vision",   label: "Görüş/dk",      desc: "Dakika başı vision score",           max: "2.5 VS/dk = max" },
-  { key: "towerDmg", label: "Kule Hasarı",   desc: "Kulelere verilen toplam hasar",      max: "8000 = max" },
-  { key: "objDmg",   label: "Objektif Hasarı",desc: "Baron/Dragon/Herald hasarı",        max: "25000 = max" },
+  { key: "vision",   label: "Görüş/dk",      desc: "Dakika başı vision score",           max: "3.0 VS/dk = max" },
+  { key: "towerDmg", label: "Kule Hasarı",   desc: "Kulelere verilen toplam hasar",      max: "10000 = max" },
+  { key: "objDmg",   label: "Objektif Hasarı",desc: "Baron/Dragon/Herald hasarı",        max: "30000 = max" },
   { key: "tankPct",  label: "Tank Katkısı",  desc: "Takım için alınan hasar payı",       max: "%100 = max" },
   { key: "healing",  label: "İyileştirme & Kalkan",  desc: "Takım arkadaşlarına heal + shield /dk", max: "800/dk = max" },
 ];
 
+// Bireysel mod ağırlıkları — backend ElwScoreService.INDIVIDUAL_WEIGHTS ile birebir.
+// Destek 3 alt-tipe ayrılır (otomatik seçilir): Şifa (enchanter), Hasar, Tank.
 const ELW_WEIGHTS = {
-  TOP:     { kda: 2.5, dpm: 2.0, gpm: 1.5, kp: 1.5, vision: 1.0, towerDmg: 2.0, objDmg: 0.5, tankPct: 1.5, healing: 0.0 },
-  JUNGLE:  { kda: 2.5, dpm: 1.5, gpm: 1.5, kp: 2.5, vision: 2.0, towerDmg: 0.5, objDmg: 3.0, tankPct: 0.5, healing: 0.0 },
-  MIDDLE:  { kda: 2.5, dpm: 2.5, gpm: 2.0, kp: 2.0, vision: 1.0, towerDmg: 1.0, objDmg: 0.5, tankPct: 0.0, healing: 0.0 },
-  BOTTOM:  { kda: 2.0, dpm: 3.0, gpm: 2.5, kp: 2.0, vision: 0.5, towerDmg: 1.5, objDmg: 0.5, tankPct: 0.0, healing: 0.0 },
-  UTILITY: { kda: 2.0, dpm: 0.5, gpm: 0.5, kp: 2.5, vision: 3.0, towerDmg: 0.0, objDmg: 0.5, tankPct: 1.5, healing: 2.5 },
+  TOP:     { kda: 2.5, dpm: 2.0, gpm: 1.5, kp: 1.0, vision: 1.0, towerDmg: 2.0, objDmg: 0.5, tankPct: 1.5, healing: 0.0 },
+  JUNGLE:  { kda: 2.5, dpm: 1.5, gpm: 1.5, kp: 1.5, vision: 1.0, towerDmg: 0.5, objDmg: 2.5, tankPct: 1.0, healing: 0.0 },
+  MIDDLE:  { kda: 2.5, dpm: 2.5, gpm: 2.0, kp: 2.0, vision: 1.0, towerDmg: 1.5, objDmg: 0.5, tankPct: 0.0, healing: 0.0 },
+  BOTTOM:  { kda: 2.5, dpm: 3.0, gpm: 2.0, kp: 2.0, vision: 0.5, towerDmg: 1.5, objDmg: 0.5, tankPct: 0.0, healing: 0.0 },
+  UTILITY_ENCHANTER: { kda: 2.0, dpm: 0.5, gpm: 0.5, kp: 2.0, vision: 3.0, towerDmg: 0.0, objDmg: 0.5, tankPct: 1.5, healing: 2.0 },
+  UTILITY_DAMAGE:    { kda: 2.0, dpm: 2.0, gpm: 0.5, kp: 2.5, vision: 2.0, towerDmg: 0.0, objDmg: 0.5, tankPct: 0.5, healing: 2.0 },
+  UTILITY_TANK:      { kda: 2.0, dpm: 1.0, gpm: 0.5, kp: 2.5, vision: 3.0, towerDmg: 0.0, objDmg: 0.5, tankPct: 2.0, healing: 0.5 },
 };
 
-const ROLE_LABELS = { TOP: "Top", JUNGLE: "Orman", MIDDLE: "Orta", BOTTOM: "ADC", UTILITY: "Destek" };
+const ROLE_LABELS = {
+  TOP: "Top", JUNGLE: "Orman", MIDDLE: "Orta", BOTTOM: "ADC",
+  UTILITY_ENCHANTER: "Dst·Şifa", UTILITY_DAMAGE: "Dst·Hasar", UTILITY_TANK: "Dst·Tank",
+};
 
 const LANE_METRICS = [
   { name: "KDA", desc: "(K+A)/D farkı, ±3 normalize" },
@@ -157,9 +165,12 @@ export default function BadgeGuideModal({ open, onClose }) {
   }, [open, onClose]);
 
   if (!open) return null;
+  if (typeof document === "undefined") return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+  // Portal ile body'ye render — navbar'ın backdrop-filter/transform'u yüzünden
+  // fixed konum bozulmasın (modal viewport'a göre ortalansın).
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div className="relative bg-card border border-edge rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
 
@@ -196,9 +207,12 @@ export default function BadgeGuideModal({ open, onClose }) {
           {/* ROZETLER TAB */}
           {tab === "badges" && (
             <div className="space-y-5">
-              <div className="flex items-center justify-center gap-4 pb-3 border-b border-edge/30">
+              <div className="flex items-center justify-center gap-4 pb-1.5 border-b border-edge/30">
                 {TIERS.map((t) => <TierText key={t.key} tier={t.key} className="text-[10px] capitalize">{t.label}</TierText>)}
               </div>
+              <p className="text-[10px] text-gray-500 text-center pb-1">
+                Maç kartlarında yalnızca <span className="text-gray-300">Master / Grandmaster / Challenger</span> rozetleri renkli vurgulanır; alt tier'lar sade gri gösterilir.
+              </p>
               {BADGE_CATEGORIES.map((cat) => (
                 <div key={cat.title}>
                   <h3 className={`text-xs font-bold uppercase tracking-wider mb-3 ${cat.badges.some(b => b.negative) ? "text-red-400" : "text-gray-300"}`}>{cat.title}</h3>
@@ -246,8 +260,8 @@ export default function BadgeGuideModal({ open, onClose }) {
 
               {/* Rol ağırlık tablosu */}
               <div>
-                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3">Koridor Çarpanları</h3>
-                <p className="text-[10px] text-gray-500 mb-3">Her koridorun güçlü olması gereken metriklere daha fazla ağırlık verilir.</p>
+                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Koridor Çarpanları <span className="text-gray-600 normal-case font-normal">(Bireysel mod)</span></h3>
+                <p className="text-[10px] text-gray-500 mb-3">Her koridorun güçlü olması gereken metriklere daha fazla ağırlık verilir. Destek; maçtaki şifa/kalkan, hasar ve alınan-hasar oranına göre <strong className="text-gray-400">Şifa, Hasar veya Tank</strong> alt-tipine ayrılır — Leona/Alistar gibi tank destekler tank katkısından tam puan alır.</p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-[10px]">
                     <thead>
@@ -396,6 +410,7 @@ export default function BadgeGuideModal({ open, onClose }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

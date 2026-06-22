@@ -1,10 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown } from "lucide-react";
 import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
 import Tooltip from "@/components/shared/Tooltip";
+import { scoreColor } from "./scoreColor";
+
+// perfLabel.color → yön oku + renk (oynayış yorumu). Yeşilsiz palet.
+const PERF_ARROW = {
+  emerald: { Icon: ArrowUp,        cls: "text-sky-300" },
+  blue:    { Icon: ArrowUpRight,   cls: "text-blue-400" },
+  gray:    { Icon: ArrowRight,     cls: "text-gray-400" },
+  yellow:  { Icon: ArrowDownRight, cls: "text-amber-400" },
+  red:     { Icon: ArrowDown,      cls: "text-red-400" },
+};
 
 const ROLE_ICON = {
   TOP: "/roles/top.webp", JUNGLE: "/roles/jungle.webp", MIDDLE: "/roles/mid.webp",
@@ -15,13 +25,21 @@ const ROLE_TR = {
 };
 const TIER_ORDER = { challenger: 0, grandmaster: 1, master: 2, diamond: 3, emerald: 4, gold: 5, silver: 6 };
 
-// Takım kalitesi → nokta + yazı rengi (kutusuz; "kare" artefaktı olmasın).
+// Takım kalitesi → nokta rengi (tooltip) + yazı rengi. Yeşilsiz: iyi=mavi.
 const TQ_DOT = {
-  great: "#34d399", good: "#34d399", avg: "#94a3b8", bad: "#f87171", terrible: "#f87171",
+  great: "#38bdf8", good: "#60a5fa", avg: "#94a3b8", bad: "#f87171", terrible: "#f87171",
 };
 const TQ_TEXT = {
-  great: "text-emerald-400", good: "text-emerald-400",
+  great: "text-sky-300", good: "text-blue-400",
   avg: "text-gray-400", bad: "text-red-400", terrible: "text-red-400",
+};
+// Takım kalitesi pill (yumuşak tint + kenar) — k/d/a altında her zaman görünür.
+const TQ_PILL = {
+  great:    "text-sky-300 bg-sky-500/10 border-sky-500/25",
+  good:     "text-blue-400 bg-blue-500/10 border-blue-500/25",
+  avg:      "text-gray-400 bg-gray-500/10 border-gray-500/30",
+  bad:      "text-red-400 bg-red-500/10 border-red-500/25",
+  terrible: "text-red-400 bg-red-500/10 border-red-500/25",
 };
 
 // Rozet renkleri — SADECE üst tier'lar (challenger/grandmaster/master) kendi
@@ -47,20 +65,12 @@ function timeAgo(ts) {
   return dd < 30 ? `${dd}g` : `${Math.floor(dd / 30)}ay`;
 }
 
+// KDA oranı → renk (yeşilsiz: çok iyi=sky, iyi=mavi, orta=gri, kötü=kırmızı).
 function kdaColor(k) {
-  if (k === "Perfect" || k >= 4) return "text-emerald-400";
+  if (k === "Perfect" || k >= 4) return "text-sky-300";
   if (k >= 3) return "text-blue-400";
   if (k >= 2) return "text-gray-200";
   return "text-red-400";
-}
-
-// ELW skoru → renk (anlamlı skala; skor satırın odak noktası).
-function scoreColor(s) {
-  if (s == null) return "#6b7280";
-  if (s >= 7) return "#34d399"; // emerald
-  if (s >= 5) return "#60a5fa"; // blue
-  if (s >= 3.5) return "#fbbf24"; // amber
-  return "#f87171"; // red
 }
 
 function placement(rank, win) {
@@ -79,6 +89,7 @@ function ChampPortrait({ champ, corner, size, cornerSize, role, cornerRole, role
   const cornerRoleSize = Math.max(11, Math.round(cornerSize * 0.6));
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      {/* Sinerji eşi köşede ana şampiyonun üstünde görünür (absolute → üstte paint). */}
       <img src={champ.image} alt={champ.name} width={size} height={size} className="rounded-lg" title={champ.name} />
       {roleIcon && (
         <img src={roleIcon} alt={role} width={roleSize} height={roleSize}
@@ -135,38 +146,66 @@ function BadgeChip({ badge }) {
   );
 }
 
-// ELW skor halkası — hover'da zengin tooltip (skor + bar + KDA/CS/hasar + takım + açıklama)
+// ELW skor dial'ı — dolu koyu daire + renkli ring, ortada skor, altında sıralama rozeti.
+// Hover'da zengin tooltip (skor + bar + KDA/CS/hasar + takım + açıklama).
 function ScoreBlock({ m }) {
   const [anchor, setAnchor] = useState(null);
   const score = m.ranking.elwScore;
   const sColor = scoreColor(score);
   const fill = Math.max(0, Math.min(1, (score ?? 0) / 10));
-  const r = 25, circ = 2 * Math.PI * r;
-  const place = m.ranking?.rank ? placement(m.ranking.rank, m.win) : null;
-  const isMvp = m.ranking?.rank === 1 && m.win;
-  const isAce = m.ranking?.rank === 1 && !m.win;
-  const tq = m.teamQuality;
+  const r = 24, circ = 2 * Math.PI * r;
+  const rank = m.ranking?.rank;
+  const place = rank ? placement(rank, m.win) : null;
+  const isMvp = rank === 1 && m.win;
+  const isAce = rank === 1 && !m.win;
   const perf = m.perfLabel;
+  const pa = perf?.label ? (PERF_ARROW[perf.color] || PERF_ARROW.gray) : null;
+  const PerfIcon = pa?.Icon;
+  const badgeCls = isMvp
+    ? "text-amber-300 border-amber-400/50 bg-[#1c1604]"
+    : isAce
+      ? "text-cyan-300 border-cyan-400/50 bg-[#04161c]"
+      : rank <= 3
+        ? "text-sky-300 border-sky-400/40 bg-[#06141c]"
+        : "text-gray-300 border-edge bg-[#0c1220]";
 
   return (
-    <div className="flex flex-col items-center w-[64px] leading-tight cursor-help"
+    <div className="relative flex items-center justify-center w-[58px] h-[66px] flex-shrink-0 cursor-help"
       onMouseEnter={(e) => setAnchor(e.currentTarget)} onMouseLeave={() => setAnchor(null)}>
+      <svg width="58" height="58" className="-rotate-90 absolute top-0">
+        <circle cx="29" cy="29" r={r} fill="var(--c-base)" stroke="var(--c-edge)" strokeWidth="5.5" />
+        <circle cx="29" cy="29" r={r} fill="none" stroke={sColor} strokeWidth="5.5" strokeLinecap="round"
+          strokeDasharray={circ} strokeDashoffset={circ * (1 - fill)} />
+      </svg>
+      <span className="absolute top-0 w-[58px] h-[58px] flex items-center justify-center text-[18px] font-extrabold tabular-nums" style={{ color: sColor }}>
+        {score != null ? score.toFixed(1) : "—"}
+      </span>
       {place && (
-        <span className={`text-[10px] font-bold mb-0.5 ${isMvp ? "mvp-text" : isAce ? "text-cyan-300" : "text-gray-500"}`}>{place}</span>
-      )}
-      <div className="relative w-[56px] h-[56px] flex items-center justify-center">
-        <svg width="56" height="56" className="-rotate-90">
-          <circle cx="28" cy="28" r={r} fill="none" stroke="var(--c-edge)" strokeWidth="4.5" />
-          <circle cx="28" cy="28" r={r} fill="none" stroke={sColor} strokeWidth="4.5" strokeLinecap="round"
-            strokeDasharray={circ} strokeDashoffset={circ * (1 - fill)} />
-        </svg>
-        <span className="absolute text-[18px] font-extrabold tabular-nums" style={{ color: sColor }}>
-          {score != null ? score.toFixed(1) : "—"}
+        <span className={`absolute bottom-0 px-1.5 py-px rounded-full text-[9px] font-bold leading-none border ${badgeCls}`}>
+          {place}
         </span>
-      </div>
+      )}
       {anchor && (
         <Tooltip anchorEl={anchor}>
           <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-56">
+            {/* Oynayış yorumu (perfLabel) — en üstte: yön oku + etiket + sıra + açıklama */}
+            {pa && (
+              <>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className={`flex items-center gap-1.5 text-[13px] font-bold ${pa.cls}`}>
+                    <PerfIcon size={15} strokeWidth={2.6} className="flex-shrink-0" />
+                    {perf.label}
+                  </span>
+                  {place && (
+                    <span className="text-[11px] text-gray-400 font-medium flex-shrink-0">
+                      {place === "MVP" || place === "ACE" ? place : `${place} sıra`}
+                    </span>
+                  )}
+                </div>
+                {perf.desc && <p className="text-[10px] text-gray-400 leading-relaxed mb-2.5">{perf.desc}</p>}
+                <div className="h-px bg-edge mb-2.5" />
+              </>
+            )}
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[11px] text-gray-500 font-medium">ELW Score</span>
               {score != null && <span className="text-xl font-bold" style={{ color: sColor }}>{score.toFixed(1)}</span>}
@@ -176,7 +215,7 @@ function ScoreBlock({ m }) {
                 <div className="h-full rounded-full" style={{ width: `${score * 10}%`, background: sColor }} />
               </div>
             )}
-            <div className="grid grid-cols-3 gap-x-2 mb-2.5 text-center">
+            <div className="grid grid-cols-3 gap-x-2 text-center">
               <div>
                 <p className="text-[9px] text-gray-600">KDA</p>
                 <p className="text-[11px] text-gray-200 font-semibold">{m.kills}/{m.deaths}/{m.assists}</p>
@@ -190,19 +229,6 @@ function ScoreBlock({ m }) {
                 <p className="text-[11px] text-gray-200 font-semibold">{m.damage != null ? fmtDmg(m.damage) : "-"}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {place && (
-                <span className="text-[10px] text-gray-300 bg-edge px-1.5 py-0.5 rounded font-medium">
-                  {place === "MVP" || place === "ACE" ? place : `${place} sıra`}
-                </span>
-              )}
-              {tq && (
-                <span className={`text-[10px] font-semibold ${TQ_TEXT[tq.key] || "text-gray-400"}`}>
-                  {tq.label}{tq.diff != null ? ` (${tq.diff > 0 ? "+" : ""}${tq.diff})` : ""}
-                </span>
-              )}
-            </div>
-            {perf?.desc && <p className="text-[10px] text-gray-500 leading-relaxed mt-2">{perf.desc}</p>}
           </div>
         </Tooltip>
       )}
@@ -215,30 +241,47 @@ function TeamQualityTag({ tq }) {
   const [anchor, setAnchor] = useState(null);
   const color = TQ_DOT[tq.key] || "#94a3b8";
   const diff = tq.diff ?? 0;
+  const myAvg = tq.myAvg, enemyAvg = tq.enemyAvg;
+  const hasAvg = myAvg != null && enemyAvg != null;
+  const myPct = hasAvg && myAvg + enemyAvg > 0 ? (myAvg / (myAvg + enemyAvg)) * 100 : 50;
   return (
     <>
-      <div
-        className="flex items-center justify-center gap-1 mt-1 cursor-help"
-        onMouseEnter={(e) => setAnchor(e.currentTarget)}
-        onMouseLeave={() => setAnchor(null)}
-      >
-        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-        <span className={`text-[10px] font-semibold ${TQ_TEXT[tq.key] || "text-gray-400"}`}>{tq.label}</span>
+      <div className="flex justify-center mt-1">
+        <span
+          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border cursor-help whitespace-nowrap ${TQ_PILL[tq.key] || "text-gray-400 bg-gray-500/10 border-gray-500/30"}`}
+          onMouseEnter={(e) => setAnchor(e.currentTarget)}
+          onMouseLeave={() => setAnchor(null)}
+        >
+          {tq.label}
+        </span>
       </div>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2.5 shadow-2xl shadow-black/90 w-56">
-            <div className="flex items-center gap-2 mb-1.5">
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2.5 shadow-2xl shadow-black/90 w-52">
+            <div className="flex items-center gap-2 mb-2.5">
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
               <span className={`text-xs font-bold ${TQ_TEXT[tq.key] || "text-gray-300"}`}>{tq.label}</span>
             </div>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              Takım arkadaşlarının (sen hariç) ortalama ELW'si, rakip takımınkinden{" "}
-              <b className="text-gray-100">{Math.abs(diff)} puan {diff >= 0 ? "yüksek" : "düşük"}</b>.
-            </p>
-            <p className="text-[10px] text-gray-600 mt-1.5 leading-relaxed">
-              Lobi ne kadar zorsa skorun o kadar değerlidir.
-            </p>
+            {hasAvg ? (
+              <>
+                {/* Bizim takım vs rakip — ortalama ELW gücü kıyası */}
+                <div className="flex items-center justify-between text-[10px] font-semibold mb-1">
+                  <span className="text-blue-400">Bizim {myAvg}</span>
+                  <span className="text-red-400">Rakip {enemyAvg}</span>
+                </div>
+                <div className="flex h-2 rounded-full overflow-hidden bg-edge">
+                  <div style={{ width: `${myPct}%`, background: "#60a5fa" }} />
+                  <div style={{ width: `${100 - myPct}%`, background: "#f87171" }} />
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1.5">
+                  Güç farkı <b className="text-gray-300">{diff > 0 ? "+" : ""}{diff}</b>
+                </p>
+              </>
+            ) : (
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                Takımın rakipten <b className="text-gray-100">{Math.abs(diff)} puan {diff < 0 ? "zayıf" : "güçlü"}</b>.
+              </p>
+            )}
           </div>
         </Tooltip>
       )}
@@ -246,43 +289,18 @@ function TeamQualityTag({ tq }) {
   );
 }
 
-// Koridor farm kıyası "X vs Y cs" — hover'da zengin tooltip (sen / rakip / fark)
-function LaneCsCompare({ m }) {
-  const [anchor, setAnchor] = useState(null);
-  const oppCs = m.cs - m.csDiff;
-  const ahead = m.csDiff > 0, behind = m.csDiff < 0;
+// Skor yanı stat bloğu — KDA oranı (renkli) + KP + CS/dk. Değer-önce kompakt, hizalı 2-kolon.
+function StatBlock({ m }) {
+  const kdaStr = typeof m.kda === "number" ? m.kda.toFixed(2) : (m.kda ?? "-");
   return (
-    <>
-      <span
-        className="text-[10px] font-medium tabular-nums whitespace-nowrap cursor-help"
-        onMouseEnter={(e) => setAnchor(e.currentTarget)}
-        onMouseLeave={() => setAnchor(null)}
-      >
-        <span className={ahead ? "text-emerald-400 font-bold" : behind ? "text-red-400 font-bold" : "text-gray-200 font-bold"}>{m.cs}</span>
-        <span className="text-gray-600 font-normal"> vs </span>
-        <span className="text-gray-400">{oppCs}</span>
-        <span className="text-gray-600 font-normal"> cs</span>
-      </span>
-      {anchor && (
-        <Tooltip anchorEl={anchor}>
-          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2.5 shadow-2xl shadow-black/90 w-44">
-            <p className="text-[11px] text-gray-500 font-medium mb-1.5">Koridor farm kıyası</p>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-gray-400">Sen</span>
-              <span className="font-bold text-gray-100 tabular-nums">{m.cs} CS</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px] mt-0.5">
-              <span className="text-gray-400">Rakip</span>
-              <span className="font-bold text-gray-100 tabular-nums">{oppCs} CS</span>
-            </div>
-            <div className="h-px bg-edge my-1.5" />
-            <p className={`text-[11px] font-semibold ${ahead ? "text-emerald-400" : behind ? "text-red-400" : "text-gray-400"}`}>
-              {ahead ? `${m.csDiff} CS öndesin` : behind ? `${-m.csDiff} CS geridesin` : "Eşitsiniz"}
-            </p>
-          </div>
-        </Tooltip>
-      )}
-    </>
+    <div className="grid grid-cols-[auto_auto] gap-x-1.5 items-center text-[10px] leading-tight">
+      <span className={`text-right font-bold tabular-nums ${kdaColor(m.kda)}`}>{kdaStr}</span>
+      <span className="text-gray-500 font-medium">KDA</span>
+      <span className="text-right font-semibold tabular-nums text-gray-300">{m.kp != null ? `${m.kp}%` : "-"}</span>
+      <span className="text-gray-500 font-medium">KP</span>
+      <span className="text-right font-semibold tabular-nums text-gray-300">{m.csPerMin != null ? m.csPerMin : "-"}</span>
+      <span className="text-gray-500 font-medium">CS/dk</span>
+    </div>
   );
 }
 
@@ -297,23 +315,19 @@ export default function MatchCardPro({ match: m, expanded }) {
 
   return (
     <div className={`${rowAccent} ${rowBg} hover:bg-hover transition-colors`}>
-      <div className="flex items-center gap-2.5 px-3.5 py-2">
-        {/* 1) ŞAMPİYON (kendi lane ikonu + sinerji eşi köşede, eşin rol ikonuyla) + SPELL + RUNE */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+      <div className="flex items-stretch px-3.5 py-2">
+        {/* 1) ŞAMPİYON + RUNE — sabit sol kolon (spell'ler eşyaların soluna taşındı) */}
+        <div className="flex items-center gap-1.5 flex-shrink-0 basis-[84px]">
           <ChampPortrait champ={m.champion} corner={m.laneDuo} cornerRole={m.laneDuo?.role || m.partnerRole}
             size={50} cornerSize={26} role={m.role} roleSize={17} />
-          <div className="flex flex-col gap-1">
-            {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={21} height={21} className="rounded" title={m.spells[0].name} />}
-            {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={21} height={21} className="rounded" title={m.spells[1].name} />}
-          </div>
           <RuneTooltip runes={m.runes} keystoneSize={21} subTreeSize={21} />
         </div>
 
         {/* 2) SONUÇ + queue/LP + süre·zaman */}
-        <div className="w-[74px] flex-shrink-0 leading-tight">
+        <div className="flex flex-col justify-center flex-shrink-0 basis-[80px] leading-tight border-l border-edge/25 pl-3">
           <p className={`text-[13px] font-bold ${resClr}`}>{resTxt}</p>
           {m.lpChange != null ? (
-            <p className={`text-[11px] font-bold ${m.lpChange > 0 ? "text-emerald-400" : "text-red-400"}`}>
+            <p className={`text-[11px] font-bold ${m.lpChange > 0 ? "text-blue-400" : "text-red-400"}`}>
               {m.lpChange > 0 ? "+" : ""}{m.lpChange} LP
             </p>
           ) : (
@@ -324,63 +338,42 @@ export default function MatchCardPro({ match: m, expanded }) {
           </p>
         </div>
 
-        {/* 3) KDA (k/d/a) + ALTINDA takım kalitesi (iyi/kötü takım) */}
-        <div className="w-[96px] flex-shrink-0 text-center border-l border-edge/40 pl-2.5">
+        {/* 3) KDA (k/d/a) + ALTINDA takım kalitesi pill (KP stat bloğunda) */}
+        <div className="flex flex-col items-center justify-center flex-shrink-0 basis-[100px] text-center border-l border-edge/25 px-3">
           <p className="text-[15px] font-bold text-gray-50 leading-tight">
             {m.kills}<span className="text-gray-500 font-normal"> / </span><span className="text-red-400">{m.deaths}</span><span className="text-gray-500 font-normal"> / </span>{m.assists}
           </p>
           {!remake && tq && <TeamQualityTag tq={tq} />}
         </div>
 
-        {/* 4) KDA oranı + CS/dk + KP — kişisel stat bloğu (CS farkı koridor rakibine taşındı) */}
-        <div className="w-[84px] flex-shrink-0 text-center border-l border-edge/40 pl-2.5 leading-tight">
-          <p className={`text-[11px] font-mono font-bold ${remake ? "text-gray-500" : kdaColor(m.kda)}`}>
-            {remake ? "-" : typeof m.kda === "number" ? `${m.kda.toFixed(2)} KDA` : `${m.kda} KDA`}
-          </p>
-          <p className="text-[11px] text-gray-300 mt-0.5 whitespace-nowrap">
-            {m.csPerMin != null ? m.csPerMin : (m.cs ?? "-")}<span className="text-gray-500"> CS/dk</span>
-          </p>
-          <p className="text-[11px] text-gray-400 mt-0.5 whitespace-nowrap">
-            {m.kp != null ? m.kp : "-"}<span className="text-gray-500">% KP</span>
-          </p>
-        </div>
-
-        {/* 5) ITEMS */}
-        <div className="flex-shrink-0 border-l border-edge/40 pl-2.5">
-          <div className="flex gap-0.5">
-            {[0, 1, 2].map((i) => (m.items[i]
-              ? <ItemTooltip key={i} item={m.items[i]} size={24} />
-              : <div key={i} className="w-[24px] h-[24px] rounded bg-edge" />))}
-          </div>
-          <div className="flex gap-0.5 mt-0.5">
-            {[3, 4, 5].map((i) => (m.items[i]
-              ? <ItemTooltip key={i} item={m.items[i]} size={24} />
-              : <div key={i} className="w-[24px] h-[24px] rounded bg-edge" />))}
-            {m.items[6]
-              ? <ItemTooltip item={m.items[6]} size={24} />
-              : <div className="w-[24px] h-[24px] rounded-full bg-edge" />}
+        {/* 4) SPELL'LER (eşyaların solunda, üst üste) + ITEMS tek satır */}
+        <div className="flex items-center justify-center flex-1 border-l border-edge/25 px-3">
+          <div className="flex items-center gap-1.5">
+            <div className="flex flex-col gap-0.5 flex-shrink-0">
+              {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={22} height={22} className="rounded" title={m.spells[0].name} />}
+              {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={22} height={22} className="rounded" title={m.spells[1].name} />}
+            </div>
+            <div className="flex gap-1">
+              {[0, 1, 2, 3, 4, 5].map((i) => (m.items[i]
+                ? <ItemTooltip key={i} item={m.items[i]} size={26} />
+                : <div key={i} className="w-[26px] h-[26px] rounded bg-edge" />))}
+              {m.items[6]
+                ? <ItemTooltip item={m.items[6]} size={26} />
+                : <div className="w-[26px] h-[26px] rounded-full bg-edge" />}
+            </div>
           </div>
         </div>
 
-        {/* 6) MATCHUP — koridor rakibi + farm kıyası (senin CS'in vs rakibin CS'i) */}
-        {m.laneOpponent && (
-          <div className="hidden md:flex flex-col items-center gap-1 leading-none flex-shrink-0 border-l border-edge/40 pl-2.5">
-            <span className="text-[9px] text-gray-600 font-semibold uppercase tracking-wider">Karşı</span>
-            <ChampPortrait champ={m.laneOpponent} corner={m.enemyDuo} cornerRole={m.enemyDuo?.role || m.partnerRole}
-              size={44} cornerSize={22} role={m.laneOpponent?.role || m.role} roleSize={15} />
-            {!remake && m.csDiff != null && m.cs != null ? (
-              <LaneCsCompare m={m} />
-            ) : (
-              <span className="h-[14px]" />
-            )}
-          </div>
-        )}
+        {/* 5) STAT bloğu — KDA/KP/CS-dk (skorun solunda; mobilde gizli) */}
+        <div className="hidden md:flex items-center justify-center flex-shrink-0 basis-[86px] border-l border-edge/25 px-3">
+          {!remake && <StatBlock m={m} />}
+        </div>
 
-        {/* 7) ELW SKOR — sağa yaslı odak nokta (hover'da tooltip) */}
-        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+        {/* 6) ELW SKOR dial + aç/kapa — sabit sağ kolon */}
+        <div className="flex items-center justify-center gap-1 flex-shrink-0 border-l border-edge/25 pl-3">
           {!remake && m.ranking
             ? <ScoreBlock m={m} />
-            : <div className="w-[64px] flex-shrink-0" />}
+            : <div className="w-[58px] flex-shrink-0" />}
           <ChevronDown size={16} className={`text-gray-500 transition-transform flex-shrink-0 ${expanded ? "rotate-180" : ""}`} />
         </div>
       </div>

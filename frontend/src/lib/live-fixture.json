@@ -1,0 +1,1992 @@
+{
+  "status": "ingame",
+  "mock": true,
+  "gameId": 7000000001,
+  "gameStartTime": 0,
+  "gameLength": 932,
+  "mapId": 11,
+  "queueId": 420,
+  "queueName": "SoloQ",
+  "searchedPuuid": "mock-ally-1",
+  "searchedTeamId": 100,
+  "profile": {
+    "gameName": "elw",
+    "tagLine": "0000",
+    "profileIcon": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/profileicon/4659.png"
+  },
+  "bans": [],
+  "allyTeam": [
+    {
+      "puuid": "mock-ally-1",
+      "summonerName": "elw",
+      "tagLine": "0000",
+      "teamId": 100,
+      "isMe": true,
+      "isBot": false,
+      "championId": 266,
+      "role": "TOP",
+      "champion": {
+        "id": "Aatrox",
+        "name": "Aatrox",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Aatrox.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Teleport",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerTeleport.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Conqueror",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/Conqueror/Conqueror.png"
+        },
+        "primary": {
+          "name": "Precision"
+        },
+        "secondary": {
+          "name": "Resolve",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7204_Resolve.png"
+        },
+        "all": [
+          {
+            "name": "Conqueror",
+            "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/Conqueror/Conqueror.png"
+          },
+          {
+            "name": "Triumph",
+            "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/Triumph.png"
+          },
+          {
+            "name": "Legend: Alacrity",
+            "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/LegendAlacrity/LegendAlacrity.png"
+          },
+          {
+            "name": "Last Stand",
+            "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/LastStand/LastStand.png"
+          },
+          {
+            "name": "Conditioning",
+            "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Resolve/Conditioning/Conditioning.png"
+          },
+          {
+            "name": "Overgrowth",
+            "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Resolve/Overgrowth/Overgrowth.png"
+          }
+        ]
+      },
+      "rank": {
+        "solo": {
+          "tier": "DIAMOND",
+          "rank": "II",
+          "lp": 64,
+          "winRate": 54,
+          "wins": 130,
+          "losses": 111
+        },
+        "flex": null
+      }
+    },
+    {
+      "puuid": "mock-ally-2",
+      "summonerName": "JungleDiff",
+      "tagLine": "TR1",
+      "teamId": 100,
+      "isMe": false,
+      "isBot": false,
+      "championId": 64,
+      "role": "JUNGLE",
+      "champion": {
+        "id": "LeeSin",
+        "name": "Lee Sin",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/LeeSin.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Smite",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerSmite.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Hail of Blades",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/HailOfBlades/HailOfBlades.png"
+        },
+        "primary": {
+          "name": "Domination"
+        },
+        "secondary": {
+          "name": "Precision",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7201_Precision.png"
+        },
+        "all": [
+          {
+            "name": "Hail of Blades",
+            "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/HailOfBlades/HailOfBlades.png"
+          },
+          {
+            "name": "Sudden Impact",
+            "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/SuddenImpact/SuddenImpact.png"
+          }
+        ]
+      },
+      "rank": {
+        "solo": {
+          "tier": "DIAMOND",
+          "rank": "IV",
+          "lp": 12,
+          "winRate": 51,
+          "wins": 96,
+          "losses": 92
+        },
+        "flex": null
+      }
+    },
+    {
+      "puuid": "mock-ally-3",
+      "summonerName": "MidOrFeed",
+      "tagLine": "EUW",
+      "teamId": 100,
+      "isMe": false,
+      "isBot": false,
+      "championId": 103,
+      "role": "MIDDLE",
+      "champion": {
+        "id": "Ahri",
+        "name": "Ahri",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Ahri.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Ignite",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerDot.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Electrocute",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/Electrocute/Electrocute.png"
+        },
+        "primary": {
+          "name": "Domination"
+        },
+        "secondary": {
+          "name": "Sorcery",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7202_Sorcery.png"
+        }
+      },
+      "rank": {
+        "solo": {
+          "tier": "EMERALD",
+          "rank": "I",
+          "lp": 88,
+          "winRate": 56,
+          "wins": 78,
+          "losses": 61
+        },
+        "flex": null
+      }
+    },
+    {
+      "puuid": "mock-ally-4",
+      "summonerName": "100CSby10",
+      "tagLine": "TR1",
+      "teamId": 100,
+      "isMe": false,
+      "isBot": false,
+      "championId": 222,
+      "role": "BOTTOM",
+      "champion": {
+        "id": "Jinx",
+        "name": "Jinx",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Jinx.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Heal",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerHeal.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Lethal Tempo",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/LethalTempo/LethalTempoTemp.png"
+        },
+        "primary": {
+          "name": "Precision"
+        },
+        "secondary": {
+          "name": "Domination",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7200_Domination.png"
+        }
+      },
+      "rank": {
+        "solo": {
+          "tier": "EMERALD",
+          "rank": "II",
+          "lp": 41,
+          "winRate": 49,
+          "wins": 70,
+          "losses": 73
+        },
+        "flex": null
+      }
+    },
+    {
+      "puuid": "mock-ally-5",
+      "summonerName": "elwyore",
+      "tagLine": "TR1",
+      "teamId": 100,
+      "isMe": false,
+      "isBot": false,
+      "championId": 350,
+      "role": "UTILITY",
+      "champion": {
+        "id": "Yuumi",
+        "name": "Yuumi",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Yuumi.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Ignite",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerDot.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Summon Aery",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/SummonAery/SummonAery.png"
+        },
+        "primary": {
+          "name": "Sorcery"
+        },
+        "secondary": {
+          "name": "Inspiration",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7203_Whimsy.png"
+        }
+      },
+      "rank": {
+        "solo": {
+          "tier": "EMERALD",
+          "rank": "III",
+          "lp": 7,
+          "winRate": 53,
+          "wins": 88,
+          "losses": 78
+        },
+        "flex": null
+      }
+    }
+  ],
+  "enemyTeam": [
+    {
+      "puuid": "mock-enemy-1",
+      "summonerName": "TopGapAndy",
+      "tagLine": "TR1",
+      "teamId": 200,
+      "isMe": false,
+      "isBot": false,
+      "championId": 86,
+      "role": "TOP",
+      "champion": {
+        "id": "Garen",
+        "name": "Garen",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Garen.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Teleport",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerTeleport.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Conqueror",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/Conqueror/Conqueror.png"
+        },
+        "primary": {
+          "name": "Precision"
+        },
+        "secondary": {
+          "name": "Resolve",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7204_Resolve.png"
+        }
+      },
+      "rank": {
+        "solo": {
+          "tier": "DIAMOND",
+          "rank": "III",
+          "lp": 33,
+          "winRate": 52,
+          "wins": 110,
+          "losses": 101
+        },
+        "flex": null
+      }
+    },
+    {
+      "puuid": "mock-enemy-2",
+      "summonerName": "BugSplat",
+      "tagLine": "TR1",
+      "teamId": 200,
+      "isMe": false,
+      "isBot": false,
+      "championId": 121,
+      "role": "JUNGLE",
+      "champion": {
+        "id": "Khazix",
+        "name": "Kha'Zix",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Khazix.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Smite",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerSmite.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Electrocute",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/Electrocute/Electrocute.png"
+        },
+        "primary": {
+          "name": "Domination"
+        },
+        "secondary": {
+          "name": "Precision",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7201_Precision.png"
+        }
+      },
+      "rank": {
+        "solo": {
+          "tier": "DIAMOND",
+          "rank": "I",
+          "lp": 4,
+          "winRate": 55,
+          "wins": 120,
+          "losses": 98
+        },
+        "flex": null
+      }
+    },
+    {
+      "puuid": "mock-enemy-3",
+      "summonerName": "ZedMain99",
+      "tagLine": "TR1",
+      "teamId": 200,
+      "isMe": false,
+      "isBot": false,
+      "championId": 238,
+      "role": "MIDDLE",
+      "champion": {
+        "id": "Zed",
+        "name": "Zed",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Zed.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Ignite",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerDot.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Electrocute",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/Electrocute/Electrocute.png"
+        },
+        "primary": {
+          "name": "Domination"
+        },
+        "secondary": {
+          "name": "Precision",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7201_Precision.png"
+        }
+      },
+      "rank": {
+        "solo": {
+          "tier": "MASTER",
+          "rank": "",
+          "lp": 122,
+          "winRate": 57,
+          "wins": 210,
+          "losses": 158
+        },
+        "flex": null
+      }
+    },
+    {
+      "puuid": "mock-enemy-4",
+      "summonerName": "HeadshotPls",
+      "tagLine": "TR1",
+      "teamId": 200,
+      "isMe": false,
+      "isBot": false,
+      "championId": 51,
+      "role": "BOTTOM",
+      "champion": {
+        "id": "Caitlyn",
+        "name": "Caitlyn",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Caitlyn.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Heal",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerHeal.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Fleet Footwork",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/FleetFootwork/FleetFootwork.png"
+        },
+        "primary": {
+          "name": "Precision"
+        },
+        "secondary": {
+          "name": "Inspiration",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7203_Whimsy.png"
+        }
+      },
+      "rank": {
+        "solo": {
+          "tier": "EMERALD",
+          "rank": "I",
+          "lp": 71,
+          "winRate": 50,
+          "wins": 75,
+          "losses": 75
+        },
+        "flex": null
+      }
+    },
+    {
+      "puuid": "mock-enemy-5",
+      "summonerName": "PixGuardian",
+      "tagLine": "TR1",
+      "teamId": 200,
+      "isMe": false,
+      "isBot": false,
+      "championId": 117,
+      "role": "UTILITY",
+      "champion": {
+        "id": "Lulu",
+        "name": "Lulu",
+        "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Lulu.png"
+      },
+      "spells": [
+        {
+          "name": "Flash",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerFlash.png"
+        },
+        {
+          "name": "Exhaust",
+          "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/spell/SummonerExhaust.png"
+        }
+      ],
+      "runes": {
+        "keystone": {
+          "name": "Summon Aery",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/SummonAery/SummonAery.png"
+        },
+        "primary": {
+          "name": "Sorcery"
+        },
+        "secondary": {
+          "name": "Resolve",
+          "icon": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7204_Resolve.png"
+        }
+      },
+      "rank": {
+        "solo": {
+          "tier": "EMERALD",
+          "rank": "IV",
+          "lp": 22,
+          "winRate": 48,
+          "wins": 60,
+          "losses": 65
+        },
+        "flex": null
+      }
+    }
+  ],
+  "players": {
+    "mock-ally-1": {
+      "playstyleBadges": [
+        {
+          "key": "solo_killer",
+          "label": "Düellocu",
+          "category": "combat",
+          "tier": "challenger",
+          "count": 7,
+          "rate": 70
+        },
+        {
+          "key": "damage_dealer",
+          "label": "Hasar Makinesi",
+          "category": "damage",
+          "tier": "gold",
+          "count": 6,
+          "rate": 60
+        },
+        {
+          "key": "team_player",
+          "label": "Takım Oyuncusu",
+          "category": "teamplay",
+          "tier": "gold",
+          "count": 5,
+          "rate": 50
+        }
+      ],
+      "recentStats": {
+        "winRate": 70,
+        "wins": 7,
+        "losses": 3,
+        "totalGames": 10,
+        "avgKDA": {
+          "kills": 8.2,
+          "deaths": 4.1,
+          "assists": 6.4,
+          "ratio": 3.56
+        },
+        "mainRole": "Top Main",
+        "roleStats": [
+          {
+            "role": "TOP",
+            "label": "Top",
+            "games": 8,
+            "winRate": 75
+          },
+          {
+            "role": "JUNGLE",
+            "label": "Jungle",
+            "games": 2,
+            "winRate": 50
+          }
+        ]
+      },
+      "elwAverage": 7.4,
+      "championStat": {
+        "championName": "Aatrox",
+        "games": 6,
+        "wins": 5,
+        "winRate": 83,
+        "avgKda": {
+          "kills": 9.1,
+          "deaths": 3.8,
+          "assists": 5.2,
+          "ratio": 3.76
+        },
+        "source": "recent"
+      },
+      "recentGames": [
+        {
+          "matchId": "m1",
+          "champion": {
+            "id": "Aatrox",
+            "name": "Aatrox",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Aatrox.png"
+          },
+          "win": true,
+          "kills": 11,
+          "deaths": 3,
+          "assists": 6,
+          "kda": 5.67,
+          "role": "TOP",
+          "elwScore": 8.2,
+          "matchRank": 1
+        },
+        {
+          "matchId": "m2",
+          "champion": {
+            "id": "Aatrox",
+            "name": "Aatrox",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Aatrox.png"
+          },
+          "win": true,
+          "kills": 8,
+          "deaths": 2,
+          "assists": 4,
+          "kda": 6,
+          "role": "TOP",
+          "elwScore": 7.4,
+          "matchRank": 2
+        },
+        {
+          "matchId": "m3",
+          "champion": {
+            "id": "Camille",
+            "name": "Camille",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Camille.png"
+          },
+          "win": false,
+          "kills": 4,
+          "deaths": 7,
+          "assists": 3,
+          "kda": 1,
+          "role": "TOP",
+          "elwScore": 7.1,
+          "matchRank": 2
+        },
+        {
+          "matchId": "m4",
+          "champion": {
+            "id": "Aatrox",
+            "name": "Aatrox",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Aatrox.png"
+          },
+          "win": true,
+          "kills": 10,
+          "deaths": 5,
+          "assists": 7,
+          "kda": 3.4,
+          "role": "TOP",
+          "elwScore": 7.5,
+          "matchRank": 2
+        },
+        {
+          "matchId": "m5",
+          "champion": {
+            "id": "Sett",
+            "name": "Sett",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Sett.png"
+          },
+          "win": true,
+          "kills": 6,
+          "deaths": 4,
+          "assists": 9,
+          "kda": 3.75,
+          "role": "TOP",
+          "elwScore": 7.2,
+          "matchRank": 2
+        }
+      ],
+      "build": {
+        "champion": {
+          "id": "Aatrox",
+          "name": "Aatrox"
+        },
+        "items": [
+          {
+            "id": 6630,
+            "name": "Goredrinker",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/6630.png"
+          },
+          {
+            "id": 3047,
+            "name": "Plated Steelcaps",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3047.png"
+          },
+          {
+            "id": 6333,
+            "name": "Death's Dance",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/6333.png"
+          },
+          {
+            "id": 3071,
+            "name": "Black Cleaver",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3071.png"
+          },
+          {
+            "id": 3053,
+            "name": "Sterak's Gage",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3053.png"
+          },
+          null,
+          {
+            "id": 3340,
+            "name": "Stealth Ward",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3340.png"
+          }
+        ],
+        "win": true,
+        "matchId": "m1"
+      }
+    },
+    "mock-ally-2": {
+      "playstyleBadges": [
+        {
+          "key": "objective_steal",
+          "label": "Hırsız",
+          "category": "objective",
+          "tier": "diamond",
+          "count": 3,
+          "rate": 30
+        },
+        {
+          "key": "team_player",
+          "label": "Takım Oyuncusu",
+          "category": "teamplay",
+          "tier": "gold",
+          "count": 6,
+          "rate": 60
+        }
+      ],
+      "recentStats": {
+        "winRate": 50,
+        "wins": 5,
+        "losses": 5,
+        "totalGames": 10,
+        "avgKDA": {
+          "kills": 6.1,
+          "deaths": 5.4,
+          "assists": 9.2,
+          "ratio": 2.83
+        },
+        "mainRole": "Jungle Main",
+        "roleStats": [
+          {
+            "role": "JUNGLE",
+            "label": "Jungle",
+            "games": 9,
+            "winRate": 52
+          },
+          {
+            "role": "TOP",
+            "label": "Top",
+            "games": 1,
+            "winRate": 0
+          }
+        ]
+      },
+      "elwAverage": 5.7,
+      "championStat": {
+        "championName": "Lee Sin",
+        "games": 4,
+        "wins": 2,
+        "winRate": 50,
+        "avgKda": {
+          "kills": 7,
+          "deaths": 5.5,
+          "assists": 8,
+          "ratio": 2.73
+        },
+        "source": "recent"
+      },
+      "recentGames": [
+        {
+          "matchId": "j1",
+          "champion": {
+            "id": "LeeSin",
+            "name": "Lee Sin",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/LeeSin.png"
+          },
+          "win": true,
+          "kills": 9,
+          "deaths": 4,
+          "assists": 11,
+          "kda": 5,
+          "role": "JUNGLE",
+          "elwScore": 7.1,
+          "matchRank": 2
+        },
+        {
+          "matchId": "j2",
+          "champion": {
+            "id": "Viego",
+            "name": "Viego",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Viego.png"
+          },
+          "win": false,
+          "kills": 3,
+          "deaths": 8,
+          "assists": 5,
+          "kda": 1,
+          "role": "JUNGLE",
+          "elwScore": 3.9,
+          "matchRank": 9
+        },
+        {
+          "matchId": "j3",
+          "champion": {
+            "id": "LeeSin",
+            "name": "Lee Sin",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/LeeSin.png"
+          },
+          "win": true,
+          "kills": 7,
+          "deaths": 6,
+          "assists": 10,
+          "kda": 2.83,
+          "role": "JUNGLE",
+          "elwScore": 5.8,
+          "matchRank": 5
+        },
+        {
+          "matchId": "j4",
+          "champion": {
+            "id": "Graves",
+            "name": "Graves",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Graves.png"
+          },
+          "win": false,
+          "kills": 5,
+          "deaths": 5,
+          "assists": 6,
+          "kda": 2.2,
+          "role": "JUNGLE",
+          "elwScore": 5.1,
+          "matchRank": 6
+        }
+      ],
+      "build": {
+        "champion": {
+          "id": "LeeSin",
+          "name": "Lee Sin"
+        },
+        "items": [
+          {
+            "id": 3142,
+            "name": "Youmuu's Ghostblade",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3142.png"
+          },
+          {
+            "id": 3158,
+            "name": "Ionian Boots",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3158.png"
+          },
+          {
+            "id": 6692,
+            "name": "Eclipse",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/6692.png"
+          },
+          {
+            "id": 3814,
+            "name": "Edge of Night",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3814.png"
+          },
+          null,
+          null,
+          {
+            "id": 3340,
+            "name": "Stealth Ward",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3340.png"
+          }
+        ],
+        "win": true,
+        "matchId": "j1"
+      }
+    },
+    "mock-ally-3": {
+      "playstyleBadges": [
+        {
+          "key": "high_dpm",
+          "label": "Yüksek DPM",
+          "category": "damage",
+          "tier": "gold",
+          "count": 5,
+          "rate": 50
+        },
+        {
+          "key": "high_kda",
+          "label": "Yüksek KDA",
+          "category": "combat",
+          "tier": "gold",
+          "count": 4,
+          "rate": 40
+        }
+      ],
+      "recentStats": {
+        "winRate": 60,
+        "wins": 6,
+        "losses": 4,
+        "totalGames": 10,
+        "avgKDA": {
+          "kills": 9.4,
+          "deaths": 4,
+          "assists": 7.1,
+          "ratio": 4.13
+        },
+        "mainRole": "Top Main",
+        "roleStats": [
+          {
+            "role": "TOP",
+            "label": "Top",
+            "games": 8,
+            "winRate": 62
+          },
+          {
+            "role": "JUNGLE",
+            "label": "Jungle",
+            "games": 2,
+            "winRate": 50
+          }
+        ]
+      },
+      "elwAverage": 6.4,
+      "championStat": null,
+      "recentGames": [
+        {
+          "matchId": "a1",
+          "champion": {
+            "id": "Sett",
+            "name": "Sett",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Sett.png"
+          },
+          "win": true,
+          "kills": 9,
+          "deaths": 3,
+          "assists": 5,
+          "kda": 4.67,
+          "role": "TOP",
+          "elwScore": 7.2,
+          "matchRank": 2
+        },
+        {
+          "matchId": "a2",
+          "champion": {
+            "id": "Darius",
+            "name": "Darius",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Darius.png"
+          },
+          "win": false,
+          "kills": 6,
+          "deaths": 6,
+          "assists": 4,
+          "kda": 1.67,
+          "role": "TOP",
+          "elwScore": 5,
+          "matchRank": 6
+        },
+        {
+          "matchId": "a3",
+          "champion": {
+            "id": "Sett",
+            "name": "Sett",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Sett.png"
+          },
+          "win": true,
+          "kills": 11,
+          "deaths": 4,
+          "assists": 7,
+          "kda": 4.5,
+          "role": "TOP",
+          "elwScore": 6.8,
+          "matchRank": 3
+        }
+      ],
+      "build": null
+    },
+    "mock-ally-4": {
+      "playstyleBadges": [
+        {
+          "key": "gold_maker",
+          "label": "Altın Madencisi",
+          "category": "farming",
+          "tier": "gold",
+          "count": 7,
+          "rate": 70
+        },
+        {
+          "key": "cs_master",
+          "label": "CS Ustası",
+          "category": "farming",
+          "tier": "emerald",
+          "count": 4,
+          "rate": 40
+        }
+      ],
+      "recentStats": {
+        "winRate": 50,
+        "wins": 5,
+        "losses": 5,
+        "totalGames": 10,
+        "avgKDA": {
+          "kills": 7.8,
+          "deaths": 5.9,
+          "assists": 5,
+          "ratio": 2.17
+        },
+        "mainRole": "ADC Main",
+        "roleStats": [
+          {
+            "role": "BOTTOM",
+            "label": "ADC",
+            "games": 10,
+            "winRate": 50
+          }
+        ]
+      },
+      "elwAverage": 5.4,
+      "championStat": {
+        "championName": "Jinx",
+        "games": 6,
+        "wins": 3,
+        "winRate": 50,
+        "avgKda": {
+          "kills": 8.5,
+          "deaths": 5.2,
+          "assists": 6,
+          "ratio": 2.79
+        },
+        "source": "recent"
+      },
+      "recentGames": [
+        {
+          "matchId": "c1",
+          "champion": {
+            "id": "Jinx",
+            "name": "Jinx",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Jinx.png"
+          },
+          "win": true,
+          "kills": 14,
+          "deaths": 4,
+          "assists": 8,
+          "kda": 5.5,
+          "role": "BOTTOM",
+          "elwScore": 7.6,
+          "matchRank": 2
+        },
+        {
+          "matchId": "c2",
+          "champion": {
+            "id": "Jinx",
+            "name": "Jinx",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Jinx.png"
+          },
+          "win": false,
+          "kills": 5,
+          "deaths": 9,
+          "assists": 3,
+          "kda": 0.89,
+          "role": "BOTTOM",
+          "elwScore": 3.5,
+          "matchRank": 9
+        },
+        {
+          "matchId": "c3",
+          "champion": {
+            "id": "Ezreal",
+            "name": "Ezreal",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Ezreal.png"
+          },
+          "win": true,
+          "kills": 8,
+          "deaths": 3,
+          "assists": 7,
+          "kda": 5,
+          "role": "BOTTOM",
+          "elwScore": 6.7,
+          "matchRank": 3
+        }
+      ],
+      "build": {
+        "champion": {
+          "id": "Jinx",
+          "name": "Jinx"
+        },
+        "items": [
+          {
+            "id": 3031,
+            "name": "Infinity Edge",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3031.png"
+          },
+          {
+            "id": 3006,
+            "name": "Berserker's Greaves",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3006.png"
+          },
+          {
+            "id": 3094,
+            "name": "Rapid Firecannon",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3094.png"
+          },
+          {
+            "id": 3036,
+            "name": "Lord Dominik's Regards",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3036.png"
+          },
+          null,
+          null,
+          {
+            "id": 3363,
+            "name": "Farsight Alteration",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3363.png"
+          }
+        ],
+        "win": true,
+        "matchId": "c1"
+      }
+    },
+    "mock-ally-5": {
+      "playstyleBadges": [
+        {
+          "key": "vision_master",
+          "label": "Görüş Ustası",
+          "category": "vision",
+          "tier": "diamond",
+          "count": 8,
+          "rate": 80
+        },
+        {
+          "key": "ward_master",
+          "label": "Ward Ustası",
+          "category": "vision",
+          "tier": "emerald",
+          "count": 6,
+          "rate": 60
+        },
+        {
+          "key": "team_player",
+          "label": "Takım Oyuncusu",
+          "category": "teamplay",
+          "tier": "gold",
+          "count": 5,
+          "rate": 50
+        }
+      ],
+      "recentStats": {
+        "winRate": 60,
+        "wins": 6,
+        "losses": 4,
+        "totalGames": 10,
+        "avgKDA": {
+          "kills": 1.8,
+          "deaths": 6,
+          "assists": 16.4,
+          "ratio": 3.03
+        },
+        "mainRole": "Support Main",
+        "roleStats": [
+          {
+            "role": "UTILITY",
+            "label": "Destek",
+            "games": 11,
+            "winRate": 60
+          }
+        ]
+      },
+      "elwAverage": 7.4,
+      "championStat": {
+        "championName": "Yuumi",
+        "games": 4,
+        "wins": 3,
+        "winRate": 75,
+        "avgKda": {
+          "kills": 1,
+          "deaths": 2.8,
+          "assists": 20,
+          "ratio": 7.5
+        },
+        "source": "recent"
+      },
+      "recentGames": [
+        {
+          "matchId": "y1",
+          "champion": {
+            "id": "Yuumi",
+            "name": "Yuumi",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Yuumi.png"
+          },
+          "win": true,
+          "kills": 1,
+          "deaths": 3,
+          "assists": 24,
+          "kda": 8.33,
+          "role": "UTILITY",
+          "elwScore": 7.8,
+          "matchRank": 2
+        },
+        {
+          "matchId": "y2",
+          "champion": {
+            "id": "Yuumi",
+            "name": "Yuumi",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Yuumi.png"
+          },
+          "win": true,
+          "kills": 0,
+          "deaths": 2,
+          "assists": 19,
+          "kda": 9.5,
+          "role": "UTILITY",
+          "elwScore": 7.2,
+          "matchRank": 2
+        },
+        {
+          "matchId": "y3",
+          "champion": {
+            "id": "Soraka",
+            "name": "Soraka",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Soraka.png"
+          },
+          "win": false,
+          "kills": 2,
+          "deaths": 5,
+          "assists": 16,
+          "kda": 3.6,
+          "role": "UTILITY",
+          "elwScore": 7.1,
+          "matchRank": 2
+        },
+        {
+          "matchId": "y4",
+          "champion": {
+            "id": "Yuumi",
+            "name": "Yuumi",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Yuumi.png"
+          },
+          "win": true,
+          "kills": 1,
+          "deaths": 1,
+          "assists": 21,
+          "kda": 22,
+          "role": "UTILITY",
+          "elwScore": 7.6,
+          "matchRank": 2
+        }
+      ],
+      "build": {
+        "champion": {
+          "id": "Yuumi",
+          "name": "Yuumi"
+        },
+        "items": [
+          {
+            "id": 3190,
+            "name": "Locket of the Iron Solari",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3190.png"
+          },
+          {
+            "id": 3047,
+            "name": "Plated Steelcaps",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3047.png"
+          },
+          {
+            "id": 3109,
+            "name": "Knight's Vow",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3109.png"
+          },
+          null,
+          null,
+          null,
+          {
+            "id": 3364,
+            "name": "Oracle Lens",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3364.png"
+          }
+        ],
+        "win": true,
+        "matchId": "t1"
+      }
+    },
+    "mock-enemy-1": {
+      "playstyleBadges": [
+        {
+          "key": "tank",
+          "label": "Duvar",
+          "category": "damage",
+          "tier": "gold",
+          "count": 6,
+          "rate": 60
+        },
+        {
+          "key": "solo_killer",
+          "label": "Düellocu",
+          "category": "combat",
+          "tier": "gold",
+          "count": 4,
+          "rate": 40
+        }
+      ],
+      "recentStats": {
+        "winRate": 52,
+        "wins": 6,
+        "losses": 4,
+        "totalGames": 10,
+        "avgKDA": {
+          "kills": 5,
+          "deaths": 4.8,
+          "assists": 6.2,
+          "ratio": 2.33
+        },
+        "mainRole": "Top Main",
+        "roleStats": [
+          {
+            "role": "TOP",
+            "label": "Top",
+            "games": 8,
+            "winRate": 60
+          },
+          {
+            "role": "JUNGLE",
+            "label": "Jungle",
+            "games": 2,
+            "winRate": 40
+          }
+        ]
+      },
+      "elwAverage": 5.6,
+      "championStat": {
+        "championName": "Garen",
+        "games": 5,
+        "wins": 3,
+        "winRate": 60,
+        "avgKda": {
+          "kills": 6,
+          "deaths": 4,
+          "assists": 5.5,
+          "ratio": 2.88
+        },
+        "source": "recent"
+      },
+      "recentGames": [
+        {
+          "matchId": "g1",
+          "champion": {
+            "id": "Garen",
+            "name": "Garen",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Garen.png"
+          },
+          "win": true,
+          "kills": 7,
+          "deaths": 3,
+          "assists": 5,
+          "kda": 4,
+          "role": "TOP",
+          "elwScore": 6.4,
+          "matchRank": 4
+        },
+        {
+          "matchId": "g2",
+          "champion": {
+            "id": "Garen",
+            "name": "Garen",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Garen.png"
+          },
+          "win": false,
+          "kills": 4,
+          "deaths": 6,
+          "assists": 4,
+          "kda": 1.33,
+          "role": "TOP",
+          "elwScore": 4.6,
+          "matchRank": 7
+        }
+      ],
+      "build": {
+        "champion": {
+          "id": "Garen",
+          "name": "Garen"
+        },
+        "items": [
+          {
+            "id": 6631,
+            "name": "Stridebreaker",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/6631.png"
+          },
+          {
+            "id": 3047,
+            "name": "Plated Steelcaps",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3047.png"
+          },
+          {
+            "id": 3071,
+            "name": "Black Cleaver",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3071.png"
+          },
+          null,
+          null,
+          null,
+          {
+            "id": 3340,
+            "name": "Stealth Ward",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3340.png"
+          }
+        ],
+        "win": true,
+        "matchId": "g1"
+      }
+    },
+    "mock-enemy-2": {
+      "playstyleBadges": [
+        {
+          "key": "solo_killer",
+          "label": "Düellocu",
+          "category": "combat",
+          "tier": "diamond",
+          "count": 6,
+          "rate": 60
+        },
+        {
+          "key": "objective_steal",
+          "label": "Hırsız",
+          "category": "objective",
+          "tier": "grandmaster",
+          "count": 2,
+          "rate": 20
+        }
+      ],
+      "recentStats": {
+        "winRate": 55,
+        "wins": 6,
+        "losses": 5,
+        "totalGames": 11,
+        "avgKDA": {
+          "kills": 9,
+          "deaths": 5,
+          "assists": 6,
+          "ratio": 3
+        },
+        "mainRole": "Jungle Main",
+        "roleStats": [
+          {
+            "role": "JUNGLE",
+            "label": "Jungle",
+            "games": 11,
+            "winRate": 55
+          }
+        ]
+      },
+      "elwAverage": 6,
+      "championStat": {
+        "championName": "Kha'Zix",
+        "games": 7,
+        "wins": 4,
+        "winRate": 57,
+        "avgKda": {
+          "kills": 10,
+          "deaths": 4.5,
+          "assists": 5,
+          "ratio": 3.33
+        },
+        "source": "recent"
+      },
+      "recentGames": [
+        {
+          "matchId": "k1",
+          "champion": {
+            "id": "Khazix",
+            "name": "Kha'Zix",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Khazix.png"
+          },
+          "win": true,
+          "kills": 13,
+          "deaths": 4,
+          "assists": 4,
+          "kda": 4.25,
+          "role": "JUNGLE",
+          "elwScore": 7.8,
+          "matchRank": 2
+        },
+        {
+          "matchId": "k2",
+          "champion": {
+            "id": "Khazix",
+            "name": "Kha'Zix",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Khazix.png"
+          },
+          "win": true,
+          "kills": 9,
+          "deaths": 5,
+          "assists": 6,
+          "kda": 3,
+          "role": "JUNGLE",
+          "elwScore": 6.7,
+          "matchRank": 3
+        },
+        {
+          "matchId": "k3",
+          "champion": {
+            "id": "Khazix",
+            "name": "Kha'Zix",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Khazix.png"
+          },
+          "win": false,
+          "kills": 6,
+          "deaths": 7,
+          "assists": 3,
+          "kda": 1.29,
+          "role": "JUNGLE",
+          "elwScore": 4.8,
+          "matchRank": 7
+        }
+      ],
+      "build": {
+        "champion": {
+          "id": "Khazix",
+          "name": "Kha'Zix"
+        },
+        "items": [
+          {
+            "id": 6692,
+            "name": "Eclipse",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/6692.png"
+          },
+          {
+            "id": 3158,
+            "name": "Ionian Boots",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3158.png"
+          },
+          {
+            "id": 6694,
+            "name": "Serylda's Grudge",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/6694.png"
+          },
+          null,
+          null,
+          null,
+          {
+            "id": 3340,
+            "name": "Stealth Ward",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3340.png"
+          }
+        ],
+        "win": true,
+        "matchId": "k1"
+      }
+    },
+    "mock-enemy-3": {
+      "playstyleBadges": [
+        {
+          "key": "solo_killer",
+          "label": "Düellocu",
+          "category": "combat",
+          "tier": "challenger",
+          "count": 9,
+          "rate": 90
+        },
+        {
+          "key": "high_dpm",
+          "label": "Yüksek DPM",
+          "category": "damage",
+          "tier": "diamond",
+          "count": 7,
+          "rate": 70
+        },
+        {
+          "key": "first_blood",
+          "label": "İlk Kan",
+          "category": "combat",
+          "tier": "gold",
+          "count": 5,
+          "rate": 50
+        }
+      ],
+      "recentStats": {
+        "winRate": 57,
+        "wins": 8,
+        "losses": 6,
+        "totalGames": 14,
+        "avgKDA": {
+          "kills": 11,
+          "deaths": 5.5,
+          "assists": 4,
+          "ratio": 2.73
+        },
+        "mainRole": "Mid Main",
+        "roleStats": [
+          {
+            "role": "MIDDLE",
+            "label": "Orta",
+            "games": 14,
+            "winRate": 57
+          }
+        ]
+      },
+      "elwAverage": 6.9,
+      "championStat": {
+        "championName": "Zed",
+        "games": 9,
+        "wins": 6,
+        "winRate": 67,
+        "avgKda": {
+          "kills": 12,
+          "deaths": 5,
+          "assists": 4,
+          "ratio": 3.2
+        },
+        "source": "recent"
+      },
+      "recentGames": [
+        {
+          "matchId": "z1",
+          "champion": {
+            "id": "Zed",
+            "name": "Zed",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Zed.png"
+          },
+          "win": true,
+          "kills": 16,
+          "deaths": 3,
+          "assists": 5,
+          "kda": 7,
+          "role": "MIDDLE",
+          "elwScore": 8.6,
+          "matchRank": 1
+        },
+        {
+          "matchId": "z2",
+          "champion": {
+            "id": "Zed",
+            "name": "Zed",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Zed.png"
+          },
+          "win": true,
+          "kills": 10,
+          "deaths": 6,
+          "assists": 3,
+          "kda": 2.17,
+          "role": "MIDDLE",
+          "elwScore": 6.4,
+          "matchRank": 4
+        },
+        {
+          "matchId": "z3",
+          "champion": {
+            "id": "Zed",
+            "name": "Zed",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Zed.png"
+          },
+          "win": false,
+          "kills": 7,
+          "deaths": 8,
+          "assists": 2,
+          "kda": 1.13,
+          "role": "MIDDLE",
+          "elwScore": 4.9,
+          "matchRank": 7
+        }
+      ],
+      "build": {
+        "champion": {
+          "id": "Zed",
+          "name": "Zed"
+        },
+        "items": [
+          {
+            "id": 6692,
+            "name": "Eclipse",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/6692.png"
+          },
+          {
+            "id": 3142,
+            "name": "Youmuu's Ghostblade",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3142.png"
+          },
+          {
+            "id": 3814,
+            "name": "Edge of Night",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3814.png"
+          },
+          {
+            "id": 3156,
+            "name": "Maw of Malmortius",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3156.png"
+          },
+          null,
+          null,
+          {
+            "id": 3340,
+            "name": "Stealth Ward",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3340.png"
+          }
+        ],
+        "win": true,
+        "matchId": "z1"
+      }
+    },
+    "mock-enemy-4": {
+      "playstyleBadges": [
+        {
+          "key": "gold_maker",
+          "label": "Altın Madencisi",
+          "category": "farming",
+          "tier": "diamond",
+          "count": 6,
+          "rate": 60
+        },
+        {
+          "key": "cs_lead",
+          "label": "CS Baskını",
+          "category": "farming",
+          "tier": "gold",
+          "count": 4,
+          "rate": 40
+        }
+      ],
+      "recentStats": {
+        "winRate": 50,
+        "wins": 5,
+        "losses": 5,
+        "totalGames": 10,
+        "avgKDA": {
+          "kills": 8,
+          "deaths": 5.5,
+          "assists": 6,
+          "ratio": 2.55
+        },
+        "mainRole": "ADC Main",
+        "roleStats": [
+          {
+            "role": "BOTTOM",
+            "label": "ADC",
+            "games": 9,
+            "winRate": 45
+          },
+          {
+            "role": "MIDDLE",
+            "label": "Orta",
+            "games": 1,
+            "winRate": 100
+          }
+        ]
+      },
+      "elwAverage": 5.5,
+      "championStat": {
+        "championName": "Caitlyn",
+        "games": 5,
+        "wins": 2,
+        "winRate": 40,
+        "avgKda": {
+          "kills": 9,
+          "deaths": 6,
+          "assists": 5,
+          "ratio": 2.33
+        },
+        "source": "recent"
+      },
+      "recentGames": [
+        {
+          "matchId": "ca1",
+          "champion": {
+            "id": "Caitlyn",
+            "name": "Caitlyn",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Caitlyn.png"
+          },
+          "win": false,
+          "kills": 9,
+          "deaths": 7,
+          "assists": 4,
+          "kda": 1.86,
+          "role": "BOTTOM",
+          "elwScore": 5.2,
+          "matchRank": 6
+        },
+        {
+          "matchId": "ca2",
+          "champion": {
+            "id": "Caitlyn",
+            "name": "Caitlyn",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Caitlyn.png"
+          },
+          "win": false,
+          "kills": 6,
+          "deaths": 8,
+          "assists": 5,
+          "kda": 1.38,
+          "role": "BOTTOM",
+          "elwScore": 4.3,
+          "matchRank": 8
+        },
+        {
+          "matchId": "ca3",
+          "champion": {
+            "id": "Caitlyn",
+            "name": "Caitlyn",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Caitlyn.png"
+          },
+          "win": true,
+          "kills": 11,
+          "deaths": 3,
+          "assists": 7,
+          "kda": 6,
+          "role": "BOTTOM",
+          "elwScore": 7.2,
+          "matchRank": 2
+        }
+      ],
+      "build": {
+        "champion": {
+          "id": "Caitlyn",
+          "name": "Caitlyn"
+        },
+        "items": [
+          {
+            "id": 3031,
+            "name": "Infinity Edge",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3031.png"
+          },
+          {
+            "id": 3006,
+            "name": "Berserker's Greaves",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3006.png"
+          },
+          {
+            "id": 6676,
+            "name": "The Collector",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/6676.png"
+          },
+          null,
+          null,
+          null,
+          {
+            "id": 3363,
+            "name": "Farsight Alteration",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3363.png"
+          }
+        ],
+        "win": false,
+        "matchId": "ca1"
+      }
+    },
+    "mock-enemy-5": {
+      "playstyleBadges": [
+        {
+          "key": "team_player",
+          "label": "Takım Oyuncusu",
+          "category": "teamplay",
+          "tier": "diamond",
+          "count": 8,
+          "rate": 80
+        },
+        {
+          "key": "vision_master",
+          "label": "Görüş Ustası",
+          "category": "vision",
+          "tier": "gold",
+          "count": 5,
+          "rate": 50
+        }
+      ],
+      "recentStats": {
+        "winRate": 48,
+        "wins": 5,
+        "losses": 6,
+        "totalGames": 11,
+        "avgKDA": {
+          "kills": 2,
+          "deaths": 5,
+          "assists": 15,
+          "ratio": 3.4
+        },
+        "mainRole": "Support Main",
+        "roleStats": [
+          {
+            "role": "UTILITY",
+            "label": "Destek",
+            "games": 11,
+            "winRate": 48
+          }
+        ]
+      },
+      "elwAverage": 5.8,
+      "championStat": {
+        "championName": "Lulu",
+        "games": 6,
+        "wins": 3,
+        "winRate": 50,
+        "avgKda": {
+          "kills": 1.5,
+          "deaths": 4.8,
+          "assists": 17,
+          "ratio": 3.85
+        },
+        "source": "recent"
+      },
+      "recentGames": [
+        {
+          "matchId": "l1",
+          "champion": {
+            "id": "Lulu",
+            "name": "Lulu",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Lulu.png"
+          },
+          "win": true,
+          "kills": 1,
+          "deaths": 4,
+          "assists": 21,
+          "kda": 5.5,
+          "role": "UTILITY",
+          "elwScore": 6.6,
+          "matchRank": 3
+        },
+        {
+          "matchId": "l2",
+          "champion": {
+            "id": "Janna",
+            "name": "Janna",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/champion/Janna.png"
+          },
+          "win": false,
+          "kills": 0,
+          "deaths": 6,
+          "assists": 12,
+          "kda": 2,
+          "role": "UTILITY",
+          "elwScore": 4.7,
+          "matchRank": 7
+        }
+      ],
+      "build": {
+        "champion": {
+          "id": "Lulu",
+          "name": "Lulu"
+        },
+        "items": [
+          {
+            "id": 6617,
+            "name": "Moonstone Renewer",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/6617.png"
+          },
+          {
+            "id": 3158,
+            "name": "Ionian Boots",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3158.png"
+          },
+          {
+            "id": 3504,
+            "name": "Ardent Censer",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3504.png"
+          },
+          null,
+          null,
+          null,
+          {
+            "id": 3364,
+            "name": "Oracle Lens",
+            "image": "https://ddragon.leagueoflegends.com/cdn/16.12.1/img/item/3364.png"
+          }
+        ],
+        "win": true,
+        "matchId": "l1"
+      }
+    }
+  }
+}

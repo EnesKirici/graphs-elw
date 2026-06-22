@@ -47,6 +47,63 @@ export async function fetchApi(endpoint) {
 }
 
 /**
+ * Canlı maç verisi — name/tag ile arar.
+ * Oyuncu oyunda değilse backend 404 + {status:"offline"} döner; bu bir HATA
+ * DEĞİL geçerli bir durum olduğu için 404'ü özel ele alıyoruz (throw etmez).
+ * Canlı veri olduğu için cache: "no-store".
+ */
+export async function getLiveGame(name, tag) {
+  const res = await fetch(
+    `${API_BASE}/live/search?name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`,
+    { cache: "no-store" }
+  );
+  if (res.status === 404) {
+    try {
+      return await res.json(); // { status: "offline", puuid, profile }
+    } catch {
+      return { status: "offline" };
+    }
+  }
+  if (res.status === 429) {
+    try {
+      return { ...(await res.json()), rateLimited: true };
+    } catch {
+      return { rateLimited: true };
+    }
+  }
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/**
+ * Tek oyuncunun ağır (son-maç türevli) verisi — kart başına progresif çağrı.
+ * Hata olursa null döner; UI zarifçe bozulmadan devam etsin.
+ */
+export async function getLivePlayer(puuid, champion) {
+  try {
+    const q = champion ? `?champion=${encodeURIComponent(champion)}` : "";
+    const res = await fetch(`${API_BASE}/live/player/${puuid}${q}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * "Oyunda mı?" — profil sayfasındaki yeşil tık için hafif kontrol.
+ */
+export async function getLiveStatus(puuid) {
+  try {
+    const res = await fetch(`${API_BASE}/live/${puuid}/status`, { cache: "no-store" });
+    if (!res.ok) return { inGame: false };
+    return res.json();
+  } catch {
+    return { inGame: false };
+  }
+}
+
+/**
  * Public ayarları getir (profil tasarımı, ELW eşikleri vb.).
  * Hata durumunda boş obje döner — sayfa yine de render olsun.
  */

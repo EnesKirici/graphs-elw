@@ -11,30 +11,24 @@ const GAME_TYPES = [
 ];
 
 function wrColor(wr) {
-  if (wr >= 60) return "text-emerald-400";
+  if (wr >= 60) return "text-cyan-400";
   if (wr >= 50) return "text-blue-400";
-  if (wr >= 45) return "text-gray-300";
-  return "text-red-400";
-}
-function wrBar(wr) {
-  if (wr >= 60) return "bg-emerald-500";
-  if (wr >= 50) return "bg-blue-500";
-  if (wr >= 45) return "bg-gray-500";
-  return "bg-red-500";
-}
-function kdaColor(k) {
-  if (k === "Perfect" || k >= 4) return "text-emerald-400";
-  if (k >= 3) return "text-blue-400";
-  if (k >= 2) return "text-gray-200";
+  if (wr >= 44) return "text-purple-400";
   return "text-red-400";
 }
 
-// PLACEHOLDER (TEST VERİSİ) — şampiyon dünya/TR sırası worker ile gelecek (ChampionPool ile aynı).
-function placeholderChampRank(name, games) {
+// PLACEHOLDER/DEMO (TEST VERİSİ) — şampiyon Dünya + TR sırası worker ile gelecek (c.championRank).
+const DEMO_RANKS = [
+  { global: 1840, tr: 142 },
+  { global: 12503, tr: 961 },
+  { global: 6720, tr: 503 },
+];
+function placeholderChampRank(name, games, i) {
+  if (i != null && DEMO_RANKS[i]) return DEMO_RANKS[i];
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const global = Math.max(800, 9000 + (h % 230000) - (games || 0) * 120);
-  const tr = Math.max(60, Math.round(global / 13));
+  const global = Math.max(8000, 40000 + (h % 1200000) - (games || 0) * 2000);
+  const tr = Math.max(500, Math.round(global / 13));
   return { global, tr };
 }
 const fmt = (n) => n.toLocaleString("tr-TR");
@@ -63,14 +57,14 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
             <span className="w-[38px]" />
             <span className="flex-1">Şampiyon</span>
             <span className="w-9 text-center">Oyun</span>
-            <span className="w-14 text-center">KDA</span>
-            <span className="w-12 text-right">WR</span>
+            <span className="w-[68px] text-center">KDA</span>
+            <span className="w-10 text-right">WR</span>
           </div>
 
           <div className="divide-y divide-edge/25">
             {list.slice(0, 6).map((c, i) => {
-              const ratio = c.avgKda?.ratio ?? 0;
-              const rk = placeholderChampRank(c.championName, c.games);
+              // Gerçek sıra (championRank) gelene kadar placeholder/demo göster.
+              const rk = c.championRank?.global != null ? c.championRank : placeholderChampRank(c.championName, c.games, i);
               return (
                 <Link
                   key={c.championName + i}
@@ -79,23 +73,20 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
                 >
                   <img src={c.championImage} alt={c.championName} width={38} height={38} className="rounded-lg flex-shrink-0" />
                   <div className="flex-1 min-w-0">
+                    {/* Ad + Dünya sırası + TR sırası — okunur boyut, sayılar parlak (sönük kalmasın) */}
                     <p className="text-[13px] text-gray-100 font-semibold truncate leading-tight">{c.championName}</p>
-                    <p className="text-[10px] text-gray-400 leading-tight mt-0.5">
-                      Sıra <span className="text-gray-300 font-medium">{fmt(rk.global)}</span>
-                      <span className="text-gray-500"> · {region} {fmt(rk.tr)}</span>
+                    <p className="text-[11.5px] leading-tight mt-1 tabular-nums whitespace-nowrap">
+                      <span className="text-gray-500">Sıra </span><span className="text-gray-200 font-medium">{fmt(rk.global)}</span>
+                    </p>
+                    <p className="text-[11.5px] leading-tight mt-0.5 tabular-nums whitespace-nowrap">
+                      <span className="text-gray-500">{region} </span><span className="text-gray-100 font-medium">{fmt(rk.tr)}</span>
                     </p>
                   </div>
-                  <span className="w-9 text-center text-[13px] text-gray-200 font-medium">{c.games}</span>
-                  <div className="w-14 text-center">
-                    <p className="text-[11px] text-gray-300 leading-tight">{c.avgKda?.kills}/{c.avgKda?.deaths}/{c.avgKda?.assists}</p>
-                    <p className={`text-xs font-bold leading-tight ${kdaColor(ratio)}`}>{ratio === "Perfect" ? "Perfect" : Number(ratio).toFixed(1)}</p>
-                  </div>
-                  <div className="w-12 text-right">
-                    <span className={`text-[13px] font-bold font-mono ${wrColor(c.winRate)}`}>{c.winRate}%</span>
-                    <div className="mt-1 h-1.5 bg-edge rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${wrBar(c.winRate)}`} style={{ width: `${c.winRate}%` }} />
-                    </div>
-                  </div>
+                  <span className="w-9 text-center text-[13px] text-gray-200 font-medium tabular-nums">{c.games}</span>
+                  <span className="w-[68px] text-center text-[11px] text-gray-400 tabular-nums">
+                    {c.avgKda?.kills}/{c.avgKda?.deaths}/{c.avgKda?.assists}
+                  </span>
+                  <span className={`w-10 text-right text-[13px] font-bold font-mono ${wrColor(c.winRate)}`}>{Math.round(c.winRate)}%</span>
                 </Link>
               );
             })}

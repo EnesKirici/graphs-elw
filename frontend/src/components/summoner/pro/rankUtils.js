@@ -12,10 +12,11 @@ export function miniCrestUrl(tier) {
   return `${MINI_CREST_BASE}/${(tier || "unranked").toLowerCase()}.svg`;
 }
 
+// İçerik İngilizce (kullanıcı tercihi); obje adı geriye-uyum için TIER_TR kaldı.
 export const TIER_TR = {
-  IRON: "Demir", BRONZE: "Bronz", SILVER: "Gümüş", GOLD: "Altın",
-  PLATINUM: "Platin", EMERALD: "Zümrüt", DIAMOND: "Elmas",
-  MASTER: "Usta", GRANDMASTER: "Büyük Usta", CHALLENGER: "Şampiyon",
+  IRON: "Iron", BRONZE: "Bronze", SILVER: "Silver", GOLD: "Gold",
+  PLATINUM: "Platinum", EMERALD: "Emerald", DIAMOND: "Diamond",
+  MASTER: "Master", GRANDMASTER: "Grandmaster", CHALLENGER: "Challenger",
 };
 
 export function tierLabel(data) {
@@ -38,7 +39,7 @@ export const TIER_COLORS = {
   DIAMOND: "#5a8fe6",    // mavi
   MASTER: "#c264e0",     // mor
   GRANDMASTER: "#e05555", // kırmızı
-  CHALLENGER: "#f0c674", // altın
+  CHALLENGER: "#2cc9e6", // cyan (tek renk; gradient değil)
 };
 
 export function tierColor(tier) {

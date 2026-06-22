@@ -1,64 +1,33 @@
 "use client";
 
 // "Son N Oyun Performansı" — yüklü maçlardan (client-side) hesaplanır.
-// Büyük, okunur, dengeli renkli panel: WR donut + en çok oynanan + KDA/ort. sıra.
+// Tasarım: ring/bar YOK. Büyük tipografi (WR) + gerçek şampiyon portreleri
+// (çerçevesi WR rengine göre) + net stat değerleri. Yeşilsiz/morlu palet.
 
 function wrColor(wr) {
-  if (wr >= 60) return "text-emerald-400";
+  if (wr >= 60) return "text-cyan-400";
   if (wr >= 50) return "text-blue-400";
-  if (wr >= 45) return "text-gray-300";
+  if (wr >= 44) return "text-purple-400";
   return "text-red-400";
 }
+function wrHex(wr) {
+  if (wr >= 60) return "#22d3ee"; // cyan
+  if (wr >= 50) return "#60a5fa"; // mavi
+  if (wr >= 44) return "#a855f7"; // mor
+  return "#ef4444";               // kırmızı
+}
 function kdaColor(k) {
-  if (k === "Perfect" || k >= 4) return "text-emerald-400";
+  if (k === "Perfect" || k >= 4) return "text-sky-300";
   if (k >= 3) return "text-blue-400";
   if (k >= 2) return "text-gray-200";
   return "text-red-400";
 }
 function rankColor(r) {
   if (r == null) return "text-gray-300";
-  if (r <= 3) return "text-emerald-400";
+  if (r <= 3) return "text-sky-300";
   if (r <= 5) return "text-blue-400";
   if (r <= 7) return "text-gray-200";
   return "text-red-400";
-}
-
-function WrGauge({ winRate, wins, losses }) {
-  const r = 38;
-  const circ = 2 * Math.PI * r;
-  const winFrac = wins + losses > 0 ? wins / (wins + losses) : 0;
-  const good = winRate >= 50;
-  return (
-    <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-      <div className="relative w-[96px] h-[96px] flex items-center justify-center">
-        <svg width="96" height="96" className="-rotate-90">
-          <circle cx="48" cy="48" r={r} fill="none" stroke="var(--dpm-bad-team)" strokeWidth="8" opacity="0.35" />
-          <circle
-            cx="48" cy="48" r={r} fill="none" stroke="var(--dpm-good-team)" strokeWidth="8" strokeLinecap="round"
-            strokeDasharray={circ} strokeDashoffset={circ * (1 - winFrac)}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-[23px] font-extrabold leading-none ${good ? "text-gray-50" : "text-gray-200"}`}>{winRate}%</span>
-          <span className="text-[10px] text-gray-400 mt-0.5">WR</span>
-        </div>
-      </div>
-      <p className="text-[13px]">
-        <span className="text-emerald-400 font-bold">{wins}G</span>{" "}
-        <span className="text-red-400 font-bold">{losses}M</span>
-      </p>
-    </div>
-  );
-}
-
-function StatBlock({ label, children, sub }) {
-  return (
-    <div className="text-center">
-      <p className="text-[11px] text-gray-400 uppercase tracking-wide">{label}</p>
-      <div className="mt-1">{children}</div>
-      {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
-    </div>
-  );
 }
 
 export default function Last30Panel({ matches }) {
@@ -75,7 +44,7 @@ export default function Last30Panel({ matches }) {
   const kdaRatio = d > 0 ? (k + a) / d : (k + a);
   const avgK = (k / total).toFixed(1), avgD = (d / total).toFixed(1), avgA = (a / total).toFixed(1);
 
-  // Şampiyon kırılımı
+  // Şampiyon kırılımı (en çok oynanan)
   const champMap = {};
   ranked.forEach((m) => {
     const id = m.champion.name;
@@ -93,52 +62,69 @@ export default function Last30Panel({ matches }) {
   const ace = ranked.filter((m) => m.ranking?.rank === 1 && !m.win).length;
 
   return (
-    <div className="glass rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3.5">
+    <div className="glass rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-gray-100">Son {total} Oyun Performansı</h3>
-        <div className="flex items-center gap-2">
-          {mvp > 0 && <span className="text-[10px] font-bold bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded">MVP ×{mvp}</span>}
-          {ace > 0 && <span className="text-[10px] font-bold bg-cyan-500/15 text-cyan-300 px-1.5 py-0.5 rounded">ACE ×{ace}</span>}
+        <div className="flex items-center gap-1.5">
+          {mvp > 0 && <span className="text-[10px] font-bold bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full">MVP ×{mvp}</span>}
+          {ace > 0 && <span className="text-[10px] font-bold bg-cyan-500/15 text-cyan-300 px-2 py-0.5 rounded-full">ACE ×{ace}</span>}
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-5">
-        {/* WR donut */}
-        <WrGauge winRate={winRate} wins={wins} losses={losses} />
-
-        {/* En çok oynanan şampiyonlar */}
-        <div className="flex-1 w-full grid grid-cols-2 gap-x-4 gap-y-2.5 min-w-0 lg:border-l lg:border-edge/50 lg:pl-5">
-          {champs.map((c) => {
-            const cwr = Math.round((c.wins / c.games) * 100);
-            const cKda = c.d > 0 ? ((c.k + c.a) / c.d) : (c.k + c.a);
-            return (
-              <div key={c.name} className="flex items-center gap-2 min-w-0">
-                <img src={c.image} alt={c.name} width={34} height={34} className="rounded-lg flex-shrink-0" title={c.name} />
-                <div className="min-w-0">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className={`text-sm font-bold ${wrColor(cwr)}`}>{cwr}%</span>
-                    <span className="text-[10px] text-gray-400">{c.wins}G {c.games - c.wins}M</span>
-                  </div>
-                  <span className={`text-[11px] font-medium ${kdaColor(cKda)}`}>{cKda.toFixed(1)} KDA</span>
-                </div>
-              </div>
-            );
-          })}
+      <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-6">
+        {/* Özet — WR büyük tipografi + galibiyet/mağlubiyet */}
+        <div className="flex-shrink-0 text-center sm:text-left">
+          <p className={`text-[44px] font-extrabold leading-none ${wrColor(winRate)}`}>
+            {winRate}<span className="text-[24px] align-top">%</span>
+          </p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-[0.12em] mt-2">Kazanma Oranı</p>
+          <p className="text-[12.5px] font-semibold mt-1.5">
+            <span className="text-blue-400">{wins} Galibiyet</span>
+            <span className="text-gray-600"> · </span>
+            <span className="text-red-400">{losses} Mağlubiyet</span>
+          </p>
         </div>
 
-        {/* KDA + ort. sıra */}
-        <div className="flex items-center gap-5 flex-shrink-0 lg:border-l lg:border-edge/50 lg:pl-5">
-          <StatBlock label="KDA" sub={`${avgK} / ${avgD} / ${avgA}`}>
-            <p className={`text-2xl font-extrabold leading-none ${kdaColor(kdaRatio)}`}>
+        <div className="hidden sm:block w-px self-stretch bg-edge/40" />
+
+        {/* En çok oynanan — portreler (çerçeve = WR rengi), altında WR% + KDA */}
+        <div className="flex-1 min-w-0 w-full">
+          <p className="text-[10px] text-gray-500 uppercase tracking-[0.12em] mb-3">En Çok Oynanan</p>
+          <div className="flex justify-center sm:justify-start gap-4">
+            {champs.map((c) => {
+              const cwr = Math.round((c.wins / c.games) * 100);
+              const cKda = c.d > 0 ? ((c.k + c.a) / c.d) : (c.k + c.a);
+              return (
+                <div key={c.name} className="flex flex-col items-center gap-1.5 w-[56px]">
+                  <img src={c.image} alt={c.name} width={44} height={44} title={c.name}
+                    className="rounded-lg" style={{ boxShadow: `0 0 0 2px ${wrHex(cwr)}, 0 0 0 4px var(--c-card)` }} />
+                  <span className={`text-[13px] font-bold leading-none ${wrColor(cwr)}`}>{cwr}%</span>
+                  <span className={`text-[10px] leading-none ${kdaColor(cKda)}`}>{cKda.toFixed(1)} KDA</span>
+                  <span className="text-[9px] text-gray-500 leading-none">{c.games} oyun</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="hidden sm:block w-px self-stretch bg-edge/40" />
+
+        {/* Sağ — KDA + Ort. Sıra */}
+        <div className="flex-shrink-0 flex flex-row sm:flex-col gap-5 sm:gap-3 text-center">
+          <div>
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.12em]">KDA</p>
+            <p className={`text-[22px] font-extrabold leading-none mt-1 ${kdaColor(kdaRatio)}`}>
               {kdaRatio === "Perfect" ? "∞" : kdaRatio.toFixed(2)}
             </p>
-          </StatBlock>
+            <p className="text-[11px] text-gray-400 mt-1">{avgK} / {avgD} / {avgA}</p>
+          </div>
           {avgRank != null && (
-            <StatBlock label="Ort. Sıra">
-              <p className={`text-2xl font-extrabold leading-none ${rankColor(avgRank)}`}>
-                {avgRank.toFixed(1)}<span className="text-xs text-gray-400 font-bold">/10</span>
+            <div className="sm:pt-3 sm:border-t sm:border-edge/40">
+              <p className="text-[10px] text-gray-500 uppercase tracking-[0.12em]">Ort. Sıra</p>
+              <p className={`text-[22px] font-extrabold leading-none mt-1 ${rankColor(avgRank)}`}>
+                {avgRank.toFixed(1)}<span className="text-xs text-gray-500 font-bold">/10</span>
               </p>
-            </StatBlock>
+            </div>
           )}
         </div>
       </div>

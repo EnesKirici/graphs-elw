@@ -97,13 +97,13 @@ class BadgeService
 
     private function addFarmingBadges(array &$badges, array $c, string $role): void
     {
-        $cs10 = $c['laneMinionsFirst10Minutes'] ?? 0;
+        $cs10 = round($c['laneMinionsFirst10Minutes'] ?? 0);
         if ($cs10 >= 65 && in_array($role, ['TOP', 'MIDDLE', 'BOTTOM'])) {
             $tier = $cs10 >= 95 ? 'challenger' : ($cs10 >= 88 ? 'grandmaster' : ($cs10 >= 80 ? 'diamond' : ($cs10 >= 72 ? 'emerald' : 'gold')));
             $badges[] = ['key' => 'cs_master', 'label' => 'CS Ustası', 'desc' => "10dk'da {$cs10} CS", 'category' => 'farming', 'tier' => $tier];
         }
 
-        $csAdv = $c['maxCsAdvantageOnLaneOpponent'] ?? 0;
+        $csAdv = round($c['maxCsAdvantageOnLaneOpponent'] ?? 0);
         if ($csAdv >= 15) {
             $tier = $csAdv >= 60 ? 'challenger' : ($csAdv >= 40 ? 'diamond' : ($csAdv >= 25 ? 'emerald' : 'gold'));
             $badges[] = ['key' => 'cs_lead', 'label' => 'CS Baskını', 'desc' => "+{$csAdv} CS farkı (max)", 'category' => 'farming', 'tier' => $tier];

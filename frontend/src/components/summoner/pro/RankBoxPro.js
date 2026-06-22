@@ -9,6 +9,15 @@ import {
 
 const trNum = (n) => n.toLocaleString("tr-TR");
 
+// Tier adı + LP TEK renkte, rank rengine göre (Challenger mavi vb.).
+function TierHeading({ data, className }) {
+  return (
+    <p className={className} style={{ color: tierColor(data.tier) }}>
+      {tierLabel(data)} {data.lp} LP
+    </p>
+  );
+}
+
 function lpWindowChange(timeline, days) {
   if (!timeline || timeline.length < 2) return null;
   const cutoff = Date.now() - days * 86400000;
@@ -23,7 +32,7 @@ function ChangeBadge({ label, value }) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-gray-400">{label}</span>
-      <span className={`text-sm font-bold ${up ? "text-emerald-400" : "text-red-400"}`}>
+      <span className={`text-sm font-bold ${up ? "text-blue-400" : "text-red-400"}`}>
         {up ? "▲" : "▼"} {Math.abs(value)} LP
       </span>
     </div>
@@ -45,7 +54,7 @@ function MiniRank({ label, tier, rank, lp, title }) {
 }
 
 // LP Gelişimi / WR grafiği toggle'lı görünüm
-function RankCharts({ lpTl, wrTl }) {
+function RankCharts({ lpTl, wrTl, tier }) {
   const [mode, setMode] = useState("lp"); // default LP
   const hasLp = lpTl?.timeline?.length >= 2;
   const hasWr = wrTl?.length >= 2;
@@ -62,13 +71,13 @@ function RankCharts({ lpTl, wrTl }) {
         )}
         {hasWr && (
           <button onClick={() => setMode("wr")}
-            className={`text-xs px-2.5 py-1 rounded-full transition-colors cursor-pointer ${mode === "wr" ? "text-emerald-300 bg-emerald-500/15 font-semibold" : "text-gray-400 hover:text-gray-200"}`}>
+            className={`text-xs px-2.5 py-1 rounded-full transition-colors cursor-pointer ${mode === "wr" ? "text-sky-300 bg-sky-500/15 font-semibold" : "text-gray-400 hover:text-gray-200"}`}>
             WR
           </button>
         )}
       </div>
       {mode === "lp" && hasLp && (
-        <LpRiseChart timeline={lpTl.timeline} peak={lpTl.peak} estimated={lpTl.estimated} showHeaderLabel={false} />
+        <LpRiseChart timeline={lpTl.timeline} peak={lpTl.peak} estimated={lpTl.estimated} tier={tier} showHeaderLabel={false} />
       )}
       {mode === "wr" && hasWr && (
         <LpRiseChart timeline={wrTl} variant="wr" showHeaderLabel={false} />
@@ -89,14 +98,12 @@ function SoloBlock({ data, region, lpTl, wrTl, avgGameRank }) {
 
   return (
     <div>
-      <div className="flex items-center gap-3">
-        <img src={rankBadgeUrl(data.tier)} alt={data.tier} width={54} height={54} className="flex-shrink-0 drop-shadow-[0_4px_14px_rgba(0,0,0,0.5)]" />
+      <div className="flex items-center gap-3.5">
+        <img src={rankBadgeUrl(data.tier)} alt={data.tier} width={72} height={72} className="flex-shrink-0 drop-shadow-[0_4px_14px_rgba(0,0,0,0.5)]" />
         <div className="min-w-0 flex-1">
-          <p className="text-xl font-extrabold text-gray-50 leading-tight">
-            {tierLabel(data)} <span style={{ color: tierColor(data.tier) }}>{data.lp} LP</span>
-          </p>
+          <TierHeading data={data} className="text-xl font-extrabold leading-tight" />
           <p className="text-[13px] mt-1">
-            <span className="text-emerald-400 font-semibold">{data.wins}G</span>{" "}
+            <span className="text-blue-400 font-semibold">{data.wins}G</span>{" "}
             <span className="text-red-400 font-semibold">{data.losses}M</span>{" "}
             <span className="text-gray-400">({data.winRate}%)</span>
           </p>
@@ -114,7 +121,7 @@ function SoloBlock({ data, region, lpTl, wrTl, avgGameRank }) {
         </div>
       )}
 
-      <RankCharts lpTl={lpTl} wrTl={wrTl} />
+      <RankCharts lpTl={lpTl} wrTl={wrTl} tier={data.tier} />
 
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-edge/50">
         {peak && <MiniRank label="Peak" tier={peak.tier} rank={peak.rank} lp={peak.divLp} />}
@@ -142,11 +149,9 @@ function FlexBlock({ data, region, lpTl }) {
       >
         <img src={rankBadgeUrl(data.tier)} alt={data.tier} width={44} height={44} className="flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-base font-bold text-gray-100 leading-tight">
-            {tierLabel(data)} <span style={{ color: tierColor(data.tier) }}>{data.lp} LP</span>
-          </p>
+          <TierHeading data={data} className="text-base font-bold leading-tight" />
           <p className="text-xs mt-1">
-            <span className="text-emerald-400 font-semibold">{data.wins}G</span>{" "}
+            <span className="text-blue-400 font-semibold">{data.wins}G</span>{" "}
             <span className="text-red-400 font-semibold">{data.losses}M</span>{" "}
             <span className="text-gray-400">({data.winRate}%)</span>
             <span className="text-gray-500"> · Top %{rk.topPct}</span>
@@ -158,7 +163,7 @@ function FlexBlock({ data, region, lpTl }) {
       </button>
       {open && hasChart && (
         <div className="mt-3">
-          <LpRiseChart timeline={lpTl.timeline} peak={lpTl.peak} estimated={lpTl.estimated} />
+          <LpRiseChart timeline={lpTl.timeline} peak={lpTl.peak} estimated={lpTl.estimated} tier={data.tier} />
         </div>
       )}
     </div>
