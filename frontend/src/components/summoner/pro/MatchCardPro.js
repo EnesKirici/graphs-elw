@@ -168,16 +168,25 @@ function ScoreBlock({ m }) {
       : rank <= 3
         ? "text-sky-300 border-sky-400/40 bg-[#06141c]"
         : "text-gray-300 border-edge bg-[#0c1220]";
+  // Yüksek skor/MVP → dial parlar. 2 = güçlü (MVP veya ≥9.5/tam nota yakın), 1 = orta (≥8.5).
+  const glowLvl = isMvp || (score != null && score >= 9.5) ? 2 : (score != null && score >= 8.5) ? 1 : 0;
 
   return (
     <div className="relative flex items-center justify-center w-[58px] h-[66px] flex-shrink-0 cursor-help"
       onMouseEnter={(e) => setAnchor(e.currentTarget)} onMouseLeave={() => setAnchor(null)}>
-      <svg width="58" height="58" className="-rotate-90 absolute top-0">
+      {glowLvl > 0 && (
+        <span aria-hidden
+          className={`absolute top-0 left-0 w-[58px] h-[58px] rounded-full pointer-events-none ${glowLvl === 2 ? "animate-pulse" : ""}`}
+          style={{ background: `radial-gradient(circle at center, ${sColor}${glowLvl === 2 ? "80" : "40"} 0%, transparent 68%)`, filter: `blur(${glowLvl === 2 ? 6 : 3}px)` }} />
+      )}
+      <svg width="58" height="58" className="-rotate-90 absolute top-0 overflow-visible">
         <circle cx="29" cy="29" r={r} fill="var(--c-base)" stroke="var(--c-edge)" strokeWidth="5.5" />
         <circle cx="29" cy="29" r={r} fill="none" stroke={sColor} strokeWidth="5.5" strokeLinecap="round"
-          strokeDasharray={circ} strokeDashoffset={circ * (1 - fill)} />
+          strokeDasharray={circ} strokeDashoffset={circ * (1 - fill)}
+          style={glowLvl ? { filter: `drop-shadow(0 0 ${glowLvl === 2 ? 5 : 3}px ${sColor})` } : undefined} />
       </svg>
-      <span className="absolute top-0 w-[58px] h-[58px] flex items-center justify-center text-[18px] font-extrabold tabular-nums" style={{ color: sColor }}>
+      <span className="absolute top-0 w-[58px] h-[58px] flex items-center justify-center text-[18px] font-extrabold tabular-nums"
+        style={{ color: sColor, textShadow: glowLvl === 2 ? `0 0 10px ${sColor}` : undefined }}>
         {score != null ? score.toFixed(1) : "—"}
       </span>
       {place && (
@@ -236,6 +245,29 @@ function ScoreBlock({ m }) {
   );
 }
 
+// Takım gücü barı (tooltip içi) — etiket + 0-10 değer + dolu bar (yumuşak glow).
+function TeamBar({ label, val, color }) {
+  const pct = Math.max(5, Math.min(100, (val / 10) * 100));
+  return (
+    <div className="mb-2">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] text-gray-400 font-medium">{label}</span>
+        <span className="text-[12px] font-bold tabular-nums" style={{ color }}>{val}</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-edge overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color, boxShadow: `0 0 6px ${color}66` }} />
+      </div>
+    </div>
+  );
+}
+
+// Güç farkı oku — güçlü=yukarı sky, zayıf=aşağı kırmızı, denk=sağ gri.
+function DiffArrow({ diff }) {
+  const Icon = diff < -0.05 ? ArrowDown : diff > 0.05 ? ArrowUp : ArrowRight;
+  const cls = diff < -0.05 ? "text-red-400" : diff > 0.05 ? "text-sky-300" : "text-gray-400";
+  return <Icon size={15} strokeWidth={2.6} className={`flex-shrink-0 ${cls}`} />;
+}
+
 // Takım kalitesi etiketi (KDA altında) — hover'da zengin tooltip (güç farkı + açıklama)
 function TeamQualityTag({ tq }) {
   const [anchor, setAnchor] = useState(null);
@@ -257,25 +289,28 @@ function TeamQualityTag({ tq }) {
       </div>
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2.5 shadow-2xl shadow-black/90 w-52">
-            <div className="flex items-center gap-2 mb-2.5">
-              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
-              <span className={`text-xs font-bold ${TQ_TEXT[tq.key] || "text-gray-300"}`}>{tq.label}</span>
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-xl px-3.5 py-3 shadow-2xl shadow-black/90 w-60">
+            {/* Başlık — renkli nokta (glow) + etiket + "takım gücü" */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />
+              <span className={`text-[13px] font-bold ${TQ_TEXT[tq.key] || "text-gray-300"}`}>{tq.label}</span>
+              <span className="ml-auto text-[9px] text-gray-600 font-semibold uppercase tracking-wider">Takım gücü</span>
             </div>
             {hasAvg ? (
               <>
-                {/* Bizim takım vs rakip — ortalama ELW gücü kıyası */}
-                <div className="flex items-center justify-between text-[10px] font-semibold mb-1">
-                  <span className="text-blue-400">Bizim {myAvg}</span>
-                  <span className="text-red-400">Rakip {enemyAvg}</span>
+                <TeamBar label="Bizim takım" val={myAvg} color="#60a5fa" />
+                <TeamBar label="Rakip takım" val={enemyAvg} color="#f87171" />
+                <div className="h-px bg-edge/70 my-2.5" />
+                {/* Güç farkı — ok + miktar + kelime */}
+                <div className="flex items-center gap-1.5">
+                  <DiffArrow diff={diff} />
+                  <span className="text-[11px] text-gray-400">
+                    Takımın{" "}
+                    <b className={diff < -0.05 ? "text-red-400" : diff > 0.05 ? "text-sky-300" : "text-gray-200"}>
+                      {Math.abs(diff).toFixed(1)} puan {diff < -0.05 ? "zayıf" : diff > 0.05 ? "güçlü" : "denk"}
+                    </b>
+                  </span>
                 </div>
-                <div className="flex h-2 rounded-full overflow-hidden bg-edge">
-                  <div style={{ width: `${myPct}%`, background: "#60a5fa" }} />
-                  <div style={{ width: `${100 - myPct}%`, background: "#f87171" }} />
-                </div>
-                <p className="text-[10px] text-gray-500 mt-1.5">
-                  Güç farkı <b className="text-gray-300">{diff > 0 ? "+" : ""}{diff}</b>
-                </p>
               </>
             ) : (
               <p className="text-[11px] text-gray-400 leading-relaxed">

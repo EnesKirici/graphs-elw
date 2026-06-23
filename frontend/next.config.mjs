@@ -1,12 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config) => {
-    config.watchOptions = {
-      poll: false,
-      ignored: ['**/node_modules/**', '**/.next/**'],
-    };
-    return config;
-  },
   // DDragon'dan gelen şampiyon/item görsellerini Next.js Image ile kullanabilmek için
   // Normalde Next.js harici URL'lerden görsel yüklemeye izin vermez (güvenlik).
   // "remotePatterns" ile izin verdiğimiz domain'leri belirtiyoruz.

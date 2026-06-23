@@ -24,7 +24,7 @@ class ElwScoreService
         'MIDDLE'  => ['kda' => 2.5, 'dpm' => 2.5, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
         'BOTTOM'  => ['kda' => 2.5, 'dpm' => 3.0, 'gpm' => 2.0, 'kp' => 2.0, 'vision' => 0.5, 'towerDmg' => 1.5, 'objDmg' => 0.5, 'tankPct' => 0.0, 'healing' => 0.0],
         // Enchanter support (Lulu, Janna, Soraka...) — heal/shield ve vision ön planda
-        'UTILITY_ENCHANTER' => ['kda' => 2.0, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.0, 'vision' => 3.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.5, 'healing' => 2.0],
+        'UTILITY_ENCHANTER' => ['kda' => 2.5, 'dpm' => 0.5, 'gpm' => 0.5, 'kp' => 2.0, 'vision' => 2.3, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 1.3, 'healing' => 1.6],
         // Hasar support (Brand, Zyra, Vel'Koz...) — hasar ve KP ön planda
         'UTILITY_DAMAGE'    => ['kda' => 2.0, 'dpm' => 2.0, 'gpm' => 0.5, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 0.0, 'objDmg' => 0.5, 'tankPct' => 0.5, 'healing' => 2.0],
         // Tank support (Leona, Alistar, Nautilus...) — tank katkısı (CC/önde durma) heal kadar değerli
@@ -46,6 +46,16 @@ class ElwScoreService
     private const DEFAULT_INDIVIDUAL_W = ['kda' => 2.5, 'dpm' => 2.0, 'gpm' => 1.5, 'kp' => 2.0, 'vision' => 1.0, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.5];
     private const DEFAULT_TEAM_W       = ['kda' => 2.0, 'dpm' => 1.5, 'gpm' => 1.0, 'kp' => 2.5, 'vision' => 2.0, 'towerDmg' => 1.0, 'objDmg' => 1.0, 'tankPct' => 0.5, 'healing' => 0.5];
 
+    // Ölüm dengesi — lobi ortalama ölümünden sapma başına skor etkisi. Az ölen
+    // ödüllenir, çok ölen (feed) cezalanır. op.gg'de ölüm baskın negatif; bu olmadan
+    // vision/heal/KP'si yüksek feed support'lar (ör. 0/11/14 Soraka) fazla puan alıyor.
+    private const DEATH_W = 0.4;
+
+    // Galibiyet/mağlubiyet etkisi — kazanan +, kaybeden −. Referanslar sonucu tartar
+    // ama performansı baskın tutar; o yüzden ölçülü (carry edilen zayıf kazananı
+    // abartmasın). Bu olmadan hasarı yüksek kaybedenler (53k Ezreal) fazla puan alıyor.
+    private const WIN_W = 0.8;
+
     /**
      * Tüm 10 oyuncunun ELW Score'unu hesapla — puuid → score map döner.
      * @param string $mode 'individual' veya 'team'
@@ -55,6 +65,7 @@ class ElwScoreService
         $roleWeights = $mode === 'team' ? self::TEAM_WEIGHTS : self::INDIVIDUAL_WEIGHTS;
         $defaultW = $mode === 'team' ? self::DEFAULT_TEAM_W : self::DEFAULT_INDIVIDUAL_W;
         $minutes = max($duration / 60, 1);
+        $avgDeaths = $this->avgDeaths($participants);
 
         $scores = [];
         foreach ($participants as $p) {
@@ -91,11 +102,25 @@ class ElwScoreService
             $score = $kdaNorm * $w['kda'] + $dpmNorm * $w['dpm'] + $gpmNorm * $w['gpm'] + $kp * $w['kp']
                    + $vsNorm * $w['vision'] + $towerNorm * $w['towerDmg'] + $objNorm * $w['objDmg']
                    + $tankPct * $w['tankPct'] + $healNorm * $w['healing'];
+            // Ölüm dengesi — az ölen ödüllenir, feed cezalanır (op.gg'ye yaklaşım)
+            $score += ($avgDeaths - $p['deaths']) * self::DEATH_W;
+            // Kitle kontrol (CC) — playmaker support/tank/orman ödülü (Zilean, Leona, Amumu...)
+            $ccNorm = min((($p['timeCCingOthers'] ?? 0) / $minutes) / 1.5, 1);
+            $ccW = str_starts_with($role, 'UTILITY') ? 1.6 : (in_array($role, ['TOP', 'JUNGLE']) ? 1.0 : 0.5);
+            $score += $ccNorm * $ccW;
+            // Galibiyet/mağlubiyet — sonuç ağırlığı (kazanan yukarı, kaybeden aşağı)
+            $score += ($p['win'] ?? false) ? self::WIN_W : -self::WIN_W;
 
             $scores[] = ['puuid' => $p['puuid'], 'score' => $score];
         }
 
-        return $this->normalizeScores($scores);
+        // Bireysel mod: maç kartı başlığıyla (calculateMatchRanking → zToElw) AYNI
+        // ölçekte olsun diye cömert eğri kullanılır (8.6 başlıkta = 8.6 tabloda).
+        // Takım modu: takım-kalitesi sınıflandırması (great/good/avg/bad/terrible)
+        // eşikleri lineer ölçeğe (5 = lobi ort.) ayarlı, o yüzden lineer kalır.
+        return $mode === 'team'
+            ? $this->normalizeScores($scores)
+            : $this->normalizeScoresGenerous($scores);
     }
 
     /**
@@ -107,6 +132,7 @@ class ElwScoreService
         $roleWeights = self::INDIVIDUAL_WEIGHTS;
         $defaultW = self::DEFAULT_INDIVIDUAL_W;
         $minutes = max($duration / 60, 1);
+        $avgDeaths = $this->avgDeaths($participants);
 
         $scores = [];
         foreach ($participants as $p) {
@@ -143,6 +169,14 @@ class ElwScoreService
             $score = $kdaNorm * $w['kda'] + $dpmNorm * $w['dpm'] + $gpmNorm * $w['gpm'] + $kp * $w['kp']
                    + $vsNorm * $w['vision'] + $towerNorm * $w['towerDmg'] + $objNorm * $w['objDmg']
                    + $tankPct * $w['tankPct'] + $healNorm * $w['healing'];
+            // Ölüm dengesi — az ölen ödüllenir, feed cezalanır (op.gg'ye yaklaşım)
+            $score += ($avgDeaths - $p['deaths']) * self::DEATH_W;
+            // Kitle kontrol (CC) — playmaker support/tank/orman ödülü (Zilean, Leona, Amumu...)
+            $ccNorm = min((($p['timeCCingOthers'] ?? 0) / $minutes) / 1.5, 1);
+            $ccW = str_starts_with($role, 'UTILITY') ? 1.6 : (in_array($role, ['TOP', 'JUNGLE']) ? 1.0 : 0.5);
+            $score += $ccNorm * $ccW;
+            // Galibiyet/mağlubiyet — sonuç ağırlığı (kazanan yukarı, kaybeden aşağı)
+            $score += ($p['win'] ?? false) ? self::WIN_W : -self::WIN_W;
 
             $scores[] = ['puuid' => $p['puuid'], 'score' => $score];
         }
@@ -155,8 +189,7 @@ class ElwScoreService
         $stdDev = max(sqrt($variance / max(count($rawScores), 1)), 0.5);
 
         foreach ($scores as &$s) {
-            $z = ($s['score'] - $avg) / $stdDev;
-            $s['elwScore'] = $this->zToElw($z);
+            $s['elwScore'] = $this->blendedElw($s['score'], $avg, $stdDev);
         }
         unset($s);
 
@@ -268,6 +301,30 @@ class ElwScoreService
     }
 
     /**
+     * Harman ELW — göreceli (lobi içi z-score) + mutlak (lobiden bağımsız ham skor).
+     * Mutlak bileşen sayesinde iyi oynayan BİRDEN ÇOK oyuncu da ~10'a çıkabilir
+     * (op.gg/dpm.lol gibi). Sadece göreceli olsaydı yalnız lobinin en iyisi yüksek alırdı.
+     * Ham skor ~8.5 ve üzeri "mükemmel" kabul edilip 10'a eşlenir.
+     */
+    private function blendedElw(float $raw, float $avg, float $stdDev): float
+    {
+        $z = ($raw - $avg) / max($stdDev, 0.5);
+        $rel = $this->zToElw($z);                      // göreceli
+        $abs = max(0, min(10, $raw / 8.5 * 10));       // mutlak
+        return round(0.5 * $rel + 0.5 * $abs, 1);
+    }
+
+    /**
+     * Lobideki ortalama ölüm sayısı (10 oyuncu) — ölüm dengesi için referans.
+     */
+    private function avgDeaths(array $participants): float
+    {
+        $total = 0;
+        foreach ($participants as $p) { $total += $p['deaths'] ?? 0; }
+        return $total / max(count($participants), 1);
+    }
+
+    /**
      * Z-score normalizasyon — ham skorları 0-10 arası puanlama.
      */
     private function normalizeScores(array $scores): array
@@ -284,6 +341,26 @@ class ElwScoreService
         foreach ($scores as $s) {
             $z = ($s['score'] - $avg) / $stdDev;
             $result[$s['puuid']] = round(max(0, min(10, 5 + $z * 1.8)), 1);
+        }
+        return $result;
+    }
+
+    /**
+     * Cömert z-score normalizasyon (zToElw) — maç kartı başlığıyla aynı ölçek.
+     * Skor tablosundaki bireysel puanlar bununla hesaplanır ki başlıktaki puanla
+     * birebir tutsun (ör. başlıkta 8.6 → tabloda 8.6).
+     */
+    private function normalizeScoresGenerous(array $scores): array
+    {
+        $rawScores = array_column($scores, 'score');
+        $avg = array_sum($rawScores) / max(count($rawScores), 1);
+        $variance = 0;
+        foreach ($rawScores as $rs) { $variance += ($rs - $avg) ** 2; }
+        $stdDev = max(sqrt($variance / max(count($rawScores), 1)), 0.5);
+
+        $result = [];
+        foreach ($scores as $s) {
+            $result[$s['puuid']] = $this->blendedElw($s['score'], $avg, $stdDev);
         }
         return $result;
     }

@@ -23,7 +23,9 @@ export default function LiveGameButton({ puuid, name, tag, className = "" }) {
     };
   }, [puuid]);
 
-  const href = `/live-game/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`;
+  // Şimdilik test verisi (fixture) göster — production key gelince `?mock=1`
+  // kaldırılıp gerçek canlı maç verisine (Spectator-V5) döndürülecek.
+  const href = `/live-game/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?mock=1`;
 
   return (
     <Link
