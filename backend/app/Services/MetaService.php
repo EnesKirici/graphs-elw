@@ -18,9 +18,15 @@ class MetaService
 
     public function getFreeRotation(): array
     {
-        return Cache::remember('meta:free_rotation', 3600, function () {
-            return $this->riot->platformRequest('/lol/platform/v3/champion-rotations');
-        });
+        try {
+            return Cache::remember('meta:free_rotation', 3600, function () {
+                return $this->riot->platformRequest('/lol/platform/v3/champion-rotations');
+            });
+        } catch (\Throwable $e) {
+            // Riot tökezlerse (503/expire/rate-limit) rotasyon kritik değil — boş döner.
+            // Hata CACHE'LENMEZ (Cache::remember exception'da yazmaz) → sonraki istek tekrar dener.
+            return ['freeChampionIds' => [], 'freeChampionIdsForNewPlayers' => [], 'maxNewPlayerLevel' => 0];
+        }
     }
 
     public function getDashboardStats(): array
@@ -28,7 +34,6 @@ class MetaService
         return Cache::remember('meta:dashboard_stats_v7', config('riot.cache_ttl.meta_stats'), function () {
             $champions = $this->ddragon->getChampions();
             $version = $this->ddragon->getCurrentVersion();
-            $rotation = $this->getFreeRotation();
             $positionMap = $this->ddragon->getChampionPositions();
             $ddragonBase = config('riot.ddragon_url');
 

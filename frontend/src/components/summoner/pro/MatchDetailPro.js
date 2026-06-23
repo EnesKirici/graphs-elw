@@ -35,7 +35,7 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
   const badgeCls = isMvp ? "text-amber-400" : isAce ? "text-cyan-300" : p.matchRank <= 3 ? "text-blue-400" : p.matchRank >= 8 ? "text-red-400" : "text-gray-500";
 
   return (
-    <div className={`flex items-center gap-2.5 pl-3 pr-5 py-2.5 ${isMe ? "bg-cyan-500/[0.07]" : ""} ${rowHL} hover:bg-hover transition-colors`}>
+    <div className={`flex items-center gap-2.5 px-5 py-2.5 ${isMe ? "bg-cyan-500/[0.07]" : ""} ${rowHL} hover:bg-hover transition-colors`}>
       {/* Sıra / MVP / ACE */}
       <span className={`w-8 text-center text-[11px] font-bold flex-shrink-0 ${badgeCls}`}>
         {badgeLabel}
@@ -114,7 +114,7 @@ function TeamBlock({ team, searchedPuuid, maxDmg, mvpPuuid, acePuuid }) {
   const assists = team?.players?.reduce((s, p) => s + p.assists, 0) || 0;
   return (
     <div className={`rounded-lg overflow-hidden border ${isWin ? "border-blue-500/25" : "border-red-500/25"}`}>
-      <div className={`px-3 py-2 flex items-center justify-between ${isWin ? "bg-blue-500/10" : "bg-red-500/10"}`}>
+      <div className={`px-5 py-2 flex items-center justify-between ${isWin ? "bg-blue-500/10" : "bg-red-500/10"}`}>
         <div className="flex items-center gap-2">
           <span className={`text-[13px] font-bold ${isWin ? "text-blue-400" : "text-red-400"}`}>{isWin ? "Zafer" : "Yenilgi"}</span>
           <span className="text-[11px] text-gray-500">{team?.info?.totalKills}/{deaths}/{assists}</span>
@@ -133,16 +133,28 @@ function TeamBlock({ team, searchedPuuid, maxDmg, mvpPuuid, acePuuid }) {
   Eski MatchDetail'in 2-kolon aynalı düzeni dar alanda bozuluyordu; bu sürüm
   takım-bazlı tek-kolon (op.gg tarzı) satırlarla temiz durur.
 */
+// Açılan maç detaylarını bellekte tut — kart kapatılıp tekrar açılınca yeniden fetch
+// etmesin (accordion kapanınca component unmount oluyor). matchId → maç detayı verisi.
+const detailCache = new Map();
+
 export default function MatchDetailPro({ matchId, puuid }) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => detailCache.get(matchId) ?? null);
+  const [loading, setLoading] = useState(() => !detailCache.has(matchId));
 
   useEffect(() => {
+    // Daha önce yüklendiyse cache'ten ver, ağ isteği yapma
+    if (detailCache.has(matchId)) {
+      setData(detailCache.get(matchId));
+      setLoading(false);
+      return;
+    }
     let active = true;
+    setLoading(true);
     (async () => {
       try {
         const res = await fetch(`${API_BASE}/matches/${matchId}`);
         const d = await res.json();
+        detailCache.set(matchId, d);
         if (active) setData(d);
       } catch {
         if (active) setData(null);
