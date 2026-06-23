@@ -18,7 +18,8 @@ class AnalyticsController extends Controller
     public function store(Request $request): JsonResponse
     {
         if ($this->isAbuse($request)) {
-            return response()->json(['error' => 'Engellendi.'], 403);
+            // Rate-limit aşıldı → event'i sessizce düş (ban yok, hata yok)
+            return response()->json(['ok' => true, 'dropped' => true]);
         }
 
         $validated = $request->validate([
@@ -44,7 +45,8 @@ class AnalyticsController extends Controller
     public function batch(Request $request): JsonResponse
     {
         if ($this->isAbuse($request)) {
-            return response()->json(['error' => 'Engellendi.'], 403);
+            // Rate-limit aşıldı → event'i sessizce düş (ban yok, hata yok)
+            return response()->json(['ok' => true, 'dropped' => true]);
         }
 
         $validated = $request->validate([
@@ -74,8 +76,8 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Analytics endpoint'e spam koruması.
-     * IP başına dakikada max 30 analytics isteği.
+     * Analytics rate-limit — IP başına dakikada max 200 istek. Aşılırsa event
+     * sessizce düşer. BANLAMAZ (gerçek kullanıcı normal gezerken banlanmasın diye).
      */
     private function isAbuse(Request $request): bool
     {
@@ -84,17 +86,9 @@ class AnalyticsController extends Controller
         $count = (int) Cache::get($key, 0) + 1;
         Cache::put($key, $count, 60);
 
-        if ($count > 30) {
-            BannedIp::ban($ip, "Analytics spam: dakikada {$count} analytics istegi", 0, true);
-            Cache::put('banned:' . $ip, true, 300);
-
-            $alerts = Cache::get('ban_alerts', []);
-            $alerts[] = ['ip' => $ip, 'reason' => "Analytics spam: dakikada {$count} istek", 'time' => now()->toIso8601String()];
-            Cache::put('ban_alerts', array_slice($alerts, -50), 86400);
-
-            return true;
-        }
-
-        return false;
+        // Analytics'i SADECE sınırla — BANLAMA. Gerçek kullanıcı normal gezerken de
+        // event üretir; banlamak tüm siteyi kilitlerdi (kullanıcı kendini banlıyordu).
+        // Eşik aşılırsa event sessizce düşer.
+        return $count > 200;
     }
 }
