@@ -240,7 +240,7 @@ class MatchStatisticsService
     {
         $soloKey = ($ranked['solo']['tier'] ?? '') . ($ranked['solo']['rank'] ?? '') . ($ranked['solo']['lp'] ?? '');
         $flexKey = ($ranked['flex']['tier'] ?? '') . ($ranked['flex']['rank'] ?? '') . ($ranked['flex']['lp'] ?? '');
-        $cacheKey = "lp_timeline:v3:{$puuid}:{$soloKey}:{$flexKey}";
+        $cacheKey = "lp_timeline:v4:{$puuid}:{$soloKey}:{$flexKey}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid, $ranked) {
             $result = ['solo' => null, 'flex' => null];
@@ -269,8 +269,11 @@ class MatchStatisticsService
                 // Riot maç-başı LP vermez; yalnız bu snapshot anlarında gerçek LP biliyoruz.
                 $queueName = $queueId === 420 ? 'RANKED_SOLO_5x5' : 'RANKED_FLEX_SR';
                 $realByMatch = [];
+                $peakCands = [['abs' => $curAbs, 'tier' => $cur['tier']]]; // mevcut LP de bir peak adayı
                 foreach (LpSnapshot::where('puuid', $puuid)->where('queue', $queueName)->get() as $sn) {
-                    $realByMatch[$sn->match_id] = $this->rankToAbsolute($sn->tier, $sn->rank, $sn->lp);
+                    $a = $this->rankToAbsolute($sn->tier, $sn->rank, $sn->lp);
+                    $realByMatch[$sn->match_id] = $a;
+                    $peakCands[] = ['abs' => $a, 'tier' => $sn->tier];
                 }
 
                 // Demir noktalar: gerçek snapshot olan maçlar + en yeni maç (şu anki gerçek LP).
@@ -295,12 +298,17 @@ class MatchStatisticsService
                     $abs[$i - 1] = max(0, ($abs[$i] ?? $curAbs) - $delta);
                 }
 
-                $peakAbs = max($abs);
-                $peakDisp = $this->absoluteToDisplay($peakAbs);
+                // Peak: gerçek snapshot'lar + mevcut LP'den en yükseği. Master+ tier korunur
+                // (aynı LP'de Challenger > GM > Master) → Challenger peak'i Master sanmaz.
+                $tierPrio = ['CHALLENGER' => 3, 'GRANDMASTER' => 2, 'MASTER' => 1];
+                usort($peakCands, fn ($a, $b) => ($b['abs'] <=> $a['abs'])
+                    ?: (($tierPrio[strtoupper($b['tier'])] ?? 0) <=> ($tierPrio[strtoupper($a['tier'])] ?? 0)));
+                $peakAbs = $peakCands[0]['abs'];
+                $peakDisp = $this->absoluteToDisplay($peakAbs, $peakCands[0]['tier']);
 
                 $timeline = [];
                 foreach ($games as $i => $g) {
-                    $d = $this->absoluteToDisplay($abs[$i]);
+                    $d = $this->absoluteToDisplay($abs[$i], $cur['tier']);
                     $timeline[] = [
                         'game'      => $i + 1,
                         'lp'        => $abs[$i],          // mutlak LP (grafik ekseni)
@@ -345,10 +353,15 @@ class MatchStatisticsService
     /**
      * Mutlak LP → tier/rank/bölüm-LP (eğri noktalarını etikete çevirmek için).
      */
-    private function absoluteToDisplay(int $abs): array
+    private function absoluteToDisplay(int $abs, ?string $masterTier = null): array
     {
         if ($abs >= 2800) {
-            return ['tier' => 'MASTER', 'rank' => '', 'lp' => $abs - 2800];
+            // Master/GM/Challenger aynı LP ölçeğini paylaşır (taban 2800) → LP'den ayırt
+            // edilemez. Gerçek tier verildiyse onu kullan (peak Challenger ise Challenger).
+            $mt = strtoupper($masterTier ?? '');
+            $tier = in_array($mt, ['MASTER', 'GRANDMASTER', 'CHALLENGER'], true) ? $mt : 'MASTER';
+
+            return ['tier' => $tier, 'rank' => '', 'lp' => $abs - 2800];
         }
         $order = ['IRON' => 0, 'BRONZE' => 400, 'SILVER' => 800, 'GOLD' => 1200, 'PLATINUM' => 1600, 'EMERALD' => 2000, 'DIAMOND' => 2400];
         $tier = 'IRON';
