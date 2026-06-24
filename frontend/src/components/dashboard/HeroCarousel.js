@@ -176,6 +176,11 @@ export default function HeroCarousel({ sliderPool = [], version }) {
       data-reveal
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      style={{
+        // Aktif slaytın kategorisi tüm slider accent'ini sürer (CTA buton + aktif dot dahil).
+        "--accent": curStyle.color,
+        "--accent-soft": `color-mix(in oklab, ${curStyle.color} 18%, transparent)`,
+      }}
     >
       {slides.map((s, idx) => {
         const role = primaryRole(s.positions);
