@@ -184,6 +184,7 @@ class MatchService
                 'badges'         => $this->badges->calculateBadges($p, $info),
                 'tier'           => null,
                 'rankDivision'   => null,
+                'leaguePoints'   => null, // Master+ LP gösterimi için
             ];
         }
 
@@ -194,6 +195,7 @@ class MatchService
                 if ($ranked['solo'] ?? null) {
                     $pl['tier'] = $ranked['solo']['tier'];
                     $pl['rankDivision'] = $ranked['solo']['rank'];
+                    $pl['leaguePoints'] = $ranked['solo']['lp'] ?? null;
                 }
             } catch (\Exception $e) {
                 // Sessizce yutma — rank null kalırsa (key expire/rate-limit) sebebi görünsün.

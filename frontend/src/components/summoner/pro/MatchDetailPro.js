@@ -1,9 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { LayoutGrid, PieChart, Gem } from "lucide-react";
 import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
 import { scoreColor } from "./scoreColor";
+import MatchDetailsTab from "./MatchDetailsTab";
+
+const DETAIL_TABS = [
+  { key: "general", label: "Genel", icon: LayoutGrid },
+  { key: "details", label: "Detaylar", icon: PieChart },
+  { key: "runes", label: "Rünler", icon: Gem },
+];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -11,10 +19,14 @@ function fmtGold(g) { return g >= 1000 ? (g / 1000).toFixed(1) + "k" : g; }
 function fmtDmg(d) { return d >= 1000 ? (d / 1000).toFixed(1) + "k" : d; }
 function fmtDur(s) { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
 
-function formatRank(tier, div) {
+function formatRank(tier, div, lp) {
   if (!tier) return "";
   const name = tier.charAt(0) + tier.slice(1).toLowerCase();
-  return ["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier) ? name : `${name} ${div || ""}`.trim();
+  // Master+ tek bölüm → LP göster ("Master 302 LP"). Altı → bölüm yeter ("Diamond II").
+  if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier)) {
+    return lp != null ? `${name} ${lp} LP` : name;
+  }
+  return `${name} ${div || ""}`.trim();
 }
 function rankBadgeUrl(tier) { return tier ? `/ranks/badges/${tier.toLowerCase()}.webp` : null; }
 function kdaColor(k) {
@@ -25,7 +37,7 @@ function kdaColor(k) {
 }
 
 function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
-  const rank = formatRank(p.tier, p.rankDivision);
+  const rank = formatRank(p.tier, p.rankDivision, p.leaguePoints);
   const sc = p.elwScore;
   const dmgPct = maxDmg > 0 ? ((p.damage || 0) / maxDmg) * 100 : 0;
   const mk = p.pentaKills > 0 ? "PENTA" : p.quadraKills > 0 ? "QUADRA" : p.tripleKills > 0 ? "TRIPLE" : null;
@@ -56,8 +68,8 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
         <RuneTooltip runes={p.runes} keystoneSize={21} subTreeSize={15} />
       </div>
 
-      {/* İsim + rank */}
-      <div className="w-[122px] min-w-0 flex-shrink-0">
+      {/* İsim + rank — küçülebilir (flex-shrink yok = satır taşmasını bu emer, skor kırpılmaz) */}
+      <div className="w-[122px] min-w-0">
         <p className={`text-[13px] truncate leading-tight ${p.isBot ? "text-gray-500 italic" : isMe ? "text-cyan-300 font-semibold" : "text-gray-100"}`}>
           {p.summonerName}
         </p>
@@ -74,7 +86,7 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
         </p>
         <p className={`text-[11px] font-semibold leading-tight ${kdaColor(p.kda)}`}>
           {p.kda === "Perfect" ? "Perfect" : `${p.kda.toFixed(1)}`}
-          {mk && <span className="ml-0.5 text-[9px] text-amber-400">{mk[0]}{mk.length > 1 ? mk.slice(1, 2).toLowerCase() : ""}</span>}
+          {mk && <span className="ml-1 text-[9px] font-bold text-amber-400">{{ TRIPLE: "Triple Kill", QUADRA: "Quadra Kill", PENTA: "Penta Kill" }[mk]}</span>}
         </p>
       </div>
 
@@ -99,8 +111,8 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
         </div>
       </div>
 
-      {/* ELW — MVP/yüksek skorda glow */}
-      <span className="w-10 text-right text-[16px] font-extrabold flex-shrink-0 tabular-nums"
+      {/* ELW — MVP/yüksek skorda glow (w-12 + pr ile sağ kenarda kırpılmaz) */}
+      <span className="w-12 pr-0.5 text-right text-[16px] font-extrabold flex-shrink-0 tabular-nums"
         style={{ color: scoreColor(sc), textShadow: scGlow ? `0 0 9px ${scoreColor(sc)}` : undefined }}>
         {sc != null ? sc.toFixed(1) : "—"}
       </span>
@@ -140,6 +152,7 @@ const detailCache = new Map();
 export default function MatchDetailPro({ matchId, puuid }) {
   const [data, setData] = useState(() => detailCache.get(matchId) ?? null);
   const [loading, setLoading] = useState(() => !detailCache.has(matchId));
+  const [tab, setTab] = useState("general");
 
   useEffect(() => {
     // Daha önce yüklendiyse cache'ten ver, ağ isteği yapma
@@ -195,8 +208,71 @@ export default function MatchDetailPro({ matchId, puuid }) {
         <span className="text-[11px] text-gray-400 font-medium">{data.queueType}</span>
         <span className="text-[10px] text-gray-600">{fmtDur(data.duration)}</span>
       </div>
-      <TeamBlock team={t1} searchedPuuid={puuid} maxDmg={maxDmg} mvpPuuid={mvpPuuid} acePuuid={acePuuid} />
-      <TeamBlock team={t2} searchedPuuid={puuid} maxDmg={maxDmg} mvpPuuid={mvpPuuid} acePuuid={acePuuid} />
+
+      {/* Sekme çubuğu — Genel / Detaylar / Rünler */}
+      <div className="flex items-center gap-1 rounded-lg bg-card/40 border border-edge/40 p-0.5">
+        {DETAIL_TABS.map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[12px] font-semibold transition-colors cursor-pointer ${
+                active ? "bg-soft text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              <Icon size={13} className={active ? "text-[var(--dpm-accent,#60a5fa)]" : ""} />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* GENEL — mevcut takım tabloları */}
+      {tab === "general" && (
+        <>
+          <TeamBlock team={t1} searchedPuuid={puuid} maxDmg={maxDmg} mvpPuuid={mvpPuuid} acePuuid={acePuuid} />
+          <TeamBlock team={t2} searchedPuuid={puuid} maxDmg={maxDmg} mvpPuuid={mvpPuuid} acePuuid={acePuuid} />
+        </>
+      )}
+
+      {/* DETAYLAR — tek oyuncu odaklı (skill/build order, kıyas, rozetler) */}
+      {tab === "details" && (
+        <MatchDetailsTab t1={t1} t2={t2} searchedPuuid={puuid} duration={data.duration} />
+      )}
+
+      {/* RÜNLER — oyuncu başına rün sayfası */}
+      {tab === "runes" && <RunesTab t1={t1} t2={t2} searchedPuuid={puuid} />}
+    </div>
+  );
+}
+
+/* ===== Rünler sekmesi — her oyuncu için inline rün özeti (hover'da tam ağaç) ===== */
+function RunesTab({ t1, t2, searchedPuuid }) {
+  const Row = ({ p }) => (
+    <div className={`flex items-center gap-2.5 px-3 py-2 rounded-md ${p.puuid === searchedPuuid ? "bg-cyan-500/[0.07]" : ""}`}>
+      <img src={p.champion?.image} alt="" width={30} height={30} className="rounded-md flex-shrink-0" />
+      <span className={`text-[12px] truncate flex-1 min-w-0 ${p.puuid === searchedPuuid ? "text-cyan-300 font-semibold" : "text-gray-200"}`}>
+        {p.summonerName}
+      </span>
+      <RuneTooltip runes={p.runes} keystoneSize={24} subTreeSize={18} />
+    </div>
+  );
+  const Block = ({ team }) => (
+    <div className={`rounded-lg overflow-hidden border ${team?.info?.win ? "border-blue-500/25" : "border-red-500/25"}`}>
+      <div className={`px-3 py-1.5 text-[12px] font-bold ${team?.info?.win ? "bg-blue-500/10 text-blue-400" : "bg-red-500/10 text-red-400"}`}>
+        {team?.info?.win ? "Zafer" : "Yenilgi"}
+      </div>
+      <div className="divide-y divide-edge/15">
+        {team?.players?.map((p, i) => <Row key={p.puuid + i} p={p} />)}
+      </div>
+    </div>
+  );
+  return (
+    <div className="space-y-2">
+      <Block team={t1} />
+      <Block team={t2} />
     </div>
   );
 }

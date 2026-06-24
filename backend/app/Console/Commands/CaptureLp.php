@@ -7,6 +7,7 @@ use App\Models\TrackedPlayer;
 use App\Services\LpTrackingService;
 use App\Services\RiotApi\LeagueService;
 use App\Services\RiotApi\MatchDataService;
+use App\Services\RiotApi\MatchService;
 use App\Services\RiotApi\SummonerService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -26,6 +27,7 @@ class CaptureLp extends Command
         LeagueService $league,
         MatchDataService $matchData,
         LpTrackingService $lpTracking,
+        MatchService $matchService,
     ): int {
         $players = TrackedPlayer::where('active', true)
             ->orderByRaw('last_tracked_at IS NOT NULL, last_tracked_at') // hiç çekilmeyen / en eski önce
@@ -85,6 +87,12 @@ class CaptureLp extends Command
                 $tp->last_tracked_at = now();
                 $tp->last_match_id = $newest['solo'] ?? $newest['flex'] ?? $tp->last_match_id;
                 $tp->save();
+
+                // 7. Prewarm: sezon maç ÖZETLERİNİ de kur (DB-first; eksikleri rate-limit
+                //    bütçesiyle çeker) → bu hesabın profili kimse bakmadan hazır, anında açılır.
+                try {
+                    $matchService->ensureSeasonSummaries($puuid);
+                } catch (\Exception $e) {}
 
                 $rankStr = $solo ? "{$solo['tier']} {$solo['rank']} {$solo['lp']}LP" : 'Unranked';
                 $this->line("  {$label}: {$rankStr}  (+{$written} snapshot)");
