@@ -116,7 +116,14 @@ export function RankRow({ rank, champ, value, color, href }) {
       <ChampPortrait name={champ.name} image={champ.image} size={34} />
       <div className="rank-meta">
         <b>{champ.name}</b>
-        <RoleBadge role={role} />
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <RoleBadge role={role} />
+          {champ.sampleSize ? (
+            <small style={{ color: "var(--txt-3)", fontSize: 10, whiteSpace: "nowrap" }}>
+              {champ.sampleSize} maç
+            </small>
+          ) : null}
+        </span>
       </div>
       <div className="rank-val">
         <span className="num" style={{ color }}>{value}</span>

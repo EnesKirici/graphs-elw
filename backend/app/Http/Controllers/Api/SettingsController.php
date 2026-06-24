@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SettingsController extends Controller
 {
@@ -45,20 +46,27 @@ class SettingsController extends Controller
      */
     public function update(string $key, Request $request): JsonResponse
     {
-        $allowed = ['performance_labels', 'badge_config', 'elw_score', 'profile_design'];
+        $allowed = ['performance_labels', 'badge_config', 'elw_score', 'profile_design', 'meta_insufficient_mode'];
 
         if (!in_array($key, $allowed)) {
             return response()->json(['error' => 'Geçersiz ayar anahtarı.'], 422);
         }
 
-        // profile_design tek bir string ('classic' | 'pro'); diğerleri yapılandırma dizisi.
+        // Tek string ayarlar vs yapılandırma dizisi.
         if ($key === 'profile_design') {
             $request->validate(['value' => 'required|string|in:classic,pro']);
+        } elseif ($key === 'meta_insufficient_mode') {
+            $request->validate(['value' => 'required|string|in:label,sim']);
         } else {
             $request->validate(['value' => 'required|array']);
         }
 
         AdminSetting::setValue($key, $request->input('value'));
+
+        // Meta modu değişince ana sayfa dashboard cache'ini tazele (anında yansısın).
+        if ($key === 'meta_insufficient_mode') {
+            Cache::forget('meta:dashboard_stats_v7');
+        }
 
         return response()->json([
             'ok'  => true,
@@ -69,8 +77,9 @@ class SettingsController extends Controller
     private function getDefaults(): array
     {
         return [
-            'elw_score'      => self::DEFAULT_ELW_SCORE,
-            'profile_design' => 'classic',
+            'elw_score'              => self::DEFAULT_ELW_SCORE,
+            'profile_design'         => 'classic',
+            'meta_insufficient_mode' => 'label',
         ];
     }
 
