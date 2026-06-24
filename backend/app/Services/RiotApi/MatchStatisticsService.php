@@ -3,6 +3,8 @@
 namespace App\Services\RiotApi;
 
 use App\Models\LpSnapshot;
+use App\Models\MatchSummary;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -21,6 +23,28 @@ class MatchStatisticsService
     ) {}
 
     /**
+     * Oyuncunun sezon maçlarının kompakt stat kayıtları (match_summaries.stat_json).
+     * MatchService::ensureSeasonSummaries önceden çağrılmış olmalı → full maç OKUNMAZ.
+     * Her satır: ->queue_id, ->win, ->game_creation, ->stat_json['p'] (ham oyuncu,
+     * challenges dahil), ->stat_json['roster'] (10 kompakt kimlik), ->stat_json['gameDuration'].
+     */
+    private function seasonStatRecords(string $puuid, ?array $queueIds = null): Collection
+    {
+        // Yalnız bu sezon (game_creation ms; seasonStartTimestamp saniye) → sezonlar karışmaz.
+        $seasonStartMs = $this->matchData->seasonStartTimestamp() * 1000;
+
+        $q = MatchSummary::where('puuid', $puuid)
+            ->whereNotNull('stat_json')
+            ->where('game_creation', '>=', $seasonStartMs)
+            ->orderByDesc('game_creation');
+        if ($queueIds) {
+            $q->whereIn('queue_id', $queueIds);
+        }
+
+        return $q->get(['match_id', 'queue_id', 'win', 'game_creation', 'stat_json']);
+    }
+
+    /**
      * Tahmini MMR — son N maçtaki RAKİP oyuncuların ortalama solo rankı.
      * Riot MMR vermez; bu, oynanan maçların ortalama seviyesinden bir tahmindir.
      *
@@ -30,31 +54,22 @@ class MatchStatisticsService
      */
     public function getAvgGameRank(string $puuid, int $matchCount = 20): ?array
     {
-        return Cache::remember("avg_game_rank:v1:{$puuid}", config('riot.cache_ttl.summoner'), function () use ($puuid, $matchCount) {
-            try {
-                $matchIds = $this->matchData->getMatchIds($puuid, $matchCount, 0);
-            } catch (\Exception $e) {
-                return null;
-            }
-            if (empty($matchIds)) return null;
+        return Cache::remember("avg_game_rank:v2:{$puuid}", config('riot.cache_ttl.summoner'), function () use ($puuid, $matchCount) {
+            $rows = $this->seasonStatRecords($puuid)->take($matchCount);
+            if ($rows->isEmpty()) return null;
 
-            // Rakip puuid'lerini topla (oyuncunun takımı hariç)
+            // Rakip puuid'lerini topla (oyuncunun takımı hariç) — kompakt kadrodan
             $opp = [];
-            foreach ($matchIds as $matchId) {
-                try {
-                    $info = $this->matchData->getMatchDetail($matchId)['info'];
-                    $myTeam = null;
-                    foreach ($info['participants'] as $p) {
-                        if ($p['puuid'] === $puuid) { $myTeam = $p['teamId']; break; }
+            foreach ($rows as $row) {
+                $p = $row->stat_json['p'] ?? null;
+                $roster = $row->stat_json['roster'] ?? null;
+                if (!$p || !$roster) continue;
+                $myTeam = $p['teamId'] ?? null;
+                if ($myTeam === null) continue;
+                foreach ($roster as $rp) {
+                    if (($rp['teamId'] ?? null) !== $myTeam && !empty($rp['puuid'])) {
+                        $opp[$rp['puuid']] = true;
                     }
-                    if ($myTeam === null) continue;
-                    foreach ($info['participants'] as $p) {
-                        if (($p['teamId'] ?? null) !== $myTeam && !empty($p['puuid'])) {
-                            $opp[$p['puuid']] = true;
-                        }
-                    }
-                } catch (\Exception $e) {
-                    continue;
                 }
             }
             // Rate-limit bütçesi düşük tutuldu (mevcut API key). Tüm sonuç cache'lenir →
@@ -85,7 +100,7 @@ class MatchStatisticsService
      */
     public function getSeasonRoleStats(string $puuid): array
     {
-        $cacheKey = "season_roles:v3:{$puuid}";
+        $cacheKey = "season_roles:v4:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $queues = [
@@ -99,31 +114,18 @@ class MatchStatisticsService
             $result = ['all' => [], 'solo' => [], 'flex' => [], 'normal' => []];
             $rawByKey = ['solo' => [], 'flex' => [], 'normal' => []];
 
-            foreach ($queues as $queueId => $queueKey) {
-                try {
-                    $matchIds = $this->matchData->getSeasonMatchIds($puuid, $queueId);
-                } catch (\Exception $e) {
-                    continue;
-                }
+            foreach ($this->seasonStatRecords($puuid, array_keys($queues)) as $row) {
+                $queueKey = $queues[$row->queue_id] ?? null;
+                if (!$queueKey) continue;
+                $p = $row->stat_json['p'] ?? null;
+                if (!$p) continue;
 
-                foreach ($matchIds as $matchId) {
-                    try {
-                        $detail = $this->matchData->getMatchDetail($matchId);
-                        foreach ($detail['info']['participants'] as $p) {
-                            if ($p['puuid'] === $puuid) {
-                                $role = $p['teamPosition'] ?: $p['individualPosition'] ?: '';
-                                if (!$role) break;
-                                if ($role === 'BOT') $role = 'BOTTOM';
-                                if (!isset($rawByKey[$queueKey][$role])) $rawByKey[$queueKey][$role] = ['games' => 0, 'wins' => 0];
-                                $rawByKey[$queueKey][$role]['games']++;
-                                if ($p['win']) $rawByKey[$queueKey][$role]['wins']++;
-                                break;
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        continue;
-                    }
-                }
+                $role = ($p['teamPosition'] ?? '') ?: ($p['individualPosition'] ?? '') ?: '';
+                if (!$role) continue;
+                if ($role === 'BOT') $role = 'BOTTOM';
+                if (!isset($rawByKey[$queueKey][$role])) $rawByKey[$queueKey][$role] = ['games' => 0, 'wins' => 0];
+                $rawByKey[$queueKey][$role]['games']++;
+                if (!empty($p['win'])) $rawByKey[$queueKey][$role]['wins']++;
             }
 
             // Her kuyruk tipi için sıralı dizi oluştur
@@ -174,37 +176,21 @@ class MatchStatisticsService
      */
     public function getWinrateTimeline(string $puuid): array
     {
-        $cacheKey = "winrate_timeline:v5:{$puuid}";
+        $cacheKey = "winrate_timeline:v6:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $result = ['solo' => null, 'flex' => null];
 
             foreach ([420 => 'solo', 440 => 'flex'] as $queueId => $key) {
                 $matches = [];
-                try {
-                    $matchIds = $this->matchData->getSeasonMatchIds($puuid, $queueId);
-                } catch (\Exception $e) {
-                    continue;
-                }
-
-                foreach ($matchIds as $matchId) {
-                    try {
-                        $detail = $this->matchData->getMatchDetail($matchId);
-
-                        if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
-
-                        foreach ($detail['info']['participants'] as $p) {
-                            if ($p['puuid'] === $puuid) {
-                                $matches[] = [
-                                    'time' => $detail['info']['gameCreation'],
-                                    'win'  => $p['win'],
-                                ];
-                                break;
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        continue;
-                    }
+                foreach ($this->seasonStatRecords($puuid, [$queueId]) as $row) {
+                    $p = $row->stat_json['p'] ?? null;
+                    if (!$p) continue;
+                    if (($row->stat_json['gameDuration'] ?? 0) < 300) continue;
+                    $matches[] = [
+                        'time' => $row->game_creation,
+                        'win'  => $p['win'],
+                    ];
                 }
 
                 usort($matches, fn($a, $b) => $a['time'] <=> $b['time']);
@@ -254,7 +240,7 @@ class MatchStatisticsService
     {
         $soloKey = ($ranked['solo']['tier'] ?? '') . ($ranked['solo']['rank'] ?? '') . ($ranked['solo']['lp'] ?? '');
         $flexKey = ($ranked['flex']['tier'] ?? '') . ($ranked['flex']['rank'] ?? '') . ($ranked['flex']['lp'] ?? '');
-        $cacheKey = "lp_timeline:v2:{$puuid}:{$soloKey}:{$flexKey}";
+        $cacheKey = "lp_timeline:v3:{$puuid}:{$soloKey}:{$flexKey}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid, $ranked) {
             $result = ['solo' => null, 'flex' => null];
@@ -265,27 +251,13 @@ class MatchStatisticsService
                 $cur = $ranked[$key] ?? null;
                 if (!$cur || !isset($cur['tier'], $cur['rank'], $cur['lp'])) continue;
 
-                try {
-                    $matchIds = $this->matchData->getSeasonMatchIds($puuid, $queueId);
-                } catch (\Exception $e) {
-                    continue;
-                }
-
                 // Kronolojik galibiyet/mağlubiyet listesi (sadece tamamlanmış maçlar)
                 $games = [];
-                foreach ($matchIds as $matchId) {
-                    try {
-                        $detail = $this->matchData->getMatchDetail($matchId);
-                        if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
-                        foreach ($detail['info']['participants'] as $p) {
-                            if ($p['puuid'] === $puuid) {
-                                $games[] = ['time' => $detail['info']['gameCreation'], 'win' => $p['win'], 'matchId' => $matchId];
-                                break;
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        continue;
-                    }
+                foreach ($this->seasonStatRecords($puuid, [$queueId]) as $row) {
+                    $p = $row->stat_json['p'] ?? null;
+                    if (!$p) continue;
+                    if (($row->stat_json['gameDuration'] ?? 0) < 300) continue;
+                    $games[] = ['time' => $row->game_creation, 'win' => $p['win'], 'matchId' => $row->match_id];
                 }
                 if (count($games) < 2) continue;
                 usort($games, fn($a, $b) => $a['time'] <=> $b['time']); // eski → yeni
@@ -395,7 +367,7 @@ class MatchStatisticsService
      */
     public function getSeasonChampionStats(string $puuid): array
     {
-        $cacheKey = "season_champs:v5:{$puuid}";
+        $cacheKey = "season_champs:v6:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             // Queue → bucket. solo/flex AYRI tutulur; 'ranked' ve 'all' sonradan birleştirilir.
@@ -424,45 +396,31 @@ class MatchStatisticsService
 
             $rawByType = ['solo' => [], 'flex' => [], 'normal' => []];
 
-            foreach ($queues as $queueId => $type) {
-                try {
-                    $matchIds = $this->matchData->getSeasonMatchIds($puuid, $queueId);
-                } catch (\Exception $e) {
-                    continue;
+            foreach ($this->seasonStatRecords($puuid, array_keys($queues)) as $row) {
+                $type = $queues[$row->queue_id] ?? null;
+                if (!$type) continue;
+                $p = $row->stat_json['p'] ?? null;
+                if (!$p) continue;
+
+                $gameDuration = $row->stat_json['gameDuration'] ?? 0;
+                if ($gameDuration < 300) continue;
+
+                $name = $p['championName'];
+                if (!isset($rawByType[$type][$name])) {
+                    $rawByType[$type][$name] = $emptyChamp;
                 }
-
-                foreach ($matchIds as $matchId) {
-                    try {
-                        $detail = $this->matchData->getMatchDetail($matchId);
-
-                        $gameDuration = $detail['info']['gameDuration'] ?? 0;
-                        if ($gameDuration < 300) continue;
-
-                        foreach ($detail['info']['participants'] as $p) {
-                            if ($p['puuid'] === $puuid) {
-                                $name = $p['championName'];
-                                if (!isset($rawByType[$type][$name])) {
-                                    $rawByType[$type][$name] = $emptyChamp;
-                                }
-                                $rawByType[$type][$name]['games']++;
-                                if ($p['win']) $rawByType[$type][$name]['wins']++;
-                                $rawByType[$type][$name]['kills']       += $p['kills'];
-                                $rawByType[$type][$name]['deaths']      += $p['deaths'];
-                                $rawByType[$type][$name]['assists']     += $p['assists'];
-                                $rawByType[$type][$name]['cs']          += ($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0);
-                                $rawByType[$type][$name]['gold']        += $p['goldEarned'] ?? 0;
-                                $rawByType[$type][$name]['duration']    += $gameDuration;
-                                $rawByType[$type][$name]['pentaKills']  += $p['pentaKills'] ?? 0;
-                                $rawByType[$type][$name]['quadraKills'] += $p['quadraKills'] ?? 0;
-                                $rawByType[$type][$name]['tripleKills'] += $p['tripleKills'] ?? 0;
-                                $rawByType[$type][$name]['doubleKills'] += $p['doubleKills'] ?? 0;
-                                break;
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        continue;
-                    }
-                }
+                $rawByType[$type][$name]['games']++;
+                if (!empty($p['win'])) $rawByType[$type][$name]['wins']++;
+                $rawByType[$type][$name]['kills']       += $p['kills'];
+                $rawByType[$type][$name]['deaths']      += $p['deaths'];
+                $rawByType[$type][$name]['assists']     += $p['assists'];
+                $rawByType[$type][$name]['cs']          += ($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0);
+                $rawByType[$type][$name]['gold']        += $p['goldEarned'] ?? 0;
+                $rawByType[$type][$name]['duration']    += $gameDuration;
+                $rawByType[$type][$name]['pentaKills']  += $p['pentaKills'] ?? 0;
+                $rawByType[$type][$name]['quadraKills'] += $p['quadraKills'] ?? 0;
+                $rawByType[$type][$name]['tripleKills'] += $p['tripleKills'] ?? 0;
+                $rawByType[$type][$name]['doubleKills'] += $p['doubleKills'] ?? 0;
             }
 
             // Bucket birleştirme: ranked = solo+flex; all = solo+flex+normal
@@ -547,54 +505,40 @@ class MatchStatisticsService
 
     public function getPersonalityBadges(string $puuid): array
     {
-        $cacheKey = "season_badges:v3:{$puuid}";
+        $cacheKey = "season_badges:v4:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $games = [];
 
-            foreach ([420, 440, 400, 430, 490] as $queueId) {
-                try {
-                    $matchIds = $this->matchData->getSeasonMatchIds($puuid, $queueId);
-                } catch (\Exception $e) {
-                    continue;
-                }
-                foreach ($matchIds as $matchId) {
-                    try {
-                        $detail = $this->matchData->getMatchDetail($matchId);
-                        $info = $detail['info'] ?? [];
-                        if (($info['gameDuration'] ?? 0) < 300) continue;
-                        foreach ($info['participants'] as $p) {
-                            if ($p['puuid'] !== $puuid) continue;
-                            $c = $p['challenges'] ?? [];
-                            $mins = max(1, ($info['gameDuration'] ?? 0) / 60);
-                            $games[] = [
-                                'champ'      => $p['championName'],
-                                'win'        => (bool) $p['win'],
-                                'teamId'     => $p['teamId'] ?? 0,
-                                'surrender'  => (bool) ($p['gameEndedInSurrender'] ?? false),
-                                'firstBlood' => (bool) ($p['firstBloodKill'] ?? false),
-                                'visionPm'   => (float) ($c['visionScorePerMinute'] ?? 0),
-                                'kills'      => (int) ($p['kills'] ?? 0),
-                                'deaths'     => (int) ($p['deaths'] ?? 0),
-                                'assists'    => (int) ($p['assists'] ?? 0),
-                                'dmgPct'     => (float) ($c['teamDamagePercentage'] ?? 0),
-                                'time'       => $info['gameCreation'] ?? 0,
-                                // Oyuncu Özellikleri (vision/heal/KP/CS/objektif) için:
-                                'wards'      => (int) ($p['wardsPlaced'] ?? 0),
-                                'healPm'     => (float) ($c['effectiveHealAndShielding'] ?? 0) / $mins,
-                                'kp'         => (float) ($c['killParticipation'] ?? 0),
-                                'cspm'       => (($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0)) / $mins,
-                                'pos'        => $p['teamPosition'] ?? '',
-                                'obj'        => (float) (($c['baronTakedowns'] ?? 0) + ($c['dragonTakedowns'] ?? 0)),
-                                'penta'      => (int) ($p['pentaKills'] ?? 0),
-                                'mins'       => $mins,
-                            ];
-                            break;
-                        }
-                    } catch (\Exception $e) {
-                        continue;
-                    }
-                }
+            foreach ($this->seasonStatRecords($puuid, [420, 440, 400, 430, 490]) as $row) {
+                $p = $row->stat_json['p'] ?? null;
+                if (!$p) continue;
+                $dur = $row->stat_json['gameDuration'] ?? 0;
+                if ($dur < 300) continue;
+                $c = $p['challenges'] ?? [];
+                $mins = max(1, $dur / 60);
+                $games[] = [
+                    'champ'      => $p['championName'],
+                    'win'        => (bool) $p['win'],
+                    'teamId'     => $p['teamId'] ?? 0,
+                    'surrender'  => (bool) ($p['gameEndedInSurrender'] ?? false),
+                    'firstBlood' => (bool) ($p['firstBloodKill'] ?? false),
+                    'visionPm'   => (float) ($c['visionScorePerMinute'] ?? 0),
+                    'kills'      => (int) ($p['kills'] ?? 0),
+                    'deaths'     => (int) ($p['deaths'] ?? 0),
+                    'assists'    => (int) ($p['assists'] ?? 0),
+                    'dmgPct'     => (float) ($c['teamDamagePercentage'] ?? 0),
+                    'time'       => $row->game_creation,
+                    // Oyuncu Özellikleri (vision/heal/KP/CS/objektif) için:
+                    'wards'      => (int) ($p['wardsPlaced'] ?? 0),
+                    'healPm'     => (float) ($c['effectiveHealAndShielding'] ?? 0) / $mins,
+                    'kp'         => (float) ($c['killParticipation'] ?? 0),
+                    'cspm'       => (($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0)) / $mins,
+                    'pos'        => $p['teamPosition'] ?? '',
+                    'obj'        => (float) (($c['baronTakedowns'] ?? 0) + ($c['dragonTakedowns'] ?? 0)),
+                    'penta'      => (int) ($p['pentaKills'] ?? 0),
+                    'mins'       => $mins,
+                ];
             }
 
             $g = count($games);
@@ -1102,48 +1046,32 @@ class MatchStatisticsService
      */
     public function getChallengeAverages(string $puuid): array
     {
-        $cacheKey = "challenge_avgs:v3:{$puuid}";
+        $cacheKey = "challenge_avgs:v4:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
-            try {
-                $matchIds = $this->matchData->getAllSeasonMatchIds($puuid);
-            } catch (\Exception $e) {
-                return ['averages' => [], 'totalGames' => 0];
-            }
-
             // Summoner's Rift queue'ları — Arena/ARAM/Bot/özel modları hariç
             $allowedQueues = [400, 420, 430, 440];
 
             $totals = [];
             $counts = []; // Metrik başına ayrı sayaç (support filtrelemesi için)
 
-            foreach ($matchIds as $matchId) {
-                try {
-                    $detail = $this->matchData->getMatchDetail($matchId);
-                } catch (\Exception $e) {
-                    continue;
-                }
+            foreach ($this->seasonStatRecords($puuid, $allowedQueues) as $row) {
+                $p = $row->stat_json['p'] ?? null;
+                if (!$p) continue;
+                if (($row->stat_json['gameDuration'] ?? 0) < 300) continue;
 
-                if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
-                if (!in_array($detail['info']['queueId'] ?? 0, $allowedQueues, true)) continue;
+                $role = $p['teamPosition'] ?? '';
+                $isSupport = ($role === 'UTILITY');
 
-                foreach ($detail['info']['participants'] as $p) {
-                    if ($p['puuid'] !== $puuid) continue;
+                $ch = $p['challenges'] ?? [];
+                foreach ($ch as $key => $val) {
+                    if (!is_numeric($val) && !is_bool($val)) continue;
 
-                    $role = $p['teamPosition'] ?? '';
-                    $isSupport = ($role === 'UTILITY');
+                    // Support maçlarında laning metriklerini hariç tut
+                    if ($isSupport && in_array($key, self::LANING_METRICS, true)) continue;
 
-                    $ch = $p['challenges'] ?? [];
-                    foreach ($ch as $key => $val) {
-                        if (!is_numeric($val) && !is_bool($val)) continue;
-
-                        // Support maçlarında laning metriklerini hariç tut
-                        if ($isSupport && in_array($key, self::LANING_METRICS, true)) continue;
-
-                        $totals[$key] = ($totals[$key] ?? 0) + (is_bool($val) ? ($val ? 1 : 0) : $val);
-                        $counts[$key] = ($counts[$key] ?? 0) + 1;
-                    }
-                    break;
+                    $totals[$key] = ($totals[$key] ?? 0) + (is_bool($val) ? ($val ? 1 : 0) : $val);
+                    $counts[$key] = ($counts[$key] ?? 0) + 1;
                 }
             }
 
@@ -1169,61 +1097,42 @@ class MatchStatisticsService
      */
     public function getDuoPartners(string $puuid): array
     {
-        $cacheKey = "duo_partners:v5:{$puuid}";
+        $cacheKey = "duo_partners:v6:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
-            try {
-                $matchIds = $this->matchData->getAllSeasonMatchIds($puuid);
-            } catch (\Exception $e) {
-                return [];
-            }
-            if (empty($matchIds)) return [];
-
             // Summoner's Rift queue'ları — Arena, ARAM, Bot ve özel modları hariç tut
             $allowedQueues = [400, 420, 430, 440];
 
             $totalMatches = 0;
             $teammates = [];
 
-            foreach ($matchIds as $matchId) {
-                try {
-                    $detail = $this->matchData->getMatchDetail($matchId);
-                } catch (\Exception $e) {
-                    continue;
-                }
+            foreach ($this->seasonStatRecords($puuid, $allowedQueues) as $row) {
+                if (($row->stat_json['gameDuration'] ?? 0) < 300) continue;
+                $p = $row->stat_json['p'] ?? null;
+                $roster = $row->stat_json['roster'] ?? null;
+                if (!$p || !$roster) continue;
 
-                if (($detail['info']['gameDuration'] ?? 0) < 300) continue;
-
-                $queueId = $detail['info']['queueId'] ?? 0;
-                if (!in_array($queueId, $allowedQueues, true)) continue;
-
-                $gameCreation = $detail['info']['gameCreation'] ?? 0;
+                $gameCreation = $row->game_creation;
                 $totalMatches++;
 
-                $myTeamId = null;
-                $myWin = false;
-                foreach ($detail['info']['participants'] as $p) {
-                    if ($p['puuid'] === $puuid) {
-                        $myTeamId = $p['teamId'];
-                        $myWin = $p['win'];
-                        break;
-                    }
-                }
+                $myTeamId = $p['teamId'] ?? null;
+                $myWin = (bool) ($p['win'] ?? false);
                 if (!$myTeamId) continue;
 
-                foreach ($detail['info']['participants'] as $p) {
-                    if ($p['puuid'] === $puuid) continue;
-                    if ($p['teamId'] !== $myTeamId) continue;
+                foreach ($roster as $rp) {
+                    if (($rp['puuid'] ?? '') === $puuid) continue;
+                    if (($rp['teamId'] ?? null) !== $myTeamId) continue;
 
-                    $pid = $p['puuid'];
-                    if (str_starts_with($pid, 'BOT')) continue;
+                    $pid = $rp['puuid'] ?? '';
+                    if (!$pid || str_starts_with($pid, 'BOT')) continue;
 
+                    $name = ($rp['gameName'] ?? '') ?: '?';
                     if (!isset($teammates[$pid])) {
                         $teammates[$pid] = [
                             'puuid'       => $pid,
-                            'gameName'    => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
-                            'tagLine'     => $p['riotIdTagline'] ?? '',
-                            'profileIcon' => $p['profileIcon'] ?? 0,
+                            'gameName'    => $name,
+                            'tagLine'     => $rp['tagLine'] ?? '',
+                            'profileIcon' => $rp['profileIcon'] ?? 0,
                             'games'       => 0,
                             'wins'        => 0,
                             'losses'      => 0,
@@ -1237,12 +1146,12 @@ class MatchStatisticsService
 
                     if ($gameCreation > $teammates[$pid]['lastPlayed']) {
                         $teammates[$pid]['lastPlayed'] = $gameCreation;
-                        $teammates[$pid]['gameName'] = $p['riotIdGameName'] ?? $p['summonerName'] ?? '?';
-                        $teammates[$pid]['tagLine'] = $p['riotIdTagline'] ?? '';
-                        $teammates[$pid]['profileIcon'] = $p['profileIcon'] ?? $teammates[$pid]['profileIcon'];
+                        $teammates[$pid]['gameName'] = $name;
+                        $teammates[$pid]['tagLine'] = $rp['tagLine'] ?? '';
+                        $teammates[$pid]['profileIcon'] = $rp['profileIcon'] ?? $teammates[$pid]['profileIcon'];
                     }
 
-                    $champName = $p['championName'] ?? '';
+                    $champName = $rp['championName'] ?? '';
                     if ($champName && !in_array($champName, $teammates[$pid]['champions'])) {
                         $teammates[$pid]['champions'][] = $champName;
                     }

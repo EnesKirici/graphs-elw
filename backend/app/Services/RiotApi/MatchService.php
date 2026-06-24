@@ -291,7 +291,8 @@ class MatchService
             }
             if (!$summary) continue;
 
-            $this->persistSummary($matchId, $puuid, $detail['info'] ?? [], $summary);
+            $stat = $this->buildStatPayload($detail['info'] ?? [], $puuid);
+            $this->persistSummary($matchId, $puuid, $detail['info'] ?? [], $summary, $stat);
             $matches[] = $summary;
         }
 
@@ -301,8 +302,55 @@ class MatchService
         return $matches;
     }
 
+    /**
+     * Bir oyuncunun TÜM sezon maçlarının özetini (display + stat) garanti et.
+     * Eksikleri transient çeker (matches'e YAZMADAN) + kurar + match_summaries'e yazar.
+     * Profil açılışında BİR KEZ çağrılır; 8 season-stat metodu da aynı havuzdan okur
+     * → full maç saklanmaz, maç 8 kez taranmaz. (Eski toplu preload'un yerini alır.)
+     */
+    public function ensureSeasonSummaries(string $puuid): array
+    {
+        $matchIds = [];
+        foreach ([420, 440, 400, 430, 490] as $queueId) {
+            try {
+                $matchIds = array_merge($matchIds, $this->matchData->getSeasonMatchIds($puuid, $queueId));
+            } catch (\Exception $e) {}
+        }
+        $matchIds = array_values(array_unique($matchIds));
+        if (empty($matchIds)) return [];
+
+        // Bu algo versiyonunda + stat_json dolu olanlar hazır; gerisi eksik.
+        $have = MatchSummary::where('puuid', $puuid)
+            ->whereIn('match_id', $matchIds)
+            ->where('algorithm_version', self::ALGO_VERSION)
+            ->whereNotNull('stat_json')
+            ->pluck('match_id')
+            ->all();
+        $missing = array_values(array_diff($matchIds, $have));
+        if (empty($missing)) return $matchIds;
+
+        $details = $this->matchData->getMatchDetailsTransient($missing);
+        if (empty($details)) return $matchIds;
+        $ctx = $this->summaryContext();
+
+        foreach ($missing as $matchId) {
+            $detail = $details[$matchId] ?? null;
+            if (!$detail) continue;
+            try {
+                $summary = $this->buildMatchSummary($detail, $puuid, $matchId, $ctx);
+                $stat = $this->buildStatPayload($detail['info'] ?? [], $puuid);
+                if (!$summary || !$stat) continue;
+                $this->persistSummary($matchId, $puuid, $detail['info'] ?? [], $summary, $stat);
+            } catch (\Exception $e) {}
+        }
+
+        $this->cachePlayersFromDetails($details);
+
+        return $matchIds;
+    }
+
     /** Bir maç özetini match_summaries'e yaz (match_id+puuid unique). */
-    private function persistSummary(string $matchId, string $puuid, array $info, array $summary): void
+    private function persistSummary(string $matchId, string $puuid, array $info, array $summary, ?array $stat): void
     {
         try {
             MatchSummary::updateOrCreate(
@@ -312,10 +360,46 @@ class MatchService
                     'game_creation'     => $info['gameCreation'] ?? 0,
                     'win'               => $summary['win'] ?? false,
                     'summary_json'      => $summary,
+                    'stat_json'         => $stat,
                     'algorithm_version' => self::ALGO_VERSION,
                 ],
             );
         } catch (\Exception $e) {}
+    }
+
+    /**
+     * Season-stat metotları için kompakt veri: aranan oyuncunun HAM participant'ı
+     * (challenges dahil) + maçtaki 10 oyuncunun kompakt kimliği (duo/avg-rank) + meta.
+     * Full 10-oyuncu maçı saklamadan tüm sezon istatistikleri buradan hesaplanır.
+     */
+    private function buildStatPayload(array $info, string $puuid): ?array
+    {
+        $player = null;
+        foreach ($info['participants'] ?? [] as $p) {
+            if (($p['puuid'] ?? null) === $puuid) { $player = $p; break; }
+        }
+        if (!$player) return null;
+
+        $roster = [];
+        foreach ($info['participants'] as $p) {
+            $roster[] = [
+                'puuid'        => $p['puuid'] ?? '',
+                'gameName'     => $p['riotIdGameName'] ?? $p['summonerName'] ?? '',
+                'tagLine'      => $p['riotIdTagline'] ?? '',
+                'profileIcon'  => $p['profileIcon'] ?? null,
+                'championName' => $p['championName'] ?? '',
+                'teamId'       => $p['teamId'] ?? 0,
+                'position'     => $p['teamPosition'] ?? '',
+            ];
+        }
+
+        return [
+            'p'            => $player,
+            'roster'       => $roster,
+            'gameDuration' => $info['gameDuration'] ?? 0,
+            'gameCreation' => $info['gameCreation'] ?? 0,
+            'queueId'      => $info['queueId'] ?? 0,
+        ];
     }
 
     /** Özet kurulumu için ortak DataDragon bağlamı (maç başına yeniden çekilmesin). */

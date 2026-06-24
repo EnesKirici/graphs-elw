@@ -204,36 +204,18 @@ class SummonerController extends Controller
         }
 
         // ────────────────────────────────────────────
-        //  AKILLI YÜKLEME:
-        //  1. Son 10 maç + Sezon ranked maçları paralel preload
-        //  2. Timeline'lar ilk yüklemede çekilmez (maç detayında çekilir)
-        //  3. DB'de olan maçlar tekrar çekilmez (0 istek)
+        //  AKILLI YÜKLEME (DB optimizasyonu — match_summaries):
+        //  Sezon maçlarının kompakt ÖZETİ BİR KEZ kurulur (full 10-oyuncu maçı
+        //  SAKLANMAZ). İstatistik servisleri bu özetlerden okur → tek geçiş, hızlı.
+        //  Maç DETAYI yalnız tıklanınca matches tablosuna yazılır.
         // ────────────────────────────────────────────
-
-        // Son 10 maç ID + TÜM sezon maç ID'lerini topla ve toplu preload
-        // Solo(420), Flex(440), Normal(400), Blind(430), Quickplay(490)
-        // Hepsini önceden yükle → istatistik servisleri tek tek API çağrısı yapmaz
         $seasonOnlyIds = [];
         try {
-            $preloadIds = [];
-            $recentIds = $this->matchData->getMatchIds($puuid, 10, 0);
-            $preloadIds = array_merge($preloadIds, $recentIds);
-            foreach ([420, 440, 400, 430, 490] as $queueId) {
-                try {
-                    $ids = $this->matchData->getSeasonMatchIds($puuid, $queueId);
-                    $preloadIds = array_merge($preloadIds, $ids);
-                    $seasonOnlyIds = array_merge($seasonOnlyIds, $ids);
-                } catch (\Exception $e) {
-                    if ($e->getCode() === 429) $rateLimited = true;
-                }
-            }
-            $preloadIds = array_unique($preloadIds);
-            $this->matchData->preloadMatchDetails($preloadIds);
+            $seasonOnlyIds = $this->match->ensureSeasonSummaries($puuid);
         } catch (\Exception $e) {
             if ($e->getCode() === 429) $rateLimited = true;
         }
-        // Sezon tüm maç sayısı — preload sırasında topladığımız ID'ler.
-        // 5 queue × 100 = 500'e kadar (Riot match-v5 /ids tek istekte max 100)
+        // Sezon tüm maç sayısı (5 queue × 100 = 500'e kadar).
         $totalSeasonMatches = count(array_unique($seasonOnlyIds));
 
         $recentMatches = [];

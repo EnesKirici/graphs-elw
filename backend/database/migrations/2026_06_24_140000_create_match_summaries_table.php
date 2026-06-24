@@ -23,7 +23,8 @@ return new class extends Migration
             $table->unsignedSmallInteger('queue_id')->default(0);
             $table->unsignedBigInteger('game_creation')->default(0);
             $table->boolean('win')->default(false);
-            $table->json('summary_json');                       // tüm özet (hesaplı alanlar dahil)
+            $table->json('summary_json');                       // liste gösterimi (hesaplı alanlar dahil)
+            $table->json('stat_json')->nullable();              // season-stats: ham oyuncu + kompakt 10-kadro
             $table->unsignedSmallInteger('algorithm_version')->default(1); // ELW/badge algo değişince bump
             $table->timestamps();
 
