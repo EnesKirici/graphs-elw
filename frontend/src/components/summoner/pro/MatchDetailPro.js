@@ -29,6 +29,12 @@ function formatRank(tier, div, lp) {
   return `${name} ${div || ""}`.trim();
 }
 function rankBadgeUrl(tier) { return tier ? `/ranks/badges/${tier.toLowerCase()}.webp` : null; }
+// Kompakt rank — rozet tier'i gösterir; yanına yalnız LP (Master+) veya bölüm (altı). Sığsın diye.
+function rankShort(tier, div, lp) {
+  if (!tier) return "";
+  if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier)) return lp != null ? `${lp} LP` : "";
+  return div || "";
+}
 function kdaColor(k) {
   if (k === "Perfect" || k >= 4) return "text-sky-300";
   if (k >= 2.5) return "text-blue-400";
@@ -73,9 +79,17 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
         <p className={`text-[13px] truncate leading-tight ${p.isBot ? "text-gray-500 italic" : isMe ? "text-cyan-300 font-semibold" : "text-gray-100"}`}>
           {p.summonerName}
         </p>
-        <div className="flex items-center gap-1 leading-tight mt-0.5">
-          {p.tier && <img src={rankBadgeUrl(p.tier)} alt="" width={16} height={16} />}
-          <span className="text-[11px] text-gray-400 font-medium truncate">{p.isBot ? "BOT" : rank || "—"}</span>
+        <div className="flex items-center gap-1.5 leading-tight mt-0.5">
+          {p.tier ? (
+            <>
+              <img src={rankBadgeUrl(p.tier)} alt={p.tier} title={rank} width={22} height={22} className="flex-shrink-0" />
+              <span className="text-[11px] text-gray-300 font-semibold whitespace-nowrap">
+                {p.isBot ? "BOT" : rankShort(p.tier, p.rankDivision, p.leaguePoints)}
+              </span>
+            </>
+          ) : (
+            <span className="text-[11px] text-gray-500">{p.isBot ? "BOT" : "—"}</span>
+          )}
         </div>
       </div>
 
