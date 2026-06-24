@@ -14,14 +14,26 @@ export async function generateMetadata({ params }) {
 }
 
 /** Ortak boş-durum kabuğu (offline / bulunamadı / rate limit). */
-function StateShell({ icon, title, children, profileHref }) {
+function StateShell({ icon, title, children, profileHref, mockHref }) {
   return (
     <div className="max-w-[640px] mx-auto px-6 py-24 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-soft flex items-center justify-center mx-auto mb-4 text-3xl">
-        {icon}
-      </div>
+      {icon && (
+        <div className="w-16 h-16 rounded-2xl bg-soft flex items-center justify-center mx-auto mb-4 text-3xl">
+          {icon}
+        </div>
+      )}
       <h1 className="text-xl font-bold text-gray-100 mb-2">{title}</h1>
       <div className="text-gray-400 text-sm">{children}</div>
+      {mockHref && (
+        <div className="mt-5">
+          <Link
+            href={mockHref}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+          >
+            Örnek veri göster
+          </Link>
+        </div>
+      )}
       <div className="mt-6 flex items-center justify-center gap-4 text-sm">
         {profileHref && (
           <Link href={profileHref} className="text-blue-400 hover:underline">← Profile dön</Link>
@@ -38,6 +50,7 @@ export default async function LiveGamePage({ params, searchParams }) {
   const dn = decodeURIComponent(name);
   const dt = decodeURIComponent(tag);
   const profileHref = `/summoner/${encodeURIComponent(dn)}/${encodeURIComponent(dt)}`;
+  const mockHref = `/live-game/${encodeURIComponent(dn)}/${encodeURIComponent(dt)}?mock=1`;
 
   // ?mock=1 → API'ye gitmeden fixture ile çalış (tasarım/screenshot için)
   let data;
@@ -63,14 +76,14 @@ export default async function LiveGamePage({ params, searchParams }) {
         }
         if (!data) {
           return (
-            <StateShell icon="!" title="Oyuncu Bulunamadı" profileHref={profileHref}>
+            <StateShell icon="!" title="Oyuncu Bulunamadı" profileHref={profileHref} mockHref={mockHref}>
               {dn}#{dt} bulunamadı.
             </StateShell>
           );
         }
         if (data.status === "offline") {
           return (
-            <StateShell icon="🎮" title="Şu An Oyunda Değil" profileHref={profileHref}>
+            <StateShell title="Şu An Oyunda Değil" profileHref={profileHref} mockHref={mockHref}>
               <span className="text-gray-200 font-semibold">{dn}#{dt}</span> şu anda bir maçta değil.
               Oyuncu maça girince bu sayfa canlı verilerle dolar.
             </StateShell>
