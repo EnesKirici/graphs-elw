@@ -23,9 +23,9 @@ export default function LiveGameButton({ puuid, name, tag, className = "" }) {
     };
   }, [puuid]);
 
-  // Şimdilik test verisi (fixture) göster — production key gelince `?mock=1`
-  // kaldırılıp gerçek canlı maç verisine (Spectator-V5) döndürülecek.
-  const href = `/live-game/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?mock=1`;
+  // Gerçek canlı maç (Spectator-V5). Personal key ile çalışır; oyuncu maçta değilse
+  // sayfa "maçta değil" gösterir. (Test verisi için ?mock=1 ekle.)
+  const href = `/live-game/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`;
 
   return (
     <Link
