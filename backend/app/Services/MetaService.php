@@ -8,6 +8,7 @@ use App\Models\MatchRecord;
 use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
 use App\Services\RiotApi\RiotApiService;
+use App\Support\Statistics;
 use Illuminate\Support\Facades\Cache;
 
 class MetaService
@@ -33,7 +34,7 @@ class MetaService
 
     public function getDashboardStats(): array
     {
-        return Cache::remember('meta:dashboard_stats_v7', config('riot.cache_ttl.meta_stats'), function () {
+        return Cache::remember('meta:dashboard_stats_v8', config('riot.cache_ttl.meta_stats'), function () {
             $champions = $this->ddragon->getChampions();
             $version = $this->ddragon->getCurrentVersion();
             $positionMap = $this->ddragon->getChampionPositions();
@@ -48,6 +49,7 @@ class MetaService
             // Yetersiz örneklemde davranış — admin panelden yönetilir.
             // 'label' = "veri yetersiz" (varsayılan, dürüst) | 'sim' = sahte simülasyonla doldur.
             $insufficientMode = AdminSetting::getValue('meta_insufficient_mode', 'label');
+            $minGames = (int) config('elwgraphs.stats.min_games', 30);
 
             $stats = [];
             foreach ($champions as $champ) {
@@ -65,6 +67,12 @@ class MetaService
                     $wrChange = isset($prevStats[$champ['id']])
                         ? round($winRate - $prevStats[$champ['id']]['winRate'], 1)
                         : null;
+                    // Wilson alt sınırı (adil sıralama) + kompozit tier + düşük örneklem işareti.
+                    $wins = $r['wins'] ?? (int) round($winRate / 100 * $sampleSize);
+                    $wilson = Statistics::wilsonLowerBound($wins, $sampleSize);
+                    $wilsonWr = round($wilson * 100, 1);
+                    $lowSample = $sampleSize < $minGames;
+                    $tier = $this->tierFromScore($this->compositeTierScore($wilson, $pickRate, $banRate, $sampleSize));
                 } elseif ($insufficientMode === 'sim') {
                     // Sahte simülasyon (admin tercih ederse)
                     $h1 = abs(crc32($champ['id'] . 'wr'));
@@ -77,6 +85,9 @@ class MetaService
                     $wrChange = round(($h4 % 60 - 30) / 10, 1);
                     $dataSource = 'sim';
                     $sampleSize = null;
+                    $wilsonWr = null;
+                    $lowSample = false;
+                    $tier = $this->calculateTier($winRate, $pickRate);
                 } else {
                     // "Veri yetersiz" — sayı gösterilmez (null)
                     $winRate = null;
@@ -85,6 +96,9 @@ class MetaService
                     $wrChange = null;
                     $dataSource = 'insufficient';
                     $sampleSize = null;
+                    $wilsonWr = null;
+                    $lowSample = false;
+                    $tier = null;
                 }
 
                 $stats[] = [
@@ -101,7 +115,9 @@ class MetaService
                     'pickRate'   => $pickRate !== null ? round($pickRate, 1) : null,
                     'banRate'    => $banRate !== null ? round($banRate, 1) : null,
                     'wrChange'   => $wrChange,
-                    'tier'       => $winRate !== null ? $this->calculateTier($winRate, $pickRate) : null,
+                    'wilsonWr'   => $wilsonWr,   // Wilson alt sınırı (adil sıralama temeli)
+                    'tier'       => $tier,
+                    'lowSample'  => $lowSample,  // sampleSize < min_games → "düşük örneklem"
                     'dataSource' => $dataSource,   // 'real' | 'sim' | 'insufficient'
                     'sampleSize' => $sampleSize,
                 ];
@@ -113,7 +129,10 @@ class MetaService
             // Şampiyon listesi: yetersizler sona düşsün.
             usort($stats, fn($a, $b) => ($b['winRate'] ?? -1) <=> ($a['winRate'] ?? -1));
 
-            $topWinRate = array_slice($rankable, 0, 10);
+            // "En Yüksek WR": Wilson alt sınırına göre sırala + düşük örneklem HARİÇ (dürüst).
+            $wrList = array_values(array_filter($rankable, fn($s) => empty($s['lowSample'])));
+            usort($wrList, fn($a, $b) => ($b['wilsonWr'] ?? $b['winRate']) <=> ($a['wilsonWr'] ?? $a['winRate']));
+            $topWinRate = array_slice($wrList, 0, 10);
             $topPickRate = array_slice(
                 collect($rankable)->sortByDesc('pickRate')->values()->all(), 0, 10
             );
@@ -222,6 +241,39 @@ class MetaService
         $i = array_search($current, $patches, true);
 
         return ($i !== false && isset($patches[$i + 1])) ? $patches[$i + 1] : null;
+    }
+
+    /**
+     * Kompozit tier skoru (0–1): Wilson WR (ana) + pick + ban + örneklem güveni.
+     * Bileşenler 0–1 normalize edilir, config ağırlıklarıyla toplanır.
+     */
+    private function compositeTierScore(float $wilson, float $pickRate, float $banRate, int $games): float
+    {
+        $n = config('elwgraphs.tier.normalize');
+        $w = config('elwgraphs.tier.weights');
+        $sampleAt = (float) config('elwgraphs.tier.sample_full_confidence_at', 200);
+
+        $normWr   = Statistics::clamp01(($wilson - $n['wr_min']) / max(0.0001, $n['wr_max'] - $n['wr_min']));
+        $normPick = Statistics::clamp01($pickRate / max(0.0001, $n['pick_max']));
+        $normBan  = Statistics::clamp01($banRate / max(0.0001, $n['ban_max']));
+        $conf     = Statistics::clamp01($games / max(1, $sampleAt));
+
+        return $w['wilson_wr'] * $normWr
+            + $w['pick_rate'] * $normPick
+            + $w['ban_rate'] * $normBan
+            + $w['sample'] * $conf;
+    }
+
+    /** Kompozit skoru (0–1) config eşiklerine göre tier'a (S+/S/A/B/C/D) çevir. */
+    private function tierFromScore(float $score): string
+    {
+        foreach (config('elwgraphs.tier.thresholds') as $tier => $min) {
+            if ($score >= $min) {
+                return $tier;
+            }
+        }
+
+        return 'D';
     }
 
     private function calculateTier(float $winRate, float $pickRate): string

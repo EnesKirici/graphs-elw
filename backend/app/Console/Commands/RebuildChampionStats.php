@@ -18,7 +18,7 @@ class RebuildChampionStats extends Command
         $start = microtime(true);
 
         $result = $stats->aggregateFromMatches();
-        Cache::forget('meta:dashboard_stats_v7'); // dashboard yeni veriyi hemen göstersin
+        Cache::forget('meta:dashboard_stats_v8'); // dashboard yeni veriyi hemen göstersin
 
         $secs = round(microtime(true) - $start, 2);
         $this->info("Bitti ({$secs}s).");

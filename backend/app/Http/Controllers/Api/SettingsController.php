@@ -65,7 +65,7 @@ class SettingsController extends Controller
 
         // Meta modu değişince ana sayfa dashboard cache'ini tazele (anında yansısın).
         if ($key === 'meta_insufficient_mode') {
-            Cache::forget('meta:dashboard_stats_v7');
+            Cache::forget('meta:dashboard_stats_v8');
         }
 
         return response()->json([

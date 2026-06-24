@@ -125,6 +125,7 @@ class ChampionStatsService
                 'pickRate'   => round($r->games / $total * 100, 1),
                 'banRate'    => round($r->bans / $total * 100, 1),
                 'sampleSize' => $r->games,
+                'wins'       => $r->wins, // Wilson alt sınırı için
             ];
         }
 

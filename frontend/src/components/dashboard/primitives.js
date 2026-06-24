@@ -119,8 +119,11 @@ export function RankRow({ rank, champ, value, color, href }) {
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <RoleBadge role={role} />
           {champ.sampleSize ? (
-            <small style={{ color: "var(--txt-3)", fontSize: 10, whiteSpace: "nowrap" }}>
-              {champ.sampleSize} maç
+            <small
+              style={{ color: champ.lowSample ? "var(--loss)" : "var(--txt-3)", fontSize: 10, whiteSpace: "nowrap" }}
+              title={champ.lowSample ? "Düşük örneklem — az maçtan, güvenilirliği düşük" : null}
+            >
+              {champ.sampleSize} maç{champ.lowSample ? " · az" : ""}
             </small>
           ) : null}
         </span>
