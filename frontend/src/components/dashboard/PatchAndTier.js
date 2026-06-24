@@ -47,18 +47,24 @@ export default function PatchAndTier({ champions = [], patch }) {
       <div className="card pad">
         <div className="section-head" style={{ marginBottom: 16 }}>
           <h2>Patch {patch} Değişimleri</h2>
-          <span className="tag">son 24 saat</span>
         </div>
-        <div className="patch-grid">
-          <div>
-            <div className="patch-head up">▲ Yükselen</div>
-            {rising.map((c) => <PatchRow key={c.id} champ={c} />)}
+        {rising.length === 0 && falling.length === 0 ? (
+          <p className="muted" style={{ fontSize: 13, padding: "6px 0", lineHeight: 1.5 }}>
+            Patch değişimleri, önceki yamanın verisi de biriktiğinde hesaplanır
+            (bu yamadan önceki WR ile karşılaştırma). Yeterli geçmiş oluşunca burada görünecek.
+          </p>
+        ) : (
+          <div className="patch-grid">
+            <div>
+              <div className="patch-head up">▲ Yükselen</div>
+              {rising.map((c) => <PatchRow key={c.id} champ={c} />)}
+            </div>
+            <div>
+              <div className="patch-head down">▼ Düşen</div>
+              {falling.map((c) => <PatchRow key={c.id} champ={c} />)}
+            </div>
           </div>
-          <div>
-            <div className="patch-head down">▼ Düşen</div>
-            {falling.map((c) => <PatchRow key={c.id} champ={c} />)}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Tier list */}
