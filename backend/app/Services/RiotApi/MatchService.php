@@ -4,6 +4,7 @@ namespace App\Services\RiotApi;
 
 use App\Models\CachedPlayer;
 use App\Models\MatchSummary;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Maç geçmişi orkestratör servisi.
@@ -154,6 +155,32 @@ class MatchService
                 'tripleKills'    => $p['tripleKills'] ?? 0,
                 'quadraKills'    => $p['quadraKills'] ?? 0,
                 'pentaKills'     => $p['pentaKills'] ?? 0,
+                'spellCasts'     => [
+                    'q' => $p['spell1Casts'] ?? 0,
+                    'w' => $p['spell2Casts'] ?? 0,
+                    'e' => $p['spell3Casts'] ?? 0,
+                    'r' => $p['spell4Casts'] ?? 0,
+                ],
+                'summonerCasts'  => [
+                    'd' => $p['summoner1Casts'] ?? 0, // 1. sihirdar büyüsü (D)
+                    'f' => $p['summoner2Casts'] ?? 0, // 2. sihirdar büyüsü (F)
+                ],
+                'pings'          => [
+                    'onMyWayPings'       => $p['onMyWayPings'] ?? 0,
+                    'enemyMissingPings'  => $p['enemyMissingPings'] ?? 0,
+                    'assistMePings'      => $p['assistMePings'] ?? 0,
+                    'needVisionPings'    => $p['needVisionPings'] ?? 0,
+                    'getBackPings'       => $p['getBackPings'] ?? 0,
+                    'pushPings'          => $p['pushPings'] ?? 0,
+                    'allInPings'         => $p['allInPings'] ?? 0,
+                    'holdPings'          => $p['holdPings'] ?? 0,
+                    'dangerPings'        => $p['dangerPings'] ?? 0,
+                    'commandPings'       => $p['commandPings'] ?? 0,
+                    'enemyVisionPings'   => $p['enemyVisionPings'] ?? 0,
+                    'visionClearedPings' => $p['visionClearedPings'] ?? 0,
+                    'baitPings'          => $p['baitPings'] ?? 0,
+                    'basicPings'         => $p['basicPings'] ?? 0,
+                ],
                 'badges'         => $this->badges->calculateBadges($p, $info),
                 'tier'           => null,
                 'rankDivision'   => null,
@@ -168,7 +195,10 @@ class MatchService
                     $pl['tier'] = $ranked['solo']['tier'];
                     $pl['rankDivision'] = $ranked['solo']['rank'];
                 }
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+                // Sessizce yutma — rank null kalırsa (key expire/rate-limit) sebebi görünsün.
+                Log::warning('match detail rank fetch failed', ['puuid' => $pl['puuid'], 'err' => $e->getMessage()]);
+            }
         }
         unset($pl);
 

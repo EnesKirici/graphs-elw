@@ -274,6 +274,18 @@ class MatchDataService
                 'item3' => $p['item3'] ?? 0, 'item4' => $p['item4'] ?? 0, 'item5' => $p['item5'] ?? 0, 'item6' => $p['item6'] ?? 0,
                 'doubleKills' => $p['doubleKills'] ?? 0, 'tripleKills' => $p['tripleKills'] ?? 0,
                 'quadraKills' => $p['quadraKills'] ?? 0, 'pentaKills' => $p['pentaKills'] ?? 0,
+                // Spell casts (Q/W/E/R + D/F) — Detaylar sekmesi "Spell Casted"
+                'spell1Casts' => $p['spell1Casts'] ?? 0, 'spell2Casts' => $p['spell2Casts'] ?? 0,
+                'spell3Casts' => $p['spell3Casts'] ?? 0, 'spell4Casts' => $p['spell4Casts'] ?? 0,
+                'summoner1Casts' => $p['summoner1Casts'] ?? 0, 'summoner2Casts' => $p['summoner2Casts'] ?? 0,
+                // Pings (Riot alan adları korunur — frontend PING_LABELS bunlarla eşler)
+                'onMyWayPings' => $p['onMyWayPings'] ?? 0, 'enemyMissingPings' => $p['enemyMissingPings'] ?? 0,
+                'assistMePings' => $p['assistMePings'] ?? 0, 'needVisionPings' => $p['needVisionPings'] ?? 0,
+                'getBackPings' => $p['getBackPings'] ?? 0, 'pushPings' => $p['pushPings'] ?? 0,
+                'allInPings' => $p['allInPings'] ?? 0, 'holdPings' => $p['holdPings'] ?? 0,
+                'dangerPings' => $p['dangerPings'] ?? 0, 'commandPings' => $p['commandPings'] ?? 0,
+                'enemyVisionPings' => $p['enemyVisionPings'] ?? 0, 'visionClearedPings' => $p['visionClearedPings'] ?? 0,
+                'baitPings' => $p['baitPings'] ?? 0, 'basicPings' => $p['basicPings'] ?? 0,
                 'challenges' => [
                     'soloKills' => $p['challenges']['soloKills'] ?? 0,
                     'damagePerMinute' => $p['challenges']['damagePerMinute'] ?? 0,
