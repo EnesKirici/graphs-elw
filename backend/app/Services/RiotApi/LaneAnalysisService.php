@@ -45,6 +45,100 @@ class LaneAnalysisService
         ],
     ];
 
+    public function __construct(
+        private DataDragonService $ddragon,
+    ) {}
+
+    /**
+     * Maç ÖZETİ için hafif koridor/takım analizi (profil listesi kartı alanları):
+     * koridor rakibi/eşi, takım kalitesi (ELW farkı), KP, CS/dk, koridor CS farkı.
+     * Detaylı 9-metrik buildAnalysis'ten ayrıdır.
+     *
+     * @param array $teamScores puuid => takım-ağırlıklı ELW (0-10)
+     */
+    public function summarizeForPlayer(array $info, array $player, string $puuid, array $teamScores): array
+    {
+        $playerTeam = $player['teamId'];
+        $myRole = $player['teamPosition'] ?? '';
+        $partnerRoleMap = ['TOP' => 'JUNGLE', 'MIDDLE' => 'JUNGLE', 'JUNGLE' => 'MIDDLE', 'BOTTOM' => 'UTILITY', 'UTILITY' => 'BOTTOM'];
+        $partnerRole = $partnerRoleMap[$myRole] ?? '';
+
+        $laneOpponent = null;
+        $laneOpponentCs = null;
+        $laneDuo = null;
+        $enemyDuo = null;
+        $myTeamSum = 0; $myTeamCount = 0;
+        $enemySum = 0;  $enemyCount = 0;
+        $teamKills = 0;
+
+        $champEntry = fn ($p, $role) => [
+            'name'     => $p['championName'],
+            'image'    => $this->ddragon->championIconUrl($p['championName']),
+            'gameName' => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
+            'tagLine'  => $p['riotIdTagline'] ?? '',
+            'role'     => $role,
+        ];
+
+        foreach ($info['participants'] as $p) {
+            $pPos = $p['teamPosition'] ?? '';
+            if ($p['teamId'] === $playerTeam) {
+                $teamKills += $p['kills'];
+                if ($p['puuid'] !== $puuid) {
+                    $myTeamSum += $teamScores[$p['puuid']] ?? 5;
+                    $myTeamCount++;
+                    if ($partnerRole && !$laneDuo && $pPos === $partnerRole) {
+                        $laneDuo = $champEntry($p, $partnerRole);
+                    }
+                }
+            } else {
+                $enemySum += $teamScores[$p['puuid']] ?? 5;
+                $enemyCount++;
+                if ($myRole && !$laneOpponent && $pPos === $myRole) {
+                    $laneOpponent = $champEntry($p, $myRole);
+                    $laneOpponentCs = ($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0);
+                }
+                if ($partnerRole && !$enemyDuo && $pPos === $partnerRole) {
+                    $enemyDuo = $champEntry($p, $partnerRole);
+                }
+            }
+        }
+
+        $teamQuality = null;
+        if ($myTeamCount > 0 && $enemyCount > 0) {
+            $diff = ($myTeamSum / $myTeamCount) - ($enemySum / $enemyCount);
+            if ($diff >= 1.2) {
+                $teamQuality = ['key' => 'great', 'label' => 'Çok iyi takım'];
+            } elseif ($diff >= 0.5) {
+                $teamQuality = ['key' => 'good', 'label' => 'İyi takım'];
+            } elseif ($diff > -0.5) {
+                $teamQuality = ['key' => 'avg', 'label' => 'Ort. takım'];
+            } elseif ($diff > -1.2) {
+                $teamQuality = ['key' => 'bad', 'label' => 'Kötü takım'];
+            } else {
+                $teamQuality = ['key' => 'terrible', 'label' => 'Çok kötü takım'];
+            }
+            $teamQuality['diff'] = round($diff, 2);
+            $teamQuality['myAvg'] = round($myTeamSum / $myTeamCount, 1);
+            $teamQuality['enemyAvg'] = round($enemySum / $enemyCount, 1);
+        }
+
+        $kp = $teamKills > 0 ? (int) round(($player['kills'] + $player['assists']) / $teamKills * 100) : 0;
+        $totalCs = $player['totalMinionsKilled'] + ($player['neutralMinionsKilled'] ?? 0);
+        $csPerMin = ($info['gameDuration'] ?? 0) > 0 ? round($totalCs / ($info['gameDuration'] / 60), 1) : 0;
+        $csDiff = ($laneOpponent && $laneOpponentCs !== null) ? ($totalCs - $laneOpponentCs) : null;
+
+        return [
+            'laneOpponent' => $laneOpponent,
+            'laneDuo'      => $laneDuo,
+            'enemyDuo'     => $enemyDuo,
+            'partnerRole'  => $partnerRole,
+            'teamQuality'  => $teamQuality,
+            'kp'           => $kp,
+            'csPerMin'     => $csPerMin,
+            'csDiff'       => $csDiff,
+        ];
+    }
+
     /**
      * İki takımın rol bazlı karşılaştırma analizini döner.
      */

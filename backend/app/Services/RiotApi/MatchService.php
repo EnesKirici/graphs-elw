@@ -3,6 +3,7 @@
 namespace App\Services\RiotApi;
 
 use App\Models\CachedPlayer;
+use App\Models\MatchSummary;
 
 /**
  * Maç geçmişi orkestratör servisi.
@@ -12,6 +13,9 @@ use App\Models\CachedPlayer;
  */
 class MatchService
 {
+    /** ELW/badge algoritması değişince bump → eski match_summaries yeniden kurulur. */
+    private const ALGO_VERSION = 1;
+
     public function __construct(
         private MatchDataService $matchData,
         private MatchFormatterService $formatter,
@@ -257,218 +261,181 @@ class MatchService
     public function getRecentMatches(string $puuid, int $count = 20, int $start = 0, bool $skipPreload = false): array
     {
         $matchIds = $this->matchData->getMatchIds($puuid, $count, $start);
+        if (empty($matchIds)) return [];
 
-        // buildFullResponse zaten preload yaptıysa tekrar yapma
-        if (!$skipPreload) {
-            $this->matchData->preloadMatchDetails($matchIds);
-        }
+        // 1. Önceden hesaplanmış özetler (DB-first, bu algo versiyonu) → liste hızlı.
+        $cached = MatchSummary::where('puuid', $puuid)
+            ->whereIn('match_id', $matchIds)
+            ->where('algorithm_version', self::ALGO_VERSION)
+            ->get()
+            ->keyBy('match_id');
 
-        $version = $this->ddragon->getCurrentVersion();
-        $ddragonBase = config('riot.ddragon_url');
+        // 2. Eksikler için full maçı TRANSIENT çek (matches'e YAZMADAN), özet kur + sakla.
+        $missing = array_values(array_filter($matchIds, fn($id) => !$cached->has($id)));
+        $details = $missing ? $this->matchData->getMatchDetailsTransient($missing) : [];
+        $ctx = $details ? $this->summaryContext() : [];
 
-        $runeMap = $this->ddragon->getRuneMap();
-        $spellMap = $this->ddragon->getSpellMap();
-        $allItems = $this->ddragon->getItems();
-
+        // 3. matchIds sırasıyla (yeni→eski) özetleri topla.
         $matches = [];
         foreach ($matchIds as $matchId) {
+            if ($cached->has($matchId)) {
+                $matches[] = $cached[$matchId]->summary_json;
+                continue;
+            }
+            $detail = $details[$matchId] ?? null;
+            if (!$detail) continue;
             try {
-                $detail = $this->matchData->getMatchDetail($matchId);
-                $info = $detail['info'];
-
-                $player = null;
-                foreach ($info['participants'] as $p) {
-                    if ($p['puuid'] === $puuid) {
-                        $player = $p;
-                        break;
-                    }
-                }
-                if (!$player) continue;
-
-                $ranking = $this->elw->calculateMatchRanking($info['participants'], $player['puuid'], $info['gameDuration'] ?? 0);
-
-                // Timeline DB'de varsa kullan, yoksa null (maç detayında çekilecek)
-                $timeline = $this->matchData->getMatchTimelineIfExists($matchId);
-                $perfLabel = $this->elw->calculatePerformanceLabel($ranking, $player, $info, $timeline);
-
-                // Items — 7 sabit slot KORUNUR (boş slot = null). Aksi halde dizi
-                // sıkışır ve totem (item6) boş yuvalara kayar; slot 7 yerine ortada durur.
-                $items = [];
-                for ($i = 0; $i <= 6; $i++) {
-                    $itemId = $player["item{$i}"] ?? 0;
-                    $itemData = $itemId > 0 ? ($allItems[(string) $itemId] ?? null) : null;
-                    $items[] = $itemId > 0 ? [
-                        'id'    => $itemId,
-                        'name'  => $itemData['name'] ?? '',
-                        'desc'  => $this->formatter->parseItemDescription($itemData['description'] ?? ''),
-                        'gold'  => $itemData['gold']['total'] ?? 0,
-                        'image' => "{$ddragonBase}/cdn/{$version}/img/item/{$itemId}.png",
-                    ] : null;
-                }
-
-                // Spells
-                $spells = [
-                    $spellMap[$player['summoner1Id'] ?? 0] ?? ['name' => '?', 'image' => ''],
-                    $spellMap[$player['summoner2Id'] ?? 0] ?? ['name' => '?', 'image' => ''],
-                ];
-
-                // Runes
-                $runes = $this->formatter->extractRunes($player['perks'] ?? null, $runeMap);
-
-                // Takımlar
-                $playerTeam = $player['teamId'];
-                $allies = [];
-                $enemies = [];
-                foreach ($info['participants'] as $p) {
-                    $entry = [
-                        'name'      => $p['championName'],
-                        'image'     => $this->ddragon->championIconUrl($p['championName']),
-                        'isMe'      => $p['puuid'] === $puuid,
-                        'gameName'  => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
-                        'tagLine'   => $p['riotIdTagline'] ?? '',
-                    ];
-                    if ($p['teamId'] === $playerTeam) {
-                        $allies[] = $entry;
-                    } else {
-                        $enemies[] = $entry;
-                    }
-                }
-
-                // ── Pro tasarım alanları: koridor rakibi + takım kalite + KP ──
-                // Takım ağırlıklı ELW skorları (10 oyuncu, puuid => 0-10)
-                $teamScores = $this->elw->calculateAllElwScores($info['participants'], $info['gameDuration'] ?? 0, 'team');
-
-                // Koridor için yalnız teamPosition güvenilir (ARAM/eski maçta boş olabilir).
-                // Sinerji eşi (kendi takımından): Top↔Orman, Mid↔Orman, ADC↔Destek, Orman↔Mid.
-                $myRole = $player['teamPosition'] ?? '';
-                $partnerRoleMap = ['TOP' => 'JUNGLE', 'MIDDLE' => 'JUNGLE', 'JUNGLE' => 'MIDDLE', 'BOTTOM' => 'UTILITY', 'UTILITY' => 'BOTTOM'];
-                $partnerRole = $partnerRoleMap[$myRole] ?? '';
-                $laneOpponent = null;
-                $laneOpponentCs = null;
-                $laneDuo = null;
-                $enemyDuo = null;
-                $myTeamSum = 0; $myTeamCount = 0;
-                $enemySum = 0;  $enemyCount = 0;
-                $teamKills = 0;
-
-                $champEntry = function ($p, $role) {
-                    return [
-                        'name'     => $p['championName'],
-                        'image'    => $this->ddragon->championIconUrl($p['championName']),
-                        'gameName' => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
-                        'tagLine'  => $p['riotIdTagline'] ?? '',
-                        'role'     => $role,
-                    ];
-                };
-
-                foreach ($info['participants'] as $p) {
-                    $pPos = $p['teamPosition'] ?? '';
-                    if ($p['teamId'] === $playerTeam) {
-                        $teamKills += $p['kills'];
-                        if ($p['puuid'] !== $puuid) {
-                            $myTeamSum += $teamScores[$p['puuid']] ?? 5;
-                            $myTeamCount++;
-                            // Sinerji koridor eşi (kendi takımından)
-                            if ($partnerRole && !$laneDuo && $pPos === $partnerRole) {
-                                $laneDuo = $champEntry($p, $partnerRole);
-                            }
-                        }
-                    } else {
-                        $enemySum += $teamScores[$p['puuid']] ?? 5;
-                        $enemyCount++;
-                        // Rakip koridor (aynı rol) + rakip eş (sinerji rolü)
-                        if ($myRole && !$laneOpponent && $pPos === $myRole) {
-                            $laneOpponent = $champEntry($p, $myRole);
-                            $laneOpponentCs = ($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0);
-                        }
-                        if ($partnerRole && !$enemyDuo && $pPos === $partnerRole) {
-                            $enemyDuo = $champEntry($p, $partnerRole);
-                        }
-                    }
-                }
-
-                // Takım kalite: takım arkadaşları (kendisi hariç) ort. ELW − rakip ort. ELW
-                $teamQuality = null;
-                if ($myTeamCount > 0 && $enemyCount > 0) {
-                    $diff = ($myTeamSum / $myTeamCount) - ($enemySum / $enemyCount);
-                    if ($diff >= 1.2) {
-                        $teamQuality = ['key' => 'great', 'label' => 'Çok iyi takım'];
-                    } elseif ($diff >= 0.5) {
-                        $teamQuality = ['key' => 'good', 'label' => 'İyi takım'];
-                    } elseif ($diff > -0.5) {
-                        $teamQuality = ['key' => 'avg', 'label' => 'Ort. takım'];
-                    } elseif ($diff > -1.2) {
-                        $teamQuality = ['key' => 'bad', 'label' => 'Kötü takım'];
-                    } else {
-                        $teamQuality = ['key' => 'terrible', 'label' => 'Çok kötü takım'];
-                    }
-                    $teamQuality['diff'] = round($diff, 2);
-                    // Karşılaştırma grafiği için iki takımın ortalama ELW gücü (0-10).
-                    $teamQuality['myAvg'] = round($myTeamSum / $myTeamCount, 1);
-                    $teamQuality['enemyAvg'] = round($enemySum / $enemyCount, 1);
-                }
-
-                // Kill participation %
-                $kp = $teamKills > 0 ? (int) round(($player['kills'] + $player['assists']) / $teamKills * 100) : 0;
-                // CS / dakika
-                $totalCs = $player['totalMinionsKilled'] + ($player['neutralMinionsKilled'] ?? 0);
-                $csPerMin = ($info['gameDuration'] ?? 0) > 0 ? round($totalCs / ($info['gameDuration'] / 60), 1) : 0;
-
-                $matches[] = [
-                    'matchId'      => $matchId,
-                    'champion'     => [
-                        'id'    => $player['championName'],
-                        'name'  => $player['championName'],
-                        'image' => $this->ddragon->championIconUrl($player['championName']),
-                    ],
-                    'kills'        => $player['kills'],
-                    'deaths'       => $player['deaths'],
-                    'assists'      => $player['assists'],
-                    'kda'          => $player['deaths'] > 0
-                        ? round(($player['kills'] + $player['assists']) / $player['deaths'], 2)
-                        : 'Perfect',
-                    'cs'           => $player['totalMinionsKilled'] + ($player['neutralMinionsKilled'] ?? 0),
-                    'gold'         => $player['goldEarned'],
-                    'damage'       => $player['totalDamageDealtToChampions'],
-                    'items'        => $items,
-                    'spells'       => $spells,
-                    'runes'        => $runes,
-                    'allies'       => $allies,
-                    'enemies'      => $enemies,
-                    'win'          => $player['win'],
-                    'duration'     => $info['gameDuration'],
-                    'queueType'    => MatchDataService::QUEUE_NAMES[$info['queueId'] ?? 0] ?? 'Diğer',
-                    'role'         => ($player['teamPosition'] ?: $player['individualPosition'] ?: '') === 'BOT' ? 'BOTTOM' : ($player['teamPosition'] ?: $player['individualPosition'] ?: ''),
-                    'gameCreation' => $info['gameCreation'],
-                    'champLevel'   => $player['champLevel'],
-                    'doubleKills'  => $player['doubleKills'] ?? 0,
-                    'tripleKills'  => $player['tripleKills'] ?? 0,
-                    'quadraKills'  => $player['quadraKills'] ?? 0,
-                    'pentaKills'   => $player['pentaKills'] ?? 0,
-                    'badges'       => $this->badges->calculateBadges($player, $info),
-                    'ranking'      => $ranking,
-                    'perfLabel'    => $perfLabel,
-                    'missions'     => $player['missions'] ?? null,
-                    // Pro tasarım alanları (eski MatchCard bunları yok sayar)
-                    'laneOpponent' => $laneOpponent,
-                    'laneDuo'      => $laneDuo,
-                    'enemyDuo'     => $enemyDuo,
-                    'partnerRole'  => $partnerRole,
-                    'teamQuality'  => $teamQuality,
-                    'kp'           => $kp,
-                    'csPerMin'     => $csPerMin,
-                    // Koridor rakibine karşı toplam CS farkı (rol eşleşince)
-                    'csDiff'       => ($laneOpponent && $laneOpponentCs !== null) ? ($totalCs - $laneOpponentCs) : null,
-                ];
+                $summary = $this->buildMatchSummary($detail, $puuid, $matchId, $ctx);
             } catch (\Exception $e) {
                 continue;
             }
+            if (!$summary) continue;
+
+            $this->persistSummary($matchId, $puuid, $detail['info'] ?? [], $summary);
+            $matches[] = $summary;
         }
 
-        // Maçlardaki tüm oyuncuları veritabanına kaydet (autocomplete için)
-        $this->cachePlayersFromMatchIds($matchIds);
+        // Autocomplete: yalnız yeni çekilen maçlardaki oyuncuları kaydet.
+        $this->cachePlayersFromDetails($details);
 
         return $matches;
+    }
+
+    /** Bir maç özetini match_summaries'e yaz (match_id+puuid unique). */
+    private function persistSummary(string $matchId, string $puuid, array $info, array $summary): void
+    {
+        try {
+            MatchSummary::updateOrCreate(
+                ['match_id' => $matchId, 'puuid' => $puuid],
+                [
+                    'queue_id'          => $info['queueId'] ?? 0,
+                    'game_creation'     => $info['gameCreation'] ?? 0,
+                    'win'               => $summary['win'] ?? false,
+                    'summary_json'      => $summary,
+                    'algorithm_version' => self::ALGO_VERSION,
+                ],
+            );
+        } catch (\Exception $e) {}
+    }
+
+    /** Özet kurulumu için ortak DataDragon bağlamı (maç başına yeniden çekilmesin). */
+    private function summaryContext(): array
+    {
+        return [
+            'version'     => $this->ddragon->getCurrentVersion(),
+            'ddragonBase' => config('riot.ddragon_url'),
+            'runeMap'     => $this->ddragon->getRuneMap(),
+            'spellMap'    => $this->ddragon->getSpellMap(),
+            'allItems'    => $this->ddragon->getItems(),
+        ];
+    }
+
+    /**
+     * Tek maçın aranan oyuncuya ait özetini kur — odaklı servislere DELEGE eder:
+     * sıralama/perfLabel/ELW→ElwScoreService, eşya→buildPlayerItems, rün→Formatter,
+     * badge→BadgeService, koridor/takım→LaneAnalysisService. (Eski dev inline blok bölündü.)
+     */
+    private function buildMatchSummary(array $detail, string $puuid, string $matchId, array $ctx): ?array
+    {
+        $info = $detail['info'];
+
+        $player = null;
+        foreach ($info['participants'] as $p) {
+            if ($p['puuid'] === $puuid) { $player = $p; break; }
+        }
+        if (!$player) return null;
+
+        $duration = $info['gameDuration'] ?? 0;
+
+        // Sıralama + performans etiketi (ELW servisi)
+        $ranking = $this->elw->calculateMatchRanking($info['participants'], $puuid, $duration);
+        $timeline = $this->matchData->getMatchTimelineIfExists($matchId);
+        $perfLabel = $this->elw->calculatePerformanceLabel($ranking, $player, $info, $timeline);
+
+        // Eşya / büyü / rün
+        $items = $this->buildPlayerItems($player, $ctx['allItems'], $ctx['version'], $ctx['ddragonBase']);
+        $spells = [
+            $ctx['spellMap'][$player['summoner1Id'] ?? 0] ?? ['name' => '?', 'image' => ''],
+            $ctx['spellMap'][$player['summoner2Id'] ?? 0] ?? ['name' => '?', 'image' => ''],
+        ];
+        $runes = $this->formatter->extractRunes($player['perks'] ?? null, $ctx['runeMap']);
+
+        // Dost/düşman kadroları + koridor/takım analizi (LaneAnalysisService)
+        [$allies, $enemies] = $this->buildRosters($info, $puuid, $player['teamId']);
+        $teamScores = $this->elw->calculateAllElwScores($info['participants'], $duration, 'team');
+        $lane = $this->laneAnalysis->summarizeForPlayer($info, $player, $puuid, $teamScores);
+
+        $role = $player['teamPosition'] ?: $player['individualPosition'] ?: '';
+        $role = $role === 'BOT' ? 'BOTTOM' : $role;
+
+        return [
+            'matchId'      => $matchId,
+            'champion'     => [
+                'id'    => $player['championName'],
+                'name'  => $player['championName'],
+                'image' => $this->ddragon->championIconUrl($player['championName']),
+            ],
+            'kills'        => $player['kills'],
+            'deaths'       => $player['deaths'],
+            'assists'      => $player['assists'],
+            'kda'          => $player['deaths'] > 0
+                ? round(($player['kills'] + $player['assists']) / $player['deaths'], 2)
+                : 'Perfect',
+            'cs'           => $player['totalMinionsKilled'] + ($player['neutralMinionsKilled'] ?? 0),
+            'gold'         => $player['goldEarned'],
+            'damage'       => $player['totalDamageDealtToChampions'],
+            'items'        => $items,
+            'spells'       => $spells,
+            'runes'        => $runes,
+            'allies'       => $allies,
+            'enemies'      => $enemies,
+            'win'          => $player['win'],
+            'duration'     => $duration,
+            'queueType'    => MatchDataService::QUEUE_NAMES[$info['queueId'] ?? 0] ?? 'Diğer',
+            'role'         => $role,
+            'gameCreation' => $info['gameCreation'],
+            'champLevel'   => $player['champLevel'],
+            'doubleKills'  => $player['doubleKills'] ?? 0,
+            'tripleKills'  => $player['tripleKills'] ?? 0,
+            'quadraKills'  => $player['quadraKills'] ?? 0,
+            'pentaKills'   => $player['pentaKills'] ?? 0,
+            'badges'       => $this->badges->calculateBadges($player, $info),
+            'ranking'      => $ranking,
+            'perfLabel'    => $perfLabel,
+            'missions'     => $player['missions'] ?? null,
+            // Koridor/takım (LaneAnalysisService::summarizeForPlayer)
+            'laneOpponent' => $lane['laneOpponent'],
+            'laneDuo'      => $lane['laneDuo'],
+            'enemyDuo'     => $lane['enemyDuo'],
+            'partnerRole'  => $lane['partnerRole'],
+            'teamQuality'  => $lane['teamQuality'],
+            'kp'           => $lane['kp'],
+            'csPerMin'     => $lane['csPerMin'],
+            'csDiff'       => $lane['csDiff'],
+        ];
+    }
+
+    /** Maçtaki dost/düşman şampiyon kadroları (aranan oyuncunun takımına göre). */
+    private function buildRosters(array $info, string $puuid, int $playerTeam): array
+    {
+        $allies = [];
+        $enemies = [];
+        foreach ($info['participants'] as $p) {
+            $entry = [
+                'name'     => $p['championName'],
+                'image'    => $this->ddragon->championIconUrl($p['championName']),
+                'isMe'     => $p['puuid'] === $puuid,
+                'gameName' => $p['riotIdGameName'] ?? $p['summonerName'] ?? '?',
+                'tagLine'  => $p['riotIdTagline'] ?? '',
+            ];
+            if ($p['teamId'] === $playerTeam) {
+                $allies[] = $entry;
+            } else {
+                $enemies[] = $entry;
+            }
+        }
+
+        return [$allies, $enemies];
     }
 
     // ────────────────────────────────────────────
@@ -556,6 +523,38 @@ class MatchService
                     }
                 } catch (\Exception $e) {
                     continue;
+                }
+            }
+        } catch (\Exception $e) {}
+    }
+
+    /**
+     * Zaten çekilmiş maç detaylarındaki oyuncuları autocomplete için kaydet.
+     * getRecentMatches transient detayları buraya verir → tekrar API/getMatchDetail YOK.
+     */
+    private function cachePlayersFromDetails(array $details): void
+    {
+        try {
+            $seen = [];
+            foreach ($details as $detail) {
+                foreach ($detail['info']['participants'] ?? [] as $p) {
+                    $pid = $p['puuid'] ?? null;
+                    if (!$pid || isset($seen[$pid])) continue;
+                    $seen[$pid] = true;
+
+                    $name = $p['riotIdGameName'] ?? $p['summonerName'] ?? null;
+                    $tag = $p['riotIdTagline'] ?? null;
+                    if (!$name || !$tag) continue;
+
+                    CachedPlayer::firstOrCreate(
+                        ['puuid' => $pid],
+                        [
+                            'game_name'       => $name,
+                            'tag_line'        => $tag,
+                            'profile_icon_id' => $p['profileIcon'] ?? null,
+                            'summoner_level'  => $p['summonerLevel'] ?? null,
+                        ]
+                    );
                 }
             }
         } catch (\Exception $e) {}

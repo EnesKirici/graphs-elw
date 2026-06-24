@@ -375,6 +375,57 @@ class MatchDataService
     }
 
     /**
+     * Maç detaylarını getir ama API'den geleni matches'e YAZMA (geçici).
+     * DB'de varsa oradan (0 API), yoksa API'den (paralel). match_summaries kurulumu
+     * için: full 10-oyuncu maçı saklamadan özet hesaplanır → matches yalnız tıklanınca büyür.
+     *
+     * @return array<string, array> matchId => slim detail (bulunamayan/başarısız atlanır)
+     */
+    public function getMatchDetailsTransient(array $matchIds): array
+    {
+        $out = [];
+        if (empty($matchIds)) return $out;
+
+        // 1. DB'de olan tam maçlar (mevcut kayıtlar) — 0 API isteği.
+        $rows = MatchRecord::whereIn('match_id', $matchIds)->get(['match_id', 'data']);
+        foreach ($rows as $row) {
+            $out[$row->match_id] = $row->data;
+        }
+
+        // 2. Eksikler → API (paralel), ama matches'e YAZMA.
+        $missing = array_values(array_diff($matchIds, array_keys($out)));
+        if (empty($missing)) return $out;
+
+        $regionUrl = config('riot.region_url');
+        $apiKey = config('riot.api_key');
+
+        foreach (array_chunk($missing, 20) as $chunk) {
+            $cooldown = Cache::get('riot:rate_limit_cooldown');
+            if ($cooldown && time() < $cooldown) break;
+
+            $responses = Http::pool(function ($pool) use ($chunk, $regionUrl, $apiKey) {
+                foreach ($chunk as $id) {
+                    $pool->as($id)
+                        ->timeout(10)
+                        ->withHeaders(['X-Riot-Token' => $apiKey])
+                        ->get("{$regionUrl}/lol/match/v5/matches/{$id}");
+                }
+            });
+
+            foreach ($chunk as $id) {
+                $resp = $responses[$id] ?? null;
+                if (!$resp) continue;
+                if (RiotApiService::handlePoolRateLimit($resp)) break 2;
+                if ($resp->successful()) {
+                    $out[$id] = $this->extractMatchData($resp->json()); // YAZMA YOK
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * Sadece timeline'ları paralel yükle.
      */
     public function preloadMatchTimelines(array $matchIds): void
