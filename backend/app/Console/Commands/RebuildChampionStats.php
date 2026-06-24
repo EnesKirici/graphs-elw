@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\ChampionStatsService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 class RebuildChampionStats extends Command
 {
@@ -17,6 +18,7 @@ class RebuildChampionStats extends Command
         $start = microtime(true);
 
         $result = $stats->aggregateFromMatches();
+        Cache::forget('meta:dashboard_stats_v7'); // dashboard yeni veriyi hemen göstersin
 
         $secs = round(microtime(true) - $start, 2);
         $this->info("Bitti ({$secs}s).");

@@ -57,7 +57,9 @@ export default function ChampionTable({ title, champions, sortBy = "winRate" }) 
 
       {/* Satırlar */}
       <div className="divide-y divide-edge/30">
-        {champions.map((champ, index) => (
+        {champions.map((champ, index) => {
+          const insufficient = champ.winRate == null; // "veri yetersiz" (yeterli örneklem yok)
+          return (
           <Link
             key={champ.id}
             href={`/champions/${champ.id}`}
@@ -92,40 +94,43 @@ export default function ChampionTable({ title, champions, sortBy = "winRate" }) 
               </div>
             </div>
 
-            {/* Win Rate + bar */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-edge rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full bg-gradient-to-r ${getWinRateColor(champ.winRate)} animate-fill-bar`}
-                  style={{
-                    width: `${champ.winRate}%`,
-                    animationDelay: `${index * 50 + 300}ms`,
-                  }}
-                />
+            {/* Win Rate + bar — yeterli veri yoksa "veri yetersiz" */}
+            {insufficient ? (
+              <span className="text-[11px] text-gray-600 italic">veri yetersiz</span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-edge rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r ${getWinRateColor(champ.winRate)} animate-fill-bar`}
+                    style={{
+                      width: `${champ.winRate}%`,
+                      animationDelay: `${index * 50 + 300}ms`,
+                    }}
+                  />
+                </div>
+                <span className="text-xs text-gray-300 font-mono w-[42px] text-right">
+                  {champ.winRate}%
+                </span>
               </div>
-              <span className="text-xs text-gray-300 font-mono w-[42px] text-right">
-                {champ.winRate}%
-              </span>
-            </div>
+            )}
 
             {/* Pick rate */}
             <span className="text-xs text-gray-400 font-mono">
-              {champ.pickRate}%
+              {insufficient ? "—" : `${champ.pickRate}%`}
             </span>
 
             {/* Ban rate */}
             <span className="text-xs text-gray-400 font-mono">
-              {champ.banRate}%
+              {insufficient ? "—" : `${champ.banRate}%`}
             </span>
 
             {/* Tier */}
-            <span
-              className={`text-xs font-bold ${getTierClass(champ.tier)}`}
-            >
-              {champ.tier}
+            <span className={`text-xs font-bold ${insufficient ? "text-gray-600" : getTierClass(champ.tier)}`}>
+              {insufficient ? "—" : champ.tier}
             </span>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

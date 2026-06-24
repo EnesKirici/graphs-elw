@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\AdminSetting;
 use App\Models\CachedPlayer;
 use App\Models\MatchRecord;
+use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
 use App\Services\RiotApi\RiotApiService;
 use Illuminate\Support\Facades\Cache;
@@ -37,33 +39,51 @@ class MetaService
             $positionMap = $this->ddragon->getChampionPositions();
             $ddragonBase = config('riot.ddragon_url');
 
-            // Gerçek istatistikler (yeterli örneklemi olan şampiyonlar). Boşsa simülasyon.
-            $realStats = $this->stats->getMetaStats($this->stats->currentPatchBucket());
+            // Gerçek istatistikler (yeterli örneklemli) + önceki patch (gerçek wrChange için).
+            $currentPatch = $this->stats->currentPatchBucket();
+            $realStats = $this->stats->getMetaStats($currentPatch);
+            $prevPatch = $this->previousPatch($currentPatch);
+            $prevStats = $prevPatch ? $this->stats->getMetaStats($prevPatch) : [];
+
+            // Yetersiz örneklemde davranış — admin panelden yönetilir.
+            // 'label' = "veri yetersiz" (varsayılan, dürüst) | 'sim' = sahte simülasyonla doldur.
+            $insufficientMode = AdminSetting::getValue('meta_insufficient_mode', 'label');
 
             $stats = [];
             foreach ($champions as $champ) {
                 $key = (int) $champ['key'];
 
-                // Patch win-rate değişimi — çok-patch geçmişi gelene kadar placeholder.
-                $h4 = abs(crc32($champ['id'] . 'ch'));
-                $wrChange = round(($h4 % 60 - 30) / 10, 1);  // -3.0 ile +2.9
-
-                // Gerçek veri varsa onu kullan; yoksa hash tabanlı simülasyon.
                 if (isset($realStats[$champ['id']])) {
+                    // GERÇEK veri
                     $r = $realStats[$champ['id']];
                     $winRate = $r['winRate'];
                     $pickRate = $r['pickRate'];
                     $banRate = $r['banRate'];
                     $dataSource = 'real';
                     $sampleSize = $r['sampleSize'];
-                } else {
+                    // Gerçek patch değişimi: önceki patch'te de yeterli veri varsa fark, yoksa null.
+                    $wrChange = isset($prevStats[$champ['id']])
+                        ? round($winRate - $prevStats[$champ['id']]['winRate'], 1)
+                        : null;
+                } elseif ($insufficientMode === 'sim') {
+                    // Sahte simülasyon (admin tercih ederse)
                     $h1 = abs(crc32($champ['id'] . 'wr'));
                     $h2 = abs(crc32($champ['id'] . 'pr'));
                     $h3 = abs(crc32($champ['id'] . 'br'));
-                    $winRate = 44 + ($h1 % 1400) / 100;      // 44.0% - 57.9%
-                    $pickRate = 1 + ($h2 % 2800) / 100;       // 1.0% - 29.0%
-                    $banRate = 0.5 + ($h3 % 3500) / 100;      // 0.5% - 35.5%
+                    $h4 = abs(crc32($champ['id'] . 'ch'));
+                    $winRate = 44 + ($h1 % 1400) / 100;
+                    $pickRate = 1 + ($h2 % 2800) / 100;
+                    $banRate = 0.5 + ($h3 % 3500) / 100;
+                    $wrChange = round(($h4 % 60 - 30) / 10, 1);
                     $dataSource = 'sim';
+                    $sampleSize = null;
+                } else {
+                    // "Veri yetersiz" — sayı gösterilmez (null)
+                    $winRate = null;
+                    $pickRate = null;
+                    $banRate = null;
+                    $wrChange = null;
+                    $dataSource = 'insufficient';
                     $sampleSize = null;
                 }
 
@@ -77,24 +97,28 @@ class MetaService
                     'image'      => $this->ddragon->championIconUrl($champ['id']),
                     'splash'     => $this->ddragon->splashArtUrl($champ['id']),
                     'centered'   => "{$ddragonBase}/cdn/img/champion/centered/{$champ['id']}_0.jpg",
-                    'winRate'    => round($winRate, 1),
-                    'pickRate'   => round($pickRate, 1),
-                    'banRate'    => round($banRate, 1),
+                    'winRate'    => $winRate !== null ? round($winRate, 1) : null,
+                    'pickRate'   => $pickRate !== null ? round($pickRate, 1) : null,
+                    'banRate'    => $banRate !== null ? round($banRate, 1) : null,
                     'wrChange'   => $wrChange,
-                    'tier'       => $this->calculateTier($winRate, $pickRate),
-                    'dataSource' => $dataSource,   // 'real' | 'sim'
+                    'tier'       => $winRate !== null ? $this->calculateTier($winRate, $pickRate) : null,
+                    'dataSource' => $dataSource,   // 'real' | 'sim' | 'insufficient'
                     'sampleSize' => $sampleSize,
                 ];
             }
 
-            usort($stats, fn($a, $b) => $b['winRate'] <=> $a['winRate']);
+            // Sıralanabilir = winRate'i olan (real veya sim). 'insufficient' top listelere/risers'a girmez.
+            $rankable = array_values(array_filter($stats, fn($s) => $s['winRate'] !== null));
+            usort($rankable, fn($a, $b) => $b['winRate'] <=> $a['winRate']);
+            // Şampiyon listesi: yetersizler sona düşsün.
+            usort($stats, fn($a, $b) => ($b['winRate'] ?? -1) <=> ($a['winRate'] ?? -1));
 
-            $topWinRate = array_slice($stats, 0, 10);
+            $topWinRate = array_slice($rankable, 0, 10);
             $topPickRate = array_slice(
-                collect($stats)->sortByDesc('pickRate')->values()->all(), 0, 10
+                collect($rankable)->sortByDesc('pickRate')->values()->all(), 0, 10
             );
             $topBanRate = array_slice(
-                collect($stats)->sortByDesc('banRate')->values()->all(), 0, 10
+                collect($rankable)->sortByDesc('banRate')->values()->all(), 0, 10
             );
 
             // Slider havuzu: her kategoriden top 7'ye skin datası ekle
@@ -136,9 +160,9 @@ class MetaService
                 }
             }
 
-            $risers = collect($stats)->where('wrChange', '>', 0)
+            $risers = collect($rankable)->where('wrChange', '>', 0)
                 ->sortByDesc('wrChange')->values()->take(3)->all();
-            $fallers = collect($stats)->where('wrChange', '<', 0)
+            $fallers = collect($rankable)->where('wrChange', '<', 0)
                 ->sortBy('wrChange')->values()->take(3)->all();
 
             return [
@@ -184,6 +208,20 @@ class MetaService
             }
         }
         return $lastReal;
+    }
+
+    /** Bir önceki patch bucket'ı ("16.12" → "16.11"); yoksa null. Numerik sıralama. */
+    private function previousPatch(string $current): ?string
+    {
+        $patches = StatPatch::pluck('patch')->all();
+        usort($patches, function ($a, $b) {
+            $pa = array_map('intval', explode('.', $a));
+            $pb = array_map('intval', explode('.', $b));
+            return ($pb[0] <=> $pa[0]) ?: (($pb[1] ?? 0) <=> ($pa[1] ?? 0));
+        });
+        $i = array_search($current, $patches, true);
+
+        return ($i !== false && isset($patches[$i + 1])) ? $patches[$i + 1] : null;
     }
 
     private function calculateTier(float $winRate, float $pickRate): string
