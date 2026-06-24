@@ -228,8 +228,15 @@ export default function HeroCarousel({ sliderPool = [], version }) {
               )}
             </div>
             <div className="hero-info">
-              <span className="hero-tag">
-                <span className="dot-mark" />
+              <span
+                className="hero-tag"
+                style={{
+                  color: st.color,
+                  background: `color-mix(in oklab, ${st.color} 12%, transparent)`,
+                  borderColor: `color-mix(in oklab, ${st.color} 30%, transparent)`,
+                }}
+              >
+                <span className="dot-mark" style={{ background: st.color, boxShadow: `0 0 8px ${st.color}` }} />
                 {s.sliderCategory} #{s.sliderRank}
               </span>
               <div className="hero-name">{s.name}</div>
@@ -266,7 +273,7 @@ export default function HeroCarousel({ sliderPool = [], version }) {
       })}
 
       <div className="hero-wr">
-        <div className="wr-num" style={{ color: curStyle.color }}>{pctTR(featuredValue(cur, curStyle))}</div>
+        <div className="wr-num" style={{ color: curStyle.color, textShadow: `0 0 26px color-mix(in oklab, ${curStyle.color} 50%, transparent)` }}>{pctTR(featuredValue(cur, curStyle))}</div>
         <div className="wr-lab">{curStyle.label}</div>
       </div>
 
