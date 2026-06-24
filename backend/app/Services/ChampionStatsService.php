@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\ChampionDuoStat;
 use App\Models\ChampionStat;
 use App\Models\MatchRecord;
 use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
+use App\Support\Statistics;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -130,6 +132,111 @@ class ChampionStatsService
         }
 
         return $out;
+    }
+
+    /**
+     * Ranked maçlardan ADC+Support duo sayaçlarını (champion_duo_stats) yeniden hesaplar.
+     * Her maçta her takımın BOTTOM+UTILITY ikilisi sayılır (tam rebuild).
+     *
+     * @return int benzersiz ikili sayısı
+     */
+    public function aggregateDuosFromMatches(): int
+    {
+        $acc = []; // "ADC|SUP" => ['games','wins']
+
+        MatchRecord::whereIn('queue_id', self::RANKED_QUEUES)
+            ->select(['data'])
+            ->chunk(200, function ($rows) use (&$acc) {
+                foreach ($rows as $row) {
+                    $info = $row->data['info'] ?? null;
+                    if (! $info || empty($info['participants'])) {
+                        continue;
+                    }
+
+                    $byTeam = [];
+                    foreach ($info['participants'] as $p) {
+                        $pos = $p['teamPosition'] ?? '';
+                        if ($pos === 'BOTTOM' || $pos === 'UTILITY') {
+                            $byTeam[$p['teamId']][$pos] = [
+                                'champ' => $p['championName'] ?? '',
+                                'win'   => ! empty($p['win']),
+                            ];
+                        }
+                    }
+
+                    foreach ($byTeam as $team) {
+                        if (! isset($team['BOTTOM'], $team['UTILITY'])) {
+                            continue;
+                        }
+                        if (! $team['BOTTOM']['champ'] || ! $team['UTILITY']['champ']) {
+                            continue;
+                        }
+                        $key = $team['BOTTOM']['champ'].'|'.$team['UTILITY']['champ'];
+                        $acc[$key] ??= ['games' => 0, 'wins' => 0];
+                        $acc[$key]['games']++;
+                        if ($team['BOTTOM']['win']) {
+                            $acc[$key]['wins']++;
+                        }
+                    }
+                }
+            });
+
+        DB::transaction(function () use ($acc) {
+            ChampionDuoStat::query()->delete();
+            $now = now();
+            $bulk = [];
+            foreach ($acc as $key => $v) {
+                [$adc, $sup] = explode('|', $key, 2);
+                $bulk[] = [
+                    'adc_champion'     => $adc,
+                    'support_champion' => $sup,
+                    'games'            => $v['games'],
+                    'wins'             => $v['wins'],
+                    'created_at'       => $now,
+                    'updated_at'       => $now,
+                ];
+            }
+            foreach (array_chunk($bulk, 400) as $chunk) {
+                ChampionDuoStat::insert($chunk);
+            }
+        });
+
+        return count($acc);
+    }
+
+    /**
+     * Bir şampiyonun en iyi duo partnerleri (shrinkage WR + min_games).
+     * Şampiyon ADC iken en iyi support'lar + support iken en iyi ADC'ler.
+     *
+     * @return array{asAdc: array, asSupport: array}
+     */
+    public function getBestPartners(string $championId, int $limit = 5): array
+    {
+        $minGames = (int) config('elwgraphs.duo.min_games', 5);
+
+        $build = function ($rows, string $partnerCol) use ($minGames, $limit) {
+            $out = [];
+            foreach ($rows as $r) {
+                if ($r->games < $minGames) {
+                    continue;
+                }
+                $adj = Statistics::shrunkWinRate($r->wins, $r->games);
+                $out[] = [
+                    'champion' => $r->{$partnerCol},
+                    'games'    => $r->games,
+                    'winRate'  => round($r->wins / $r->games * 100, 1),
+                    'adjWr'    => round($adj * 100, 1),
+                ];
+            }
+            usort($out, fn ($a, $b) => $b['adjWr'] <=> $a['adjWr']);
+
+            return array_slice($out, 0, $limit);
+        };
+
+        return [
+            'asAdc'     => $build(ChampionDuoStat::where('adc_champion', $championId)->get(), 'support_champion'),
+            'asSupport' => $build(ChampionDuoStat::where('support_champion', $championId)->get(), 'adc_champion'),
+        ];
     }
 
     public function currentPatchBucket(): string

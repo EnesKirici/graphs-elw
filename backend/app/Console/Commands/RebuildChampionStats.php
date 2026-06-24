@@ -18,12 +18,14 @@ class RebuildChampionStats extends Command
         $start = microtime(true);
 
         $result = $stats->aggregateFromMatches();
+        $duoPairs = $stats->aggregateDuosFromMatches(); // ADC+Support sinerji sayaçları
         Cache::forget('meta:dashboard_stats_v8'); // dashboard yeni veriyi hemen göstersin
 
         $secs = round(microtime(true) - $start, 2);
         $this->info("Bitti ({$secs}s).");
         $this->line("  İşlenen maç : {$result['matches']}");
         $this->line("  Sayaç satırı: {$result['statRows']}");
+        $this->line("  Duo ikili   : {$duoPairs}");
         foreach ($result['patches'] as $patch => $games) {
             $this->line("  Patch {$patch}: {$games} maç");
         }

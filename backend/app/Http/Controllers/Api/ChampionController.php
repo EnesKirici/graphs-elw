@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\ChampionStatsService;
 use App\Services\RiotApi\DataDragonService;
 use Illuminate\Http\JsonResponse;
 
 class ChampionController extends Controller
 {
     public function __construct(
-        private DataDragonService $ddragon
+        private DataDragonService $ddragon,
+        private ChampionStatsService $stats,
     ) {}
 
     /**
@@ -85,6 +87,8 @@ class ChampionController extends Controller
                 'stats'   => $champion['stats'],
                 'skins'   => $this->ddragon->formatSkins($champion),
             ],
+            // ADC+Support sinerji partnerleri (shrinkage WR + min_games)
+            'duos' => $this->stats->getBestPartners($id),
         ]);
     }
 

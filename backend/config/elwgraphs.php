@@ -16,6 +16,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Duo (ADC+Support sinerji) istatistikleri
+    |--------------------------------------------------------------------------
+    */
+    'duo' => [
+        'min_games' => 5, // bir ikili "gösterilebilir" sayılması için min birlikte maç
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Kompozit tier skoru
     |--------------------------------------------------------------------------
     | Tier yalnız WR ile değil; Wilson WR + pick + ban + örneklem güveni'nin
