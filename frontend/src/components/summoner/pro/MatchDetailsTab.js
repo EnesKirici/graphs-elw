@@ -249,14 +249,13 @@ const PING_LABELS = {
   commandPings: "Komut", enemyVisionPings: "Düşman Görüş", visionClearedPings: "Görüş Temiz",
   baitPings: "Yem", basicPings: "Temel",
 };
-// Ping görselleri — gerçek oyun ping ikonları DDragon'da yok, CDragon'da da güvenilir CDN'de
-// bulunamadı; her ping tipine net emoji (istenirse ileride local PNG ile değiştirilir).
+// Ping görselleri — gerçek oyun ikonları (Community Dragon ux/minimap/pings, public/pings/'e indirildi).
 const PING_ICONS = {
-  onMyWayPings: "🏃", enemyMissingPings: "❓", assistMePings: "🆘",
-  needVisionPings: "👁️", getBackPings: "🔙", pushPings: "⏩",
-  allInPings: "⚔️", holdPings: "✋", dangerPings: "⚠️",
-  commandPings: "📍", enemyVisionPings: "👀", visionClearedPings: "🚫",
-  baitPings: "🎣", basicPings: "🔔",
+  onMyWayPings: "omw", enemyMissingPings: "missing", assistMePings: "assist",
+  needVisionPings: "needvision", getBackPings: "getback", pushPings: "push",
+  allInPings: "allin", holdPings: "hold", dangerPings: "danger",
+  commandPings: "generic", enemyVisionPings: "enemyvision", visionClearedPings: "cleared",
+  baitPings: "bait", basicPings: "generic",
 };
 function Pings({ pings }) {
   const entries = pings ? Object.entries(pings).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]) : [];
@@ -274,7 +273,7 @@ function Pings({ pings }) {
     <div className="grid grid-cols-4 sm:grid-cols-6 gap-y-4 gap-x-2">
       {entries.map(([k, v]) => (
         <div key={k} className="flex flex-col items-center text-center">
-          <span className="text-[16px] leading-none mb-1" title={PING_LABELS[k] || k}>{PING_ICONS[k] || "📍"}</span>
+          <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt={PING_LABELS[k] || k} title={PING_LABELS[k] || k} width={26} height={26} className="mb-1" />
           <span className="text-[18px] font-bold text-gray-100 tabular-nums leading-none">{v}</span>
           <span className="text-[10px] text-gray-500 mt-1">{PING_LABELS[k] || k}</span>
         </div>
