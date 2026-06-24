@@ -1,5 +1,9 @@
 # Worker Sistemi Planı
 
+> **✅ DURUM (2026-06-24): 5-hesap LP worker + meta-from-DB YAPILDI & CANLI** (Personal key).
+> `tracked_players` + `lp:capture` (cron 10dk, +prewarm ensureSeasonSummaries) + `LpTrackingService` + scheduler.
+> **KALAN: yüksek-elo crawler + incremental aggregation (tüm TR → production key).** Triyaj: `PROJE_DURUM.md`.
+
 ## Worker Nedir?
 Arka planda sürekli çalışan PHP process. Kullanıcıdan bağımsız olarak oyuncu verilerini günceller.
 Production key alındıktan sonra eklenecek.

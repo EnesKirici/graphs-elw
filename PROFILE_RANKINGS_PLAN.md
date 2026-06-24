@@ -1,4 +1,9 @@
-# Profil — Sıralama / Percentile Verileri (PLANLANAN)
+# Profil — Sıralama / Percentile Verileri
+
+> **🟠 DURUM (2026-06-24):** Ladder rank + **peak (✓ düzeltildi: Challenger artık Master sanılmıyor)** +
+> tahmini MMR (`getAvgGameRank`, server'da valid key ile) ÇALIŞIYOR. **KALAN: `championRank`
+> (oyuncu-şampiyon sırası) — `CHAMPION_RANKING_METHODOLOGY.md`, tüm-TR veri + production key gerek.**
+> (FAZ 4 ELW percentile düştü: ladder percentile "Top %0.05" zaten var.) Triyaj: `PROJE_DURUM.md`.
 
 > Durum: **Frontend'de TEST VERİSİ (placeholder) ile gösteriliyor.** Gerçek veriler
 > DB + worker gerektiriyor. Bu doküman, hangi verinin nereden geleceğini ve şu an

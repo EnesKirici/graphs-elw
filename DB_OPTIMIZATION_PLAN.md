@@ -1,5 +1,10 @@
 # DB Optimizasyon Planı — Match Storage
 
+> **🟡 DURUM (2026-06-24): Faz 1+2 KODLANDI & local test edildi; CANLIYA ALINMADI.**
+> `match_summaries` (summary_json + stat_json) + `ensureSeasonSummaries` + 8 season-stat metodu
+> özetten okur. Ölçüm: özet 12.3KB vs full 24KB → ~%50 (planın %80'i değil). **KALAN: items/runes
+> trim (→~%66) + cleanup cron + deploy + e2e doğrulama.** Triyaj: `PROJE_DURUM.md`.
+
 ## Amaç
 DB boyutunu %80-90 küçültmek. Şu an her maç için 10 oyuncunun tüm verisi
 (~25KB) saklanıyor. Profil listesi için sadece aranan oyuncunun verisi yeterli.

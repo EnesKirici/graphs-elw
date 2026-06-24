@@ -1,4 +1,9 @@
-# Meta Tier List + Şampiyon Build Sayfası (PLANLANAN)
+# Meta Tier List + Şampiyon Build Sayfası
+
+> **🟡 GÜNCEL DURUM (2026-06-24): Ana sayfa meta'sı GERÇEK DB'den** (champion_stats) + shrinkage WR +
+> kompozit tier + admin "veri yetersiz" toggle + duo sinerji YAPILDI (local). **KALAN: `/tier-list`
+> sayfası hâlâ stat'sız (`/champions`) — meta verisine bağlanacak.** Triyaj: `PROJE_DURUM.md`.
+> (Aşağısı orijinal plan — test-verisi notları artık geçersiz.)
 
 > Durum: **Tier list TEST verisi ile çalışıyor** (`/tier-list`). Şampiyon build/detay
 > verisi (rün/item/build/matchup/top players) **henüz yok** — yapılacak.
