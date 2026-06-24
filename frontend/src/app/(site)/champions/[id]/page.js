@@ -14,6 +14,7 @@ import StatsTable from "@/components/champion/StatsTable";
 import SkinGallery from "@/components/champion/SkinGallery";
 import ChampionBuild from "@/components/champion/ChampionBuild";
 import ChampionTabs from "@/components/champion/ChampionTabs";
+import DuoPartners from "@/components/champion/DuoPartners";
 
 // Dinamik metadata - her şampiyonun kendi title'ı olur (SEO)
 export async function generateMetadata({ params }) {
@@ -162,6 +163,10 @@ export default async function ChampionDetail({ params }) {
           <div className="lg:col-span-4 space-y-4">
             <ChampionRadar info={champ.info} />
             <StatsTable stats={champ.stats} />
+
+            {/* En İyi Duo Partnerleri (ADC+Support sinerji) — yalnız veri varsa */}
+            <DuoPartners duos={data.duos} version={data.version} />
+
 
             {/* İpuçları */}
             {(champ.allytips?.length > 0 || champ.enemytips?.length > 0) && (
