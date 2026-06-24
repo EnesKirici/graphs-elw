@@ -25,6 +25,18 @@ function initSkins(slides) {
   return m;
 }
 
+// Slider kategorisine göre vurgu rengi + öne çıkan stat (büyük sayı = şampiyonun
+// slider'da olma SEBEBİ). Ban → kırmızı, Popüler → mavi, WR → yeşil (ayarlı WR).
+function categoryStyle(category) {
+  if (category?.includes("Banlanan")) return { color: "var(--loss)", valueKey: "banRate", label: "BAN" };
+  if (category?.includes("Popüler")) return { color: "#4f8cff", valueKey: "pickRate", label: "PICK" };
+  return { color: "var(--win)", valueKey: "adjWr", fallback: "winRate", label: "WIN RATE" };
+}
+function featuredValue(champ, st) {
+  const v = champ[st.valueKey];
+  return v != null ? v : st.fallback ? champ[st.fallback] : v;
+}
+
 export default function HeroCarousel({ sliderPool = [], version }) {
   const slides = useMemo(() => selectSlides(sliderPool), [sliderPool]);
   const { setBg } = useBackground();
@@ -156,6 +168,7 @@ export default function HeroCarousel({ sliderPool = [], version }) {
   }
 
   const cur = slides[i];
+  const curStyle = categoryStyle(cur.sliderCategory);
 
   return (
     <div
@@ -168,10 +181,21 @@ export default function HeroCarousel({ sliderPool = [], version }) {
         const role = primaryRole(s.positions);
         const skinList = skins[s.id];
         const activeSkin = skinIdx[s.id] ?? 0;
+        const st = categoryStyle(s.sliderCategory);
         return (
           <div key={s.id + s.sliderCategory} className={"hero-slide" + (idx === i ? " active" : "")} aria-hidden={idx !== i}>
             <div className="hero-art" onClick={() => nextSkin(s.id)} title="Kostümü değiştir (tıkla)">
-              {splashFor(s) && <img src={splashFor(s)} alt={s.name} />}
+              {splashFor(s) && (
+                <img
+                  src={splashFor(s)}
+                  alt={s.name}
+                  onError={(e) => {
+                    // Yeni şampiyon kostümünün splash'ı CDN'de yoksa (404) varsayılana düş.
+                    const fb = s.splash || s.latestSkinSplash;
+                    if (fb && e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                  }}
+                />
+              )}
 
               {idx === i && (
                 <button
@@ -215,15 +239,15 @@ export default function HeroCarousel({ sliderPool = [], version }) {
               </div>
               <div className="hero-stats">
                 <div className="hero-stat">
-                  <div className="hs-val up">{pctTR(s.winRate)}</div>
+                  <div className="hs-val" style={st.label === "WIN RATE" ? { color: st.color } : undefined}>{pctTR(s.adjWr ?? s.winRate)}</div>
                   <div className="hs-lab">Win Rate</div>
                 </div>
                 <div className="hero-stat">
-                  <div className="hs-val">{pctTR(s.pickRate)}</div>
+                  <div className="hs-val" style={st.label === "PICK" ? { color: st.color } : undefined}>{pctTR(s.pickRate)}</div>
                   <div className="hs-lab">Pick</div>
                 </div>
                 <div className="hero-stat">
-                  <div className="hs-val">{pctTR(s.banRate)}</div>
+                  <div className="hs-val" style={st.label === "BAN" ? { color: st.color } : undefined}>{pctTR(s.banRate)}</div>
                   <div className="hs-lab">Ban</div>
                 </div>
               </div>
@@ -242,8 +266,8 @@ export default function HeroCarousel({ sliderPool = [], version }) {
       })}
 
       <div className="hero-wr">
-        <div className="wr-num">{pctTR(cur.winRate)}</div>
-        <div className="wr-lab">WIN RATE</div>
+        <div className="wr-num" style={{ color: curStyle.color }}>{pctTR(featuredValue(cur, curStyle))}</div>
+        <div className="wr-lab">{curStyle.label}</div>
       </div>
 
       {total > 1 && (

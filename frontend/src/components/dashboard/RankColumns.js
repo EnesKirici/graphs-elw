@@ -8,7 +8,7 @@ import { RankRow, pctTR } from "./primitives";
 export default function RankColumns({ popular = [], topWinRate = [], topBanned = [] }) {
   const cols = [
     { key: "pop", title: "Popüler Şampiyonlar", icon: "★", color: "#4f8cff", data: popular, valueKey: "pickRate" },
-    { key: "wr", title: "En Yüksek Win Rate", icon: "↗", color: "var(--win)", data: topWinRate, valueKey: "winRate" },
+    { key: "wr", title: "En Yüksek Win Rate", icon: "↗", color: "var(--win)", data: topWinRate, valueKey: "adjWr" },
     { key: "ban", title: "En Çok Banlanan", icon: "⊘", color: "var(--loss)", data: topBanned, valueKey: "banRate" },
   ];
 

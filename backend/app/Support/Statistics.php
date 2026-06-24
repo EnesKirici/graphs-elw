@@ -37,6 +37,27 @@ class Statistics
     }
 
     /**
+     * Shrinkage (regresyon-ortalamaya) win rate — gözlenen oranı örneklem küçükken
+     * 0.5'e doğru çeker, büyükken neredeyse gözlenen kalır.
+     *
+     * Wilson ALT sınırının aksine SİSTEMATİK düşürmez (merkezî tahmin) → ekranda
+     * gösterilecek "adil WR" için daha gerçekçi. Sıralama yine örneklem-duyarlı.
+     *
+     * @param int      $k     prior gücü (kaç maçlık 0.5 önsel); null → config
+     * @param float    $prior önsel oran (nötr WR = 0.5)
+     */
+    public static function shrunkWinRate(int $wins, int $n, ?int $k = null, float $prior = 0.5): float
+    {
+        if ($n <= 0) {
+            return 0.0;
+        }
+
+        $k ??= (int) config('elwgraphs.stats.prior_strength', 100);
+
+        return ($wins + $k * $prior) / ($n + $k);
+    }
+
+    /**
      * 0–1 aralığına kırp.
      */
     public static function clamp01(float $v): float

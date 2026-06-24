@@ -9,8 +9,9 @@ return [
     | yüksek WR dürüstçe aşağı çekilir (Singed 30 maç/%65 tepeyi işgal etmez).
     */
     'stats' => [
-        'z'         => 1.96, // %95 güven (Wilson z-değeri)
-        'min_games' => 30,   // "güvenilir" sayılması için min maç; altı = düşük örneklem
+        'z'              => 1.96, // %95 güven (Wilson z-değeri)
+        'min_games'      => 30,   // "güvenilir" sayılması için min maç; altı = düşük örneklem
+        'prior_strength' => 100,  // shrinkage prior gücü: kaç maçlık %50 önsel (büyük=daha temkinli)
     ],
 
     /*

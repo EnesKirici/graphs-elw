@@ -67,12 +67,12 @@ class MetaService
                     $wrChange = isset($prevStats[$champ['id']])
                         ? round($winRate - $prevStats[$champ['id']]['winRate'], 1)
                         : null;
-                    // Wilson alt sınırı (adil sıralama) + kompozit tier + düşük örneklem işareti.
+                    // Shrinkage WR (adil + gerçekçi; sistematik düşürmez) + kompozit tier + düşük örneklem.
                     $wins = $r['wins'] ?? (int) round($winRate / 100 * $sampleSize);
-                    $wilson = Statistics::wilsonLowerBound($wins, $sampleSize);
-                    $wilsonWr = round($wilson * 100, 1);
+                    $adj = Statistics::shrunkWinRate($wins, $sampleSize);
+                    $adjWr = round($adj * 100, 1);
                     $lowSample = $sampleSize < $minGames;
-                    $tier = $this->tierFromScore($this->compositeTierScore($wilson, $pickRate, $banRate, $sampleSize));
+                    $tier = $this->tierFromScore($this->compositeTierScore($adj, $pickRate, $banRate, $sampleSize));
                 } elseif ($insufficientMode === 'sim') {
                     // Sahte simülasyon (admin tercih ederse)
                     $h1 = abs(crc32($champ['id'] . 'wr'));
@@ -85,7 +85,7 @@ class MetaService
                     $wrChange = round(($h4 % 60 - 30) / 10, 1);
                     $dataSource = 'sim';
                     $sampleSize = null;
-                    $wilsonWr = null;
+                    $adjWr = null;
                     $lowSample = false;
                     $tier = $this->calculateTier($winRate, $pickRate);
                 } else {
@@ -96,7 +96,7 @@ class MetaService
                     $wrChange = null;
                     $dataSource = 'insufficient';
                     $sampleSize = null;
-                    $wilsonWr = null;
+                    $adjWr = null;
                     $lowSample = false;
                     $tier = null;
                 }
@@ -115,7 +115,7 @@ class MetaService
                     'pickRate'   => $pickRate !== null ? round($pickRate, 1) : null,
                     'banRate'    => $banRate !== null ? round($banRate, 1) : null,
                     'wrChange'   => $wrChange,
-                    'wilsonWr'   => $wilsonWr,   // Wilson alt sınırı (adil sıralama temeli)
+                    'adjWr'      => $adjWr,      // shrinkage WR (adil + gerçekçi; gösterim/sıralama temeli)
                     'tier'       => $tier,
                     'lowSample'  => $lowSample,  // sampleSize < min_games → "düşük örneklem"
                     'dataSource' => $dataSource,   // 'real' | 'sim' | 'insufficient'
@@ -129,9 +129,9 @@ class MetaService
             // Şampiyon listesi: yetersizler sona düşsün.
             usort($stats, fn($a, $b) => ($b['winRate'] ?? -1) <=> ($a['winRate'] ?? -1));
 
-            // "En Yüksek WR": Wilson alt sınırına göre sırala + düşük örneklem HARİÇ (dürüst).
+            // "En Yüksek WR": ayarlı (shrinkage) WR'a göre sırala + düşük örneklem HARİÇ (dürüst).
             $wrList = array_values(array_filter($rankable, fn($s) => empty($s['lowSample'])));
-            usort($wrList, fn($a, $b) => ($b['wilsonWr'] ?? $b['winRate']) <=> ($a['wilsonWr'] ?? $a['winRate']));
+            usort($wrList, fn($a, $b) => ($b['adjWr'] ?? $b['winRate']) <=> ($a['adjWr'] ?? $a['winRate']));
             $topWinRate = array_slice($wrList, 0, 10);
             $topPickRate = array_slice(
                 collect($rankable)->sortByDesc('pickRate')->values()->all(), 0, 10
@@ -146,7 +146,8 @@ class MetaService
             $seen = [];
 
             $categories = [
-                ['list' => $topWinRate, 'category' => 'En Yüksek Win Rate', 'valueKey' => 'winRate', 'suffix' => '%'],
+                // WR kategorisi: ayarlı (shrinkage) WR göster → sıralamayla tutarlı + gerçekçi.
+                ['list' => $topWinRate, 'category' => 'En Yüksek Win Rate', 'valueKey' => 'adjWr', 'suffix' => '%'],
                 ['list' => $topPickRate, 'category' => 'En Popüler', 'valueKey' => 'pickRate', 'suffix' => '%'],
                 ['list' => $topBanRate, 'category' => 'En Çok Banlanan', 'valueKey' => 'banRate', 'suffix' => '%'],
             ];
