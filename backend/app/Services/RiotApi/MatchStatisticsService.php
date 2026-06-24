@@ -1059,7 +1059,7 @@ class MatchStatisticsService
      */
     public function getChallengeAverages(string $puuid): array
     {
-        $cacheKey = "challenge_avgs:v4:{$puuid}";
+        $cacheKey = "challenge_avgs:v5:{$puuid}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             // Summoner's Rift queue'ları — Arena/ARAM/Bot/özel modları hariç
@@ -1076,6 +1076,9 @@ class MatchStatisticsService
                 $role = $p['teamPosition'] ?? '';
                 $isSupport = ($role === 'UTILITY');
 
+                // NOT: firstBloodKill artık extractMatchData'da ham participant top-düzeyinden
+                // doğru doldurulup slim challenges'a yazılıyor; burada challenges'tan okunması yeterli.
+                // (Eski slim kayıtlarda bu değer false — yeniden işlenince/yeni maçlarda düzelir.)
                 $ch = $p['challenges'] ?? [];
                 foreach ($ch as $key => $val) {
                     if (!is_numeric($val) && !is_bool($val)) continue;

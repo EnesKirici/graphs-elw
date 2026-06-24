@@ -51,7 +51,7 @@ class BadgeService
             $badges[] = ['key' => 'immortal', 'label' => 'Ölümsüz', 'desc' => "0 ölüm, {$ka} K+A ile galibiyet", 'category' => 'combat', 'tier' => $tier];
         }
 
-        if ($c['firstBloodKill'] ?? false) {
+        if ($c['firstBloodKill'] ?? false) {  // slim challenges'tan (extractMatchData ham participant.firstBloodKill'den doldurur)
             $badges[] = ['key' => 'first_blood', 'label' => 'İlk Kan', 'desc' => 'İlk kanı aldı', 'category' => 'combat', 'tier' => 'gold'];
         }
 

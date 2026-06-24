@@ -300,7 +300,7 @@ class MatchDataService
                     'skillshotsDodged' => $p['challenges']['skillshotsDodged'] ?? 0,
                     'laneMinionsFirst10Minutes' => $p['challenges']['laneMinionsFirst10Minutes'] ?? 0,
                     'maxCsAdvantageOnLaneOpponent' => $p['challenges']['maxCsAdvantageOnLaneOpponent'] ?? 0,
-                    'firstBloodKill' => $p['challenges']['firstBloodKill'] ?? false,
+                    'firstBloodKill' => $p['firstBloodKill'] ?? false,  // top-düzey: challenges.firstBloodKill Riot'ta güvenilmez (hep false)
                     'firstTowerKill' => $p['challenges']['firstTowerKill'] ?? false,
                     'controlWardsPlaced' => $p['challenges']['controlWardsPlaced'] ?? 0,
                     'survivedSingleDigitHpCount' => $p['challenges']['survivedSingleDigitHpCount'] ?? 0,

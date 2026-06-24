@@ -141,7 +141,17 @@ Birebir @15 isteniyorsa: `getMatchTimeline` → `frames[15].participantFrames[pi
 
 ---
 
-## 6) First Blood her zaman `false` ⚠️ DOĞRULANMIŞ BUG
+## 6) First Blood her zaman `false` — ✅ DÜZELTİLDİ (frontend oturumu, 2026-06-24)
+
+> **Çözüm uygulandı:** `extractMatchData()` (MatchDataService) artık `firstBloodKill`'i ham Riot
+> `participant.firstBloodKill` (top-düzey) alanından okuyup slim challenges'a yazıyor. Diğer
+> katmanlar (getMatchDetailFull, BadgeService, getChallengeAverages) zaten slim challenges'tan
+> okuyor — değişmedi. `getChallengeAverages` cache v4→v5. **Kanıt:** Riot ham yanıtında alan
+> doğru geliyor (örn. elw son 25 maçta 2 ilk kan = %8; eskiden %0 görünüyordu). **KALAN:** eski
+> DB slim kayıtlarında değer hâlâ `false` — o maçlar Riot'tan yeniden çekilince/yeni maçlarda düzelir.
+> İstenirse mevcut `match_summaries` yeniden işlenebilir.
+
+### (Orijinal teşhis, referans için)
 
 Performans Metrikleri'nde "First Blood 0%" ve Detaylar'da "İlk Kan —" hep boş. Kanıt: maç
 `TR1_1721894803`'te **10 oyuncunun 10'u da `challenges.firstBloodKill = false`** — bu imkansız

@@ -138,7 +138,7 @@ class MatchService
                     'skillshotsDodged'   => $p['challenges']['skillshotsDodged'] ?? 0,
                     'laneMinions10'      => $p['challenges']['laneMinionsFirst10Minutes'] ?? 0,
                     'csAdvantage'        => $p['challenges']['maxCsAdvantageOnLaneOpponent'] ?? 0,
-                    'firstBloodKill'     => $p['challenges']['firstBloodKill'] ?? false,
+                    'firstBloodKill'     => $p['challenges']['firstBloodKill'] ?? false,  // slim challenges'tan (extractMatchData ham participant.firstBloodKill'den doldurur)
                     'firstTowerKill'     => $p['challenges']['firstTowerKill'] ?? false,
                     'controlWardsPlaced' => $p['challenges']['controlWardsPlaced'] ?? 0,
                     'survivedLowHp'      => $p['challenges']['survivedSingleDigitHpCount'] ?? 0,
