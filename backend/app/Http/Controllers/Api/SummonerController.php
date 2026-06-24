@@ -11,6 +11,7 @@ use App\Services\RiotApi\ChampionMasteryService;
 use App\Services\RiotApi\MatchService;
 use App\Services\RiotApi\MatchDataService;
 use App\Services\RiotApi\DataDragonService;
+use App\Services\LpTrackingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -24,6 +25,7 @@ class SummonerController extends Controller
         private MatchService $match,
         private MatchDataService $matchData,
         private DataDragonService $ddragon,
+        private LpTrackingService $lpTracking,
     ) {}
 
     public function search(Request $request): JsonResponse
@@ -269,8 +271,15 @@ class SummonerController extends Controller
         // LP snapshot — mevcut LP'yi en son ranked maçla eşleştirip kaydet
         // Sonra her maça LP değişimini hesaplayıp ekle
         try {
-            $this->saveLpSnapshot($puuid, $ranked, $recentMatches);
-            $recentMatches = $this->attachLpChanges($puuid, $recentMatches);
+            // En yeni ranked maçı kuyruk bazında bul (ilk eşleşen = en yeni — eski davranış).
+            $newest = ['solo' => null, 'flex' => null];
+            foreach ($recentMatches as $rm) {
+                $qt = $rm['queueType'] ?? '';
+                if ($qt === 'SoloQ' && $newest['solo'] === null) $newest['solo'] = $rm['matchId'] ?? null;
+                if ($qt === 'Flex'  && $newest['flex'] === null) $newest['flex'] = $rm['matchId'] ?? null;
+            }
+            $this->lpTracking->recordSnapshots($puuid, $ranked, $newest);
+            $recentMatches = $this->lpTracking->attachLpChanges($puuid, $recentMatches);
         } catch (\Exception $e) {}
 
         // Sezon verileri — DB'de maç varsa hesapla, yoksa recentMatches'tan fallback
@@ -512,151 +521,4 @@ class SummonerController extends Controller
         return ['all' => $list, 'ranked' => [], 'normal' => $list];
     }
 
-    /**
-     * LP snapshot — mevcut LP'yi en son ranked maç ile eşleştirip kaydet.
-     * Aynı match_id için zaten kayıt varsa tekrar kaydetmez.
-     */
-    private function saveLpSnapshot(string $puuid, array $ranked, array $recentMatches): void
-    {
-        try {
-            foreach (['solo' => 'RANKED_SOLO_5x5', 'flex' => 'RANKED_FLEX_SR'] as $key => $queue) {
-                $data = $ranked[$key] ?? null;
-                if (!$data || !isset($data['lp'])) continue;
-
-                $queueId = $key === 'solo' ? 420 : 440;
-
-                // Bu kuyruk için en son ranked maçı bul
-                $lastRankedMatch = null;
-                foreach ($recentMatches as $m) {
-                    if (($m['queueType'] ?? '') === ($key === 'solo' ? 'SoloQ' : 'Flex')) {
-                        $lastRankedMatch = $m;
-                        break; // İlk bulunan = en yeni
-                    }
-                }
-
-                if (!$lastRankedMatch) continue;
-                $matchId = $lastRankedMatch['matchId'];
-
-                // Bu match_id için zaten snapshot var mı?
-                $exists = LpSnapshot::where('puuid', $puuid)
-                    ->where('match_id', $matchId)
-                    ->exists();
-                if ($exists) continue;
-
-                LpSnapshot::create([
-                    'puuid'    => $puuid,
-                    'queue'    => $queue,
-                    'match_id' => $matchId,
-                    'tier'     => $data['tier'],
-                    'rank'     => $data['rank'],
-                    'lp'       => $data['lp'],
-                ]);
-            }
-        } catch (\Exception $e) {}
-    }
-
-    /**
-     * Her maça LP değişimini hesaplayıp ekle.
-     *
-     * DİKKAT — snapshot'lar SEYREK: saveLpSnapshot yalnızca profil açıldığı andaki
-     * EN SON ranked maça o anki LP'yi yazar. İki profil ziyareti arasında oynanan
-     * maçların snapshot'ı yoktur. Bu yüzden iki ardışık snapshot arasındaki fark,
-     * aralarındaki TÜM maçların toplamı olabilir (ör. 9 maç sonra açılınca "+250 LP").
-     *
-     * Çözüm (worker gelene kadar): farkı sadece iki snapshot BİTİŞİK iki ranked maça
-     * aitse (aralarında snapshot'sız başka ranked maç yoksa) göster; değilse gösterme.
-     * Böylece tek maça ait olmayan, şişmiş LP değerleri ekrana hiç gelmez.
-     */
-    private function attachLpChanges(string $puuid, array $matches): array
-    {
-        // Bu oyuncunun tüm LP snapshot'larını çek (yeniden eskiye)
-        $snapshots = LpSnapshot::where('puuid', $puuid)
-            ->orderBy('id', 'desc')
-            ->get()
-            ->keyBy('match_id');
-
-        // Tüm snapshot'ları sıralı listede tut (LP farkı hesabı için)
-        $soloSnapshots = LpSnapshot::where('puuid', $puuid)
-            ->where('queue', 'RANKED_SOLO_5x5')
-            ->orderBy('id', 'desc')
-            ->get();
-        $flexSnapshots = LpSnapshot::where('puuid', $puuid)
-            ->where('queue', 'RANKED_FLEX_SR')
-            ->orderBy('id', 'desc')
-            ->get();
-
-        // Yüklü maç geçmişinden kuyruk bazında SIRALI (yeni→eski) ranked maç id listesi.
-        // Bitişiklik kontrolü için: prevSnap, bu maçtan hemen önceki ranked maç mı?
-        $rankedOrder = ['RANKED_SOLO_5x5' => [], 'RANKED_FLEX_SR' => []];
-        foreach ($matches as $m) {
-            $qt = $m['queueType'] ?? '';
-            $q  = $qt === 'SoloQ' ? 'RANKED_SOLO_5x5' : ($qt === 'Flex' ? 'RANKED_FLEX_SR' : null);
-            if ($q && isset($m['matchId'])) $rankedOrder[$q][] = $m['matchId'];
-        }
-
-        foreach ($matches as &$m) {
-            $m['lpChange'] = null;
-            $matchId = $m['matchId'] ?? null;
-            if (!$matchId) continue;
-
-            $snap = $snapshots[$matchId] ?? null;
-            if (!$snap) continue;
-
-            // Bu snapshot'tan bir öncekini bul (aynı queue)
-            $list = $snap->queue === 'RANKED_SOLO_5x5' ? $soloSnapshots : $flexSnapshots;
-            $found = false;
-            $prevSnap = null;
-            foreach ($list as $s) {
-                if ($found) { $prevSnap = $s; break; }
-                if ($s->match_id === $matchId) $found = true;
-            }
-            if (!$prevSnap) continue;
-
-            // BİTİŞİKLİK: prevSnap, bu maçtan hemen önceki ranked maç olmalı.
-            // İkisi de yüklü pencerede olmalı ve aralarında snapshot'sız maç olmamalı,
-            // yoksa fark tek maça ait değildir → güvenilmez, gösterme.
-            $order = $rankedOrder[$snap->queue] ?? [];
-            $iCur  = array_search($matchId, $order, true);
-            $iPrev = array_search($prevSnap->match_id, $order, true);
-            if ($iCur === false || $iPrev === false || $iPrev !== $iCur + 1) continue;
-
-            $currentTotal = $this->lpToAbsolute($snap->tier, $snap->rank, $snap->lp);
-            $prevTotal    = $this->lpToAbsolute($prevSnap->tier, $prevSnap->rank, $prevSnap->lp);
-            $diff = $currentTotal - $prevTotal;
-
-            // Tutarlılık: galibiyet + negatif LP veya mağlubiyet + pozitif LP → güvenilmez
-            $win = $m['win'] ?? null;
-            if ($win === true && $diff < 0) continue;
-            if ($win === false && $diff > 0) continue;
-
-            // Son güvenlik kapağı: tek bir maç için makul aralık dışıysa (tier yanlış
-            // okuması, MMR sıçraması vb.) gösterme. Normal bir maç ~15-40 LP'dir.
-            if (abs($diff) > 60) continue;
-
-            $m['lpChange'] = $diff;
-        }
-        unset($m);
-
-        return $matches;
-    }
-
-    /**
-     * Tier+Rank+LP'yi mutlak sayıya çevir (LP farkı hesabı için).
-     * Iron IV 0LP = 0, Challenger 1000LP = ~5400
-     */
-    private function lpToAbsolute(string $tier, string $rank, int $lp): int
-    {
-        $tiers = ['IRON' => 0, 'BRONZE' => 400, 'SILVER' => 800, 'GOLD' => 1200, 'PLATINUM' => 1600, 'EMERALD' => 2000, 'DIAMOND' => 2400, 'MASTER' => 2800, 'GRANDMASTER' => 2800, 'CHALLENGER' => 2800];
-        $ranks = ['IV' => 0, 'III' => 100, 'II' => 200, 'I' => 300];
-
-        $base = $tiers[strtoupper($tier)] ?? 0;
-        $rankOffset = $ranks[$rank] ?? 0;
-
-        // Master+ tek division, LP direkt eklenir
-        if (in_array(strtoupper($tier), ['MASTER', 'GRANDMASTER', 'CHALLENGER'])) {
-            return $base + $lp;
-        }
-
-        return $base + $rankOffset + $lp;
-    }
 }
