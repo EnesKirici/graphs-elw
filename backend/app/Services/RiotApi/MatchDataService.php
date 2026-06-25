@@ -274,6 +274,7 @@ class MatchDataService
                 'item3' => $p['item3'] ?? 0, 'item4' => $p['item4'] ?? 0, 'item5' => $p['item5'] ?? 0, 'item6' => $p['item6'] ?? 0,
                 'doubleKills' => $p['doubleKills'] ?? 0, 'tripleKills' => $p['tripleKills'] ?? 0,
                 'quadraKills' => $p['quadraKills'] ?? 0, 'pentaKills' => $p['pentaKills'] ?? 0,
+                'timeCCingOthers' => $p['timeCCingOthers'] ?? 0, // ELW CC bonusu (engage/peel)
                 // Spell casts (Q/W/E/R + D/F) — Detaylar sekmesi "Spell Casted"
                 'spell1Casts' => $p['spell1Casts'] ?? 0, 'spell2Casts' => $p['spell2Casts'] ?? 0,
                 'spell3Casts' => $p['spell3Casts'] ?? 0, 'spell4Casts' => $p['spell4Casts'] ?? 0,

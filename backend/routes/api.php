@@ -56,6 +56,8 @@ Route::prefix('v1')->group(function () {
 
     // Maç detay
     Route::get('/matches/{matchId}', [SummonerController::class, 'matchDetail']);
+    // ELW skor kırılımı (şeffaflık modalı)
+    Route::get('/matches/{matchId}/elw/{puuid}', [SummonerController::class, 'elwBreakdown']);
 
     // Canlı maç (Spectator-V5)
     // Sıralama önemli: search/player {puuid} yakalamasından ÖNCE tanımlanmalı.

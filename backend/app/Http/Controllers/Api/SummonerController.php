@@ -125,6 +125,24 @@ class SummonerController extends Controller
     }
 
     /**
+     * Tek oyuncunun ELW skor kırılımı (şeffaflık modalı).
+     * GET /api/v1/matches/{matchId}/elw/{puuid}?mode=individual|team
+     */
+    public function elwBreakdown(string $matchId, string $puuid): JsonResponse
+    {
+        try {
+            $mode = request()->query('mode', 'individual');
+            $data = $this->match->getElwBreakdown($matchId, $puuid, $mode);
+            if ($data === null) {
+                return response()->json(['error' => 'Skor kırılımı bulunamadı.'], 404);
+            }
+            return response()->json($data);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Skor kırılımı alınamadı.'], 500);
+        }
+    }
+
+    /**
      * Oyuncu cache'ini temizle ve güncel veriyi döndür.
      * POST /api/v1/summoner/{puuid}/refresh
      */

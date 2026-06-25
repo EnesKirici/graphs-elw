@@ -34,6 +34,21 @@ class MatchService
     //  Maç Detay — 10 oyuncunun tam istatistikleri
     // ────────────────────────────────────────────
 
+    /**
+     * Tek oyuncunun ELW skor kırılımı (DPM-tarzı şeffaflık modalı). Maçı DB-first yükler;
+     * skoru oluşturan bileşenleri (stat → puan) + harf notu döndürür. Oyuncu yoksa null.
+     */
+    public function getElwBreakdown(string $matchId, string $puuid, string $mode = 'individual'): ?array
+    {
+        $detail = $this->matchData->getMatchDetail($matchId);
+        $info = $detail['info'] ?? null;
+        if (!$info || empty($info['participants'])) {
+            return null;
+        }
+        $mode = $mode === 'team' ? 'team' : 'individual';
+        return $this->elw->scoreBreakdown($info['participants'], $puuid, $info['gameDuration'] ?? 0, $mode);
+    }
+
     public function getMatchDetailFull(string $matchId): array
     {
         $detail = $this->matchData->getMatchDetail($matchId);
