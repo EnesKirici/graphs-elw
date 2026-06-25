@@ -6,6 +6,7 @@ import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
 import Tooltip from "@/components/shared/Tooltip";
 import { scoreColor } from "./scoreColor";
+import ElwScoreModal from "./ElwScoreModal";
 
 // perfLabel.color → yön oku + renk (oynayış yorumu). Yeşilsiz palet.
 const PERF_ARROW = {
@@ -150,6 +151,7 @@ function BadgeChip({ badge }) {
 // Hover'da zengin tooltip (skor + bar + KDA/CS/hasar + takım + açıklama).
 function ScoreBlock({ m }) {
   const [anchor, setAnchor] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const score = m.ranking.elwScore;
   const sColor = scoreColor(score);
   const fill = Math.max(0, Math.min(1, (score ?? 0) / 10));
@@ -172,8 +174,10 @@ function ScoreBlock({ m }) {
   const glowLvl = isMvp || (score != null && score >= 9.5) ? 2 : (score != null && score >= 8.5) ? 1 : 0;
 
   return (
-    <div className="relative flex items-center justify-center w-[58px] h-[66px] flex-shrink-0 cursor-help"
-      onMouseEnter={(e) => setAnchor(e.currentTarget)} onMouseLeave={() => setAnchor(null)}>
+    <div className="relative flex items-center justify-center w-[58px] h-[66px] flex-shrink-0 cursor-pointer"
+      title="ELW skor kırılımını gör"
+      onMouseEnter={(e) => setAnchor(e.currentTarget)} onMouseLeave={() => setAnchor(null)}
+      onClick={(e) => { e.stopPropagation(); if (m.matchId && m.puuid) { setAnchor(null); setModalOpen(true); } }}>
       {glowLvl > 0 && (
         <span aria-hidden
           className={`absolute top-0 left-0 w-[58px] h-[58px] rounded-full pointer-events-none ${glowLvl === 2 ? "animate-pulse" : ""}`}
@@ -240,6 +244,14 @@ function ScoreBlock({ m }) {
             </div>
           </div>
         </Tooltip>
+      )}
+      {modalOpen && (
+        <ElwScoreModal
+          matchId={m.matchId}
+          puuid={m.puuid}
+          champImage={m.champion?.image}
+          onClose={() => setModalOpen(false)}
+        />
       )}
     </div>
   );

@@ -47,6 +47,16 @@ export async function fetchApi(endpoint) {
 }
 
 /**
+ * Tek oyuncunun ELW skor kırılımı (şeffaflık modalı).
+ * mode: "individual" (carry — maç kartı ölçeği) | "team".
+ */
+export async function getElwBreakdown(matchId, puuid, mode = "individual") {
+  return fetchApi(
+    `/matches/${encodeURIComponent(matchId)}/elw/${encodeURIComponent(puuid)}?mode=${mode}`
+  );
+}
+
+/**
  * Canlı maç verisi — name/tag ile arar.
  * Oyuncu oyunda değilse backend 404 + {status:"offline"} döner; bu bir HATA
  * DEĞİL geçerli bir durum olduğu için 404'ü özel ele alıyoruz (throw etmez).

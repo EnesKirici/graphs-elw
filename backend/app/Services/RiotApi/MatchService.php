@@ -503,6 +503,7 @@ class MatchService
 
         return [
             'matchId'      => $matchId,
+            'puuid'        => $puuid, // ELW skor kırılımı modalı için
             'champion'     => [
                 'id'    => $player['championName'],
                 'name'  => $player['championName'],
