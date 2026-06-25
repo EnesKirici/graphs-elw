@@ -2,6 +2,7 @@ import { Geist, Archivo, Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "./dashboard-theme.css";
 import Providers from "@/components/Providers";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -27,17 +28,33 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata = {
+  // Tüm göreli OG/canonical URL'leri buna göre mutlaklaşır.
+  metadataBase: new URL("https://elwgraphs.elw.com.tr"),
   title: {
-    default: "ELW Graphs — League of Legends İstatistik ve Analiz",
-    template: "%s | ELW Graphs",
+    default: "ElwGraphs — League of Legends İstatistik ve Analiz",
+    template: "%s | ElwGraphs",
   },
   description: "League of Legends oyuncu profilleri, maç analizleri, ELW Score performans puanlama, şampiyon istatistikleri ve meta takibi.",
-  keywords: ["league of legends", "lol", "oyuncu istatistikleri", "maç analizi", "elw score", "lol türkiye", "şampiyon istatistikleri"],
+  keywords: ["league of legends", "lol", "oyuncu istatistikleri", "maç analizi", "elw score", "lol türkiye", "şampiyon istatistikleri", "tier list", "lol meta"],
+  applicationName: "ElwGraphs",
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "ELW Graphs — League of Legends İstatistik ve Analiz",
+    title: "ElwGraphs — League of Legends İstatistik ve Analiz",
     description: "Oyuncu profilleri, maç analizleri, ELW Score performans puanlama sistemi.",
-    siteName: "ELW Graphs",
+    siteName: "ElwGraphs",
+    url: "https://elwgraphs.elw.com.tr",
+    locale: "tr_TR",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ElwGraphs — League of Legends İstatistik ve Analiz",
+    description: "Oyuncu profilleri, maç analizleri, ELW Score performans puanlama.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
   icons: {
     // ?v=2: marka yenilendi (mavi EL) — tarayıcının eski favicon önbelleğini kırar
@@ -65,6 +82,7 @@ export default function RootLayout({ children }) {
         <Providers>
           {children}
         </Providers>
+        <GoogleAnalytics />
       </body>
     </html>
   );
