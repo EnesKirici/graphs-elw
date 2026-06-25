@@ -106,16 +106,18 @@ const ELW_METRICS = [
   { key: "healing",  label: "İyileştirme & Kalkan",  desc: "Takım arkadaşlarına heal + shield /dk", max: "800/dk = max" },
 ];
 
-// Bireysel mod ağırlıkları — backend ElwScoreService.INDIVIDUAL_WEIGHTS ile birebir.
+// Bireysel mod ağırlıkları — backend ElwScoreService.INDIVIDUAL_WEIGHTS ile birebir (2026-06-25).
 // Destek 3 alt-tipe ayrılır (otomatik seçilir): Şifa (enchanter), Hasar, Tank.
+// Ek: tüm rollere eşit CC bonusu (1.0, bonus-only) + ölüm dengesi (×0.4). Galibiyet/Mağlubiyet
+// puana GİRMEZ — "sonuca değil, ne yaptığına" göre puan.
 const ELW_WEIGHTS = {
-  TOP:     { kda: 2.5, dpm: 2.0, gpm: 1.5, kp: 1.0, vision: 1.0, towerDmg: 2.0, objDmg: 0.5, tankPct: 1.5, healing: 0.0 },
-  JUNGLE:  { kda: 2.5, dpm: 1.5, gpm: 1.5, kp: 1.5, vision: 1.0, towerDmg: 0.5, objDmg: 2.5, tankPct: 1.0, healing: 0.0 },
+  TOP:     { kda: 2.5, dpm: 2.0, gpm: 1.5, kp: 1.5, vision: 1.0, towerDmg: 2.0, objDmg: 0.5, tankPct: 1.0, healing: 0.0 },
+  JUNGLE:  { kda: 2.5, dpm: 1.5, gpm: 1.0, kp: 2.0, vision: 2.0, towerDmg: 0.0, objDmg: 2.5, tankPct: 0.5, healing: 0.0 },
   MIDDLE:  { kda: 2.5, dpm: 2.5, gpm: 2.0, kp: 2.0, vision: 1.0, towerDmg: 1.5, objDmg: 0.5, tankPct: 0.0, healing: 0.0 },
   BOTTOM:  { kda: 2.5, dpm: 3.0, gpm: 2.0, kp: 2.0, vision: 0.5, towerDmg: 1.5, objDmg: 0.5, tankPct: 0.0, healing: 0.0 },
-  UTILITY_ENCHANTER: { kda: 2.0, dpm: 0.5, gpm: 0.5, kp: 2.0, vision: 3.0, towerDmg: 0.0, objDmg: 0.5, tankPct: 1.5, healing: 2.0 },
+  UTILITY_ENCHANTER: { kda: 2.5, dpm: 0.5, gpm: 0.5, kp: 2.0, vision: 2.5, towerDmg: 0.0, objDmg: 0.5, tankPct: 1.0, healing: 2.0 },
   UTILITY_DAMAGE:    { kda: 2.0, dpm: 2.0, gpm: 0.5, kp: 2.5, vision: 2.0, towerDmg: 0.0, objDmg: 0.5, tankPct: 0.5, healing: 2.0 },
-  UTILITY_TANK:      { kda: 2.0, dpm: 1.0, gpm: 0.5, kp: 2.5, vision: 3.0, towerDmg: 0.0, objDmg: 0.5, tankPct: 2.0, healing: 0.5 },
+  UTILITY_TANK:      { kda: 2.0, dpm: 1.0, gpm: 0.5, kp: 2.5, vision: 2.5, towerDmg: 0.0, objDmg: 0.5, tankPct: 2.0, healing: 0.5 },
 };
 
 const ROLE_LABELS = {
