@@ -224,7 +224,7 @@ class LiveGameService
      * @param  string       $puuid
      * @param  string|null  $championName  Canlı maçta oynadığı şampiyon (build seçimi için)
      */
-    public function getPlayerEnrichment(string $puuid, ?string $championName = null): array
+    public function getPlayerEnrichment(string $puuid, ?string $championName = null, ?string $role = null, array $enemyChamps = [], bool $autofilled = false): array
     {
         $base = Cache::remember("live:player:v2:{$puuid}", 300, function () use ($puuid) {
             try {
@@ -306,9 +306,32 @@ class LiveGameService
                 $championAgg[$cn]['assists'] += $m['assists'] ?? 0;
             }
 
+            // Etiket motoru aggregate'leri (son maçlardan, ekstra istek YOK).
+            $n = max(count($matches), 1);
+            $avgCsPerMin = round(array_sum(array_map(fn($m) => $m['csPerMin'] ?? 0, $matches)) / $n, 1);
+            $avgDeaths   = round(array_sum(array_map(fn($m) => $m['deaths'] ?? 0, $matches)) / $n, 1);
+            $avgKills    = round(array_sum(array_map(fn($m) => $m['kills'] ?? 0, $matches)) / $n, 1);
+            $mainChamp = null;
+            $maxG = 0;
+            foreach ($championAgg as $cn => $a) {
+                if ($a['games'] > $maxG) { $maxG = $a['games']; $mainChamp = $cn; }
+            }
+            // Seri: en yeni maçtan +N galibiyet / -N mağlubiyet (recentGames recency sırasında).
+            $streak = 0;
+            foreach ($recentGames as $g) {
+                if (($g['win'] ?? null) === true) { if ($streak >= 0) { $streak++; } else { break; } }
+                elseif (($g['win'] ?? null) === false) { if ($streak <= 0) { $streak--; } else { break; } }
+                else { break; }
+            }
+
             return [
                 'playstyleBadges' => $playstyle,
                 'recentGames'     => $recentGames,
+                'avgCsPerMin'     => $avgCsPerMin,
+                'avgDeaths'       => $avgDeaths,
+                'avgKills'        => $avgKills,
+                'mainChamp'       => $mainChamp,
+                'streak'          => $streak,
                 'recentStats'     => [
                     'winRate'    => $recentStats['winRate'] ?? 0,
                     'wins'       => $recentStats['wins'] ?? 0,
@@ -359,8 +382,36 @@ class LiveGameService
             'elwAverage'      => $base['elwAverage'] ?? null,
             'build'           => $build,
             'championStat'    => $championStat,
+            'liveLabels'      => $this->buildLiveLabels($base, $championName, $role, $enemyChamps, $autofilled),
             'error'           => $base['error'] ?? null,
         ];
+    }
+
+    /**
+     * Canlı maç etiketleri (LabelEngine) — cache'li stat'lardan + canlı bağlamdan (cache DIŞINDA,
+     * çünkü rakip kadrosu/rol oyuna özgü). Veri yoksa boş döner (etiket çıkmaz, hata vermez).
+     */
+    private function buildLiveLabels(array $base, ?string $champ, ?string $role, array $enemyChamps, bool $autofilled): array
+    {
+        if (!empty($base['error'])) {
+            return [];
+        }
+        $agg = $champ ? ($base['championAgg'][$champ] ?? null) : null;
+        $data = [
+            'liveChamp'      => $champ,
+            'liveChampGames' => $agg['games'] ?? 0,
+            'liveChampWr'    => ($agg && ($agg['games'] ?? 0) > 0) ? round($agg['wins'] / $agg['games'] * 100) : 0,
+            'mainChamp'      => $base['mainChamp'] ?? null,
+            'enemyChamps'    => $enemyChamps,
+            'role'           => $role,
+            'autofilled'     => $autofilled,
+            'avgCsPerMin'    => $base['avgCsPerMin'] ?? 0,
+            'avgDeaths'      => $base['avgDeaths'] ?? 0,
+            'avgKills'       => $base['avgKills'] ?? 0,
+            'streak'         => $base['streak'] ?? 0,
+            'elwAverage'     => $base['elwAverage'] ?? null,
+        ];
+        return app(\App\Services\LabelEngine::class)->evaluate('live', $data);
     }
 
     // ────────────────────────────────────────────

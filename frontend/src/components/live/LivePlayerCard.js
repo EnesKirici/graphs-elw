@@ -194,6 +194,8 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
     (hi70 >= 3 || hi65 >= 4);
   // En yüksek (en sık) 3 rozet — fazlası kart önyüzünde kayıyordu (kullanıcı geri bildirimi).
   const badges = (enrichment?.playstyleBadges || []).slice(0, 3);
+  // Bağlamsal etiketler (LabelEngine) — OTP/Main'i Karşıda/Bad CSer… renkli (admin'den yönetilir).
+  const liveLabels = enrichment?.liveLabels || [];
   const streak = computeStreak(games);
   const splash = splashUrl(p.champion?.id);
   const roleStats = rs?.roleStats || [];
@@ -295,15 +297,24 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
               <div className="text-[12px] text-gray-400">Unranked</div>
             )}
 
-            {/* Rozetler */}
+            {/* Bağlamsal etiketler (renkli) + oynayış rozetleri */}
             <div className="flex flex-wrap items-center justify-center gap-1 min-h-[20px]">
-              {loading && badges.length === 0 && (
+              {loading && badges.length === 0 && liveLabels.length === 0 && (
                 <>
                   <span className="h-4 w-14 rounded bg-white/10 animate-pulse" />
                   <span className="h-4 w-12 rounded bg-white/10 animate-pulse" />
                 </>
               )}
-              {badges.slice(0, 4).map((b) => <BadgeChip key={b.key} badge={b} />)}
+              {liveLabels.map((l) => (
+                <span
+                  key={l.key}
+                  className="px-1.5 py-0.5 rounded text-[9px] font-bold border whitespace-nowrap"
+                  style={{ color: l.color, borderColor: `${l.color}55`, background: `${l.color}1a` }}
+                >
+                  {l.text}
+                </span>
+              ))}
+              {badges.slice(0, 3).map((b) => <BadgeChip key={b.key} badge={b} />)}
             </div>
           </div>
         </div>

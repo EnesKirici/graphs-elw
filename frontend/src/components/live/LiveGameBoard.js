@@ -51,7 +51,13 @@ export default function LiveGameBoard({ game }) {
   useEffect(() => {
     if (game.mock) return;
     let alive = true;
-    const all = [...ally, ...enemy].filter((p) => p.puuid && !p.isBot);
+    const allyChamps = ally.map((p) => p.champion?.name).filter(Boolean);
+    const enemyChamps = enemy.map((p) => p.champion?.name).filter(Boolean);
+    const allyPuuids = new Set(ally.map((p) => p.puuid));
+    // fetchPriority sırasında (bana en yakın matchup önce) — rate-limit stratejisi.
+    const all = [...ally, ...enemy]
+      .filter((p) => p.puuid && !p.isBot)
+      .sort((a, b) => (a.fetchPriority ?? 9) - (b.fetchPriority ?? 9));
     if (all.length === 0) {
       setLoading(false);
       return;
@@ -60,7 +66,12 @@ export default function LiveGameBoard({ game }) {
     runThrottled(
       all,
       async (p) => {
-        const data = await getLivePlayer(p.puuid, p.champion?.name);
+        const opp = allyPuuids.has(p.puuid) ? enemyChamps : allyChamps;
+        const data = await getLivePlayer(p.puuid, p.champion?.name, {
+          role: p.role,
+          autofilled: p.autofilled,
+          enemyChamps: opp,
+        });
         if (alive && data) {
           setEnrichments((prev) => ({ ...prev, [p.puuid]: data }));
         }

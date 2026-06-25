@@ -89,9 +89,14 @@ export async function getLiveGame(name, tag) {
  * Tek oyuncunun ağır (son-maç türevli) verisi — kart başına progresif çağrı.
  * Hata olursa null döner; UI zarifçe bozulmadan devam etsin.
  */
-export async function getLivePlayer(puuid, champion) {
+export async function getLivePlayer(puuid, champion, opts = {}) {
   try {
-    const q = champion ? `?champion=${encodeURIComponent(champion)}` : "";
+    const params = new URLSearchParams();
+    if (champion) params.set("champion", champion);
+    if (opts.role) params.set("role", opts.role);
+    if (opts.autofilled) params.set("autofilled", "1");
+    if (opts.enemyChamps?.length) params.set("enemyChamps", opts.enemyChamps.join(","));
+    const q = params.toString() ? `?${params}` : "";
     const res = await fetch(`${API_BASE}/live/player/${puuid}${q}`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
