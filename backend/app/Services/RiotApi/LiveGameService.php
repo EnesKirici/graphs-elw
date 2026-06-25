@@ -86,6 +86,11 @@ class LiveGameService
             }
         }
 
+        // Takım-seviyesi rol ataması — 5 oyuncuya BENZERSİZ rol (Smite→orman kilitli, gerisi
+        // şampiyon pozisyon tercihiyle açgözlü) + koridor sırasına (Top→JG→Mid→ADC→Sup) diz.
+        $allyTeam = $this->assignTeamRoles($allyTeam, $positions);
+        $enemyTeam = $this->assignTeamRoles($enemyTeam, $positions);
+
         // Ban'lar
         $bans = array_map(fn($b) => [
             'championId' => $b['championId'] ?? -1,
@@ -113,6 +118,62 @@ class LiveGameService
             'bans'           => $bans,
             'rateLimited'    => $rateLimited,
         ];
+    }
+
+    /**
+     * Takım-seviyesi rol ataması: 5 oyuncuya BENZERSİZ rol + koridor sırasına diz.
+     * Smite → orman (kilit), gerisi şampiyon pozisyon tercihiyle açgözlü; çakışırsa boş role.
+     * 'autofilled' = atanan rol şampiyonun tipik pozisyonu değil (off-role işareti).
+     */
+    private function assignTeamRoles(array $team, array $positions): array
+    {
+        $order = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'];
+        $norm = ['MID' => 'MIDDLE', 'BOT' => 'BOTTOM', 'ADC' => 'BOTTOM', 'ADCARRY' => 'BOTTOM', 'SUPPORT' => 'UTILITY'];
+        $prefsOf = function ($p) use ($positions, $norm) {
+            $champ = $p['champion']['id'] ?? null;
+            $raw = $champ ? ($positions[$champ] ?? []) : [];
+            return array_values(array_filter(array_map(fn ($r) => $norm[strtoupper($r)] ?? strtoupper($r), $raw)));
+        };
+
+        $assigned = [];
+        $used = [];
+        // 1. Smite → JUNGLE (kilit)
+        foreach ($team as $i => $p) {
+            if (($p['role'] ?? null) === 'JUNGLE' && !in_array('JUNGLE', $used, true)) {
+                $assigned[$i] = 'JUNGLE';
+                $used[] = 'JUNGLE';
+            }
+        }
+        // 2. Açgözlü — herkes en çok tercih ettiği boş role
+        foreach ($team as $i => $p) {
+            if (isset($assigned[$i])) {
+                continue;
+            }
+            foreach ($prefsOf($p) as $r) {
+                if (in_array($r, $order, true) && !in_array($r, $used, true)) {
+                    $assigned[$i] = $r;
+                    $used[] = $r;
+                    break;
+                }
+            }
+        }
+        // 3. Kalanlar → boş roller
+        $free = array_values(array_diff($order, $used));
+        $fi = 0;
+        foreach ($team as $i => $p) {
+            if (!isset($assigned[$i])) {
+                $assigned[$i] = $free[$fi++] ?? 'MIDDLE';
+            }
+        }
+        // Uygula + autofill işareti + koridor sırasına diz
+        foreach ($team as $i => &$p) {
+            $p['role'] = $assigned[$i];
+            $prefs = $prefsOf($p);
+            $p['autofilled'] = $prefs && !in_array($assigned[$i], $prefs, true);
+        }
+        unset($p);
+        usort($team, fn ($a, $b) => array_search($a['role'], $order) <=> array_search($b['role'], $order));
+        return $team;
     }
 
     /**
