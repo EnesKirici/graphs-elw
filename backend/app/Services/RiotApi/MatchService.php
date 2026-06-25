@@ -18,8 +18,9 @@ class MatchService
      *  v2: takım kalitesi metriği kişiye-göre relatif (takım arkadaşları − ben).
      *  v3: ELW yeni ağırlıklar + Win/Loss kaldırıldı + CC eşit bonus.
      *  v4: takım kalitesi DPM tarzı (takım arkadaşlarının mutlak seviyesi, lobiye göre).
-     *  v5: takım kalitesi 'individual' skorlarla (kartta gösterilenle tutarlı) + yeni eşik. */
-    private const ALGO_VERSION = 5;
+     *  v5: takım kalitesi 'individual' skorlarla (kartta gösterilenle tutarlı) + yeni eşik.
+     *  v6: ELW score DPM-tarzı kategorili (Global+vsRakip+Objektif+Takım+Role) yeniden yazıldı. */
+    private const ALGO_VERSION = 6;
 
     public function __construct(
         private MatchDataService $matchData,
@@ -48,17 +49,19 @@ class MatchService
             return null;
         }
         $mode = $mode === 'team' ? 'team' : 'individual';
-        $breakdown = $this->elw->scoreBreakdown($info['participants'], $puuid, $info['gameDuration'] ?? 0, $mode);
+        // XP farkı için timeline (varsa — sadece daha önce açılmış/çekilmiş maçlarda).
+        $timeline = $this->matchData->getMatchTimelineIfExists($matchId);
+        $breakdown = $this->elw->scoreBreakdown($info['participants'], $puuid, $info['gameDuration'] ?? 0, $mode, $timeline);
         if ($breakdown === null) {
             return null;
         }
-        // "vs Rakip" sekmesi — koridor rakibiyle kıyas (DPM "vs Opponent" tarzı).
-        $breakdown['vsOpponent'] = $this->buildVsOpponent($info['participants'], $puuid);
+        // "vs Rakip" sekmesi başlığı için koridor rakibinin şampiyonu (metrikler skorun içinde).
+        $breakdown['opponent'] = $this->findOpponentChampion($info['participants'], $puuid);
         return $breakdown;
     }
 
-    /** Koridor rakibiyle stat kıyası (modal "vs Rakip" sekmesi). Rakip bulunamazsa null. */
-    private function buildVsOpponent(array $participants, string $puuid): ?array
+    /** Koridor rakibinin şampiyonu (vs Rakip sekmesi başlığı). Bulunamazsa null. */
+    private function findOpponentChampion(array $participants, string $puuid): ?array
     {
         $me = null;
         foreach ($participants as $p) {
@@ -71,41 +74,17 @@ class MatchService
         if (!$myRole) {
             return null;
         }
-
-        $opp = null;
         foreach ($participants as $p) {
             if (($p['teamId'] ?? null) === ($me['teamId'] ?? null)) { continue; }
             $r = ($p['teamPosition'] ?? '') ?: ($p['individualPosition'] ?? '');
-            if ($r === $myRole) { $opp = $p; break; }
+            if ($r === $myRole) {
+                return [
+                    'name'  => $p['championName'] ?? '?',
+                    'image' => $this->ddragon->championIconUrl($p['championName'] ?? ''),
+                ];
+            }
         }
-        if (!$opp) {
-            return null;
-        }
-
-        $cs = fn ($p) => ($p['totalMinionsKilled'] ?? 0) + ($p['neutralMinionsKilled'] ?? 0);
-        $kdaOf = fn ($p) => ($p['deaths'] ?? 0) > 0
-            ? round((($p['kills'] ?? 0) + ($p['assists'] ?? 0)) / $p['deaths'], 2)
-            : (($p['kills'] ?? 0) + ($p['assists'] ?? 0));
-
-        $rows = [
-            ['key' => 'kda',    'label' => 'KDA',    'me' => $kdaOf($me),                          'opp' => $kdaOf($opp),                          'dec' => 2],
-            ['key' => 'cs',     'label' => 'CS',     'me' => $cs($me),                             'opp' => $cs($opp),                             'dec' => 0],
-            ['key' => 'gold',   'label' => 'Altın',  'me' => $me['goldEarned'] ?? 0,               'opp' => $opp['goldEarned'] ?? 0,               'dec' => 0],
-            ['key' => 'dmg',    'label' => 'Hasar',  'me' => $me['totalDamageDealtToChampions'] ?? 0, 'opp' => $opp['totalDamageDealtToChampions'] ?? 0, 'dec' => 0],
-            ['key' => 'vision', 'label' => 'Vizyon', 'me' => $me['visionScore'] ?? 0,              'opp' => $opp['visionScore'] ?? 0,              'dec' => 0],
-        ];
-        foreach ($rows as &$r) {
-            $r['diff'] = round($r['me'] - $r['opp'], $r['dec']);
-        }
-        unset($r);
-
-        return [
-            'champion' => [
-                'name'  => $opp['championName'] ?? '?',
-                'image' => $this->ddragon->championIconUrl($opp['championName'] ?? ''),
-            ],
-            'rows' => $rows,
-        ];
+        return null;
     }
 
     public function getMatchDetailFull(string $matchId): array
