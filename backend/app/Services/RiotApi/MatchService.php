@@ -19,8 +19,9 @@ class MatchService
      *  v3: ELW yeni ağırlıklar + Win/Loss kaldırıldı + CC eşit bonus.
      *  v4: takım kalitesi DPM tarzı (takım arkadaşlarının mutlak seviyesi, lobiye göre).
      *  v5: takım kalitesi 'individual' skorlarla (kartta gösterilenle tutarlı) + yeni eşik.
-     *  v6: ELW score DPM-tarzı kategorili (Global+vsRakip+Objektif+Takım+Role) yeniden yazıldı. */
-    private const ALGO_VERSION = 6;
+     *  v6: ELW score DPM-tarzı kategorili (Global+vsRakip+Objektif+Takım+Role) yeniden yazıldı.
+     *  v7: role-relatif kalibrasyon (ham skor / rol-baseline) + KP ağırlığı artırıldı. */
+    private const ALGO_VERSION = 7;
 
     public function __construct(
         private MatchDataService $matchData,

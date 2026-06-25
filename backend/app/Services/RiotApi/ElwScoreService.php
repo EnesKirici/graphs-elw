@@ -115,6 +115,15 @@ class ElwScoreService
         ],
     ];
 
+    // ===== ROLE BASELINE — her rolün ortalama ham skoru (400 maç ölçümü) =====
+    // Skor, oyuncunun ham skorunu KENDİ ROLÜNÜN ortalamasına bölerek normalize edilir →
+    // ROLE-RELATİF: "mükemmel destek" = "mükemmel ADC" (DPM gibi). ADC çok ham biriktirdiği
+    // için baseline'ı yüksek; bölünce dengelenir. ROLE_W değişirse yeniden ölçülmeli.
+    private const ROLE_BASELINE = [
+        'TOP' => 7.27, 'JUNGLE' => 7.90, 'MIDDLE' => 7.32, 'BOTTOM' => 8.18,
+        'UTILITY_ENCHANTER' => 8.37, 'UTILITY_DAMAGE' => 6.86, 'UTILITY_TANK' => 7.11,
+    ];
+
     // Rol etiketleri (şeffaflık modalı için).
     private const ROLE_LABELS = [
         'TOP' => 'Top', 'JUNGLE' => 'Orman', 'MIDDLE' => 'Orta', 'BOTTOM' => 'ADC',
@@ -133,7 +142,7 @@ class ElwScoreService
         foreach ($participants as $p) {
             $role = $this->resolveRole($p);
             $cs = $this->categorizedScore($p, $role, $ctx);
-            $scores[] = ['puuid' => $p['puuid'], 'score' => $cs['raw']];
+            $scores[] = ['puuid' => $p['puuid'], 'score' => $this->roleAdjusted($cs['raw'], $role)];
         }
 
         return $mode === 'team'
@@ -152,7 +161,7 @@ class ElwScoreService
         foreach ($participants as $p) {
             $role = $this->resolveRole($p);
             $cs = $this->categorizedScore($p, $role, $ctx);
-            $scores[] = ['puuid' => $p['puuid'], 'score' => $cs['raw']];
+            $scores[] = ['puuid' => $p['puuid'], 'score' => $this->roleAdjusted($cs['raw'], $role)];
         }
 
         [$avg, $stdDev] = $this->lobbyStats($scores);
@@ -192,9 +201,10 @@ class ElwScoreService
         foreach ($participants as $p) {
             $role = $this->resolveRole($p);
             $cs = $this->categorizedScore($p, $role, $ctx);
-            $raws[] = $cs['raw'];
+            $adj = $this->roleAdjusted($cs['raw'], $role);
+            $raws[] = $adj;
             if ($p['puuid'] === $puuid) {
-                $mine = ['role' => $role, 'cs' => $cs];
+                $mine = ['role' => $role, 'cs' => $cs, 'adj' => $adj];
             }
         }
         if ($mine === null) {
@@ -202,7 +212,7 @@ class ElwScoreService
         }
 
         [$avg, $stdDev] = $this->lobbyStats($raws, true);
-        $score = $this->blendedElw($mine['cs']['raw'], $avg, $stdDev);
+        $score = $this->blendedElw($mine['adj'], $avg, $stdDev);
 
         return [
             'score'      => $score,
@@ -459,6 +469,12 @@ class ElwScoreService
             }
         }
         return $role ?: 'MIDDLE';
+    }
+
+    /** Ham skoru rolün ortalamasına böl → role-relatif (mükemmel destek = mükemmel ADC). */
+    private function roleAdjusted(float $raw, string $role): float
+    {
+        return $raw / (self::ROLE_BASELINE[$role] ?? 7.5);
     }
 
     // ────────────────────────────────────────────
