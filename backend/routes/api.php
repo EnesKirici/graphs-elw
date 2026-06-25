@@ -92,6 +92,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/analytics/page-views', [AdminController::class, 'pageViews']);
         Route::get('/analytics/events', [AdminController::class, 'events']);
 
+        Route::get('/labels', [SettingsController::class, 'labels']); // etiket motoru katalog+config
         Route::get('/settings/{key}', [SettingsController::class, 'show']);
         Route::put('/settings/{key}', [SettingsController::class, 'update']);
 
