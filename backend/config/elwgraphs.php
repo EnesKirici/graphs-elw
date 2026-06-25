@@ -25,19 +25,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Maç kartı "takım kalitesi" etiketi (KİŞİYE-GÖRE relatif)
+    | Maç kartı "takım kalitesi" etiketi (DPM tarzı — takım arkadaşlarının MUTLAK seviyesi)
     |--------------------------------------------------------------------------
-    | diff = takım arkadaşlarımın (ben hariç) ortalama ELW skoru − BENİM skorum.
-    | Win bonusu iki tarafta da olduğundan iptal olur → "takımım mı taşıdı / ben mi
-    | taşıdım" kalır (kazançtan bağımsız; her profil için ayrı hesaplanır). Eşikler
-    | 400 maç / 4000 oyuncu-perspektifi dağılımından (~10/25/30/25/10 hedef).
+    | diff = takım arkadaşlarımın (ben hariç) ortalama ELW − lobi ortalaması (10 oyuncu).
+    | "Takım arkadaşlarım lobi seviyesinin üstünde mi/altında mı." Per-player (beni
+    | çıkarınca her profil farklı): carry çıkınca takım ortalama görünür → "Ortalama";
+    | zayıf oyuncu çıkınca carry'ler kalır → "İyi"; herkes kötüyse → "Kötü". DPM ile
+    | aynı davranış. Yumuşak eşikler (carry-loss ≈ ortalama; ~12/20/36/20/12).
     */
     'team_quality' => [
-        'great'    => 1.8,  // diff >= → "Çok iyi takım" (takım beni ağır taşıdı)
-        'good'     => 0.6,  // diff >= → "İyi takım"
-        'bad'      => -0.6, // diff <= → "Kötü takım" (ben taşıdım)
-        'terrible' => -1.8, // diff <= → "Çok kötü takım" (tek başıma taşıdım)
-        // ikisinin arası → "Eşit takım"
+        'great'    => 1.5,  // diff >= → "Çok iyi takım" (takım arkadaşların lobi üstü, net)
+        'good'     => 0.7,  // diff >= → "İyi takım"
+        'bad'      => -0.7, // diff <= → "Kötü takım" (takım arkadaşların lobi altı)
+        'terrible' => -1.5, // diff <= → "Çok kötü takım"
+        // ikisinin arası → "Ortalama takım" (carry-loss ≈ -0.65 → buraya düşer, DPM gibi)
     ],
 
     /*

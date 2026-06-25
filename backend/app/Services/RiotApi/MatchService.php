@@ -16,8 +16,9 @@ class MatchService
 {
     /** ELW/badge algoritması değişince bump → eski match_summaries yeniden kurulur.
      *  v2: takım kalitesi metriği kişiye-göre relatif (takım arkadaşları − ben).
-     *  v3: ELW yeni ağırlıklar + Win/Loss kaldırıldı + CC eşit bonus. */
-    private const ALGO_VERSION = 3;
+     *  v3: ELW yeni ağırlıklar + Win/Loss kaldırıldı + CC eşit bonus.
+     *  v4: takım kalitesi DPM tarzı (takım arkadaşlarının mutlak seviyesi, lobiye göre). */
+    private const ALGO_VERSION = 4;
 
     public function __construct(
         private MatchDataService $matchData,

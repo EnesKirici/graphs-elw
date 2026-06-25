@@ -285,8 +285,8 @@ function TeamQualityTag({ tq }) {
   const [anchor, setAnchor] = useState(null);
   const color = TQ_DOT[tq.key] || "#94a3b8";
   const diff = tq.diff ?? 0;
-  const teammatesAvg = tq.teammatesAvg, myScore = tq.myScore;
-  const hasAvg = teammatesAvg != null && myScore != null;
+  const teammatesAvg = tq.teammatesAvg, lobbyAvg = tq.lobbyAvg;
+  const hasAvg = teammatesAvg != null && lobbyAvg != null;
   return (
     <>
       <div className="flex justify-center mt-1">
@@ -310,25 +310,25 @@ function TeamQualityTag({ tq }) {
             {hasAvg ? (
               <>
                 <TeamBar label="Takım arkadaşların" val={teammatesAvg} color="#60a5fa" />
-                <TeamBar label="Sen" val={myScore} color="#a78bfa" />
+                <TeamBar label="Lobi ortalaması" val={lobbyAvg} color="#94a3b8" />
                 <div className="h-px bg-edge/70 my-2.5" />
-                {/* Kişiye-göre: takım arkadaşları senden iyi mi (seni taşıdı) / sen mi taşıdın */}
+                {/* DPM tarzı: takım arkadaşların (ben hariç) lobi seviyesinin üstünde mi/altında mı */}
                 <div className="flex items-center gap-1.5">
                   <DiffArrow diff={diff} />
                   <span className="text-[11px] text-gray-400">
                     {diff > 0.05 ? (
-                      <>Takımın senden <b className="text-sky-300">{Math.abs(diff).toFixed(1)} puan iyi</b> · seni taşıdı</>
+                      <>Arkadaşların lobi ort.<b className="text-sky-300"> {Math.abs(diff).toFixed(1)} üstünde</b></>
                     ) : diff < -0.05 ? (
-                      <>Sen takımdan <b className="text-red-400">{Math.abs(diff).toFixed(1)} puan iyi</b> · sen taşıdın</>
+                      <>Arkadaşların lobi ort.<b className="text-red-400"> {Math.abs(diff).toFixed(1)} altında</b></>
                     ) : (
-                      <>Takımınla <b className="text-gray-200">denk performans</b></>
+                      <>Arkadaşların <b className="text-gray-200">lobi seviyesinde</b></>
                     )}
                   </span>
                 </div>
               </>
             ) : (
               <p className="text-[11px] text-gray-400 leading-relaxed">
-                {diff < 0 ? "Sen takımdan" : "Takımın senden"} <b className="text-gray-100">{Math.abs(diff)} puan iyi</b>.
+                Takım arkadaşların lobi ortalamasının <b className="text-gray-100">{Math.abs(diff)} {diff < 0 ? "altında" : "üstünde"}</b>.
               </p>
             )}
           </div>

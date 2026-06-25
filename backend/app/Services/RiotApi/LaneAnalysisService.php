@@ -103,22 +103,23 @@ class LaneAnalysisService
             }
         }
 
-        // Takım kalitesi — KİŞİYE-GÖRE relatif: takım arkadaşlarımın (ben hariç) ortalama
-        // ELW skoru − BENİM skorum. diff>0 → takım benden iyi (beni taşıdı); diff<0 → ben
-        // takımdan iyi (ben taşıdım). Win bonusu iki tarafta da olduğundan iptal olur →
-        // kazançtan bağımsız + her profil için ayrı (aynı maç, farklı profil → farklı etiket).
+        // Takım kalitesi — DPM tarzı: takım arkadaşlarımın (ben hariç) MUTLAK seviyesi.
+        // diff = takım arkadaşları ort ELW − lobi ortalaması (10 oyuncu). "Arkadaşlarım lobi
+        // seviyesinin üstünde mi/altında mı." Per-player (beni çıkarınca): carry çıkınca takım
+        // ortalama görünür → "Ortalama"; zayıf çıkınca carry'ler kalır → "İyi"; herkes kötü → "Kötü".
         $teamQuality = null;
-        if ($myTeamCount > 0) {
+        if ($myTeamCount > 0 && $enemyCount > 0) {
             $myScore = $teamScores[$puuid] ?? 5;
             $teammatesAvg = $myTeamSum / $myTeamCount;
-            $diff = $teammatesAvg - $myScore;
+            $lobbyAvg = ($myTeamSum + $myScore + $enemySum) / ($myTeamCount + 1 + $enemyCount);
+            $diff = $teammatesAvg - $lobbyAvg;
             $t = config('elwgraphs.team_quality');
             if ($diff >= $t['great']) {
                 $teamQuality = ['key' => 'great', 'label' => 'Çok iyi takım'];
             } elseif ($diff >= $t['good']) {
                 $teamQuality = ['key' => 'good', 'label' => 'İyi takım'];
             } elseif ($diff > $t['bad']) {
-                $teamQuality = ['key' => 'avg', 'label' => 'Eşit takım'];
+                $teamQuality = ['key' => 'avg', 'label' => 'Ortalama takım'];
             } elseif ($diff > $t['terrible']) {
                 $teamQuality = ['key' => 'bad', 'label' => 'Kötü takım'];
             } else {
@@ -126,7 +127,7 @@ class LaneAnalysisService
             }
             $teamQuality['diff'] = round($diff, 2);
             $teamQuality['teammatesAvg'] = round($teammatesAvg, 1);
-            $teamQuality['myScore'] = round($myScore, 1);
+            $teamQuality['lobbyAvg'] = round($lobbyAvg, 1);
         }
 
         $kp = $teamKills > 0 ? (int) round(($player['kills'] + $player['assists']) / $teamKills * 100) : 0;
