@@ -25,6 +25,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Maç kartı "takım kalitesi" etiketi (DPM tarzı — takım arkadaşlarının MUTLAK seviyesi)
+    |--------------------------------------------------------------------------
+    | diff = takım arkadaşlarımın (ben hariç) ortalama ELW − lobi ortalaması (10 oyuncu).
+    | "Takım arkadaşlarım lobi seviyesinin üstünde mi/altında mı." Per-player (beni
+    | çıkarınca her profil farklı): carry çıkınca takım ortalama görünür → "Ortalama";
+    | zayıf oyuncu çıkınca carry'ler kalır → "İyi"; herkes kötüyse → "Kötü". DPM ile
+    | aynı davranış. Yumuşak eşikler (carry-loss ≈ ortalama; ~12/20/36/20/12).
+    */
+    // NOT: skorlar 'individual' (cömert) modda — maç kartında gösterilenlerle aynı.
+    'team_quality' => [
+        'great'    => 1.9,  // diff >= → "Çok iyi takım" (takım arkadaşların lobi üstü, net)
+        'good'     => 0.7,  // diff >= → "İyi takım"
+        'bad'      => -0.7, // diff <= → "Kötü takım" (takım arkadaşların lobi altı)
+        'terrible' => -1.9, // diff <= → "Çok kötü takım"
+        // ikisinin arası → "Ortalama takım"
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Kompozit tier skoru
     |--------------------------------------------------------------------------
     | Tier yalnız WR ile değil; Wilson WR + pick + ban + örneklem güveni'nin

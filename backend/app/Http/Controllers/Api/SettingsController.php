@@ -25,6 +25,19 @@ class SettingsController extends Controller
     }
 
     /**
+     * Etiket motoru — KATALOG (kod) + admin ezme config'i + ton renkleri (admin paneli için).
+     * GET /api/v1/admin/labels
+     */
+    public function labels(): JsonResponse
+    {
+        return response()->json([
+            'catalog' => \App\Services\LabelEngine::CATALOG,
+            'tones'   => \App\Services\LabelEngine::TONE_COLOR,
+            'config'  => AdminSetting::getValue('labels_config', []),
+        ]);
+    }
+
+    /**
      * Belirli bir ayarı getir.
      * GET /api/v1/admin/settings/{key}
      */
@@ -46,7 +59,7 @@ class SettingsController extends Controller
      */
     public function update(string $key, Request $request): JsonResponse
     {
-        $allowed = ['performance_labels', 'badge_config', 'elw_score', 'profile_design', 'meta_insufficient_mode'];
+        $allowed = ['performance_labels', 'badge_config', 'elw_score', 'profile_design', 'meta_insufficient_mode', 'labels_config'];
 
         if (!in_array($key, $allowed)) {
             return response()->json(['error' => 'Geçersiz ayar anahtarı.'], 422);

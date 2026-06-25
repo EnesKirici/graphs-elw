@@ -14,8 +14,15 @@ use Illuminate\Support\Facades\Log;
  */
 class MatchService
 {
-    /** ELW/badge algoritması değişince bump → eski match_summaries yeniden kurulur. */
-    private const ALGO_VERSION = 1;
+    /** ELW/badge algoritması değişince bump → eski match_summaries yeniden kurulur.
+     *  v2: takım kalitesi metriği kişiye-göre relatif (takım arkadaşları − ben).
+     *  v3: ELW yeni ağırlıklar + Win/Loss kaldırıldı + CC eşit bonus.
+     *  v4: takım kalitesi DPM tarzı (takım arkadaşlarının mutlak seviyesi, lobiye göre).
+     *  v5: takım kalitesi 'individual' skorlarla (kartta gösterilenle tutarlı) + yeni eşik.
+     *  v6: ELW score DPM-tarzı kategorili (Global+vsRakip+Objektif+Takım+Role) yeniden yazıldı.
+     *  v7: role-relatif kalibrasyon (ham skor / rol-baseline) + KP ağırlığı artırıldı.
+     *  v8: multikill (triple/quadra/penta) küçük + bonusu (UNIVERSAL_W) + baseline güncel. */
+    private const ALGO_VERSION = 8;
 
     public function __construct(
         private MatchDataService $matchData,
@@ -31,6 +38,56 @@ class MatchService
     // ────────────────────────────────────────────
     //  Maç Detay — 10 oyuncunun tam istatistikleri
     // ────────────────────────────────────────────
+
+    /**
+     * Tek oyuncunun ELW skor kırılımı (DPM-tarzı şeffaflık modalı). Maçı DB-first yükler;
+     * skoru oluşturan bileşenleri (stat → puan) + harf notu döndürür. Oyuncu yoksa null.
+     */
+    public function getElwBreakdown(string $matchId, string $puuid, string $mode = 'individual'): ?array
+    {
+        $detail = $this->matchData->getMatchDetail($matchId);
+        $info = $detail['info'] ?? null;
+        if (!$info || empty($info['participants'])) {
+            return null;
+        }
+        $mode = $mode === 'team' ? 'team' : 'individual';
+        // XP farkı için timeline (varsa — sadece daha önce açılmış/çekilmiş maçlarda).
+        $timeline = $this->matchData->getMatchTimelineIfExists($matchId);
+        $breakdown = $this->elw->scoreBreakdown($info['participants'], $puuid, $info['gameDuration'] ?? 0, $mode, $timeline);
+        if ($breakdown === null) {
+            return null;
+        }
+        // "vs Rakip" sekmesi başlığı için koridor rakibinin şampiyonu (metrikler skorun içinde).
+        $breakdown['opponent'] = $this->findOpponentChampion($info['participants'], $puuid);
+        return $breakdown;
+    }
+
+    /** Koridor rakibinin şampiyonu (vs Rakip sekmesi başlığı). Bulunamazsa null. */
+    private function findOpponentChampion(array $participants, string $puuid): ?array
+    {
+        $me = null;
+        foreach ($participants as $p) {
+            if ($p['puuid'] === $puuid) { $me = $p; break; }
+        }
+        if (!$me) {
+            return null;
+        }
+        $myRole = ($me['teamPosition'] ?? '') ?: ($me['individualPosition'] ?? '');
+        if (!$myRole) {
+            return null;
+        }
+        foreach ($participants as $p) {
+            if (($p['teamId'] ?? null) === ($me['teamId'] ?? null)) { continue; }
+            $r = ($p['teamPosition'] ?? '') ?: ($p['individualPosition'] ?? '');
+            if ($r === $myRole) {
+                return [
+                    'name'  => $p['championName'] ?? '?',
+                    'image' => $this->ddragon->championIconUrl($p['championName'] ?? ''),
+                ];
+            }
+        }
+        return null;
+    }
 
     public function getMatchDetailFull(string $matchId): array
     {
@@ -478,7 +535,9 @@ class MatchService
 
         // Dost/düşman kadroları + koridor/takım analizi (LaneAnalysisService)
         [$allies, $enemies] = $this->buildRosters($info, $puuid, $player['teamId']);
-        $teamScores = $this->elw->calculateAllElwScores($info['participants'], $duration, 'team');
+        // Takım kalitesi etiketi, maç kartında GÖSTERİLEN skorlarla aynı olsun diye
+        // 'individual' (cömert) skorları kullanır — kullanıcı "takımArk 9.5 ama kötü" çelişkisi yaşamaz.
+        $teamScores = $this->elw->calculateAllElwScores($info['participants'], $duration, 'individual');
         $lane = $this->laneAnalysis->summarizeForPlayer($info, $player, $puuid, $teamScores);
 
         $role = $player['teamPosition'] ?: $player['individualPosition'] ?: '';
@@ -486,6 +545,7 @@ class MatchService
 
         return [
             'matchId'      => $matchId,
+            'puuid'        => $puuid, // ELW skor kırılımı modalı için
             'champion'     => [
                 'id'    => $player['championName'],
                 'name'  => $player['championName'],

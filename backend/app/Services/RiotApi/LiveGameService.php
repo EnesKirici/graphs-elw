@@ -86,6 +86,23 @@ class LiveGameService
             }
         }
 
+        // Takım-seviyesi rol ataması — 5 oyuncuya BENZERSİZ rol (Smite→orman kilitli, gerisi
+        // şampiyon pozisyon tercihiyle açgözlü) + koridor sırasına (Top→JG→Mid→ADC→Sup) diz.
+        $allyTeam = $this->assignTeamRoles($allyTeam, $positions);
+        $enemyTeam = $this->assignTeamRoles($enemyTeam, $positions);
+
+        // Fetch ÖNCELİĞİ (rate-limit stratejisi) — Personal key'le 10 ağır enrichment limiti
+        // aşıyor. Bana en yakın matchup'lar (koridor rakibim + ormancılar + bot eşi) önce
+        // (1-5); gerisi sonra (6+, limit yenilenince/worker). Production key'de gereksiz.
+        $myRole = null;
+        foreach ($allyTeam as $p) {
+            if ($p['isMe'] ?? false) { $myRole = $p['role'] ?? null; break; }
+        }
+        foreach ($allyTeam as &$p) { $p['fetchPriority'] = $this->fetchPriority($p, $myRole, $searchedTeamId); }
+        unset($p);
+        foreach ($enemyTeam as &$p) { $p['fetchPriority'] = $this->fetchPriority($p, $myRole, $searchedTeamId); }
+        unset($p);
+
         // Ban'lar
         $bans = array_map(fn($b) => [
             'championId' => $b['championId'] ?? -1,
@@ -116,13 +133,98 @@ class LiveGameService
     }
 
     /**
+     * Takım-seviyesi rol ataması: 5 oyuncuya BENZERSİZ rol + koridor sırasına diz.
+     * Smite → orman (kilit), gerisi şampiyon pozisyon tercihiyle açgözlü; çakışırsa boş role.
+     * 'autofilled' = atanan rol şampiyonun tipik pozisyonu değil (off-role işareti).
+     */
+    private function assignTeamRoles(array $team, array $positions): array
+    {
+        $order = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'];
+        $norm = ['MID' => 'MIDDLE', 'BOT' => 'BOTTOM', 'ADC' => 'BOTTOM', 'ADCARRY' => 'BOTTOM', 'SUPPORT' => 'UTILITY'];
+        $prefsOf = function ($p) use ($positions, $norm) {
+            $champ = $p['champion']['id'] ?? null;
+            $raw = $champ ? ($positions[$champ] ?? []) : [];
+            return array_values(array_filter(array_map(fn ($r) => $norm[strtoupper($r)] ?? strtoupper($r), $raw)));
+        };
+
+        $assigned = [];
+        $used = [];
+        // 1. Smite → JUNGLE (kilit)
+        foreach ($team as $i => $p) {
+            if (($p['role'] ?? null) === 'JUNGLE' && !in_array('JUNGLE', $used, true)) {
+                $assigned[$i] = 'JUNGLE';
+                $used[] = 'JUNGLE';
+            }
+        }
+        // 2. EN KESİN şampiyon önce — az pozisyon seçeneği olan (tek-rol; ör. Vayne=sadece ADC)
+        //    çakışmadan önce yerini alır; esnek şampiyonlar (Yasuo top/mid) sonra. Vayne→top bugı çözülür.
+        $pending = [];
+        foreach ($team as $i => $p) {
+            if (!isset($assigned[$i])) {
+                $pending[$i] = $prefsOf($p);
+            }
+        }
+        uasort($pending, fn ($a, $b) => count($a) <=> count($b));
+        foreach ($pending as $i => $prefs) {
+            foreach ($prefs as $r) {
+                if (in_array($r, $order, true) && !in_array($r, $used, true)) {
+                    $assigned[$i] = $r;
+                    $used[] = $r;
+                    break;
+                }
+            }
+        }
+        // 3. Kalanlar → boş roller
+        $free = array_values(array_diff($order, $used));
+        $fi = 0;
+        foreach ($team as $i => $p) {
+            if (!isset($assigned[$i])) {
+                $assigned[$i] = $free[$fi++] ?? 'MIDDLE';
+            }
+        }
+        // Uygula + autofill işareti + koridor sırasına diz
+        foreach ($team as $i => &$p) {
+            $p['role'] = $assigned[$i];
+            $prefs = $prefsOf($p);
+            $p['autofilled'] = $prefs && !in_array($assigned[$i], $prefs, true);
+        }
+        unset($p);
+        usort($team, fn ($a, $b) => array_search($a['role'], $order) <=> array_search($b['role'], $order));
+        return $team;
+    }
+
+    /**
+     * Fetch önceliği (rate-limit stratejisi): bana en yakın matchup düşük sayı = önce çekilir.
+     * 0=ben · 1=koridor rakibim · 2=düşman orman · 3=bizim orman · 4-5=bot eşi/rakibi (botlane
+     * oynuyorsam) · 6+=diğer koridorlar. Frontend bu sıraya göre çeker; 6+ limit yenilenince/worker.
+     */
+    private function fetchPriority(array $p, ?string $myRole, $myTeamId): int
+    {
+        if ($p['isMe'] ?? false) {
+            return 0;
+        }
+        $role = $p['role'] ?? null;
+        $isEnemy = ($p['teamId'] ?? null) !== $myTeamId;
+        if ($isEnemy && $role === $myRole) {
+            return 1; // koridor rakibim
+        }
+        if ($role === 'JUNGLE') {
+            return $isEnemy ? 2 : 3;
+        }
+        if (in_array($myRole, ['BOTTOM', 'UTILITY'], true) && in_array($role, ['BOTTOM', 'UTILITY'], true)) {
+            return $isEnemy ? 4 : 5; // bot duo (botlane oynuyorsam)
+        }
+        return $isEnemy ? 6 : 7;
+    }
+
+    /**
      * AĞIR katman — oyuncunun son maçlarından türetilen veriler.
      * Kişi başına çağrılır, 5dk cache (oyun ortasında geçmiş maçlar değişmez).
      *
      * @param  string       $puuid
      * @param  string|null  $championName  Canlı maçta oynadığı şampiyon (build seçimi için)
      */
-    public function getPlayerEnrichment(string $puuid, ?string $championName = null): array
+    public function getPlayerEnrichment(string $puuid, ?string $championName = null, ?string $role = null, array $enemyChamps = [], bool $autofilled = false): array
     {
         $base = Cache::remember("live:player:v2:{$puuid}", 300, function () use ($puuid) {
             try {
@@ -130,7 +232,9 @@ class LiveGameService
                 // sezon sorgusu (getSeasonChampionStats) BİLİNÇLİ kullanılmıyor; o,
                 // tanınmayan bir rakip için yüzlerce Match-V5 isteği demek olurdu.
                 // "Bu şampiyonda performans" aşağıda son maçlardan türetilir (0 ekstra istek).
-                $matches = $this->match->getRecentMatches($puuid, 10, 0);
+                // Rate-limit: canlı maçta 10 rastgele oyuncu × maç = Personal key'i zorlar.
+                // 6 maç ile sınırlı (etiket/main-rol için yeterli, yük yarıdan az).
+                $matches = $this->match->getRecentMatches($puuid, 6, 0);
             } catch (\Exception $e) {
                 return [
                     'error'           => $e->getCode() === 429 ? 'rate_limited' : 'failed',
@@ -202,9 +306,32 @@ class LiveGameService
                 $championAgg[$cn]['assists'] += $m['assists'] ?? 0;
             }
 
+            // Etiket motoru aggregate'leri (son maçlardan, ekstra istek YOK).
+            $n = max(count($matches), 1);
+            $avgCsPerMin = round(array_sum(array_map(fn($m) => $m['csPerMin'] ?? 0, $matches)) / $n, 1);
+            $avgDeaths   = round(array_sum(array_map(fn($m) => $m['deaths'] ?? 0, $matches)) / $n, 1);
+            $avgKills    = round(array_sum(array_map(fn($m) => $m['kills'] ?? 0, $matches)) / $n, 1);
+            $mainChamp = null;
+            $maxG = 0;
+            foreach ($championAgg as $cn => $a) {
+                if ($a['games'] > $maxG) { $maxG = $a['games']; $mainChamp = $cn; }
+            }
+            // Seri: en yeni maçtan +N galibiyet / -N mağlubiyet (recentGames recency sırasında).
+            $streak = 0;
+            foreach ($recentGames as $g) {
+                if (($g['win'] ?? null) === true) { if ($streak >= 0) { $streak++; } else { break; } }
+                elseif (($g['win'] ?? null) === false) { if ($streak <= 0) { $streak--; } else { break; } }
+                else { break; }
+            }
+
             return [
                 'playstyleBadges' => $playstyle,
                 'recentGames'     => $recentGames,
+                'avgCsPerMin'     => $avgCsPerMin,
+                'avgDeaths'       => $avgDeaths,
+                'avgKills'        => $avgKills,
+                'mainChamp'       => $mainChamp,
+                'streak'          => $streak,
                 'recentStats'     => [
                     'winRate'    => $recentStats['winRate'] ?? 0,
                     'wins'       => $recentStats['wins'] ?? 0,
@@ -255,8 +382,36 @@ class LiveGameService
             'elwAverage'      => $base['elwAverage'] ?? null,
             'build'           => $build,
             'championStat'    => $championStat,
+            'liveLabels'      => $this->buildLiveLabels($base, $championName, $role, $enemyChamps, $autofilled),
             'error'           => $base['error'] ?? null,
         ];
+    }
+
+    /**
+     * Canlı maç etiketleri (LabelEngine) — cache'li stat'lardan + canlı bağlamdan (cache DIŞINDA,
+     * çünkü rakip kadrosu/rol oyuna özgü). Veri yoksa boş döner (etiket çıkmaz, hata vermez).
+     */
+    private function buildLiveLabels(array $base, ?string $champ, ?string $role, array $enemyChamps, bool $autofilled): array
+    {
+        if (!empty($base['error'])) {
+            return [];
+        }
+        $agg = $champ ? ($base['championAgg'][$champ] ?? null) : null;
+        $data = [
+            'liveChamp'      => $champ,
+            'liveChampGames' => $agg['games'] ?? 0,
+            'liveChampWr'    => ($agg && ($agg['games'] ?? 0) > 0) ? round($agg['wins'] / $agg['games'] * 100) : 0,
+            'mainChamp'      => $base['mainChamp'] ?? null,
+            'enemyChamps'    => $enemyChamps,
+            'role'           => $role,
+            'autofilled'     => $autofilled,
+            'avgCsPerMin'    => $base['avgCsPerMin'] ?? 0,
+            'avgDeaths'      => $base['avgDeaths'] ?? 0,
+            'avgKills'       => $base['avgKills'] ?? 0,
+            'streak'         => $base['streak'] ?? 0,
+            'elwAverage'     => $base['elwAverage'] ?? null,
+        ];
+        return app(\App\Services\LabelEngine::class)->evaluate('live', $data);
     }
 
     // ────────────────────────────────────────────

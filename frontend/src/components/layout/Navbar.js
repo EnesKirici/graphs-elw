@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Sun, Moon, LayoutDashboard, Trophy, ListOrdered, Swords, Award, Menu, X } from "lucide-react";
-import { useBackground } from "@/context/BackgroundContext";
 import { useAnalytics } from "@/context/AnalyticsContext";
 import { useAdmin } from "@/context/AdminContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -153,7 +152,6 @@ function RateLimitIndicator() {
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { background, removeBg } = useBackground();
   const analytics = useAnalytics();
   const { isAdmin } = useAdmin();
   const [query, setQuery] = useState("");
@@ -363,14 +361,6 @@ export default function Navbar() {
 
       {/* Sağ */}
       <div className="flex items-center" style={{ gap: 10, flexShrink: 0 }}>
-        {background && (
-          <button onClick={removeBg} className="tb-pill" style={{ gap: 6 }} title="Arka planı kaldır">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            BG Kaldır
-          </button>
-        )}
         <button onClick={() => setBadgeGuideOpen(true)} className="tb-pill tb-badge-btn" style={{ gap: 7 }} title="Rozet & Skor rehberi">
           <Award size={15} />
           <span className="tb-badge-label">Rozet & Skor</span>

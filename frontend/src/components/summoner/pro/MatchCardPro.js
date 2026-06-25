@@ -6,6 +6,7 @@ import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
 import Tooltip from "@/components/shared/Tooltip";
 import { scoreColor } from "./scoreColor";
+import ElwScoreModal from "./ElwScoreModal";
 
 // perfLabel.color → yön oku + renk (oynayış yorumu). Yeşilsiz palet.
 const PERF_ARROW = {
@@ -26,19 +27,20 @@ const ROLE_TR = {
 const TIER_ORDER = { challenger: 0, grandmaster: 1, master: 2, diamond: 3, emerald: 4, gold: 5, silver: 6 };
 
 // Takım kalitesi → nokta rengi (tooltip) + yazı rengi. Yeşilsiz: iyi=mavi.
+// Gradyan: çok kötü=kırmızı → kötü=turuncu(ara) → ortalama=gri → iyi=mavi(ara) → çok iyi=camgöbeği.
 const TQ_DOT = {
-  great: "#38bdf8", good: "#60a5fa", avg: "#94a3b8", bad: "#f87171", terrible: "#f87171",
+  great: "#22d3ee", good: "#60a5fa", avg: "#94a3b8", bad: "#fb923c", terrible: "#ef4444",
 };
 const TQ_TEXT = {
-  great: "text-sky-300", good: "text-blue-400",
-  avg: "text-gray-400", bad: "text-red-400", terrible: "text-red-400",
+  great: "text-cyan-300", good: "text-blue-400",
+  avg: "text-gray-400", bad: "text-orange-400", terrible: "text-red-400",
 };
 // Takım kalitesi pill (yumuşak tint + kenar) — k/d/a altında her zaman görünür.
 const TQ_PILL = {
-  great:    "text-sky-300 bg-sky-500/10 border-sky-500/25",
+  great:    "text-cyan-300 bg-cyan-500/10 border-cyan-500/25",
   good:     "text-blue-400 bg-blue-500/10 border-blue-500/25",
   avg:      "text-gray-400 bg-gray-500/10 border-gray-500/30",
-  bad:      "text-red-400 bg-red-500/10 border-red-500/25",
+  bad:      "text-orange-400 bg-orange-500/10 border-orange-500/25",
   terrible: "text-red-400 bg-red-500/10 border-red-500/25",
 };
 
@@ -150,6 +152,7 @@ function BadgeChip({ badge }) {
 // Hover'da zengin tooltip (skor + bar + KDA/CS/hasar + takım + açıklama).
 function ScoreBlock({ m }) {
   const [anchor, setAnchor] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const score = m.ranking.elwScore;
   const sColor = scoreColor(score);
   const fill = Math.max(0, Math.min(1, (score ?? 0) / 10));
@@ -172,8 +175,10 @@ function ScoreBlock({ m }) {
   const glowLvl = isMvp || (score != null && score >= 9.5) ? 2 : (score != null && score >= 8.5) ? 1 : 0;
 
   return (
-    <div className="relative flex items-center justify-center w-[58px] h-[66px] flex-shrink-0 cursor-help"
-      onMouseEnter={(e) => setAnchor(e.currentTarget)} onMouseLeave={() => setAnchor(null)}>
+    <div className="relative flex items-center justify-center w-[58px] h-[66px] flex-shrink-0 cursor-pointer"
+      title="ELW skor kırılımını gör"
+      onMouseEnter={(e) => setAnchor(e.currentTarget)} onMouseLeave={() => setAnchor(null)}
+      onClick={(e) => { e.stopPropagation(); if (m.matchId && m.puuid) { setAnchor(null); setModalOpen(true); } }}>
       {glowLvl > 0 && (
         <span aria-hidden
           className={`absolute top-0 left-0 w-[58px] h-[58px] rounded-full pointer-events-none ${glowLvl === 2 ? "animate-pulse" : ""}`}
@@ -241,6 +246,14 @@ function ScoreBlock({ m }) {
           </div>
         </Tooltip>
       )}
+      {modalOpen && (
+        <ElwScoreModal
+          matchId={m.matchId}
+          puuid={m.puuid}
+          champImage={m.champion?.image}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -273,9 +286,8 @@ function TeamQualityTag({ tq }) {
   const [anchor, setAnchor] = useState(null);
   const color = TQ_DOT[tq.key] || "#94a3b8";
   const diff = tq.diff ?? 0;
-  const myAvg = tq.myAvg, enemyAvg = tq.enemyAvg;
-  const hasAvg = myAvg != null && enemyAvg != null;
-  const myPct = hasAvg && myAvg + enemyAvg > 0 ? (myAvg / (myAvg + enemyAvg)) * 100 : 50;
+  const teammatesAvg = tq.teammatesAvg, lobbyAvg = tq.lobbyAvg;
+  const hasAvg = teammatesAvg != null && lobbyAvg != null;
   return (
     <>
       <div className="flex justify-center mt-1">
@@ -298,23 +310,26 @@ function TeamQualityTag({ tq }) {
             </div>
             {hasAvg ? (
               <>
-                <TeamBar label="Bizim takım" val={myAvg} color="#60a5fa" />
-                <TeamBar label="Rakip takım" val={enemyAvg} color="#f87171" />
+                <TeamBar label="Takım arkadaşların" val={teammatesAvg} color="#60a5fa" />
+                <TeamBar label="Lobi ortalaması" val={lobbyAvg} color="#94a3b8" />
                 <div className="h-px bg-edge/70 my-2.5" />
-                {/* Güç farkı — ok + miktar + kelime */}
+                {/* DPM tarzı: takım arkadaşların (ben hariç) lobi seviyesinin üstünde mi/altında mı */}
                 <div className="flex items-center gap-1.5">
                   <DiffArrow diff={diff} />
                   <span className="text-[11px] text-gray-400">
-                    Takımın{" "}
-                    <b className={diff < -0.05 ? "text-red-400" : diff > 0.05 ? "text-sky-300" : "text-gray-200"}>
-                      {Math.abs(diff).toFixed(1)} puan {diff < -0.05 ? "zayıf" : diff > 0.05 ? "güçlü" : "denk"}
-                    </b>
+                    {diff > 0.05 ? (
+                      <>Arkadaşların lobi ort.<b className="text-sky-300"> {Math.abs(diff).toFixed(1)} üstünde</b></>
+                    ) : diff < -0.05 ? (
+                      <>Arkadaşların lobi ort.<b className="text-red-400"> {Math.abs(diff).toFixed(1)} altında</b></>
+                    ) : (
+                      <>Arkadaşların <b className="text-gray-200">lobi seviyesinde</b></>
+                    )}
                   </span>
                 </div>
               </>
             ) : (
               <p className="text-[11px] text-gray-400 leading-relaxed">
-                Takımın rakipten <b className="text-gray-100">{Math.abs(diff)} puan {diff < 0 ? "zayıf" : "güçlü"}</b>.
+                Takım arkadaşların lobi ortalamasının <b className="text-gray-100">{Math.abs(diff)} {diff < 0 ? "altında" : "üstünde"}</b>.
               </p>
             )}
           </div>

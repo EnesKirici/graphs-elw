@@ -59,8 +59,11 @@ class LiveGameController extends Controller
     public function player(string $puuid, Request $request): JsonResponse
     {
         $champion = $request->query('champion');
+        $role = $request->query('role');
+        $autofilled = $request->boolean('autofilled');
+        $enemyChamps = array_values(array_filter(explode(',', (string) $request->query('enemyChamps', ''))));
         try {
-            return response()->json($this->live->getPlayerEnrichment($puuid, $champion));
+            return response()->json($this->live->getPlayerEnrichment($puuid, $champion, $role, $enemyChamps, $autofilled));
         } catch (\Exception $e) {
             return response()->json([
                 'puuid' => $puuid,

@@ -77,6 +77,9 @@ export default function RootLayout({ children }) {
     <html lang="tr" suppressHydrationWarning className={`${geist.variable} ${archivo.variable} ${manrope.variable} ${jetbrains.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        {/* Google Analytics (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-CF9094L00G" />
+        <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-CF9094L00G');` }} />
       </head>
       <body className="min-h-screen bg-base text-gray-100 font-sans antialiased">
         <Providers>
