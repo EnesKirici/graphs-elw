@@ -104,9 +104,13 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
         </p>
       </div>
 
-      {/* CS / KP */}
+      {/* CS / KP — destek rolünde CS yerine vizyon (DPM gibi: farmlamayan destek için anlamlı) */}
       <div className="w-[64px] text-center text-[11px] text-gray-400 flex-shrink-0 leading-tight">
-        <p>{p.csPerMin} cs/dk</p>
+        {p.role === "UTILITY" ? (
+          <p>{(p.challenges?.visionScorePerMin ?? 0).toFixed(1)} vizyon</p>
+        ) : (
+          <p>{p.csPerMin} cs/dk</p>
+        )}
         <p>{p.killParticipation}% KP</p>
       </div>
 
