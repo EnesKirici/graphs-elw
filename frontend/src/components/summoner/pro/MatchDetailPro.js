@@ -29,11 +29,12 @@ function formatRank(tier, div, lp) {
   return `${name} ${div || ""}`.trim();
 }
 function rankBadgeUrl(tier) { return tier ? `/ranks/badges/${tier.toLowerCase()}.webp` : null; }
-// Kompakt rank — rozet tier'i gösterir; yanına yalnız LP (Master+) veya bölüm (altı). Sığsın diye.
+// Rank etiketi — rozetin yanına: Master+ → yalnız LP ("302 LP"); Diamond ve altı → tam ad + bölüm ("Diamond II").
 function rankShort(tier, div, lp) {
   if (!tier) return "";
-  if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier)) return lp != null ? `${lp} LP` : "";
-  return div || "";
+  const name = tier.charAt(0) + tier.slice(1).toLowerCase();
+  if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier)) return lp != null ? `${lp} LP` : name;
+  return `${name} ${div || ""}`.trim();
 }
 function kdaColor(k) {
   if (k === "Perfect" || k >= 4) return "text-sky-300";

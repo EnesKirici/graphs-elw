@@ -1,4 +1,4 @@
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getPublicSettings } from "@/lib/api";
 import ChampionGrid from "@/components/champion/ChampionGrid";
 
 export const metadata = {
@@ -14,7 +14,12 @@ export default async function ChampionsPage() {
 
   const champions = data?.champions || [];
 
+  // Profil sayfasıyla AYNI zemin: pro tasarımda dpm-scope (navy), classic'te arka plan görseli.
+  const settings = await getPublicSettings();
+  const design = settings?.profile_design === "pro" ? "pro" : "classic";
+
   return (
+    <div className={design === "pro" ? "dpm-scope min-h-screen" : undefined}>
     <div className="content">
       <div className="section-head" style={{ marginBottom: 20 }}>
         <h2 style={{ fontSize: 24, fontWeight: 800 }}>
@@ -34,6 +39,7 @@ export default async function ChampionsPage() {
           <ChampionGrid champions={champions} showSearch={true} />
         </div>
       )}
+    </div>
     </div>
   );
 }
