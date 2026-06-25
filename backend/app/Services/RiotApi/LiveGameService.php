@@ -91,6 +91,18 @@ class LiveGameService
         $allyTeam = $this->assignTeamRoles($allyTeam, $positions);
         $enemyTeam = $this->assignTeamRoles($enemyTeam, $positions);
 
+        // Fetch ÖNCELİĞİ (rate-limit stratejisi) — Personal key'le 10 ağır enrichment limiti
+        // aşıyor. Bana en yakın matchup'lar (koridor rakibim + ormancılar + bot eşi) önce
+        // (1-5); gerisi sonra (6+, limit yenilenince/worker). Production key'de gereksiz.
+        $myRole = null;
+        foreach ($allyTeam as $p) {
+            if ($p['isMe'] ?? false) { $myRole = $p['role'] ?? null; break; }
+        }
+        foreach ($allyTeam as &$p) { $p['fetchPriority'] = $this->fetchPriority($p, $myRole, $searchedTeamId); }
+        unset($p);
+        foreach ($enemyTeam as &$p) { $p['fetchPriority'] = $this->fetchPriority($p, $myRole, $searchedTeamId); }
+        unset($p);
+
         // Ban'lar
         $bans = array_map(fn($b) => [
             'championId' => $b['championId'] ?? -1,
@@ -179,6 +191,30 @@ class LiveGameService
         unset($p);
         usort($team, fn ($a, $b) => array_search($a['role'], $order) <=> array_search($b['role'], $order));
         return $team;
+    }
+
+    /**
+     * Fetch önceliği (rate-limit stratejisi): bana en yakın matchup düşük sayı = önce çekilir.
+     * 0=ben · 1=koridor rakibim · 2=düşman orman · 3=bizim orman · 4-5=bot eşi/rakibi (botlane
+     * oynuyorsam) · 6+=diğer koridorlar. Frontend bu sıraya göre çeker; 6+ limit yenilenince/worker.
+     */
+    private function fetchPriority(array $p, ?string $myRole, $myTeamId): int
+    {
+        if ($p['isMe'] ?? false) {
+            return 0;
+        }
+        $role = $p['role'] ?? null;
+        $isEnemy = ($p['teamId'] ?? null) !== $myTeamId;
+        if ($isEnemy && $role === $myRole) {
+            return 1; // koridor rakibim
+        }
+        if ($role === 'JUNGLE') {
+            return $isEnemy ? 2 : 3;
+        }
+        if (in_array($myRole, ['BOTTOM', 'UTILITY'], true) && in_array($role, ['BOTTOM', 'UTILITY'], true)) {
+            return $isEnemy ? 4 : 5; // bot duo (botlane oynuyorsam)
+        }
+        return $isEnemy ? 6 : 7;
     }
 
     /**
