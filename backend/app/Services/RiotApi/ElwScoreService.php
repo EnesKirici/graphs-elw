@@ -36,6 +36,7 @@ class ElwScoreService
         'dmg'        => ['cat' => 'global', 'label' => 'Hasar / dk'],
         'vision'     => ['cat' => 'global', 'label' => 'Vizyon / dk'],
         'firstBlood' => ['cat' => 'global', 'label' => 'İlk Kan'],
+        'multikill'  => ['cat' => 'global', 'label' => 'Multikill'],
         // vs Rakip (koridor rakibiyle fark — işaretli)
         'goldDiff'   => ['cat' => 'vsOpp', 'label' => 'Altın farkı'],
         'csDiff'     => ['cat' => 'vsOpp', 'label' => 'CS farkı'],
@@ -120,8 +121,13 @@ class ElwScoreService
     // ROLE-RELATİF: "mükemmel destek" = "mükemmel ADC" (DPM gibi). ADC çok ham biriktirdiği
     // için baseline'ı yüksek; bölünce dengelenir. ROLE_W değişirse yeniden ölçülmeli.
     private const ROLE_BASELINE = [
-        'TOP' => 7.27, 'JUNGLE' => 7.90, 'MIDDLE' => 7.32, 'BOTTOM' => 8.18,
-        'UTILITY_ENCHANTER' => 8.37, 'UTILITY_DAMAGE' => 6.86, 'UTILITY_TANK' => 7.11,
+        'TOP' => 7.34, 'JUNGLE' => 8.03, 'MIDDLE' => 7.42, 'BOTTOM' => 8.37,
+        'UTILITY_ENCHANTER' => 8.37, 'UTILITY_DAMAGE' => 6.88, 'UTILITY_TANK' => 7.13,
+    ];
+
+    // Tüm rollere EŞİT uygulanan metrikler (role-bağımsız bonuslar) — ROLE_W ile birleştirilir.
+    private const UNIVERSAL_W = [
+        'multikill' => 0.8, // triple/quadra/penta küçük + (kullanıcı isteği — taşıyan oyuncu ödüllensin)
     ];
 
     // Rol etiketleri (şeffaflık modalı için).
@@ -245,7 +251,7 @@ class ElwScoreService
     private function categorizedScore(array $p, string $role, array $ctx): array
     {
         $metrics = $this->playerMetrics($p, $ctx);
-        $weights = self::ROLE_W[$role] ?? self::ROLE_W['MIDDLE'];
+        $weights = array_merge(self::UNIVERSAL_W, self::ROLE_W[$role] ?? self::ROLE_W['MIDDLE']);
 
         $categories = array_fill_keys(self::CATEGORIES, []);
         $raw = 0.0;
@@ -283,6 +289,9 @@ class ElwScoreService
         $vsPerMin = $c['visionScorePerMinute'] ?? 0;
         $heal = ($p['totalHealsOnTeammates'] ?? 0) + ($p['totalDamageShieldedOnTeammates'] ?? 0);
         $cc = $p['timeCCingOthers'] ?? 0;
+        $dbl = $p['doubleKills'] ?? 0; $trp = $p['tripleKills'] ?? 0; $qd = $p['quadraKills'] ?? 0; $pt = $p['pentaKills'] ?? 0;
+        $mkScore = $pt * 2.0 + $qd * 1.2 + $trp * 0.6 + $dbl * 0.2; // penta>quadra>triple>double
+        $mkLabel = $pt > 0 ? 'Penta' : ($qd > 0 ? 'Quadra' : ($trp > 0 ? 'Triple' : ($dbl > 0 ? "Double×$dbl" : '—')));
 
         $m = [
             'kills'      => ['stat' => (string) ($p['kills'] ?? 0),   'norm' => min(($p['kills'] ?? 0) / 10, 1)],
@@ -293,6 +302,7 @@ class ElwScoreService
             'dmg'        => ['stat' => number_format(round($dpm)),    'norm' => min($dpm / 1000, 1)],
             'vision'     => ['stat' => number_format($vsPerMin, 1),   'norm' => min($vsPerMin / 2.5, 1)],
             'firstBlood' => ['stat' => ($c['firstBloodKill'] ?? false) ? 'Evet' : 'Hayır', 'norm' => ($c['firstBloodKill'] ?? false) ? 1 : 0],
+            'multikill'  => ['stat' => $mkLabel, 'norm' => min($mkScore / 1.5, 1)],
 
             'dragon'  => ['stat' => (string) ($c['dragonTakedowns'] ?? 0),     'norm' => min(($c['dragonTakedowns'] ?? 0) / 4, 1)],
             'baron'   => ['stat' => (string) ($c['baronTakedowns'] ?? 0),      'norm' => min(($c['baronTakedowns'] ?? 0) / 2, 1)],
