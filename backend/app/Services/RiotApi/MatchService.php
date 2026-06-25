@@ -14,8 +14,9 @@ use Illuminate\Support\Facades\Log;
  */
 class MatchService
 {
-    /** ELW/badge algoritması değişince bump → eski match_summaries yeniden kurulur. */
-    private const ALGO_VERSION = 1;
+    /** ELW/badge algoritması değişince bump → eski match_summaries yeniden kurulur.
+     *  v2: takım kalitesi metriği kişiye-göre relatif (takım arkadaşları − ben). */
+    private const ALGO_VERSION = 2;
 
     public function __construct(
         private MatchDataService $matchData,

@@ -103,23 +103,30 @@ class LaneAnalysisService
             }
         }
 
+        // Takım kalitesi — KİŞİYE-GÖRE relatif: takım arkadaşlarımın (ben hariç) ortalama
+        // ELW skoru − BENİM skorum. diff>0 → takım benden iyi (beni taşıdı); diff<0 → ben
+        // takımdan iyi (ben taşıdım). Win bonusu iki tarafta da olduğundan iptal olur →
+        // kazançtan bağımsız + her profil için ayrı (aynı maç, farklı profil → farklı etiket).
         $teamQuality = null;
-        if ($myTeamCount > 0 && $enemyCount > 0) {
-            $diff = ($myTeamSum / $myTeamCount) - ($enemySum / $enemyCount);
-            if ($diff >= 1.2) {
+        if ($myTeamCount > 0) {
+            $myScore = $teamScores[$puuid] ?? 5;
+            $teammatesAvg = $myTeamSum / $myTeamCount;
+            $diff = $teammatesAvg - $myScore;
+            $t = config('elwgraphs.team_quality');
+            if ($diff >= $t['great']) {
                 $teamQuality = ['key' => 'great', 'label' => 'Çok iyi takım'];
-            } elseif ($diff >= 0.5) {
+            } elseif ($diff >= $t['good']) {
                 $teamQuality = ['key' => 'good', 'label' => 'İyi takım'];
-            } elseif ($diff > -0.5) {
-                $teamQuality = ['key' => 'avg', 'label' => 'Ort. takım'];
-            } elseif ($diff > -1.2) {
+            } elseif ($diff > $t['bad']) {
+                $teamQuality = ['key' => 'avg', 'label' => 'Eşit takım'];
+            } elseif ($diff > $t['terrible']) {
                 $teamQuality = ['key' => 'bad', 'label' => 'Kötü takım'];
             } else {
                 $teamQuality = ['key' => 'terrible', 'label' => 'Çok kötü takım'];
             }
             $teamQuality['diff'] = round($diff, 2);
-            $teamQuality['myAvg'] = round($myTeamSum / $myTeamCount, 1);
-            $teamQuality['enemyAvg'] = round($enemySum / $enemyCount, 1);
+            $teamQuality['teammatesAvg'] = round($teammatesAvg, 1);
+            $teamQuality['myScore'] = round($myScore, 1);
         }
 
         $kp = $teamKills > 0 ? (int) round(($player['kills'] + $player['assists']) / $teamKills * 100) : 0;

@@ -273,9 +273,8 @@ function TeamQualityTag({ tq }) {
   const [anchor, setAnchor] = useState(null);
   const color = TQ_DOT[tq.key] || "#94a3b8";
   const diff = tq.diff ?? 0;
-  const myAvg = tq.myAvg, enemyAvg = tq.enemyAvg;
-  const hasAvg = myAvg != null && enemyAvg != null;
-  const myPct = hasAvg && myAvg + enemyAvg > 0 ? (myAvg / (myAvg + enemyAvg)) * 100 : 50;
+  const teammatesAvg = tq.teammatesAvg, myScore = tq.myScore;
+  const hasAvg = teammatesAvg != null && myScore != null;
   return (
     <>
       <div className="flex justify-center mt-1">
@@ -298,23 +297,26 @@ function TeamQualityTag({ tq }) {
             </div>
             {hasAvg ? (
               <>
-                <TeamBar label="Bizim takım" val={myAvg} color="#60a5fa" />
-                <TeamBar label="Rakip takım" val={enemyAvg} color="#f87171" />
+                <TeamBar label="Takım arkadaşların" val={teammatesAvg} color="#60a5fa" />
+                <TeamBar label="Sen" val={myScore} color="#a78bfa" />
                 <div className="h-px bg-edge/70 my-2.5" />
-                {/* Güç farkı — ok + miktar + kelime */}
+                {/* Kişiye-göre: takım arkadaşları senden iyi mi (seni taşıdı) / sen mi taşıdın */}
                 <div className="flex items-center gap-1.5">
                   <DiffArrow diff={diff} />
                   <span className="text-[11px] text-gray-400">
-                    Takımın{" "}
-                    <b className={diff < -0.05 ? "text-red-400" : diff > 0.05 ? "text-sky-300" : "text-gray-200"}>
-                      {Math.abs(diff).toFixed(1)} puan {diff < -0.05 ? "zayıf" : diff > 0.05 ? "güçlü" : "denk"}
-                    </b>
+                    {diff > 0.05 ? (
+                      <>Takımın senden <b className="text-sky-300">{Math.abs(diff).toFixed(1)} puan iyi</b> · seni taşıdı</>
+                    ) : diff < -0.05 ? (
+                      <>Sen takımdan <b className="text-red-400">{Math.abs(diff).toFixed(1)} puan iyi</b> · sen taşıdın</>
+                    ) : (
+                      <>Takımınla <b className="text-gray-200">denk performans</b></>
+                    )}
                   </span>
                 </div>
               </>
             ) : (
               <p className="text-[11px] text-gray-400 leading-relaxed">
-                Takımın rakipten <b className="text-gray-100">{Math.abs(diff)} puan {diff < 0 ? "zayıf" : "güçlü"}</b>.
+                {diff < 0 ? "Sen takımdan" : "Takımın senden"} <b className="text-gray-100">{Math.abs(diff)} puan iyi</b>.
               </p>
             )}
           </div>

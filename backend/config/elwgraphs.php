@@ -25,6 +25,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Maç kartı "takım kalitesi" etiketi (KİŞİYE-GÖRE relatif)
+    |--------------------------------------------------------------------------
+    | diff = takım arkadaşlarımın (ben hariç) ortalama ELW skoru − BENİM skorum.
+    | Win bonusu iki tarafta da olduğundan iptal olur → "takımım mı taşıdı / ben mi
+    | taşıdım" kalır (kazançtan bağımsız; her profil için ayrı hesaplanır). Eşikler
+    | 400 maç / 4000 oyuncu-perspektifi dağılımından (~10/25/30/25/10 hedef).
+    */
+    'team_quality' => [
+        'great'    => 1.8,  // diff >= → "Çok iyi takım" (takım beni ağır taşıdı)
+        'good'     => 0.6,  // diff >= → "İyi takım"
+        'bad'      => -0.6, // diff <= → "Kötü takım" (ben taşıdım)
+        'terrible' => -1.8, // diff <= → "Çok kötü takım" (tek başıma taşıdım)
+        // ikisinin arası → "Eşit takım"
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Kompozit tier skoru
     |--------------------------------------------------------------------------
     | Tier yalnız WR ile değil; Wilson WR + pick + ban + örneklem güveni'nin
