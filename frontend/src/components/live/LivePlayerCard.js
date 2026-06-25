@@ -192,7 +192,8 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
     enrichment?.elwAverage != null &&
     enrichment.elwAverage > 7.0 &&
     (hi70 >= 3 || hi65 >= 4);
-  const badges = enrichment?.playstyleBadges || [];
+  // En yüksek (en sık) 3 rozet — fazlası kart önyüzünde kayıyordu (kullanıcı geri bildirimi).
+  const badges = (enrichment?.playstyleBadges || []).slice(0, 3);
   const streak = computeStreak(games);
   const splash = splashUrl(p.champion?.id);
   const roleStats = rs?.roleStats || [];

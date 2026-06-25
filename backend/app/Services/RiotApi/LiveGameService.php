@@ -144,12 +144,17 @@ class LiveGameService
                 $used[] = 'JUNGLE';
             }
         }
-        // 2. Açgözlü — herkes en çok tercih ettiği boş role
+        // 2. EN KESİN şampiyon önce — az pozisyon seçeneği olan (tek-rol; ör. Vayne=sadece ADC)
+        //    çakışmadan önce yerini alır; esnek şampiyonlar (Yasuo top/mid) sonra. Vayne→top bugı çözülür.
+        $pending = [];
         foreach ($team as $i => $p) {
-            if (isset($assigned[$i])) {
-                continue;
+            if (!isset($assigned[$i])) {
+                $pending[$i] = $prefsOf($p);
             }
-            foreach ($prefsOf($p) as $r) {
+        }
+        uasort($pending, fn ($a, $b) => count($a) <=> count($b));
+        foreach ($pending as $i => $prefs) {
+            foreach ($prefs as $r) {
                 if (in_array($r, $order, true) && !in_array($r, $used, true)) {
                     $assigned[$i] = $r;
                     $used[] = $r;
@@ -191,7 +196,9 @@ class LiveGameService
                 // sezon sorgusu (getSeasonChampionStats) BİLİNÇLİ kullanılmıyor; o,
                 // tanınmayan bir rakip için yüzlerce Match-V5 isteği demek olurdu.
                 // "Bu şampiyonda performans" aşağıda son maçlardan türetilir (0 ekstra istek).
-                $matches = $this->match->getRecentMatches($puuid, 10, 0);
+                // Rate-limit: canlı maçta 10 rastgele oyuncu × maç = Personal key'i zorlar.
+                // 6 maç ile sınırlı (etiket/main-rol için yeterli, yük yarıdan az).
+                $matches = $this->match->getRecentMatches($puuid, 6, 0);
             } catch (\Exception $e) {
                 return [
                     'error'           => $e->getCode() === 429 ? 'rate_limited' : 'failed',
