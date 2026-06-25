@@ -17,8 +17,9 @@ class MatchService
     /** ELW/badge algoritması değişince bump → eski match_summaries yeniden kurulur.
      *  v2: takım kalitesi metriği kişiye-göre relatif (takım arkadaşları − ben).
      *  v3: ELW yeni ağırlıklar + Win/Loss kaldırıldı + CC eşit bonus.
-     *  v4: takım kalitesi DPM tarzı (takım arkadaşlarının mutlak seviyesi, lobiye göre). */
-    private const ALGO_VERSION = 4;
+     *  v4: takım kalitesi DPM tarzı (takım arkadaşlarının mutlak seviyesi, lobiye göre).
+     *  v5: takım kalitesi 'individual' skorlarla (kartta gösterilenle tutarlı) + yeni eşik. */
+    private const ALGO_VERSION = 5;
 
     public function __construct(
         private MatchDataService $matchData,
@@ -496,7 +497,9 @@ class MatchService
 
         // Dost/düşman kadroları + koridor/takım analizi (LaneAnalysisService)
         [$allies, $enemies] = $this->buildRosters($info, $puuid, $player['teamId']);
-        $teamScores = $this->elw->calculateAllElwScores($info['participants'], $duration, 'team');
+        // Takım kalitesi etiketi, maç kartında GÖSTERİLEN skorlarla aynı olsun diye
+        // 'individual' (cömert) skorları kullanır — kullanıcı "takımArk 9.5 ama kötü" çelişkisi yaşamaz.
+        $teamScores = $this->elw->calculateAllElwScores($info['participants'], $duration, 'individual');
         $lane = $this->laneAnalysis->summarizeForPlayer($info, $player, $puuid, $teamScores);
 
         $role = $player['teamPosition'] ?: $player['individualPosition'] ?: '';

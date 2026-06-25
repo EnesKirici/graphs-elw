@@ -33,12 +33,13 @@ return [
     | zayıf oyuncu çıkınca carry'ler kalır → "İyi"; herkes kötüyse → "Kötü". DPM ile
     | aynı davranış. Yumuşak eşikler (carry-loss ≈ ortalama; ~12/20/36/20/12).
     */
+    // NOT: skorlar 'individual' (cömert) modda — maç kartında gösterilenlerle aynı.
     'team_quality' => [
-        'great'    => 1.5,  // diff >= → "Çok iyi takım" (takım arkadaşların lobi üstü, net)
+        'great'    => 1.9,  // diff >= → "Çok iyi takım" (takım arkadaşların lobi üstü, net)
         'good'     => 0.7,  // diff >= → "İyi takım"
         'bad'      => -0.7, // diff <= → "Kötü takım" (takım arkadaşların lobi altı)
-        'terrible' => -1.5, // diff <= → "Çok kötü takım"
-        // ikisinin arası → "Ortalama takım" (carry-loss ≈ -0.65 → buraya düşer, DPM gibi)
+        'terrible' => -1.9, // diff <= → "Çok kötü takım"
+        // ikisinin arası → "Ortalama takım"
     ],
 
     /*

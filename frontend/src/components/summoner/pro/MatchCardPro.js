@@ -27,19 +27,20 @@ const ROLE_TR = {
 const TIER_ORDER = { challenger: 0, grandmaster: 1, master: 2, diamond: 3, emerald: 4, gold: 5, silver: 6 };
 
 // Takım kalitesi → nokta rengi (tooltip) + yazı rengi. Yeşilsiz: iyi=mavi.
+// Gradyan: çok kötü=kırmızı → kötü=turuncu(ara) → ortalama=gri → iyi=mavi(ara) → çok iyi=camgöbeği.
 const TQ_DOT = {
-  great: "#38bdf8", good: "#60a5fa", avg: "#94a3b8", bad: "#f87171", terrible: "#f87171",
+  great: "#22d3ee", good: "#60a5fa", avg: "#94a3b8", bad: "#fb923c", terrible: "#ef4444",
 };
 const TQ_TEXT = {
-  great: "text-sky-300", good: "text-blue-400",
-  avg: "text-gray-400", bad: "text-red-400", terrible: "text-red-400",
+  great: "text-cyan-300", good: "text-blue-400",
+  avg: "text-gray-400", bad: "text-orange-400", terrible: "text-red-400",
 };
 // Takım kalitesi pill (yumuşak tint + kenar) — k/d/a altında her zaman görünür.
 const TQ_PILL = {
-  great:    "text-sky-300 bg-sky-500/10 border-sky-500/25",
+  great:    "text-cyan-300 bg-cyan-500/10 border-cyan-500/25",
   good:     "text-blue-400 bg-blue-500/10 border-blue-500/25",
   avg:      "text-gray-400 bg-gray-500/10 border-gray-500/30",
-  bad:      "text-red-400 bg-red-500/10 border-red-500/25",
+  bad:      "text-orange-400 bg-orange-500/10 border-orange-500/25",
   terrible: "text-red-400 bg-red-500/10 border-red-500/25",
 };
 
