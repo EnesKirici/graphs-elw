@@ -21,8 +21,10 @@ class MatchService
      *  v5: takım kalitesi 'individual' skorlarla (kartta gösterilenle tutarlı) + yeni eşik.
      *  v6: ELW score DPM-tarzı kategorili (Global+vsRakip+Objektif+Takım+Role) yeniden yazıldı.
      *  v7: role-relatif kalibrasyon (ham skor / rol-baseline) + KP ağırlığı artırıldı.
-     *  v8: multikill (triple/quadra/penta) küçük + bonusu (UNIVERSAL_W) + baseline güncel. */
-    private const ALGO_VERSION = 8;
+     *  v8: multikill (triple/quadra/penta) küçük + bonusu (UNIVERSAL_W) + baseline güncel.
+     *  v9: summary_json items/runes SLIM saklanır (sadece id) → okurken DataDragon'dan
+     *      hydrate edilir (hydrateSummary). Özet ~%66 küçülür; frontend kontratı aynı. */
+    private const ALGO_VERSION = 9;
 
     public function __construct(
         private MatchDataService $matchData,
@@ -362,13 +364,15 @@ class MatchService
         // 2. Eksikler için full maçı TRANSIENT çek (matches'e YAZMADAN), özet kur + sakla.
         $missing = array_values(array_filter($matchIds, fn($id) => !$cached->has($id)));
         $details = $missing ? $this->matchData->getMatchDetailsTransient($missing) : [];
-        $ctx = $details ? $this->summaryContext() : [];
+        // ctx KOŞULSUZ kurulur: cache'li özetler de slim saklandığından okurken hydrate edilir.
+        // (summaryContext DataDragon verisi cache'li → ucuz, key gerektirmez.)
+        $ctx = $this->summaryContext();
 
-        // 3. matchIds sırasıyla (yeni→eski) özetleri topla.
+        // 3. matchIds sırasıyla (yeni→eski) özetleri topla — slim items/runes okurken hydrate edilir.
         $matches = [];
         foreach ($matchIds as $matchId) {
             if ($cached->has($matchId)) {
-                $matches[] = $cached[$matchId]->summary_json;
+                $matches[] = $this->hydrateSummary($cached[$matchId]->summary_json, $ctx);
                 continue;
             }
             $detail = $details[$matchId] ?? null;
@@ -382,7 +386,7 @@ class MatchService
 
             $stat = $this->buildStatPayload($detail['info'] ?? [], $puuid);
             $this->persistSummary($matchId, $puuid, $detail['info'] ?? [], $summary, $stat);
-            $matches[] = $summary;
+            $matches[] = $this->hydrateSummary($summary, $ctx);
         }
 
         // Autocomplete: yalnız yeni çekilen maçlardaki oyuncuları kaydet.
@@ -525,13 +529,14 @@ class MatchService
         $timeline = $this->matchData->getMatchTimelineIfExists($matchId);
         $perfLabel = $this->elw->calculatePerformanceLabel($ranking, $player, $info, $timeline);
 
-        // Eşya / büyü / rün
-        $items = $this->buildPlayerItems($player, $ctx['allItems'], $ctx['version'], $ctx['ddragonBase']);
+        // Eşya / büyü / rün — eşya+rün DB'ye SLIM (sadece id) yazılır; getRecentMatches
+        // okurken DataDragon'dan zenginleştirir (hydrateSummary). Özet ~%66 küçülür.
+        $items = $this->slimItems($player);
         $spells = [
             $ctx['spellMap'][$player['summoner1Id'] ?? 0] ?? ['name' => '?', 'image' => ''],
             $ctx['spellMap'][$player['summoner2Id'] ?? 0] ?? ['name' => '?', 'image' => ''],
         ];
-        $runes = $this->formatter->extractRunes($player['perks'] ?? null, $ctx['runeMap']);
+        $runes = $this->slimRunes($player['perks'] ?? null);
 
         // Dost/düşman kadroları + koridor/takım analizi (LaneAnalysisService)
         [$allies, $enemies] = $this->buildRosters($info, $puuid, $player['teamId']);
@@ -775,21 +780,92 @@ class MatchService
     /**
      * Oyuncunun item listesini oluştur.
      */
+    /** Participant'tan tam eşya listesi (getMatchDetailFull için): slim+hydrate kompozisyonu. */
     private function buildPlayerItems(array $p, array $allItems, string $version, string $ddragonBase): array
+    {
+        return $this->hydrateItems($this->slimItems($p), $allItems, $version, $ddragonBase);
+    }
+
+    /** Participant → 7 eşya slotu, yalnız item id (boş slot null). summary_json'da SLIM saklanır. */
+    private function slimItems(array $p): array
     {
         $items = [];
         for ($i = 0; $i <= 6; $i++) {
-            $itemId = $p["item{$i}"] ?? 0;
-            $itemData = $itemId > 0 ? ($allItems[(string) $itemId] ?? null) : null;
-            $items[] = $itemId > 0 ? [
-                'id'    => $itemId,
-                'name'  => $itemData['name'] ?? '',
-                'desc'  => $this->formatter->parseItemDescription($itemData['description'] ?? ''),
-                'gold'  => $itemData['gold']['total'] ?? 0,
-                'image' => "{$ddragonBase}/cdn/{$version}/img/item/{$itemId}.png",
-            ] : null;
+            $id = $p["item{$i}"] ?? 0;
+            $items[] = $id > 0 ? (int) $id : null;
         }
         return $items;
+    }
+
+    /** Slim eşya id dizisini DataDragon ile full'a çevir (id→name/desc/gold/image). Frontend kontratı korunur. */
+    private function hydrateItems(array $slim, array $allItems, string $version, string $ddragonBase): array
+    {
+        $out = [];
+        foreach ($slim as $entry) {
+            // Geriye-uyum: int id | eski {id:..} objesi | null.
+            $id = is_array($entry) ? (int) ($entry['id'] ?? 0) : (int) ($entry ?? 0);
+            if ($id <= 0) { $out[] = null; continue; }
+            $d = $allItems[(string) $id] ?? null;
+            $out[] = [
+                'id'    => $id,
+                'name'  => $d['name'] ?? '',
+                'desc'  => $this->formatter->parseItemDescription($d['description'] ?? ''),
+                'gold'  => $d['gold']['total'] ?? 0,
+                'image' => "{$ddragonBase}/cdn/{$version}/img/item/{$id}.png",
+            ];
+        }
+        return $out;
+    }
+
+    /** Riot perks → minimal id seti (style + selection.perk + statPerks). summary_json'da SLIM saklanır. */
+    private function slimRunes(?array $perks): ?array
+    {
+        if (!$perks || !isset($perks['styles'])) return null;
+        $styles = [];
+        foreach ($perks['styles'] as $style) {
+            $sels = [];
+            foreach ($style['selections'] ?? [] as $sel) {
+                $sels[] = ['perk' => $sel['perk'] ?? 0];
+            }
+            $styles[] = [
+                'style'       => $style['style'] ?? 0,
+                'description' => $style['description'] ?? '',
+                'selections'  => $sels,
+            ];
+        }
+        return [
+            'styles'    => $styles,
+            'statPerks' => [
+                'offense' => $perks['statPerks']['offense'] ?? 0,
+                'flex'    => $perks['statPerks']['flex'] ?? 0,
+                'defense' => $perks['statPerks']['defense'] ?? 0,
+            ],
+        ];
+    }
+
+    /** Slim perks'i full rün gösterimine çevir (extractRunes id'leri runeMap'ten çözer). */
+    private function hydrateRunes($runes, array $runeMap): array
+    {
+        // Yeni slim format (ham perks alt kümesi) → extractRunes ile full.
+        if (is_array($runes) && isset($runes['styles'])) {
+            return $this->formatter->extractRunes($runes, $runeMap);
+        }
+        // Eski v8 full kaydı → olduğu gibi; boş/null → defansif boş gösterim.
+        if (is_array($runes) && isset($runes['keystone'])) return $runes;
+        return ['keystone' => null, 'primaryTree' => null, 'subTree' => null,
+                'primaryPerks' => [], 'secondaryPerks' => [], 'statShards' => []];
+    }
+
+    /** Bir özet kaydının slim items/runes alanlarını okuma anında DataDragon'la zenginleştir. */
+    private function hydrateSummary(array $summary, array $ctx): array
+    {
+        if (array_key_exists('items', $summary)) {
+            $summary['items'] = $this->hydrateItems($summary['items'] ?? [], $ctx['allItems'], $ctx['version'], $ctx['ddragonBase']);
+        }
+        if (array_key_exists('runes', $summary)) {
+            $summary['runes'] = $this->hydrateRunes($summary['runes'], $ctx['runeMap']);
+        }
+        return $summary;
     }
 
     /**
