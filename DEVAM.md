@@ -4,15 +4,21 @@
 > `PROJE_DURUM.md` + `LIVE_GAME_PLAN.md` + memory dosyaları (`project_elw_scoring`,
 > `project_live_game`). **Her şey LOCAL, CANLIYA ALINMADI (deploy en son).**
 
-## 🔴 TAM ŞU AN NEREDE KALDIK: Duo (premade) tespiti — canlı maç
-Etiket motoru admin paneli ✅ + şampiyon-stat (KDA) ön yüze ✅ BİTTİ (aşağıda). **SIRADAKİ:**
-canlı maçta duo/premade tespiti (BEKLEYEN #3). Spectator parti vermez → sezgisel: enrichment'taki
-`recentGames[].matchId` ortak olanlar (aynı takımda birlikte oynamış) premade. Ekstra API yok,
-eşik üstü ortak maç → grupla (2-2-1, renkli işaret).
+## 🔴 TAM ŞU AN NEREDE KALDIK: Frontend priority-deferral (BEKLEYEN #4)
+Etiket admin paneli ✅ + şampiyon-stat KDA ✅ + kart redizayn ✅ + premade tespiti ✅ BİTTİ (aşağıda).
+**SIRADAKİ:** 6+ öncelikli oyuncuları (fetchPriority) limit yenilenince/retry ile sonra çek
+(şu an `runThrottled` hepsini sırayla çekiyor; rate-limit'te düşenler tekrar denenmiyor).
 
-## ✅ Şampiyon-stat KDA ön yüze — BİTTİ (commit'li)
-`LivePlayerCard` ön yüzünde maç/WR satırının altına `championStat.avgKda` eklendi:
-"K / D / A · N KDA" (ölüm kırmızı, oran amber). Backend'de veri zaten vardı. Mock ile görsel doğrulandı.
+## ✅ Canlı kart redizayn + premade — BİTTİ (commit'li)
+- **Premade (duo/trio) tespiti** (`LiveGameBoard.premadeGroups`): aynı takımda ORTAK son maç ID'leri
+  (`recentGames[].matchId`, eşik=2) → union-find gruplar. Ekstra API yok. Görsel: kart çevresine
+  renkli iç-çerçeve (ring) + sol üst "Duo/Trio" rozeti (grup başına renk). Fixture'da 2-2-1 örnek.
+- **Kart ön yüz redizayn:** üst istatistik KUTUSU kaldırıldı (splash'i kapatıyordu) → kutusuz
+  gölgeli metin. Orta satır ikonları (spell/rol/rün) büyütüldü. Summoner adı **tıklanınca yeni
+  sekmede profil** (`Link target=_blank` + stopPropagation).
+- **Şampiyon KDA** ön yüzde (maç/WR altında, ölüm kırmızı, oran amber).
+- **Seri animasyonu:** alev/buz ikonları yalnız **4+ seride** animasyonlu
+  (`globals.css` streakFlame/streakFrost). Mock'ta elw 5G, elwyore 4M demo.
 
 ## ⚠️ DEV SERVER / OOM NOTU (önemli — bu session'da yaşandı)
 `live-game?mock=1` (en ağır SSR sayfası: 10 kart + radar + splash) **OOM ile 500** verebiliyor:
@@ -61,10 +67,8 @@ build'de (derlenmiş, worker yok) bu sorun OLMAZ.
 ## ⏳ BEKLEYEN (öncelik sırası)
 1. ✅ ~~Etiket motoru admin paneli~~ — BİTTİ (yukarıda).
 2. ✅ ~~Şampiyon istatistikleri kart ÖN YÜZÜNE (KDA)~~ — BİTTİ (yukarıda).
-3. **Duo tespiti** (canlı maç) (TAM ŞU AN KALDIĞIMIZ YER) — Spectator parti vermez; sezgisel: enrichment'taki son maç ID'leri
-   ortak olanlar (aynı takımda birlikte oynamış) premade. recentGames[].matchId zaten var → ekstra
-   API'siz, aynı takımda eşik üstü ortak maç → grupla (2-2-1, renkli işaret).
-4. **Frontend priority-deferral**: 6+ öncelikli oyuncular limit yenilenince/retry ile sonra çek.
+3. ✅ ~~Duo (premade) tespiti + kart redizayn~~ — BİTTİ (yukarıda).
+4. **Frontend priority-deferral** (TAM ŞU AN KALDIĞIMIZ YER): 6+ öncelikli oyuncular limit yenilenince/retry ile sonra çek.
 5. **Vizyon-temelli etiketler** (Yürüyen Totem/Totem Unutan): maç özetinde vizyon/dk yok → eklenince.
 6. **DB-opt items/runes trim** + **worker-prewarm** (lp:capture'a ensureSeasonSummaries — kısmen?).
 7. **DEPLOY** (en son) — DB-opt + tüm ELW + canlı maç + etiketler. Plesk akışı `project_deployment`.
