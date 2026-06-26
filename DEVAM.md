@@ -4,10 +4,23 @@
 > `PROJE_DURUM.md` + `LIVE_GAME_PLAN.md` + memory dosyaları (`project_elw_scoring`,
 > `project_live_game`). **Her şey LOCAL, CANLIYA ALINMADI (deploy en son).**
 
-## 🔴 TAM ŞU AN NEREDE KALDIK: Şampiyon istatistikleri kart ÖN YÜZÜNE
-Etiket motoru admin paneli ✅ BİTTİ (aşağıda). **SIRADAKİ:** canlı maç kartının ÖN yüzünde
-şampiyon istatistiği göster (`championStat` backend'de HAZIR — games/WR/KDA). Kullanıcı:
-"ön yüz = önemli veri, arka yüz = detay". Sadece `LivePlayerCard` ÖN yüzünde göstermek kaldı.
+## 🔴 TAM ŞU AN NEREDE KALDIK: Duo (premade) tespiti — canlı maç
+Etiket motoru admin paneli ✅ + şampiyon-stat (KDA) ön yüze ✅ BİTTİ (aşağıda). **SIRADAKİ:**
+canlı maçta duo/premade tespiti (BEKLEYEN #3). Spectator parti vermez → sezgisel: enrichment'taki
+`recentGames[].matchId` ortak olanlar (aynı takımda birlikte oynamış) premade. Ekstra API yok,
+eşik üstü ortak maç → grupla (2-2-1, renkli işaret).
+
+## ✅ Şampiyon-stat KDA ön yüze — BİTTİ (commit'li)
+`LivePlayerCard` ön yüzünde maç/WR satırının altına `championStat.avgKda` eklendi:
+"K / D / A · N KDA" (ölüm kırmızı, oran amber). Backend'de veri zaten vardı. Mock ile görsel doğrulandı.
+
+## ⚠️ DEV SERVER / OOM NOTU (önemli — bu session'da yaşandı)
+`live-game?mock=1` (en ağır SSR sayfası: 10 kart + radar + splash) **OOM ile 500** verebiliyor:
+"Jest worker encountered child process exceptions, exceeding retry limit". **Kod hatası DEĞİL** —
+boş RAM yetmeyince Next `--webpack` SSR worker'ını (child process) OS öldürüyor. Bu session'da
+boş bellek ~680MB'a düşmüştü (Opera 8.5GB/45 süreç). **Çözüm:** belleği boşalt (tarayıcı sekmeleri)
++ dev server'ı **temiz yeniden başlat** (eski server'ın worker'ları "(stale)" kalıyor). Production
+build'de (derlenmiş, worker yok) bu sorun OLMAZ.
 
 ## ✅ Etiket Motoru ADMİN PANELİ — BİTTİ (commit'li)
 **Backend** (`GET /api/v1/admin/labels` → `{catalog, tones, config}`; `PUT /admin/settings/labels_config`).
@@ -47,10 +60,8 @@ Etiket motoru admin paneli ✅ BİTTİ (aşağıda). **SIRADAKİ:** canlı maç 
 
 ## ⏳ BEKLEYEN (öncelik sırası)
 1. ✅ ~~Etiket motoru admin paneli~~ — BİTTİ (yukarıda).
-2. **Şampiyon istatistikleri kart ÖN YÜZÜNE** (TAM ŞU AN KALDIĞIMIZ YER) — `championStat`
-   (games/WR/KDA) backend'de HAZIR, sadece `LivePlayerCard` ön yüzünde göster (kullanıcı:
-   "ön yüz=önemli veri, arka=detay").
-3. **Duo tespiti** (canlı maç) — Spectator parti vermez; sezgisel: enrichment'taki son maç ID'leri
+2. ✅ ~~Şampiyon istatistikleri kart ÖN YÜZÜNE (KDA)~~ — BİTTİ (yukarıda).
+3. **Duo tespiti** (canlı maç) (TAM ŞU AN KALDIĞIMIZ YER) — Spectator parti vermez; sezgisel: enrichment'taki son maç ID'leri
    ortak olanlar (aynı takımda birlikte oynamış) premade. recentGames[].matchId zaten var → ekstra
    API'siz, aynı takımda eşik üstü ortak maç → grupla (2-2-1, renkli işaret).
 4. **Frontend priority-deferral**: 6+ öncelikli oyuncular limit yenilenince/retry ile sonra çek.
