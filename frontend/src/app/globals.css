@@ -728,3 +728,18 @@ html.light .dpm-scope .glass { box-shadow: none; }
 .dpm-team-good { color: var(--dpm-good-team); }
 .dpm-team-bad  { color: var(--dpm-bad-team); }
 .dpm-team-avg  { color: var(--dpm-avg-team); }
+
+/* Canlı maç seri ikonu animasyonları — yalnızca 4+ galibiyet/mağlubiyet serisinde */
+@keyframes streakFlame {
+  0%, 100% { transform: scale(1) rotate(0deg);    filter: drop-shadow(0 0 2px rgba(251,191,36,0.55)); }
+  25%      { transform: scale(1.16) rotate(-5deg); filter: drop-shadow(0 0 4px rgba(251,191,36,0.85)); }
+  50%      { transform: scale(1.06) rotate(3deg);  filter: drop-shadow(0 0 6px rgba(251,146,60,0.95)); }
+  75%      { transform: scale(1.18) rotate(-2deg); filter: drop-shadow(0 0 4px rgba(251,191,36,0.85)); }
+}
+.streak-flame { animation: streakFlame 0.85s ease-in-out infinite; transform-origin: center bottom; }
+
+@keyframes streakFrost {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 2px rgba(103,232,249,0.55)); }
+  50%      { transform: scale(1.16); filter: drop-shadow(0 0 6px rgba(103,232,249,0.95)); }
+}
+.streak-frost { animation: streakFrost 1.25s ease-in-out infinite; transform-origin: center; }

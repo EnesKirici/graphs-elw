@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Flame, Snowflake, TrendingUp } from "lucide-react";
+import { Flame, Snowflake, TrendingUp, Users } from "lucide-react";
 import { miniCrestUrl, tierLabel, tierColor } from "@/components/summoner/pro/rankUtils";
 import BadgeChip from "@/components/shared/BadgeChip";
 import Tooltip from "@/components/shared/Tooltip";
@@ -57,14 +57,17 @@ function laneStatus(role, roleStats) {
   return { label: ROLE_TR[role] || role, marker: "dual" }; // oynuyor ama main değil
 }
 
-/* Galibiyet/mağlubiyet serisi — solid çip + alev (galibiyet) / kar tanesi (mağlubiyet) ikonu */
+/* Galibiyet/mağlubiyet serisi — solid çip + alev (galibiyet) / kar tanesi (mağlubiyet) ikonu.
+   3'ten FAZLA (4+) seride ikon animasyonlu (alev kıpırtısı / buz nabzı). */
 function StreakBadge({ streak }) {
   if (!streak) return null;
   const Icon = streak.win ? Flame : Snowflake;
+  const animated = streak.count > 3;
+  const animClass = animated ? (streak.win ? "streak-flame" : "streak-frost") : "";
   return (
     <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold text-white tabular-nums bg-black/55 border border-white/15 backdrop-blur-sm">
       {streak.count}
-      <Icon size={13} strokeWidth={2.5} className={streak.win ? "text-amber-400" : "text-cyan-300"} />
+      <Icon size={13} strokeWidth={2.5} className={`${streak.win ? "text-amber-400" : "text-cyan-300"} ${animClass}`} />
     </span>
   );
 }
@@ -171,7 +174,23 @@ function LaneTag({ role, roleStats }) {
   );
 }
 
-export default function LivePlayerCard({ participant: p, enrichment, loading, isEnemy }) {
+/* Premade (duo/trio) rozeti — aynı takımda birlikte oynayanlar (renkli) */
+function PremadeChip({ premade }) {
+  if (!premade) return null;
+  const label = premade.size === 2 ? "Duo" : premade.size === 3 ? "Trio" : `${premade.size}'li`;
+  return (
+    <span
+      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold backdrop-blur-sm border"
+      style={{ color: premade.color, borderColor: `${premade.color}66`, background: `${premade.color}26` }}
+      title="Birlikte oynuyor (son maçlardan tespit edildi)"
+    >
+      <Users size={9} strokeWidth={2.6} />
+      {label}
+    </span>
+  );
+}
+
+export default function LivePlayerCard({ participant: p, enrichment, loading, isEnemy, premade }) {
   const [flipped, setFlipped] = useState(false);
 
   const solo = p.rank?.solo;
@@ -212,7 +231,10 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
         style={{ transformStyle: "preserve-3d", transition: "transform 0.5s", transform: flipped ? "rotateY(180deg)" : "none" }}
       >
         {/* ───────── ÖN YÜZ ───────── */}
-        <div className={faceBase} style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
+        <div
+          className={faceBase}
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", boxShadow: premade ? `inset 0 0 0 2px ${premade.color}` : undefined }}
+        >
           {splash && <img src={splash} alt="" className="absolute inset-0 w-full h-full object-cover object-top" loading="lazy" />}
           <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/20 to-black/95" />
 
@@ -220,46 +242,37 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
           <div className="absolute top-2.5 right-2.5 z-10">
             <StreakBadge streak={streak} />
           </div>
-          {/* SEN — sol üst */}
-          {p.isMe && (
-            <div className="absolute top-2.5 left-2.5 z-10">
-              <span className="text-[9px] font-bold text-amber-300 bg-amber-400/20 border border-amber-400/40 px-1.5 py-0.5 rounded backdrop-blur-sm">SEN</span>
+          {/* Sol üst: SEN + premade rozeti */}
+          {(p.isMe || premade) && (
+            <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1">
+              {p.isMe && (
+                <span className="text-[9px] font-bold text-amber-300 bg-amber-400/20 border border-amber-400/40 px-1.5 py-0.5 rounded backdrop-blur-sm">SEN</span>
+              )}
+              <PremadeChip premade={premade} />
             </div>
           )}
 
-          {/* ÜST: şampiyon adı + yatay istatistik şeridi (maç · WR · KDA) — önemli veri, ferah */}
-          <div className="relative pt-3 px-2.5">
-            <div className="text-center text-lg font-extrabold text-white drop-shadow-lg truncate leading-tight">{p.champion?.name}</div>
+          {/* ÜST: şampiyon adı + bu şampiyon istatistiği — KUTU YOK (splash'i kapatmaz), gölgeyle okunur */}
+          <div className="relative pt-2.5 px-3 text-center">
+            <div className="text-lg font-extrabold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] truncate leading-tight">{p.champion?.name}</div>
             {stat && stat.games > 0 ? (
-              <div className="mt-2 rounded-lg bg-black/50 border border-white/10 backdrop-blur-sm">
-                <div className="flex items-stretch">
-                  <div className="flex-1 py-1.5 text-center">
-                    <div className="text-[15px] font-extrabold text-white tabular-nums leading-none">{stat.games}</div>
-                    <div className="text-[8px] uppercase tracking-wider text-gray-400 mt-1">maç</div>
-                  </div>
-                  <div className="w-px bg-white/10 my-1.5" />
-                  <div className="flex-1 py-1.5 text-center">
-                    <div className={`text-[15px] font-extrabold tabular-nums leading-none ${stat.winRate >= 50 ? "text-emerald-300" : "text-rose-300"}`}>%{stat.winRate}</div>
-                    <div className="text-[8px] uppercase tracking-wider text-gray-400 mt-1">WR</div>
-                  </div>
-                  <div className="w-px bg-white/10 my-1.5" />
-                  <div className="flex-1 py-1.5 text-center">
-                    <div className="text-[15px] font-extrabold text-amber-300 tabular-nums leading-none">{stat.avgKda?.ratio === "Perfect" ? "∞" : stat.avgKda?.ratio}</div>
-                    <div className="text-[8px] uppercase tracking-wider text-gray-400 mt-1">KDA</div>
-                  </div>
+              <div className="mt-0.5">
+                <div className="text-[13px] font-semibold text-gray-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] tabular-nums">
+                  {stat.games} maç · <span className={stat.winRate >= 50 ? "text-emerald-300" : "text-rose-300"}>%{stat.winRate} WR</span>
                 </div>
                 {stat.avgKda && (
-                  <div className="text-center text-[10px] tabular-nums pb-1 -mt-0.5 drop-shadow">
+                  <div className="text-[12px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] tabular-nums leading-tight">
                     <span className="text-gray-100 font-semibold">{stat.avgKda.kills}</span>
-                    <span className="text-gray-500"> / </span>
+                    <span className="text-gray-400"> / </span>
                     <span className="text-red-400 font-semibold">{stat.avgKda.deaths}</span>
-                    <span className="text-gray-500"> / </span>
+                    <span className="text-gray-400"> / </span>
                     <span className="text-gray-100 font-semibold">{stat.avgKda.assists}</span>
+                    <span className="text-amber-300 font-bold"> · {stat.avgKda.ratio === "Perfect" ? "Mükemmel" : `${stat.avgKda.ratio} KDA`}</span>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="mt-2 text-center text-[12px] text-gray-300 drop-shadow">{loading ? "yükleniyor…" : "bu şampiyonda yeni"}</div>
+              <div className="mt-0.5 text-[12px] text-gray-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{loading ? "yükleniyor…" : "bu şampiyonda yeni"}</div>
             )}
           </div>
 
@@ -358,7 +371,10 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
         </div>
 
         {/* ───────── ARKA YÜZ ───────── */}
-        <div className={faceBase} style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+        <div
+          className={faceBase}
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)", boxShadow: premade ? `inset 0 0 0 2px ${premade.color}` : undefined }}
+        >
           {/* Splash arka plan (opacity) — içerik üstte okunur kalır */}
           {splash && <img src={splash} alt="" className="absolute inset-0 w-full h-full object-cover object-top" loading="lazy" />}
           <div className="absolute inset-0 bg-black/76" />

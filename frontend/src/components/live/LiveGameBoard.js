@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getLivePlayer } from "@/lib/api";
 import LiveGameTimer from "@/components/live/LiveGameTimer";
 import LivePlayerCard from "@/components/live/LivePlayerCard";
@@ -17,7 +17,43 @@ async function runThrottled(items, worker, limit = 3) {
   await Promise.all(runners);
 }
 
-function TeamColumn({ title, dotClass, players, enrichments, loadingSet, isEnemy }) {
+// Premade grup renkleri (WIN mavi / LOSS kırmızı'dan ayrı, belirgin tonlar)
+const PREMADE_COLORS = ["#f59e0b", "#a855f7", "#ec4899", "#22d3ee", "#84cc16"];
+
+/**
+ * Aynı TAKIMDAKİ oyuncuların premade (duo/trio) gruplarını sezgisel bul.
+ * Sinyal: enrichment.recentGames[].matchId ORTAK olanlar birlikte oynamış →
+ * eşik üstü ortak maç = premade. Spectator parti vermez; ekstra API yok.
+ * Union-find ile bağlı bileşenler → 2+ kişilik gruplar.
+ */
+function premadeGroups(players, enrichments, threshold = 2) {
+  const ids = players.map((p) => p.puuid).filter(Boolean);
+  if (ids.length < 2) return [];
+  const sets = {};
+  for (const id of ids) {
+    const mids = (enrichments[id]?.recentGames || []).map((g) => g.matchId).filter(Boolean);
+    sets[id] = new Set(mids);
+  }
+  const parent = {};
+  ids.forEach((id) => (parent[id] = id));
+  const find = (x) => {
+    while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+    return x;
+  };
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const a = ids[i], b = ids[j];
+      let shared = 0;
+      for (const m of sets[a]) if (sets[b].has(m)) shared++;
+      if (shared >= threshold) parent[find(a)] = find(b);
+    }
+  }
+  const groups = {};
+  ids.forEach((id) => { const r = find(id); (groups[r] = groups[r] || []).push(id); });
+  return Object.values(groups).filter((g) => g.length >= 2);
+}
+
+function TeamColumn({ title, dotClass, players, enrichments, loadingSet, isEnemy, premadeMap }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-2.5">
@@ -33,6 +69,7 @@ function TeamColumn({ title, dotClass, players, enrichments, loadingSet, isEnemy
             enrichment={enrichments[p.puuid] || null}
             loading={!enrichments[p.puuid] && !p.isBot && loadingSet}
             isEnemy={isEnemy}
+            premade={premadeMap?.[p.puuid] || null}
           />
         ))}
       </div>
@@ -47,6 +84,21 @@ export default function LiveGameBoard({ game }) {
 
   const ally = game.allyTeam || [];
   const enemy = game.enemyTeam || [];
+
+  // Premade (duo/trio) grupları — takım bazında, ortak son maçlardan. Renk ata.
+  const premadeMap = useMemo(() => {
+    const map = {};
+    let ci = 0;
+    for (const team of [ally, enemy]) {
+      for (const g of premadeGroups(team, enrichments)) {
+        const color = PREMADE_COLORS[ci % PREMADE_COLORS.length];
+        ci++;
+        for (const id of g) map[id] = { color, size: g.length };
+      }
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.gameId, enrichments]);
 
   useEffect(() => {
     if (game.mock) return;
@@ -117,6 +169,7 @@ export default function LiveGameBoard({ game }) {
           enrichments={enrichments}
           loadingSet={loading}
           isEnemy={false}
+          premadeMap={premadeMap}
         />
         <TeamColumn
           title="Rakip Takım"
@@ -125,6 +178,7 @@ export default function LiveGameBoard({ game }) {
           enrichments={enrichments}
           loadingSet={loading}
           isEnemy={true}
+          premadeMap={premadeMap}
         />
       </div>
 
