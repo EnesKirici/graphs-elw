@@ -4,7 +4,12 @@
 > `PROJE_DURUM.md` + `LIVE_GAME_PLAN.md` + memory dosyaları (`project_elw_scoring`,
 > `project_live_game`). **Her şey LOCAL, CANLIYA ALINMADI (deploy en son).**
 
-## 🔴 TAM ŞU AN NEREDE KALDIK: DEPLOY (kullanıcı doğru zamanı söyleyecek)
+## 🟢 DEPLOY YAPILDI (2026-06-26) — canlı güncel
+**27 commit canlıya alındı** (GitHub push + Plesk bare repo push + deploy dizinine `git checkout -f` +
+backend cache:clear + frontend `npm run build` + pm2 restart + `summaries:flush` 1406 temizlendi).
+Canlı doğrulandı: ALGO_VERSION 9, LabelEngine/live-labels VAR, tüm sayfalar HTTP 200, ana sayfa 0.12s.
+⚠️ Bilinen küçük konu: `GET /api/v1/champions/rotation` 500 (ana sayfada kullanılmıyor, ayrı bakılır).
+Eski "kaldığımız yer" notu (referans):
 Etiket admin paneli ✅ KDA ✅ kart redizayn ✅ premade ✅ priority-deferral ✅ görüş/OTP-sezon ✅
 **DB-opt items/runes trim ✅ (2026-06-26):** summary_json items/runes SLIM (sadece id) saklanır, okurken
 DataDragon'dan hydrate (`MatchService::hydrateSummary`). Test: items+runes bloğu %92 küçüldü, ALGO_VERSION 9.
@@ -99,7 +104,10 @@ build'de (derlenmiş, worker yok) bu sorun OLMAZ.
    SLIM (sadece id) saklanır, okurken DataDragon'dan hydrate (`MatchService::slimItems/slimRunes` yazar,
    `hydrateSummary` okur). ALGO_VERSION 8→9 → eski v8 özetler geçersiz; **deploy'da `summaries:flush`**.
    Prewarm zaten vardı (CaptureLp adım 7). Geriye-uyum: eski full kayıtlar da hydrate'ten temiz geçiyor.
-7. **DEPLOY** (sıradaki — kullanıcı zamanı söyleyecek) — DB-opt + tüm ELW + canlı maç + etiketler. Plesk akışı `project_deployment`.
+7. ✅ ~~DEPLOY~~ — YAPILDI (2026-06-26). 27 commit canlıya alındı (DB-opt trim + tüm ELW + canlı maç +
+   etiketler + tema). Akış: GitHub push → Plesk bare repo (`~/git/graphs-elw.git`) push → deploy dizinine
+   `git --git-dir=... --work-tree=... checkout -f master` → `npm run build` + pm2 restart → `summaries:flush`.
+   ⚠️ Plesk OTOMATİK deploy YOK (hook yok) → checkout elle. config:cache YAPMA (key tuzağı). Detay: `project_deployment`.
    Migrate (match_summaries, champion_duo_stats, tracked_players) + scp + `stats:rebuild` + valid key
    ile e2e. **DİKKAT:** profil background+tema BAŞKA CHAT'te yapılıyor (çakışma olabilir, merge dikkat).
 
