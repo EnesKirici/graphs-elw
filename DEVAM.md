@@ -4,32 +4,22 @@
 > `PROJE_DURUM.md` + `LIVE_GAME_PLAN.md` + memory dosyaları (`project_elw_scoring`,
 > `project_live_game`). **Her şey LOCAL, CANLIYA ALINMADI (deploy en son).**
 
-## 🔴 TAM ŞU AN NEREDE KALDIK: Etiket Motoru ADMİN PANELİ
-Etiket motoru (`LabelEngine`) kuruldu + canlı maça BAĞLANDI (renkli etiketler kart önyüzünde
-çıkıyor). **KALAN: admin paneli** (kullanıcı: "HEPSİNİ ADMİN PANELDE KONTROL EDEBİLEYİM —
-bağlama göre ayır, aç/kapa + renk + eşik").
+## 🔴 TAM ŞU AN NEREDE KALDIK: Şampiyon istatistikleri kart ÖN YÜZÜNE
+Etiket motoru admin paneli ✅ BİTTİ (aşağıda). **SIRADAKİ:** canlı maç kartının ÖN yüzünde
+şampiyon istatistiği göster (`championStat` backend'de HAZIR — games/WR/KDA). Kullanıcı:
+"ön yüz = önemli veri, arka yüz = detay". Sadece `LivePlayerCard` ÖN yüzünde göstermek kaldı.
 
-**⚠️ İSİM ÇAKIŞMASI (önemli):** `frontend/src/app/admin/settings/labels/page.js` ZATEN VAR ama o
-**ESKİ perfLabel** sistemini yönetiyor (Durdurulamaz/Lider/Geç Açılan… `performance_labels`
-AdminSetting). Benim etiket motorum FARKLI (canlı maç bağlamsal etiketleri). → Yeni admin sayfası
-AYRI olmalı: **`/admin/settings/live-labels`** (veya `label-engine`). Eskiyi BOZMA.
-
-**Backend HAZIR (bu session'da yapıldı):**
-- `GET /api/v1/admin/labels` → `{catalog, tones, config}` (SettingsController::labels). Katalog =
-  `LabelEngine::CATALOG` (kod), config = `labels_config` AdminSetting (admin ezme).
-- `PUT /api/v1/admin/settings/labels_config` → kaydet (allowed listeye eklendi).
-- `LabelEngine::CATALOG['live']` ~16 etiket: her biri `{name (şablon "OTP {champ}"), tone, thresholds, desc}`.
-- `LabelEngine::TONE_COLOR` = good/bad/info/neutral → hex.
-
-**Frontend KALAN — yeni admin sayfası `/admin/settings/live-labels`:**
-- `fetchAdmin('/labels')` → catalog+config çek. Bağlam sekmeli (şimdilik sadece `live` dolu).
-- Her etiket satırı: aç/kapa toggle + Ad input + Ton/Renk seçici (good/bad/info/neutral ya da özel hex)
-  + Eşik input(lar)ı (thresholds: ör. otp→games, badCs→csPerMin). Desc göster.
-- Kaydet → `putAdmin('/settings/labels_config', {value: config})`. config şekli:
-  `labels_config[context][key] = {enabled, name?, tone?, color?, thresholds?}` (sadece ezilenler).
-- Mevcut `admin/settings/elw-score/page.js` deseni mirror'la (`fetchAdmin`/`putAdmin` `@/lib/adminApi`).
-- Admin settings menüsüne link ekle (eski "labels" = perfLabel'ı "Performans Etiketleri" diye
-  netleştir; yeni = "Canlı Maç Etiketleri").
+## ✅ Etiket Motoru ADMİN PANELİ — BİTTİ (commit'li)
+**Backend** (`GET /api/v1/admin/labels` → `{catalog, tones, config}`; `PUT /admin/settings/labels_config`).
+**Frontend** `frontend/src/app/admin/settings/live-labels/page.js`:
+- Bağlam sekmeli (live=15 etiket dolu; profile/match "yakında" placeholder).
+- Her etiket: aç/kapa toggle + ad input + 4 ton renk seçici (ana satır=basit) + genişletilince
+  özel hex renk + sayısal eşikler (gelişmiş) + "varsayılana dön". `{champ}` şablonu önizleme chip'inde.
+- Kaydet → minimal diff (`buildSaveConfig`: yalnız varsayılandan SAPAN değerler;
+  `labels_config[ctx][key]={enabled?,name?,tone?,color?,thresholds?}`).
+- `AdminSidebar`: eski "Etiketler"→"Performans Etiketleri" (perfLabel, çakışma netlendi),
+  yeni "Canlı Maç Etiketleri" linki eklendi.
+- ⚠️ Eski `/admin/settings/labels` (perfLabel: Durdurulamaz/Lider…) DOKUNULMADI, çalışıyor.
 
 ## ✅ Bu session'da BİTEN (commit'li)
 ### ELW Score — DPM-tarzı KATEGORİLİ, baştan yazıldı (`ElwScoreService`)
@@ -56,9 +46,10 @@ AYRI olmalı: **`/admin/settings/live-labels`** (veya `label-engine`). Eskiyi BO
   tam çekemez (rate-limit) → öncelikli fetch + worker gezdikçe DB dolar. Production key'de tam.
 
 ## ⏳ BEKLEYEN (öncelik sırası)
-1. **Etiket motoru admin paneli** (yukarıda — TAM ŞU AN KALDIĞIMIZ YER).
-2. **Şampiyon istatistikleri kart ÖN YÜZÜNE** — `championStat` (games/WR/KDA) backend'de HAZIR,
-   sadece `LivePlayerCard` ön yüzünde göster (kullanıcı: "ön yüz=önemli veri, arka=detay").
+1. ✅ ~~Etiket motoru admin paneli~~ — BİTTİ (yukarıda).
+2. **Şampiyon istatistikleri kart ÖN YÜZÜNE** (TAM ŞU AN KALDIĞIMIZ YER) — `championStat`
+   (games/WR/KDA) backend'de HAZIR, sadece `LivePlayerCard` ön yüzünde göster (kullanıcı:
+   "ön yüz=önemli veri, arka=detay").
 3. **Duo tespiti** (canlı maç) — Spectator parti vermez; sezgisel: enrichment'taki son maç ID'leri
    ortak olanlar (aynı takımda birlikte oynamış) premade. recentGames[].matchId zaten var → ekstra
    API'siz, aynı takımda eşik üstü ortak maç → grupla (2-2-1, renkli işaret).
