@@ -2,8 +2,13 @@
 
 > **🟡 DURUM (2026-06-24): Faz 1+2 KODLANDI & local test edildi; CANLIYA ALINMADI.**
 > `match_summaries` (summary_json + stat_json) + `ensureSeasonSummaries` + 8 season-stat metodu
-> özetten okur. Ölçüm: özet 12.3KB vs full 24KB → ~%50 (planın %80'i değil). **KALAN: items/runes
-> trim (→~%66) + cleanup cron + deploy + e2e doğrulama.** Triyaj: `PROJE_DURUM.md`.
+> özetten okur. Ölçüm: özet 12.3KB vs full 24KB → ~%50 (planın %80'i değil).
+>
+> **✅ items/runes trim YAPILDI (2026-06-26, local):** `summary_json` items/runes artık SLIM (yalnız id)
+> saklanır; `getRecentMatches` okurken DataDragon'dan hydrate eder (`MatchService::slimItems`/`slimRunes`
+> yazar, `hydrateSummary`/`hydrateItems`/`hydrateRunes` okur — frontend kontratı AYNI). Roundtrip testinde
+> items+runes bloğu 4098B→321B (%92). `ALGO_VERSION` 8→9 → eski v8 özetler geçersiz (deploy'da `summaries:flush`).
+> **worker-prewarm de ZATEN VARDI** (`CaptureLp` adım 7). **KALAN: cleanup cron + deploy + e2e.** Triyaj: `PROJE_DURUM.md`.
 
 ## Amaç
 DB boyutunu %80-90 küçültmek. Şu an her maç için 10 oyuncunun tüm verisi

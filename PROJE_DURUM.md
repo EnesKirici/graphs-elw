@@ -1,6 +1,8 @@
-# Proje Durumu & Gelecek Planı (2026-06-24)
+# Proje Durumu & Gelecek Planı (2026-06-24 · triyaj koddan doğrulandı 2026-06-26)
 
 Tüm planlama MD'lerinin **triyajı** (ne yaptık, ne kadar) + **kalan iş**.
+> 2026-06-26: Aşağıdaki "YAPILDI" iddiaları kodda tek tek doğrulandı (servis/komut/migration/sayfa
+> mevcudiyeti). Tablo gerçeği yansıtıyor; tek güncelleme WORKER_PLAN Aşama 3 satırında (iskelet notu).
 
 > 🟢 CANLI · 🟡 KODLANDI (local, deploy edilmedi) · 🟠 KISMÎ · 🔴 YAPILMADI · 📘 doküman/referans
 
@@ -8,7 +10,7 @@ Tüm planlama MD'lerinin **triyajı** (ne yaptık, ne kadar) + **kalan iş**.
 
 | MD | Durum | ~% | Not |
 |---|---|---|---|
-| **WORKER_PLAN.md** | 🟢 CANLI | 80 | 5-hesap LP worker (lp:capture, cron 10dk, tracked_players, LpTrackingService). Yüksek-elo **crawler** + incremental aggregation kaldı (production key). |
+| **WORKER_PLAN.md** | 🟢 CANLI | 80 | 5-hesap LP worker (lp:capture, cron 10dk `routes/console.php`, tracked_players, LpTrackingService). **Aşama 3 (build/ladder) İSKELETİ yazılmış:** `LadderCrawl`/`CollectMatches`/`BuildAggregationService` + `meta_build_ladder_tables` migration var **ama scheduler'a bağlı değil** → production key bekliyor (aktive + incremental aggregation kaldı). |
 | **META_TIERLIST_PLAN.md** | 🟡 | 85 | Meta gerçek DB'den (champion_stats) + Wilson/**shrinkage** + **kompozit tier** + admin "veri yetersiz" toggle + maç sayısı. `/tier-list` sayfası hâlâ stat'sız (`/champions`) — meta'ya bağlanabilir. |
 | **DB_OPTIMIZATION_PLAN.md** | 🟡 | 85 | `match_summaries` Faz 1+2 kodlandı/test (local). **Items/runes trim** (özet ~%50→%66) + cleanup cron + **deploy** kaldı. |
 | **META_DATA_EXPLAINED.md** | 📘 | — | Doküman: meta nasıl hesaplanıyor (küçük/yanlı örneklem). |

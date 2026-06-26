@@ -3,6 +3,13 @@
 > **✅ DURUM (2026-06-24): 5-hesap LP worker + meta-from-DB YAPILDI & CANLI** (Personal key).
 > `tracked_players` + `lp:capture` (cron 10dk, +prewarm ensureSeasonSummaries) + `LpTrackingService` + scheduler.
 > **KALAN: yüksek-elo crawler + incremental aggregation (tüm TR → production key).** Triyaj: `PROJE_DURUM.md`.
+>
+> **🟠 GÜNCELLEME (2026-06-26): Aşama 3 (build/ladder) KOD İSKELETİ zaten yazılmış** —
+> `app/Console/Commands/LadderCrawl.php` (`ladder:crawl`), `CollectMatches.php` (`matches:collect`),
+> `app/Services/BuildAggregationService.php`, migration `2026_06_04_140000_create_meta_build_ladder_tables.php`.
+> **AMA `routes/console.php`'de yalnız `lp:capture` zamanlı** → ladder/collect henüz scheduler'a bağlı DEĞİL
+> (aktive + incremental dedup + frontend bağlama production key sonrası). Aşağıdaki "production key sonrası
+> yazılacak" ifadeleri artık "yazıldı, aktive edilmedi" olarak okunmalı.
 
 ## Worker Nedir?
 Arka planda sürekli çalışan PHP process. Kullanıcıdan bağımsız olarak oyuncu verilerini günceller.

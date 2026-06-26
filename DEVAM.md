@@ -1,13 +1,16 @@
-# DEVAM — Sonraki Session İçin Kaldığımız Yer (2026-06-25)
+# DEVAM — Sonraki Session İçin Kaldığımız Yer (2026-06-25; triyaj+ayıklama 2026-06-26)
 
 > Bu dosya bir SONRAKİ session'ın kaldığı yerden devam etmesi için. Tüm proje durumu için
 > `PROJE_DURUM.md` + `LIVE_GAME_PLAN.md` + memory dosyaları (`project_elw_scoring`,
 > `project_live_game`). **Her şey LOCAL, CANLIYA ALINMADI (deploy en son).**
 
-## 🔴 TAM ŞU AN NEREDE KALDIK: DB optimizasyon (BEKLEYEN #6) veya DEPLOY
-Etiket admin paneli ✅ KDA ✅ kart redizayn ✅ premade ✅ priority-deferral ✅ görüş/OTP-sezon ✅ BİTTİ.
-**SIRADAKİ seçenek:** #6 DB-opt (match_summaries items/runes trim + worker-prewarm; local'de ölçülebilir)
-**veya** artık birikmiş onca iş için **deploy hazırlığı** (kullanıcıyla konuş). Kullanıcı önceliği soracak.
+## 🔴 TAM ŞU AN NEREDE KALDIK: DEPLOY (kullanıcı doğru zamanı söyleyecek)
+Etiket admin paneli ✅ KDA ✅ kart redizayn ✅ premade ✅ priority-deferral ✅ görüş/OTP-sezon ✅
+**DB-opt items/runes trim ✅ (2026-06-26):** summary_json items/runes SLIM (sadece id) saklanır, okurken
+DataDragon'dan hydrate (`MatchService::hydrateSummary`). Test: items+runes bloğu %92 küçüldü, ALGO_VERSION 9.
+**worker-prewarm ✅ (zaten vardı:** CaptureLp adım 7 `ensureSeasonSummaries`). Hepsi BİTTİ.
+**SIRADAKİ:** DEPLOY (#7) — kullanıcı zamanı söyleyecek. ⚠️ Deploy'da `summaries:flush` ŞART (ALGO_VERSION 9,
+eski v8 özetler geçersiz). Opsiyonel ufak iş: yenile-butonu cooldown (RefreshButton var, server-side rate-limit yok).
 
 ## ✅ Etiket motoru iyileştirmesi (görüş + sezon-bazlı) — BİTTİ (commit'li)
 - **OTP** artık "maçlarının %X'i bu şampiyon" (`share`, vars. 70) + `minGames` guard (1/1=%100 önler).
@@ -25,30 +28,22 @@ oyuncular artık KAYDEDİLMİYOR; öncelik sırasıyla **3 retry turu** (15sn ar
 başarılı olunca backend DB'ye de yazar. Mock erken döndüğü için etkilenmez. Gerçek test sunucuda.
 
 ## ✅ Canlı kart redizayn + premade — BİTTİ (commit'li)
+> (Eskiden bu bölüm DEVAM.md'de İKİ KEZ vardı ve etkileşim notu çelişiyordu; 2026-06-26'da
+> koddan teyit edilip TEK doğru bölümde birleştirildi.)
 - **Premade (duo/trio) tespiti** (`LiveGameBoard.premadeGroups`): aynı takımda ORTAK son maç ID'leri
   (`recentGames[].matchId`, eşik=2) → union-find gruplar. Ekstra API yok. Görsel: kart çevresine
-  renkli iç-çerçeve (ring) + sol üst "Duo/Trio" rozeti (grup başına renk). Fixture'da 2-2-1 örnek.
-- **Kart etkileşim (NİHAİ):** tek tık → o kartı çevirir; **VS butonu** (takımlar arası) → flipSignal
-  yayınlar, tüm kartlar aynı hedefe snap (XOR/çift-tık KALDIRILDI — sürekli sorun çıkardı).
-- **Takım renkleri:** API `searchedTeamId` (100=Mavi/200=Kırmızı) → "Senin/Rakip Takım · Mavi/Kırmızı".
-- **Seri:** 4+ seride parçacıklı alev/buz (ikon yanıp sönmez). "Gününde" koyu cam pill.
+  renkli iç-çerçeve (ring) + sol üst "Duo/Trio" dolu renkli pill (grup başına renk). Fixture'da 2-2-1.
 - **Kart ön yüz redizayn:** üst istatistik KUTUSU kaldırıldı (splash'i kapatıyordu) → kutusuz
   gölgeli metin. Orta satır ikonları (spell/rol/rün) büyütüldü. Summoner adı **tıklanınca yeni
-  sekmede profil** (`Link target=_blank` + stopPropagation).
-
-## ✅ Canlı kart redizayn + premade — BİTTİ (commit'li)
-- **Premade (duo/trio) tespiti** (`LiveGameBoard.premadeGroups`): aynı takımda ORTAK son maç ID'leri
-  (`recentGames[].matchId`, eşik=2) → union-find gruplar. Ekstra API yok. Görsel: kart çevresine
-  renkli iç-çerçeve (ring) + sol üst "Duo/Trio" rozeti (grup başına renk). Fixture'da 2-2-1 örnek.
-- **Kart ön yüz redizayn:** üst istatistik KUTUSU kaldırıldı (splash'i kapatıyordu) → kutusuz
-  gölgeli metin. Orta satır ikonları (spell/rol/rün) büyütüldü. Summoner adı **tıklanınca yeni
-  sekmede profil** (`Link target=_blank` + stopPropagation).
+  sekmede profil** (`Link target=_blank` + stopPropagation). SEN rozeti + K/D/A kırılımı kaldırıldı.
 - **Şampiyon KDA** ön yüzde (maç/WR altında, ölüm kırmızı, oran amber).
-- **Seri animasyonu:** yalnız **4+ seride** — ikon yanıp sönmez, **parçacıklar** ikon
-  üzerindeki noktalardan doğup yükselir (alev kıvılcımı/buz tozu; `globals.css` .streak-fx/.ember/.frost).
-- **Kart etkileşim/cila (son tur):** çift-tık → TÜM kartları çevir (localFlip XOR flipAll); takımlar
-  arası **VS ayracı**; Duo rozeti dolu renkli pill; "Gününde" modern degrade; SEN rozeti + K/D/A
-  kırılımı kaldırıldı; sert rank border yerine **çok minimal** rank renginde iç ışıma (`faceShadow`).
+- **Kart etkileşim (NİHAİ, kodla teyitli):** **tek tık → o kartı çevirir** (`LivePlayerCard` setFlipped);
+  ortadaki **VS butonu → flipSignal** yayınlar, tüm kartlar aynı hedefe snap. Çift-tık/XOR KALDIRILDI
+  (sürekli sorun çıkarıyordu; eski "çift-tık tümünü çevir" notu GEÇERSİZ).
+- **Takım renkleri:** API `searchedTeamId` (100=Mavi/200=Kırmızı) → "Senin/Rakip Takım · Mavi/Kırmızı".
+- **Seri animasyonu:** yalnız **4+ seride** — ikon yanıp sönmez, **parçacıklar** ikon üzerindeki
+  noktalardan doğup yükselir (alev kıvılcımı/buz tozu; `globals.css` .streak-fx/.ember/.frost). "Gününde" koyu cam pill.
+- **Cila:** sert rank border yerine **çok minimal** rank renginde iç ışıma (`faceShadow`).
 
 ## ⚠️ DEV SERVER / OOM NOTU (önemli — bu session'da yaşandı)
 `live-game?mock=1` (en ağır SSR sayfası: 10 kart + radar + splash) **OOM ile 500** verebiliyor:
@@ -100,8 +95,11 @@ build'de (derlenmiş, worker yok) bu sorun OLMAZ.
 3. ✅ ~~Duo (premade) tespiti + kart redizayn~~ — BİTTİ (yukarıda).
 4. ✅ ~~Frontend priority-deferral~~ — BİTTİ (yukarıda).
 5. ✅ ~~Görüş etiketleri + OTP/sevdalısı sezon-bazlı~~ — BİTTİ (yukarıda).
-6. **DB-opt items/runes trim** + **worker-prewarm** (lp:capture'a ensureSeasonSummaries — kısmen?).
-7. **DEPLOY** (en son) — DB-opt + tüm ELW + canlı maç + etiketler. Plesk akışı `project_deployment`.
+6. ✅ ~~DB-opt items/runes trim + worker-prewarm~~ — BİTTİ (2026-06-26). Trim: summary_json items/runes
+   SLIM (sadece id) saklanır, okurken DataDragon'dan hydrate (`MatchService::slimItems/slimRunes` yazar,
+   `hydrateSummary` okur). ALGO_VERSION 8→9 → eski v8 özetler geçersiz; **deploy'da `summaries:flush`**.
+   Prewarm zaten vardı (CaptureLp adım 7). Geriye-uyum: eski full kayıtlar da hydrate'ten temiz geçiyor.
+7. **DEPLOY** (sıradaki — kullanıcı zamanı söyleyecek) — DB-opt + tüm ELW + canlı maç + etiketler. Plesk akışı `project_deployment`.
    Migrate (match_summaries, champion_duo_stats, tracked_players) + scp + `stats:rebuild` + valid key
    ile e2e. **DİKKAT:** profil background+tema BAŞKA CHAT'te yapılıyor (çakışma olabilir, merge dikkat).
 
