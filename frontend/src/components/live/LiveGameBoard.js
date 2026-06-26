@@ -58,7 +58,7 @@ function premadeGroups(players, enrichments, threshold = 2) {
   return Object.values(groups).filter((g) => g.length >= 2);
 }
 
-function TeamColumn({ title, side, players, enrichments, loadingSet, isEnemy, premadeMap, flipAll, onFlipAll }) {
+function TeamColumn({ title, side, players, enrichments, loadingSet, isEnemy, premadeMap, flipSignal }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-2.5">
@@ -76,8 +76,7 @@ function TeamColumn({ title, side, players, enrichments, loadingSet, isEnemy, pr
             loading={!enrichments[p.puuid] && !p.isBot && loadingSet}
             isEnemy={isEnemy}
             premade={premadeMap?.[p.puuid] || null}
-            flipAll={flipAll}
-            onFlipAll={onFlipAll}
+            flipSignal={flipSignal}
           />
         ))}
       </div>
@@ -113,9 +112,10 @@ export default function LiveGameBoard({ game }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.gameId, enrichments]);
 
-  // Çift tıkla TÜM kartları çevir (her kart localFlip XOR flipAll ile gösterir).
-  const [flipAll, setFlipAll] = useState(false);
-  const toggleFlipAll = () => setFlipAll((f) => !f);
+  // TÜM kartları çevirme SİNYALİ — VS butonu / çift tık tetikler. Her sinyalde v artar,
+  // target alternatif olur; kartlar bu sinyali görünce hedefe SNAP eder (XOR yok → tuhaflık yok).
+  const [flipSignal, setFlipSignal] = useState({ v: 0, target: false });
+  const toggleFlipAll = () => setFlipSignal((s) => ({ v: s.v + 1, target: !s.target }));
 
   useEffect(() => {
     if (game.mock) return;
@@ -187,8 +187,7 @@ export default function LiveGameBoard({ game }) {
           loadingSet={loading}
           isEnemy={false}
           premadeMap={premadeMap}
-          flipAll={flipAll}
-          onFlipAll={toggleFlipAll}
+          flipSignal={flipSignal}
         />
 
         {/* Takımlar arası ayraç — taraf renkleriyle (Mavi/Kırmızı); ortadaki buton TÜM kartları çevirir */}
@@ -218,13 +217,12 @@ export default function LiveGameBoard({ game }) {
           loadingSet={loading}
           isEnemy={true}
           premadeMap={premadeMap}
-          flipAll={flipAll}
-          onFlipAll={toggleFlipAll}
+          flipSignal={flipSignal}
         />
       </div>
 
       <p className="mt-6 text-center text-[11px] text-gray-600">
-        Karta tıkla → build, rün ve detaylar. <span className="text-gray-500">Ortadaki <span className="text-gray-400 font-semibold">VS</span> butonu (veya bir karta çift tık) → tüm kartları çevirir.</span> Veriler oyuncunun son maçlarından türetilir.
+        Karta tıkla → build, rün ve detaylar. <span className="text-gray-500">Ortadaki <span className="text-gray-400 font-semibold">VS</span> butonu → tüm kartları çevirir.</span> Veriler oyuncunun son maçlarından türetilir.
       </p>
     </div>
   );

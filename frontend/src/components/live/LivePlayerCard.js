@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Flame, Snowflake, Users } from "lucide-react";
 import { miniCrestUrl, tierLabel, tierColor } from "@/components/summoner/pro/rankUtils";
@@ -215,26 +215,19 @@ function PremadeChip({ premade }) {
   );
 }
 
-export default function LivePlayerCard({ participant: p, enrichment, loading, isEnemy, premade, flipAll, onFlipAll }) {
-  const [localFlip, setLocalFlip] = useState(false);
-  const lastClickRef = useRef(0);
-  // flipped = localFlip XOR flipAll → flipAll değişince herkes döner.
-  const flipped = localFlip !== !!flipAll;
-  // Tek tık ANINDA bu kartı çevirir (gecikmesiz). ÇİFT TIK = tüm kartları çevir.
-  // Çift tık algısı çok TOLERANSLI: tarayıcının kendi sayacı (e.detail≥2, OS hızı) VEYA
-  // geniş 900ms zaman penceresi — ikisinden biri yakalarsa yeter (yavaş tıklayan da yapabilsin).
-  // İlk tık'ın bireysel flip'i 2. toggle ile geri alınır → net sadece flipAll (wobble yok, batch).
-  function handleCardClick(e) {
-    const now = Date.now();
-    setLocalFlip((f) => !f);
-    const isDouble = e.detail >= 2 || (lastClickRef.current > 0 && now - lastClickRef.current < 900);
-    if (isDouble) {
-      lastClickRef.current = 0;
-      onFlipAll?.();
-    } else {
-      lastClickRef.current = now;
+export default function LivePlayerCard({ participant: p, enrichment, loading, isEnemy, premade, flipSignal }) {
+  // Bu kartın KENDİ flip durumu. Tek tık çevirir; "Tümünü çevir" yalnızca VS butonuyla yapılır.
+  const [flipped, setFlipped] = useState(false);
+  const lastSignalRef = useRef(flipSignal?.v ?? 0);
+
+  // VS butonu sinyali (flipSignal) geldiğinde bu kart hedefe snap eder — hepsi aynı target'a.
+  useEffect(() => {
+    const v = flipSignal?.v ?? 0;
+    if (v !== lastSignalRef.current) {
+      lastSignalRef.current = v;
+      setFlipped(!!flipSignal?.target);
     }
-  }
+  }, [flipSignal]);
 
   const solo = p.rank?.solo;
   const stat = enrichment?.championStat;
@@ -275,7 +268,7 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
   return (
     <div style={{ perspective: 1400 }} className="h-[480px]">
       <div
-        onClick={handleCardClick}
+        onClick={() => setFlipped((f) => !f)}
         className="relative w-full h-full cursor-pointer rounded-xl"
         style={{ transformStyle: "preserve-3d", transition: "transform 0.4s", transform: flipped ? "rotateY(180deg)" : "none" }}
       >
