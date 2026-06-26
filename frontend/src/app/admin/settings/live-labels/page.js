@@ -20,12 +20,15 @@ const TONES = [
 
 // Eşik anahtarı → kullanıcı dostu etiket + yardım.
 const TH_META = {
-  games: { label: "Maç sayısı", help: "Eşik için gereken maç adedi" },
-  wr: { label: "WR %", help: "Kazanma oranı yüzdesi (0-100)" },
-  streak: { label: "Seri", help: "Üst üste galibiyet/mağlubiyet sayısı" },
-  csPerMin: { label: "CS/dk", help: "Dakika başına minyon eşiği" },
-  deaths: { label: "Ölüm", help: "Ortalama ölüm eşiği" },
-  kills: { label: "Kill", help: "Ortalama kill eşiği" },
+  share: { label: "Oran %", help: "Tüm sezon maçlarının yüzde kaçı bu şampiyon (örn. 70 = %70'i)" },
+  minGames: { label: "Min maç", help: "OTP için: bu şampiyonda sezon en az kaç maç (1/1=%100 yanılgısını önler)" },
+  games: { label: "Sezon maç", help: "Bu şampiyonda bu sezon oynanan maç sayısı eşiği (DB)" },
+  wr: { label: "WR %", help: "Bu şampiyonda sezon kazanma oranı (0-100)" },
+  perMin: { label: "Vizyon/dk", help: "Dakika başına vizyon skoru eşiği (genel, tüm roller)" },
+  streak: { label: "Seri", help: "Üst üste galibiyet/mağlubiyet sayısı (son maçlar)" },
+  csPerMin: { label: "CS/dk", help: "Dakika başına minyon eşiği (son maçlar)" },
+  deaths: { label: "Ölüm", help: "Son maçlarda ortalama ölüm eşiği" },
+  kills: { label: "Kill", help: "Son maçlarda ortalama kill eşiği" },
   elw: { label: "ELW", help: "Son maç ELW ortalama eşiği" },
 };
 

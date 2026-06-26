@@ -226,7 +226,7 @@ class LiveGameService
      */
     public function getPlayerEnrichment(string $puuid, ?string $championName = null, ?string $role = null, array $enemyChamps = [], bool $autofilled = false): array
     {
-        $base = Cache::remember("live:player:v2:{$puuid}", 300, function () use ($puuid) {
+        $base = Cache::remember("live:player:v3:{$puuid}", 300, function () use ($puuid) {
             try {
                 // DB-first; çoğu maç DB'den döner. RATE-LIMIT: 10 maç ile sınırlı —
                 // sezon sorgusu (getSeasonChampionStats) BİLİNÇLİ kullanılmıyor; o,
@@ -311,6 +311,19 @@ class LiveGameService
             $avgCsPerMin = round(array_sum(array_map(fn($m) => $m['csPerMin'] ?? 0, $matches)) / $n, 1);
             $avgDeaths   = round(array_sum(array_map(fn($m) => $m['deaths'] ?? 0, $matches)) / $n, 1);
             $avgKills    = round(array_sum(array_map(fn($m) => $m['kills'] ?? 0, $matches)) / $n, 1);
+            $avgVisionPerMin = round(array_sum(array_map(fn($m) => $m['challenges']['visionScorePerMin'] ?? 0, $matches)) / $n, 2);
+
+            // Sezon şampiyon istatistikleri — profildeki "Şampiyon Performansı" ile aynı kaynak
+            // (DB'deki match_summaries, cache'li). EKSTRA API YOK. OTP %'si, "sevdalısı", iyi/kötü için.
+            $seasonChampStats = []; // name => ['games'=>, 'wr'=>]
+            $seasonTotalGames = 0;
+            try {
+                foreach (($this->match->getSeasonChampionStats($puuid)['all'] ?? []) as $sc) {
+                    $seasonChampStats[$sc['championName']] = ['games' => $sc['games'], 'wr' => $sc['winRate']];
+                    $seasonTotalGames += $sc['games'];
+                }
+            } catch (\Throwable $e) { /* DB'de maç yoksa boş kalır → etiket çıkmaz */ }
+
             $mainChamp = null;
             $maxG = 0;
             foreach ($championAgg as $cn => $a) {
@@ -330,6 +343,9 @@ class LiveGameService
                 'avgCsPerMin'     => $avgCsPerMin,
                 'avgDeaths'       => $avgDeaths,
                 'avgKills'        => $avgKills,
+                'avgVisionPerMin'  => $avgVisionPerMin,
+                'seasonChampStats' => $seasonChampStats,
+                'seasonTotalGames' => $seasonTotalGames,
                 'mainChamp'       => $mainChamp,
                 'streak'          => $streak,
                 'recentStats'     => [
@@ -397,10 +413,19 @@ class LiveGameService
             return [];
         }
         $agg = $champ ? ($base['championAgg'][$champ] ?? null) : null;
+        // Sezon (DB) bazlı: bu şampiyonda toplam oyun + WR + tüm maçlar içindeki payı.
+        $seasonStat = $champ ? ($base['seasonChampStats'][$champ] ?? null) : null;
+        $seasonGames = $seasonStat['games'] ?? 0;
+        $seasonWr    = $seasonStat['wr'] ?? 0;
+        $seasonTotal = $base['seasonTotalGames'] ?? 0;
         $data = [
             'liveChamp'      => $champ,
-            'liveChampGames' => $agg['games'] ?? 0,
+            'liveChampGames' => $agg['games'] ?? 0,                                   // son maçlardaki sayı (recent)
             'liveChampWr'    => ($agg && ($agg['games'] ?? 0) > 0) ? round($agg['wins'] / $agg['games'] * 100) : 0,
+            'liveChampSeasonGames' => $seasonGames,                                   // bu sezon bu şampiyonda toplam (DB)
+            'liveChampSeasonWr'    => $seasonWr,                                      // bu sezon bu şampiyonda WR
+            'liveChampShare' => $seasonTotal > 0 ? round($seasonGames / $seasonTotal * 100) : 0, // tüm maçlarının %'si
+            'avgVisionPerMin' => $base['avgVisionPerMin'] ?? 0,
             'mainChamp'      => $base['mainChamp'] ?? null,
             'enemyChamps'    => $enemyChamps,
             'role'           => $role,

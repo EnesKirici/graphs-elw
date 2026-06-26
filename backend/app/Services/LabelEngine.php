@@ -29,21 +29,23 @@ class LabelEngine
      */
     public const CATALOG = [
         'live' => [
-            'otp'         => ['name' => 'OTP {champ}',        'tone' => 'info', 'thresholds' => ['games' => 4],            'desc' => 'Son maçların çoğu bu şampiyon'],
-            'champLover'  => ['name' => '{champ} sevdalısı',  'tone' => 'info', 'thresholds' => ['games' => 2],            'desc' => 'Bu şampiyonu seviyor (2-3 maç)'],
-            'champNew'    => ['name' => "{champ}'da yeni",     'tone' => 'bad',  'thresholds' => ['games' => 1],            'desc' => 'Bu şampiyonda az/hiç maç'],
-            'goodChamp'   => ['name' => 'İyi {champ}',         'tone' => 'good', 'thresholds' => ['games' => 3, 'wr' => 60], 'desc' => 'Bu şampiyonda yüksek WR'],
-            'badChamp'    => ['name' => 'Kötü {champ}',        'tone' => 'bad',  'thresholds' => ['games' => 3, 'wr' => 35], 'desc' => 'Bu şampiyonda düşük WR'],
-            'mainInEnemy' => ['name' => "Main'i Karşıda",      'tone' => 'bad',  'thresholds' => [],                        'desc' => 'En çok oynadığı şampiyon düşman takımda'],
-            'winStreak'   => ['name' => 'Galibiyet Serisi',   'tone' => 'good', 'thresholds' => ['streak' => 3],          'desc' => 'Üst üste galibiyet'],
-            'coldStreak'  => ['name' => 'Mağlubiyet Serisi',  'tone' => 'bad',  'thresholds' => ['streak' => 3],          'desc' => 'Üst üste mağlubiyet'],
-            'badCs'       => ['name' => 'Zayıf Farmcı',       'tone' => 'bad',  'thresholds' => ['csPerMin' => 5.0],      'desc' => 'Düşük CS/dk (destek hariç)'],
-            'goodCs'      => ['name' => 'İyi Farmcı',         'tone' => 'good', 'thresholds' => ['csPerMin' => 8.0],      'desc' => 'Yüksek CS/dk (destek hariç)'],
-            'autofill'    => ['name' => 'Autofill',           'tone' => 'info', 'thresholds' => [],                        'desc' => 'Ana rolünde değil'],
-            'feeder'      => ['name' => 'Feed Eğilimi',       'tone' => 'bad',  'thresholds' => ['deaths' => 8.0],        'desc' => 'Son maçlarda yüksek ölüm'],
-            'aggressive'  => ['name' => 'Agresif',            'tone' => 'info', 'thresholds' => ['kills' => 8.0],         'desc' => 'Son maçlarda yüksek kill'],
-            'inForm'      => ['name' => 'Formda',             'tone' => 'good', 'thresholds' => ['elw' => 7.0],           'desc' => 'Son maç ELW ortalaması yüksek'],
-            'outOfForm'   => ['name' => 'Formsuz',            'tone' => 'bad',  'thresholds' => ['elw' => 4.0],           'desc' => 'Son maç ELW ortalaması düşük'],
+            'otp'         => ['name' => 'OTP {champ}',        'tone' => 'info', 'thresholds' => ['share' => 70, 'minGames' => 4], 'desc' => 'Maçlarının çoğu bu şampiyon — Oran (%) eşiği ve üstü, en az Min maç. Sezon verisi (DB).'],
+            'champLover'  => ['name' => '{champ} sevdalısı',  'tone' => 'info', 'thresholds' => ['games' => 50],          'desc' => 'Bu şampiyonu bu sezon ÇOK oynamış — eşik maç ve üstü. Sezon verisi (DB).'],
+            'champNew'    => ['name' => "{champ}'da yeni",     'tone' => 'bad',  'thresholds' => ['games' => 2],           'desc' => 'Bu şampiyonda bu sezon az/hiç maç — eşik ve altı. Sezon verisi (DB).'],
+            'goodChamp'   => ['name' => 'İyi {champ}',         'tone' => 'good', 'thresholds' => ['games' => 5, 'wr' => 58], 'desc' => 'Bu şampiyonda sezon WR yüksek — en az X maç + WR eşiği. (DB)'],
+            'badChamp'    => ['name' => 'Kötü {champ}',        'tone' => 'bad',  'thresholds' => ['games' => 5, 'wr' => 42], 'desc' => 'Bu şampiyonda sezon WR düşük — en az X maç + WR eşiği altı. (DB)'],
+            'highVision'  => ['name' => 'Yüksek görüş',        'tone' => 'good', 'thresholds' => ['perMin' => 1.4],       'desc' => 'Yüksek vizyon/dk — tüm roller (genel). Son maçlar.'],
+            'lowVision'   => ['name' => 'Düşük görüş',         'tone' => 'bad',  'thresholds' => ['perMin' => 0.4],        'desc' => 'Düşük vizyon/dk — tüm roller (genel). Son maçlar.'],
+            'mainInEnemy' => ['name' => "Main'i Karşıda",      'tone' => 'bad',  'thresholds' => [],                        'desc' => 'En çok oynadığı şampiyon düşman takımda.'],
+            'winStreak'   => ['name' => 'Galibiyet Serisi',   'tone' => 'good', 'thresholds' => ['streak' => 3],          'desc' => 'Son maçlarda üst üste galibiyet — eşik ve üstü.'],
+            'coldStreak'  => ['name' => 'Mağlubiyet Serisi',  'tone' => 'bad',  'thresholds' => ['streak' => 3],          'desc' => 'Son maçlarda üst üste mağlubiyet — eşik ve üstü.'],
+            'badCs'       => ['name' => 'Zayıf Farmcı',       'tone' => 'bad',  'thresholds' => ['csPerMin' => 5.0],      'desc' => 'Düşük CS/dk — son maçlar (destek hariç).'],
+            'goodCs'      => ['name' => 'İyi Farmcı',         'tone' => 'good', 'thresholds' => ['csPerMin' => 8.0],      'desc' => 'Yüksek CS/dk — son maçlar (destek hariç).'],
+            'autofill'    => ['name' => 'Autofill',           'tone' => 'info', 'thresholds' => [],                        'desc' => 'Ana rolünde oynamıyor (rol tahmini).'],
+            'feeder'      => ['name' => 'Feed Eğilimi',       'tone' => 'bad',  'thresholds' => ['deaths' => 8.0],        'desc' => 'Son maçlarda ortalama yüksek ölüm — eşik ve üstü.'],
+            'aggressive'  => ['name' => 'Agresif',            'tone' => 'info', 'thresholds' => ['kills' => 8.0],         'desc' => 'Son maçlarda ortalama yüksek kill — eşik ve üstü.'],
+            'inForm'      => ['name' => 'Formda',             'tone' => 'good', 'thresholds' => ['elw' => 7.0],           'desc' => 'Son maç ELW ortalaması yüksek — eşik ve üstü.'],
+            'outOfForm'   => ['name' => 'Formsuz',            'tone' => 'bad',  'thresholds' => ['elw' => 4.0],           'desc' => 'Son maç ELW ortalaması düşük — eşik ve altı.'],
         ],
         // Profil + maç geçmişi katalogları ileride (maç rozetleri zaten BadgeService'te).
         'profile' => [],
@@ -92,16 +94,24 @@ class LabelEngine
     private function check(string $key, array $d, array $th): bool|array
     {
         $champ = $d['liveChamp'] ?? null;
-        $champGames = $d['liveChampGames'] ?? 0;
-        $champWr = $d['liveChampWr'] ?? 0; // 0-100
+        $seasonGames = $d['liveChampSeasonGames'] ?? 0;  // bu sezon bu şampiyonda toplam (DB)
+        $seasonWr    = $d['liveChampSeasonWr'] ?? 0;      // bu sezon bu şampiyonda WR (0-100)
+        $champShare  = $d['liveChampShare'] ?? 0;         // tüm sezon maçlarının % kaçı bu şampiyon
+        $vision      = $d['avgVisionPerMin'] ?? 0;        // son maçlar ortalama vizyon/dk
         $isSupport = ($d['role'] ?? '') === 'UTILITY';
 
         return match ($key) {
-            'otp'         => $champ && $champGames >= ($th['games'] ?? 4) ? ['{champ}' => $champ] : false,
-            'champLover'  => $champ && $champGames >= ($th['games'] ?? 2) && $champGames < 4 ? ['{champ}' => $champ] : false,
-            'champNew'    => $champ && $champGames <= ($th['games'] ?? 1) ? ['{champ}' => $champ] : false,
-            'goodChamp'   => $champ && $champGames >= ($th['games'] ?? 3) && $champWr >= ($th['wr'] ?? 60) ? ['{champ}' => $champ] : false,
-            'badChamp'    => $champ && $champGames >= ($th['games'] ?? 3) && $champWr <= ($th['wr'] ?? 35) ? ['{champ}' => $champ] : false,
+            // OTP: maçlarının çoğu (Oran %) bu şampiyon + en az Min maç (1/1=%100 yanılgısını önler).
+            'otp'         => $champ && $champShare >= ($th['share'] ?? 70) && $seasonGames >= ($th['minGames'] ?? 4) ? ['{champ}' => $champ] : false,
+            // Sevdalısı: bu şampiyonu bu sezon ÇOK oynamış (yüksek toplam).
+            'champLover'  => $champ && $seasonGames >= ($th['games'] ?? 50) ? ['{champ}' => $champ] : false,
+            // Yeni: bu şampiyonda bu sezon az/hiç maç.
+            'champNew'    => $champ && $seasonGames <= ($th['games'] ?? 2) ? ['{champ}' => $champ] : false,
+            'goodChamp'   => $champ && $seasonGames >= ($th['games'] ?? 5) && $seasonWr >= ($th['wr'] ?? 58) ? ['{champ}' => $champ] : false,
+            'badChamp'    => $champ && $seasonGames >= ($th['games'] ?? 5) && $seasonWr <= ($th['wr'] ?? 42) ? ['{champ}' => $champ] : false,
+            // Görüş etiketleri — GENEL (tüm roller). Vizyon verisi yoksa (0) etiket çıkmaz.
+            'highVision'  => $vision >= ($th['perMin'] ?? 1.4),
+            'lowVision'   => $vision > 0 && $vision < ($th['perMin'] ?? 0.4),
             'mainInEnemy' => !empty($d['mainChamp']) && in_array($d['mainChamp'], $d['enemyChamps'] ?? [], true) ? ['{champ}' => $d['mainChamp']] : false,
             'winStreak'   => ($d['streak'] ?? 0) >= ($th['streak'] ?? 3),
             'coldStreak'  => ($d['streak'] ?? 0) <= -($th['streak'] ?? 3),
