@@ -4,10 +4,29 @@
 > `PROJE_DURUM.md` + `LIVE_GAME_PLAN.md` + memory dosyaları (`project_elw_scoring`,
 > `project_live_game`). **Her şey LOCAL, CANLIYA ALINMADI (deploy en son).**
 
-## 🔴 TAM ŞU AN NEREDE KALDIK: Frontend priority-deferral (BEKLEYEN #4)
-Etiket admin paneli ✅ + şampiyon-stat KDA ✅ + kart redizayn ✅ + premade tespiti ✅ BİTTİ (aşağıda).
-**SIRADAKİ:** 6+ öncelikli oyuncuları (fetchPriority) limit yenilenince/retry ile sonra çek
-(şu an `runThrottled` hepsini sırayla çekiyor; rate-limit'te düşenler tekrar denenmiyor).
+## 🔴 TAM ŞU AN NEREDE KALDIK: Vizyon-temelli etiketler (BEKLEYEN #5)
+Etiket admin paneli ✅ + KDA ✅ + kart redizayn ✅ + premade ✅ + priority-deferral ✅ BİTTİ.
+**SIRADAKİ:** Vizyon-temelli canlı etiketler ("Yürüyen Totem" = yüksek vizyon/dk, "Totem Unutan"
+= düşük). Sorun: maç özetinde/recentGames'te vizyon-skoru/dk verisi YOK → önce backend'in
+enrichment aggregate'lerine (LiveGameService.getPlayerEnrichment / base) avgVisionPerMin eklenmeli,
+sonra LabelEngine CATALOG['live']'a 2 etiket (admin'den eşik). Destek/non-destek ayrımı gerekebilir.
+
+## ✅ Priority-deferral — BİTTİ (commit'li)
+`LiveGameBoard` fetch: rate-limit'e takılıp düşen (backend `error:'rate_limited'/'failed'` veya null)
+oyuncular artık KAYDEDİLMİYOR; öncelik sırasıyla **3 retry turu** (15sn arayla) tekrar deneniyor →
+başarılı olunca backend DB'ye de yazar. Mock erken döndüğü için etkilenmez. Gerçek test sunucuda.
+
+## ✅ Canlı kart redizayn + premade — BİTTİ (commit'li)
+- **Premade (duo/trio) tespiti** (`LiveGameBoard.premadeGroups`): aynı takımda ORTAK son maç ID'leri
+  (`recentGames[].matchId`, eşik=2) → union-find gruplar. Ekstra API yok. Görsel: kart çevresine
+  renkli iç-çerçeve (ring) + sol üst "Duo/Trio" rozeti (grup başına renk). Fixture'da 2-2-1 örnek.
+- **Kart etkileşim (NİHAİ):** tek tık → o kartı çevirir; **VS butonu** (takımlar arası) → flipSignal
+  yayınlar, tüm kartlar aynı hedefe snap (XOR/çift-tık KALDIRILDI — sürekli sorun çıkardı).
+- **Takım renkleri:** API `searchedTeamId` (100=Mavi/200=Kırmızı) → "Senin/Rakip Takım · Mavi/Kırmızı".
+- **Seri:** 4+ seride parçacıklı alev/buz (ikon yanıp sönmez). "Gününde" koyu cam pill.
+- **Kart ön yüz redizayn:** üst istatistik KUTUSU kaldırıldı (splash'i kapatıyordu) → kutusuz
+  gölgeli metin. Orta satır ikonları (spell/rol/rün) büyütüldü. Summoner adı **tıklanınca yeni
+  sekmede profil** (`Link target=_blank` + stopPropagation).
 
 ## ✅ Canlı kart redizayn + premade — BİTTİ (commit'li)
 - **Premade (duo/trio) tespiti** (`LiveGameBoard.premadeGroups`): aynı takımda ORTAK son maç ID'leri
@@ -71,8 +90,8 @@ build'de (derlenmiş, worker yok) bu sorun OLMAZ.
 1. ✅ ~~Etiket motoru admin paneli~~ — BİTTİ (yukarıda).
 2. ✅ ~~Şampiyon istatistikleri kart ÖN YÜZÜNE (KDA)~~ — BİTTİ (yukarıda).
 3. ✅ ~~Duo (premade) tespiti + kart redizayn~~ — BİTTİ (yukarıda).
-4. **Frontend priority-deferral** (TAM ŞU AN KALDIĞIMIZ YER): 6+ öncelikli oyuncular limit yenilenince/retry ile sonra çek.
-5. **Vizyon-temelli etiketler** (Yürüyen Totem/Totem Unutan): maç özetinde vizyon/dk yok → eklenince.
+4. ✅ ~~Frontend priority-deferral~~ — BİTTİ (yukarıda).
+5. **Vizyon-temelli etiketler** (Yürüyen Totem/Totem Unutan) (TAM ŞU AN KALDIĞIMIZ YER): maç özetinde vizyon/dk yok → backend'e ekle, sonra etiket.
 6. **DB-opt items/runes trim** + **worker-prewarm** (lp:capture'a ensureSeasonSummaries — kısmen?).
 7. **DEPLOY** (en son) — DB-opt + tüm ELW + canlı maç + etiketler. Plesk akışı `project_deployment`.
    Migrate (match_summaries, champion_duo_stats, tracked_players) + scp + `stats:rebuild` + valid key
