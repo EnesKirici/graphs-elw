@@ -123,32 +123,61 @@ export default function LiveGameBoard({ game }) {
     const allyChamps = ally.map((p) => p.champion?.name).filter(Boolean);
     const enemyChamps = enemy.map((p) => p.champion?.name).filter(Boolean);
     const allyPuuids = new Set(ally.map((p) => p.puuid));
-    // fetchPriority sırasında (bana en yakın matchup önce) — rate-limit stratejisi.
-    const all = [...ally, ...enemy]
-      .filter((p) => p.puuid && !p.isBot)
-      .sort((a, b) => (a.fetchPriority ?? 9) - (b.fetchPriority ?? 9));
+    // fetchPriority sırası (bana en yakın matchup önce) — rate-limit stratejisi.
+    const byPriority = (a, b) => (a.fetchPriority ?? 9) - (b.fetchPriority ?? 9);
+    const all = [...ally, ...enemy].filter((p) => p.puuid && !p.isBot).sort(byPriority);
     if (all.length === 0) {
       setLoading(false);
       return;
     }
-    setLoading(true);
-    runThrottled(
-      all,
-      async (p) => {
-        const opp = allyPuuids.has(p.puuid) ? enemyChamps : allyChamps;
-        const data = await getLivePlayer(p.puuid, p.champion?.name, {
-          role: p.role,
-          autofilled: p.autofilled,
-          enemyChamps: opp,
-        });
-        if (alive && data) {
-          setEnrichments((prev) => ({ ...prev, [p.puuid]: data }));
+
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // Tek oyuncuyu çek. Başarılı (error'suz veri) → kaydet + true. Düştü
+    // (rate_limit / failed / null) → false (saklamayız, retry'a kalır).
+    async function fetchOne(p) {
+      const opp = allyPuuids.has(p.puuid) ? enemyChamps : allyChamps;
+      const data = await getLivePlayer(p.puuid, p.champion?.name, {
+        role: p.role,
+        autofilled: p.autofilled,
+        enemyChamps: opp,
+      });
+      if (!alive) return true;
+      if (data && !data.error) {
+        setEnrichments((prev) => ({ ...prev, [p.puuid]: data }));
+        return true;
+      }
+      return false;
+    }
+
+    // Öncelik sırasıyla çek; rate-limit'e takılıp DÜŞENLERİ, limit yenilensin diye
+    // bekleyip TEKRAR DENE (priority-deferral). Başarılı olunca backend DB'ye de yazar.
+    async function run() {
+      setLoading(true);
+      let pending = all;
+      const MAX_ROUNDS = 4;       // ilk tur + 3 retry
+      const RETRY_DELAY = 15000;  // ~15sn — rate-limit penceresi yenilensin
+      for (let round = 0; round < MAX_ROUNDS && pending.length && alive; round++) {
+        if (round > 0) {
+          await sleep(RETRY_DELAY);
+          if (!alive) return;
+          pending = [...pending].sort(byPriority); // retry'da da öncelik korunsun
         }
-      },
-      3
-    ).finally(() => {
+        const failed = [];
+        await runThrottled(
+          pending,
+          async (p) => {
+            const ok = await fetchOne(p);
+            if (!ok) failed.push(p);
+          },
+          3
+        );
+        pending = failed;
+      }
       if (alive) setLoading(false);
-    });
+    }
+    run();
+
     return () => {
       alive = false;
     };
