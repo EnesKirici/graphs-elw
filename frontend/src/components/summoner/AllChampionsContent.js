@@ -2,20 +2,43 @@
 
 import { useState } from "react";
 import { ArrowDownUp } from "lucide-react";
+import Card from "@/components/ui/Card";
 
-/* ===== Yardımcı fonksiyonlar ===== */
+/* ===== Yardımcı fonksiyonlar =====
+   RENK KONVANSİYONU: Profil "pro" (dpm-scope) tasarımıyla tutarlı → iyi = MAVİ/CYAN
+   (yeşil DEĞİL), nötr = gri, kötü = kırmızı. (Bkz. ChampPerfListPro + globals.css
+   --res-win mavi.) Eski rainbow (emerald/sarı/amber) kaldırıldı. */
 function getWrColor(wr) {
-    // MAVİ YOK: ≥51 yeşil, 45-50 nötr gri, <45 kırmızı.
-    if (wr >= 51) return "text-emerald-400";
+    if (wr >= 60) return "text-cyan-400";
+    if (wr >= 50) return "text-blue-400";
     if (wr >= 45) return "text-gray-300";
     return "text-red-400";
 }
 
 function getKdaColor(ratio) {
-    if (ratio === "Perfect" || ratio >= 3) return "text-emerald-400";
-    if (ratio >= 2) return "text-gray-300";
+    if (ratio === "Perfect" || ratio >= 4) return "text-cyan-400";
+    if (ratio >= 2.5) return "text-blue-400";
+    if (ratio >= 1.8) return "text-gray-300";
     return "text-red-400";
 }
+
+/* TEST verisi — backend `championRank.{global,tr}` GÖNDERMEYE BAŞLAYINCA kaldır.
+   ChampPerfListPro ("Şampiyon Performansı") ile AYNI placeholder mantığı →
+   sıralama gösterimi profil genelinde tutarlı (Dünya sırası + bölge sırası). */
+const DEMO_RANKS = [
+    { global: 1840, tr: 142 },
+    { global: 12503, tr: 961 },
+    { global: 6720, tr: 503 },
+];
+function placeholderChampRank(name, games, i) {
+    if (i != null && DEMO_RANKS[i]) return DEMO_RANKS[i];
+    let h = 0;
+    for (const ch of (name || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const global = Math.max(8000, 40000 + (h % 1200000) - (games || 0) * 2000);
+    const tr = Math.max(500, Math.round(global / 13));
+    return { global, tr };
+}
+const fmtRank = (n) => n.toLocaleString("tr-TR");
 
 const GAME_TYPES = [
     { key: "all", label: "Tümü" },
@@ -72,7 +95,7 @@ export default function AllChampionsContent({ seasonChampions, region = "TR" }) 
                 <SummaryCard
                     label="Kazanma Oranı"
                     value={`${overallWr}%`}
-                    valueColor={overallWr >= 51 ? "text-emerald-400" : overallWr >= 45 ? "text-yellow-400" : "text-red-400"}
+                    valueColor={overallWr >= 60 ? "text-cyan-400" : overallWr >= 50 ? "text-blue-400" : overallWr >= 45 ? "text-gray-300" : "text-red-400"}
                 />
                 <SummaryCard label="Şampiyon Sayısı" value={rawList.length} />
                 <SummaryCard
@@ -83,7 +106,7 @@ export default function AllChampionsContent({ seasonChampions, region = "TR" }) 
             </div>
 
             {/* Filtre + Sıralama */}
-            <div className="glass rounded-xl overflow-hidden">
+            <Card className="overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-edge/50">
                     <div className="flex items-center gap-1">
                         {GAME_TYPES.map((g) => (
@@ -161,10 +184,10 @@ export default function AllChampionsContent({ seasonChampions, region = "TR" }) 
 /* ===== Özet kartı ===== */
 function SummaryCard({ label, value, valueColor = "text-gray-100" }) {
     return (
-        <div className="glass rounded-xl p-4 text-center">
+        <Card className="p-4 text-center">
             <p className={`text-xl font-bold ${valueColor}`}>{value}</p>
             <p className="text-[11px] text-gray-500 mt-1">{label}</p>
-        </div>
+        </Card>
     );
 }
 
@@ -198,16 +221,18 @@ function ChampionRow({ champ: c, index, region }) {
                 <p className="text-[15px] text-gray-100 font-semibold group-hover:text-blue-400 transition-colors truncate">
                     {c.championName}
                 </p>
-                {/* Backend bu şampiyonda 10+ maçı olan oyuncular arasında sıra hesaplayıp
-                    championRank: { position } gönderirse otomatik görünür (henüz gelmiyor). */}
-                {c.championRank?.position > 0 && (
-                    <p className="text-[10px] text-gray-500 mt-0.5">
-                        {region} Sırası{" "}
-                        <span className="text-gray-300 font-semibold">
-                            #{c.championRank.position.toLocaleString("tr-TR")}
-                        </span>
-                    </p>
-                )}
+                {/* Şampiyon sıralaması — ChampPerfListPro ile AYNI stil: iki satır
+                    (Dünya sırası + bölge sırası), parlak sayı + sönük etiket.
+                    Backend `championRank.{global,tr}` gelince gerçeği gösterir. */}
+                {!noGames && (() => {
+                    const rk = c.championRank?.global != null ? c.championRank : placeholderChampRank(c.championName, c.games, index);
+                    return (
+                        <div className="mt-1 leading-tight tabular-nums">
+                            <p className="text-[11px]"><span className="text-gray-500">Sıra </span><span className="text-gray-200 font-medium">{fmtRank(rk.global)}</span></p>
+                            <p className="text-[11px]"><span className="text-gray-500">{region} </span><span className="text-gray-100 font-medium">{fmtRank(rk.tr)}</span></p>
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* Oyun sayısı */}
@@ -221,7 +246,7 @@ function ChampionRow({ champ: c, index, region }) {
                     <span className="text-xs text-gray-600">—</span>
                 ) : (
                     <span className="text-xs font-medium">
-                        <span className="text-emerald-400">{c.wins}</span>
+                        <span className="text-blue-400">{c.wins}</span>
                         <span className="text-gray-600 mx-0.5">/</span>
                         <span className="text-red-400">{c.losses}</span>
                     </span>
@@ -239,7 +264,7 @@ function ChampionRow({ champ: c, index, region }) {
                         </span>
                         <div className="mt-1 h-1 bg-edge rounded-full overflow-hidden">
                             <div
-                                className={`h-full rounded-full ${c.winRate >= 50 ? "bg-emerald-500" : "bg-red-500"}`}
+                                className={`h-full rounded-full ${c.winRate >= 50 ? "bg-blue-500" : "bg-red-500"}`}
                                 style={{ width: `${c.winRate}%` }}
                             />
                         </div>
@@ -247,18 +272,18 @@ function ChampionRow({ champ: c, index, region }) {
                 )}
             </div>
 
-            {/* KDA — kills yeşil, deaths kırmızı, assists sarı */}
+            {/* KDA — nötr kills/assists (rainbow yok), deaths kırmızı, oran pro paletiyle */}
             <div className="w-36 text-center">
                 {noGames ? (
                     <span className="text-xs text-gray-600">—</span>
                 ) : (
                     <>
                         <p className="text-xs">
-                            <span className="text-emerald-400 font-medium">{c.avgKda.kills}</span>
+                            <span className="text-gray-100 font-medium">{c.avgKda.kills}</span>
                             <span className="text-gray-600"> / </span>
                             <span className="text-red-400 font-medium">{c.avgKda.deaths}</span>
                             <span className="text-gray-600"> / </span>
-                            <span className="text-yellow-400 font-medium">{c.avgKda.assists}</span>
+                            <span className="text-gray-400 font-medium">{c.avgKda.assists}</span>
                         </p>
                         <p className={`text-[11px] font-semibold mt-0.5 ${getKdaColor(kdaRatio)}`}>
                             {kdaRatio === "Perfect" ? "Perfect" : typeof kdaRatio === "number" ? kdaRatio.toFixed(2) : "0"}
@@ -272,8 +297,8 @@ function ChampionRow({ champ: c, index, region }) {
                 {noGames ? "—" : (c.csPerMin ?? 0).toFixed(1)}
             </span>
 
-            {/* Gold/dk */}
-            <span className="hidden md:block w-16 text-center text-xs text-amber-400/80">
+            {/* Gold/dk — amber kaldırıldı, nötr */}
+            <span className="hidden md:block w-16 text-center text-xs text-gray-300">
                 {noGames ? "—" : (c.goldPerMin ?? 0)}
             </span>
 
@@ -303,3 +328,4 @@ function ChampionRow({ champ: c, index, region }) {
         </div>
     );
 }
+

@@ -30,22 +30,25 @@ function getMasteryCrestUrl(level) {
   return `/masteries/level${level}.webp`;
 }
 
-// MAVİ YOK. ≥51 yeşil (kazanç), 45-50 nötr gri, <45 kırmızı. Bar = sayı rengiyle aynı.
+// RENK KONVANSİYONU: ≥51 cyan (iyi), 45-50 nötr gri, <45 kırmızı. Bar = sayı rengiyle aynı.
 function getWrColor(wr) {
-  if (wr >= 51) return "text-emerald-400";
+  if (wr >= 60) return "text-cyan-400";
+  if (wr >= 50) return "text-blue-400";
   if (wr >= 45) return "text-gray-300";
   return "text-red-400";
 }
 function getWrBar(wr) {
-  if (wr >= 51) return "bg-emerald-500";
+  if (wr >= 60) return "bg-cyan-500";
+  if (wr >= 50) return "bg-blue-500";
   if (wr >= 45) return "bg-gray-400";
   return "bg-red-500";
 }
 
-// KDA da aynı mantık (mavi yok): iyi yeşil, orta nötr gri, kötü kırmızı.
+// KDA: iyi cyan, orta mavi, nötr gri, kötü kırmızı.
 function getKdaColor(ratio) {
-  if (ratio === "Perfect" || ratio >= 3) return "text-emerald-400";
-  if (ratio >= 2) return "text-gray-300";
+  if (ratio === "Perfect" || ratio >= 4) return "text-cyan-400";
+  if (ratio >= 2.5) return "text-blue-400";
+  if (ratio >= 1.8) return "text-gray-300";
   return "text-red-400";
 }
 
@@ -385,3 +388,4 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
     </>
   );
 }
+
