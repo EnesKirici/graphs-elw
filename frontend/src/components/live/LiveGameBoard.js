@@ -53,7 +53,7 @@ function premadeGroups(players, enrichments, threshold = 2) {
   return Object.values(groups).filter((g) => g.length >= 2);
 }
 
-function TeamColumn({ title, dotClass, players, enrichments, loadingSet, isEnemy, premadeMap }) {
+function TeamColumn({ title, dotClass, players, enrichments, loadingSet, isEnemy, premadeMap, flipAll, onFlipAll }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-2.5">
@@ -70,6 +70,8 @@ function TeamColumn({ title, dotClass, players, enrichments, loadingSet, isEnemy
             loading={!enrichments[p.puuid] && !p.isBot && loadingSet}
             isEnemy={isEnemy}
             premade={premadeMap?.[p.puuid] || null}
+            flipAll={flipAll}
+            onFlipAll={onFlipAll}
           />
         ))}
       </div>
@@ -99,6 +101,10 @@ export default function LiveGameBoard({ game }) {
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.gameId, enrichments]);
+
+  // Çift tıkla TÜM kartları çevir (her kart localFlip XOR flipAll ile gösterir).
+  const [flipAll, setFlipAll] = useState(false);
+  const toggleFlipAll = () => setFlipAll((f) => !f);
 
   useEffect(() => {
     if (game.mock) return;
@@ -161,7 +167,7 @@ export default function LiveGameBoard({ game }) {
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         <TeamColumn
           title="Senin Takımın"
           dotClass="bg-emerald-400"
@@ -170,7 +176,21 @@ export default function LiveGameBoard({ game }) {
           loadingSet={loading}
           isEnemy={false}
           premadeMap={premadeMap}
+          flipAll={flipAll}
+          onFlipAll={toggleFlipAll}
         />
+
+        {/* Takımlar arası ayraç — VS */}
+        <div className="flex items-center gap-4 px-1 py-0.5">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-edge to-edge" />
+          <span className="flex items-center gap-2.5 text-[11px] font-bold tracking-[0.25em] text-gray-500 whitespace-nowrap">
+            <span className="text-emerald-400/80">MAVİ TAKIM</span>
+            <span className="px-2 py-0.5 rounded-full bg-soft border border-edge text-gray-300 tracking-[0.15em]">VS</span>
+            <span className="text-rose-400/80">KIRMIZI TAKIM</span>
+          </span>
+          <div className="flex-1 h-px bg-gradient-to-l from-transparent via-edge to-edge" />
+        </div>
+
         <TeamColumn
           title="Rakip Takım"
           dotClass="bg-rose-400"
@@ -179,11 +199,13 @@ export default function LiveGameBoard({ game }) {
           loadingSet={loading}
           isEnemy={true}
           premadeMap={premadeMap}
+          flipAll={flipAll}
+          onFlipAll={toggleFlipAll}
         />
       </div>
 
       <p className="mt-6 text-center text-[11px] text-gray-600">
-        Karta tıkla → build, rün ve detaylar. Veriler oyuncunun son maçlarından türetilir.
+        Karta tıkla → build, rün ve detaylar. <span className="text-gray-500">Çift tıkla → tüm kartları çevir.</span> Veriler oyuncunun son maçlarından türetilir.
       </p>
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { Flame, Snowflake, TrendingUp, Users } from "lucide-react";
+import { Flame, Snowflake, Users } from "lucide-react";
 import { miniCrestUrl, tierLabel, tierColor } from "@/components/summoner/pro/rankUtils";
 import BadgeChip from "@/components/shared/BadgeChip";
 import Tooltip from "@/components/shared/Tooltip";
@@ -13,6 +13,17 @@ const ROLE_FILE = { TOP: "top", JUNGLE: "jungle", MIDDLE: "mid", BOTTOM: "bot", 
 const ROLE_TR = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Destek" };
 const WIN = "#3b82f6"; // site mavisi (galibiyet)
 const LOSS = "#ef4444"; // kırmızı (mağlubiyet)
+
+// Seri parçacık doğuş noktaları — ikon ÜZERİNE yayılmış (left%/top%) + yatay sürüklenme.
+// Tek merkez yerine farklı noktalar → alevin/kar tanesinin çizgilerinden çıkma hissi.
+const STREAK_PARTS = [
+  { x: 36, y: 42, dx: -3 },
+  { x: 52, y: 26, dx: 0 },
+  { x: 66, y: 44, dx: 3 },
+  { x: 44, y: 60, dx: -2 },
+  { x: 58, y: 56, dx: 2 },
+  { x: 50, y: 72, dx: 0 },
+];
 
 function roleIcon(role) {
   const f = ROLE_FILE[(role || "").toUpperCase()];
@@ -58,16 +69,30 @@ function laneStatus(role, roleStats) {
 }
 
 /* Galibiyet/mağlubiyet serisi — solid çip + alev (galibiyet) / kar tanesi (mağlubiyet) ikonu.
-   3'ten FAZLA (4+) seride ikon animasyonlu (alev kıpırtısı / buz nabzı). */
+   3'ten FAZLA (4+) seride parçacıklı efekt: alevden yükselen kıvılcımlar / buz tozu. */
 function StreakBadge({ streak }) {
   if (!streak) return null;
   const Icon = streak.win ? Flame : Snowflake;
   const animated = streak.count > 3;
-  const animClass = animated ? (streak.win ? "streak-flame" : "streak-frost") : "";
+  const iconColor = streak.win ? "text-amber-400" : "text-cyan-300";
+  const pClass = streak.win ? "ember" : "frost";
   return (
     <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold text-white tabular-nums bg-black/55 border border-white/15 backdrop-blur-sm">
       {streak.count}
-      <Icon size={13} strokeWidth={2.5} className={`${streak.win ? "text-amber-400" : "text-cyan-300"} ${animClass}`} />
+      <span className="relative inline-flex">
+        {animated && (
+          <span className="streak-fx" aria-hidden="true">
+            {STREAK_PARTS.map((pt, n) => (
+              <i
+                key={n}
+                className={pClass}
+                style={{ left: `${pt.x}%`, top: `${pt.y}%`, "--dx": `${pt.dx}px`, animationDelay: `${n * 0.12}s` }}
+              />
+            ))}
+          </span>
+        )}
+        <Icon size={13} strokeWidth={2.5} className={`relative ${iconColor}`} />
+      </span>
     </span>
   );
 }
@@ -174,24 +199,39 @@ function LaneTag({ role, roleStats }) {
   );
 }
 
-/* Premade (duo/trio) rozeti — aynı takımda birlikte oynayanlar (renkli) */
+/* Premade (duo/trio) rozeti — DOLU renkli pill + Users ikonu (belirgin, neon değil) */
 function PremadeChip({ premade }) {
   if (!premade) return null;
   const label = premade.size === 2 ? "Duo" : premade.size === 3 ? "Trio" : `${premade.size}'li`;
   return (
     <span
-      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold backdrop-blur-sm border"
-      style={{ color: premade.color, borderColor: `${premade.color}66`, background: `${premade.color}26` }}
+      className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white border shadow-sm"
+      style={{ background: `${premade.color}e6`, borderColor: premade.color }}
       title="Birlikte oynuyor (son maçlardan tespit edildi)"
     >
-      <Users size={9} strokeWidth={2.6} />
+      <Users size={11} strokeWidth={2.6} />
       {label}
     </span>
   );
 }
 
-export default function LivePlayerCard({ participant: p, enrichment, loading, isEnemy, premade }) {
-  const [flipped, setFlipped] = useState(false);
+export default function LivePlayerCard({ participant: p, enrichment, loading, isEnemy, premade, flipAll, onFlipAll }) {
+  const [localFlip, setLocalFlip] = useState(false);
+  const clickTimer = useRef(null);
+  // Tek tık: bu kartı çevir. Çift tık: TÜM kartları çevir (flipAll ile XOR yayınlanır).
+  const flipped = localFlip !== !!flipAll;
+  function handleCardClick() {
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+      onFlipAll?.();
+    } else {
+      clickTimer.current = setTimeout(() => {
+        clickTimer.current = null;
+        setLocalFlip((f) => !f);
+      }, 220);
+    }
+  }
 
   const solo = p.rank?.solo;
   const stat = enrichment?.championStat;
@@ -221,19 +261,25 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
   const roleStats = rs?.roleStats || [];
   const rankColor = solo?.tier ? tierColor(solo.tier) : null;
 
+  // Kart gölgesi: rank renginde ÇOK MİNİMAL dıştan-içe ışıma + (premade ise) iç-çerçeve ring.
+  const faceShadow = [
+    rankColor ? `inset 0 0 24px -8px ${rankColor}80` : null,
+    premade ? `inset 0 0 0 2px ${premade.color}` : null,
+  ].filter(Boolean).join(", ") || undefined;
+
   const faceBase = "absolute inset-0 flex flex-col bg-card border border-edge rounded-xl overflow-hidden";
 
   return (
     <div style={{ perspective: 1400 }} className="h-[480px]">
       <div
-        onClick={() => setFlipped((f) => !f)}
+        onClick={handleCardClick}
         className="relative w-full h-full cursor-pointer rounded-xl"
         style={{ transformStyle: "preserve-3d", transition: "transform 0.5s", transform: flipped ? "rotateY(180deg)" : "none" }}
       >
         {/* ───────── ÖN YÜZ ───────── */}
         <div
           className={faceBase}
-          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", boxShadow: premade ? `inset 0 0 0 2px ${premade.color}` : undefined }}
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", boxShadow: faceShadow }}
         >
           {splash && <img src={splash} alt="" className="absolute inset-0 w-full h-full object-cover object-top" loading="lazy" />}
           <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/20 to-black/95" />
@@ -242,34 +288,19 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
           <div className="absolute top-2.5 right-2.5 z-10">
             <StreakBadge streak={streak} />
           </div>
-          {/* Sol üst: SEN + premade rozeti */}
-          {(p.isMe || premade) && (
-            <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1">
-              {p.isMe && (
-                <span className="text-[9px] font-bold text-amber-300 bg-amber-400/20 border border-amber-400/40 px-1.5 py-0.5 rounded backdrop-blur-sm">SEN</span>
-              )}
+          {/* Sol üst: premade rozeti */}
+          {premade && (
+            <div className="absolute top-2.5 left-2.5 z-20">
               <PremadeChip premade={premade} />
             </div>
           )}
 
-          {/* ÜST: şampiyon adı + bu şampiyon istatistiği — KUTU YOK (splash'i kapatmaz), gölgeyle okunur */}
+          {/* ÜST: şampiyon adı + bu şampiyon maç/WR — KUTU YOK (splash'i kapatmaz), gölgeyle okunur */}
           <div className="relative pt-2.5 px-3 text-center">
             <div className="text-lg font-extrabold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] truncate leading-tight">{p.champion?.name}</div>
             {stat && stat.games > 0 ? (
-              <div className="mt-0.5">
-                <div className="text-[13px] font-semibold text-gray-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] tabular-nums">
-                  {stat.games} maç · <span className={stat.winRate >= 50 ? "text-emerald-300" : "text-rose-300"}>%{stat.winRate} WR</span>
-                </div>
-                {stat.avgKda && (
-                  <div className="text-[12px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] tabular-nums leading-tight">
-                    <span className="text-gray-100 font-semibold">{stat.avgKda.kills}</span>
-                    <span className="text-gray-400"> / </span>
-                    <span className="text-red-400 font-semibold">{stat.avgKda.deaths}</span>
-                    <span className="text-gray-400"> / </span>
-                    <span className="text-gray-100 font-semibold">{stat.avgKda.assists}</span>
-                    <span className="text-amber-300 font-bold"> · {stat.avgKda.ratio === "Perfect" ? "Mükemmel" : `${stat.avgKda.ratio} KDA`}</span>
-                  </div>
-                )}
+              <div className="mt-0.5 text-[13px] font-semibold text-gray-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] tabular-nums">
+                {stat.games} maç · <span className={stat.winRate >= 50 ? "text-emerald-300" : "text-rose-300"}>%{stat.winRate} WR</span>
               </div>
             ) : (
               <div className="mt-0.5 text-[12px] text-gray-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{loading ? "yükleniyor…" : "bu şampiyonda yeni"}</div>
@@ -326,10 +357,10 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
               )}
               {inForm && (
                 <span
-                  className="flex items-center gap-0.5 flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold text-amber-300 bg-amber-400/20 border border-amber-400/40"
+                  className="flex items-center gap-1 flex-shrink-0 pl-1.5 pr-2 py-0.5 rounded-full text-[9px] font-extrabold text-amber-950 bg-gradient-to-b from-amber-300 to-amber-500 shadow-sm shadow-amber-900/40"
                   title="Bugün gününde — son 24 saatte 3+ maç 7.0+ (veya 4+ maç 6.5+) ve genel ELW ortalaması 7.0 üzeri."
                 >
-                  <TrendingUp size={10} strokeWidth={2.8} />
+                  <Flame size={10} strokeWidth={2.6} fill="currentColor" className="opacity-85" />
                   Gününde
                 </span>
               )}
@@ -373,7 +404,7 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
         {/* ───────── ARKA YÜZ ───────── */}
         <div
           className={faceBase}
-          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)", boxShadow: premade ? `inset 0 0 0 2px ${premade.color}` : undefined }}
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)", boxShadow: faceShadow }}
         >
           {/* Splash arka plan (opacity) — içerik üstte okunur kalır */}
           {splash && <img src={splash} alt="" className="absolute inset-0 w-full h-full object-cover object-top" loading="lazy" />}
