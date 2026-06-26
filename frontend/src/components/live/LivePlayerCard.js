@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Flame, Snowflake, Users } from "lucide-react";
 import { miniCrestUrl, tierLabel, tierColor } from "@/components/summoner/pro/rankUtils";
@@ -217,21 +217,9 @@ function PremadeChip({ premade }) {
 
 export default function LivePlayerCard({ participant: p, enrichment, loading, isEnemy, premade, flipAll, onFlipAll }) {
   const [localFlip, setLocalFlip] = useState(false);
-  const clickTimer = useRef(null);
-  // Tek tık: bu kartı çevir. Çift tık: TÜM kartları çevir (flipAll ile XOR yayınlanır).
+  // Tek tık ANINDA bu kartı çevirir (gecikme yok). Çift tık TÜM kartları çevirir.
+  // flipped = localFlip XOR flipAll → flipAll değişince herkes döner.
   const flipped = localFlip !== !!flipAll;
-  function handleCardClick() {
-    if (clickTimer.current) {
-      clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-      onFlipAll?.();
-    } else {
-      clickTimer.current = setTimeout(() => {
-        clickTimer.current = null;
-        setLocalFlip((f) => !f);
-      }, 220);
-    }
-  }
 
   const solo = p.rank?.solo;
   const stat = enrichment?.championStat;
@@ -272,9 +260,10 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
   return (
     <div style={{ perspective: 1400 }} className="h-[480px]">
       <div
-        onClick={handleCardClick}
+        onClick={() => setLocalFlip((f) => !f)}
+        onDoubleClick={() => onFlipAll?.()}
         className="relative w-full h-full cursor-pointer rounded-xl"
-        style={{ transformStyle: "preserve-3d", transition: "transform 0.5s", transform: flipped ? "rotateY(180deg)" : "none" }}
+        style={{ transformStyle: "preserve-3d", transition: "transform 0.4s", transform: flipped ? "rotateY(180deg)" : "none" }}
       >
         {/* ───────── ÖN YÜZ ───────── */}
         <div
@@ -357,10 +346,10 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
               )}
               {inForm && (
                 <span
-                  className="flex items-center gap-1 flex-shrink-0 pl-1.5 pr-2 py-0.5 rounded-full text-[9px] font-extrabold text-amber-950 bg-gradient-to-b from-amber-300 to-amber-500 shadow-sm shadow-amber-900/40"
+                  className="flex items-center gap-1 flex-shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-amber-300 bg-black/60 border border-amber-400/25 backdrop-blur-sm"
                   title="Bugün gününde — son 24 saatte 3+ maç 7.0+ (veya 4+ maç 6.5+) ve genel ELW ortalaması 7.0 üzeri."
                 >
-                  <Flame size={10} strokeWidth={2.6} fill="currentColor" className="opacity-85" />
+                  <Flame size={9} strokeWidth={2.6} fill="currentColor" />
                   Gününde
                 </span>
               )}
