@@ -4,12 +4,20 @@
 > `PROJE_DURUM.md` + `LIVE_GAME_PLAN.md` + memory dosyaları (`project_elw_scoring`,
 > `project_live_game`). **Her şey LOCAL, CANLIYA ALINMADI (deploy en son).**
 
-## 🔴 TAM ŞU AN NEREDE KALDIK: Vizyon-temelli etiketler (BEKLEYEN #5)
-Etiket admin paneli ✅ + KDA ✅ + kart redizayn ✅ + premade ✅ + priority-deferral ✅ BİTTİ.
-**SIRADAKİ:** Vizyon-temelli canlı etiketler ("Yürüyen Totem" = yüksek vizyon/dk, "Totem Unutan"
-= düşük). Sorun: maç özetinde/recentGames'te vizyon-skoru/dk verisi YOK → önce backend'in
-enrichment aggregate'lerine (LiveGameService.getPlayerEnrichment / base) avgVisionPerMin eklenmeli,
-sonra LabelEngine CATALOG['live']'a 2 etiket (admin'den eşik). Destek/non-destek ayrımı gerekebilir.
+## 🔴 TAM ŞU AN NEREDE KALDIK: DB optimizasyon (BEKLEYEN #6) veya DEPLOY
+Etiket admin paneli ✅ KDA ✅ kart redizayn ✅ premade ✅ priority-deferral ✅ görüş/OTP-sezon ✅ BİTTİ.
+**SIRADAKİ seçenek:** #6 DB-opt (match_summaries items/runes trim + worker-prewarm; local'de ölçülebilir)
+**veya** artık birikmiş onca iş için **deploy hazırlığı** (kullanıcıyla konuş). Kullanıcı önceliği soracak.
+
+## ✅ Etiket motoru iyileştirmesi (görüş + sezon-bazlı) — BİTTİ (commit'li)
+- **OTP** artık "maçlarının %X'i bu şampiyon" (`share`, vars. 70) + `minGames` guard (1/1=%100 önler).
+- **Sevdalısı** = SEZON çok oynamış (≥50). iyi/kötü/yeni de **sezon oyun+WR** bazlı (veteran "yeni" çıkmaz).
+- **Veri:** `getSeasonChampionStats` (profildeki "Şampiyon Performansı" ile aynı; `match_summaries` DB,
+  cache'li, **EKSTRA API YOK**). Mastery'ye gerek kalmadı.
+- **YENİ "Yüksek/Düşük görüş"** (vizyon/dk, GENEL — tüm roller). `LiveGameService` base'e
+  `avgVisionPerMin` + `seasonChampStats` eklendi, cache `live:player:v2→v3`.
+- **Admin panel** eşik etiketleri netlendi (Oran %, Min maç, Vizyon/dk) + açıklamalar. Mock test ✓.
+- ⚠️ Veri DB'ye bağlı: tanınmayan oyuncuda sezon-maç az → OTP/sevdalısı çıkmaz; worker gezdikçe dolar.
 
 ## ✅ Priority-deferral — BİTTİ (commit'li)
 `LiveGameBoard` fetch: rate-limit'e takılıp düşen (backend `error:'rate_limited'/'failed'` veya null)
@@ -91,7 +99,7 @@ build'de (derlenmiş, worker yok) bu sorun OLMAZ.
 2. ✅ ~~Şampiyon istatistikleri kart ÖN YÜZÜNE (KDA)~~ — BİTTİ (yukarıda).
 3. ✅ ~~Duo (premade) tespiti + kart redizayn~~ — BİTTİ (yukarıda).
 4. ✅ ~~Frontend priority-deferral~~ — BİTTİ (yukarıda).
-5. **Vizyon-temelli etiketler** (Yürüyen Totem/Totem Unutan) (TAM ŞU AN KALDIĞIMIZ YER): maç özetinde vizyon/dk yok → backend'e ekle, sonra etiket.
+5. ✅ ~~Görüş etiketleri + OTP/sevdalısı sezon-bazlı~~ — BİTTİ (yukarıda).
 6. **DB-opt items/runes trim** + **worker-prewarm** (lp:capture'a ensureSeasonSummaries — kısmen?).
 7. **DEPLOY** (en son) — DB-opt + tüm ELW + canlı maç + etiketler. Plesk akışı `project_deployment`.
    Migrate (match_summaries, champion_duo_stats, tracked_players) + scp + `stats:rebuild` + valid key
