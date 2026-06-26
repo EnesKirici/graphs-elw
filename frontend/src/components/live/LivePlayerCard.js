@@ -220,16 +220,17 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
   const lastClickRef = useRef(0);
   // flipped = localFlip XOR flipAll → flipAll değişince herkes döner.
   const flipped = localFlip !== !!flipAll;
-  // Tek tık ANINDA bu kartı çevirir (gecikmesiz). Toleranslı pencerede (≤450ms) ikinci
-  // tık gelirse ÇİFT TIK = tüm kartları çevir (ilk flip 2. toggle ile geri alınır → net flipAll).
-  function handleCardClick(e) {
-    const dt = e.timeStamp - lastClickRef.current;
+  // Tek tık ANINDA bu kartı çevirir (gecikmesiz). Geniş pencerede (≤700ms) ikinci tık
+  // gelirse ÇİFT TIK = tüm kartları çevir (ilk flip 2. toggle ile geri alınır → net flipAll).
+  // Date.now() güvenilir (bazı tarayıcılarda e.timeStamp 0 dönebiliyordu).
+  function handleCardClick() {
+    const now = Date.now();
     setLocalFlip((f) => !f);
-    if (dt > 0 && dt < 700) {
+    if (now - lastClickRef.current < 700) {
       lastClickRef.current = 0;
       onFlipAll?.();
     } else {
-      lastClickRef.current = e.timeStamp;
+      lastClickRef.current = now;
     }
   }
 
