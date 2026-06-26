@@ -55,7 +55,7 @@ export default async function ChampionDetail({ params }) {
   const runesData = runesResp?.runes || [];
 
   return (
-    <div>
+    <div className="dpm-scope min-h-screen">
       {/* ===== HERO BANNER ===== */}
       <div className="relative h-56 md:h-72 overflow-hidden">
         <img
@@ -119,8 +119,8 @@ export default async function ChampionDetail({ params }) {
       </div>
 
       {/* ===== BREADCRUMB ===== */}
-      <div className="max-w-7xl mx-auto px-6 py-2.5 border-b border-edge/30">
-        <div className="flex items-center justify-between">
+      <div className="oncanvas-bar border-b border-edge/30">
+        <div className="max-w-7xl mx-auto px-6 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
             <span>›</span>

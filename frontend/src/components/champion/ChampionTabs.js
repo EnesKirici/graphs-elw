@@ -12,7 +12,7 @@ export default function ChampionTabs({ tabs }) {
 
   return (
     <div>
-      <div className="border-b border-edge/40">
+      <div className="oncanvas-bar border-b border-edge/40">
         <div className="max-w-7xl mx-auto px-6 flex items-center gap-6">
           {tabs.map((t) => (
             <button

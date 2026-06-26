@@ -1,16 +1,16 @@
 /**
- * Açık mavi zemin kartı — Şampiyonlar + Meta Tier List için ortak component
- * 
+ * Ortak kart component'i — profil (dpm-scope) navy kart diliyle BİREBİR aynı.
+ *
  * Site-wide kullanımı:
  * - AllChampionsContent (Şampiyonlar sekmesi tablosu)
  * - RecentChampionsCard (Profil "Son Maçlar Özeti")
- * - TierList (Meta Tier List kartları)
- * 
- * Renk: bg-blue-500/15 (açık mavi, profesyonel) + backdrop-blur
+ *
+ * Renk: .glass yüzeyi → dpm-scope içinde navy (var(--glass-bg)). Böylece tüm
+ * sayfalardaki kartlarla tek tip görünür (ana sayfa hariç, o kendi siyah .card'ı).
  */
 export default function Card({ children, className = "" }) {
   return (
-    <div className={`rounded-xl border border-blue-500/25 bg-blue-500/15 backdrop-blur-sm shadow-lg ${className}`}>
+    <div className={`glass rounded-xl shadow-lg ${className}`}>
       {children}
     </div>
   );

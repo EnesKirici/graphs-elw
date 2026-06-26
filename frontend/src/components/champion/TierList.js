@@ -4,7 +4,6 @@ import { useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import ReactDOM from "react-dom";
 import { TIER_ROLES, TIER_META, buildRoleTiers, champCounters } from "@/lib/tierData";
-import Card from "@/components/ui/Card";
 
 const PATCH = "16.11";
 

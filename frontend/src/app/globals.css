@@ -62,6 +62,17 @@
    kalkar); blur tercihi bağımsız çalışmaya devam eder. */
 html.no-veil .page-veil { background: transparent; }
 
+/* Kart DIŞINDA, doğrudan arka plan görseli üstünde duran nav/breadcrumb şeritleri
+   (profil sekmeleri, şampiyon breadcrumb + sekmeler). Perde KAPALIYKEN parlak
+   görsel üzerinde dim gri yazılar kayboluyordu → bu şeritlere YEREL veil + blur ver.
+   Görsel her yerde canlı kalır; yalnızca yazıların arkası okunur olur. Perde
+   açıkken sayfa zaten karartılı olduğundan bant uygulanmaz. Görsel yoksa hiç etki yok. */
+html.has-bg.no-veil .oncanvas-bar {
+  /* Full-width SOLİD koyu şerit (--c-scrim banner alt scrim'iyle aynı renk) →
+     üstteki banner'la birleşik temiz bir bar; ortada yüzen yarı-saydam kutu değil. */
+  background: var(--c-scrim);
+}
+
 /* Maç satırı kazanma/kaybetme tonu + sonuç metni + rozet renkleri.
    DARK varsayılanları (mevcut görünümü korur); light override'ları html.light'ta. */
 :root {
@@ -353,9 +364,12 @@ html.light .hero-bg-btn:hover {
    NOT: html.light .card kuralından SONRA durmalı (eşit spesifiklikte sonraki
    kazanır) — saydam tercihi opak off-white varsayılanını ezsin diye. */
 html.glass-cards .card,
-html.glass-cards .bigsearch {
+html.glass-cards .bigsearch,
+html.glass-cards .glass {
   /* %40: gerçekten saydam hissedilsin (55 zemin perdesiyle birleşince opak
-     gibi duruyordu); okunabilirliği blur taşıyor. */
+     gibi duruyordu); okunabilirliği blur taşıyor.
+     .glass de dahil: tier-list, şampiyon detay, sıralama .glass kullanıyordu →
+     saydam kart toggle'ı onları da etkilesin (tam tutarlılık). */
   background: color-mix(in oklab, var(--bg-1) 40%, transparent);
   backdrop-filter: blur(14px);
 }
@@ -715,6 +729,12 @@ input[type="range"].stat-slider::-moz-range-track {
 
   background: var(--c-base);
 }
+
+/* Tam tutarlılık: bir arka plan görseli aktifken (html.has-bg) dpm-scope'un opak
+   navy zemini saydamlaşır → görsel profil/sıralama/canlı maç/şampiyonlar dahil
+   HER sayfada görünür. Görsel yoksa navy taban korunur (sevilen "pro" görünüm).
+   Navy palet değişkenleri (--c-card vb.) aynen kalır; sadece sayfa zemini açılır. */
+html.has-bg .dpm-scope { background: transparent; }
 
 /* Light modda .glass'a eklenen açık gölge navy üstünde yanlış durur → kaldır. */
 html.light .dpm-scope .glass { box-shadow: none; }

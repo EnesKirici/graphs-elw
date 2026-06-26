@@ -43,7 +43,7 @@ export default async function ChampionsPage({ params }) {
   const bannerSkins = data.bannerSkins || [0];
 
   return (
-    <div>
+    <div className="dpm-scope min-h-screen">
       <ProfileHeader
         profile={profile}
         data={data}

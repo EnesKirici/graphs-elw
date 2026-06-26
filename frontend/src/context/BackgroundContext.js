@@ -17,6 +17,13 @@ export function BackgroundProvider({ children }) {
     setReady(true);
   }, []);
 
+  // html.has-bg bayrağı: arka plan görseli aktifken (seçili + açık) eklenir.
+  // CSS bununla dpm-scope (navy) sayfalarda opak katmanı saydamlaştırır →
+  // görsel her sayfada görünür. No-flash uygulaması layout THEME_INIT'te.
+  useEffect(() => {
+    document.documentElement.classList.toggle("has-bg", !!(background && enabled));
+  }, [background, enabled]);
+
   function setBg(url) {
     setBackground(url);
     if (url) {

@@ -106,8 +106,10 @@ export default function ProfileHeader({
       </div>
 
       {/* ===== TAB NAVİGASYONU ===== */}
-      <div className="max-w-[1180px] mx-auto px-6 border-b border-edge/30">
-        <div className="flex items-center gap-0">
+      {/* oncanvas-bar full-width DIŞ sarmalayıcıda: arka plan görseli + perde
+          kapalıyken banner'la birleşik tam-genişlik koyu şerit olur. */}
+      <div className="oncanvas-bar border-b border-edge/30">
+        <div className="max-w-[1180px] mx-auto px-6 flex items-center gap-0">
           {TABS.map((tab) => (
             <Link
               key={tab.key}
