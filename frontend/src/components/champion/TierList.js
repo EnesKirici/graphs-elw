@@ -4,6 +4,7 @@ import { useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import ReactDOM from "react-dom";
 import { TIER_ROLES, TIER_META, buildRoleTiers, champCounters } from "@/lib/tierData";
+import Card from "@/components/ui/Card";
 
 const PATCH = "16.11";
 
@@ -13,7 +14,8 @@ const CLASS_TR = {
 };
 
 function wrColor(wr) {
-  if (wr >= 52) return "text-emerald-400";
+  if (wr >= 60) return "text-cyan-400";
+  if (wr >= 50) return "text-blue-400";
   if (wr >= 49) return "text-gray-200";
   return "text-red-400";
 }
@@ -59,7 +61,7 @@ function HoverCard({ data, role, pool, rect, onEnter, onLeave }) {
             {counters.map(({ champ, wr }) => (
               <div key={champ.id} className="flex flex-col items-center gap-1">
                 <img src={champ.image} alt={champ.name} width={34} height={34} className="rounded-md" />
-                <span className={`text-[10px] font-semibold ${wr >= 50 ? "text-emerald-400" : "text-red-400"}`}>{wr}%</span>
+                <span className={`text-[10px] font-semibold ${wr >= 50 ? "text-blue-400" : "text-red-400"}`}>{wr}%</span>
               </div>
             ))}
           </div>
