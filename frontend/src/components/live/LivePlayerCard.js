@@ -226,13 +226,25 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
             </div>
           )}
 
-          {/* ÜST: ortalı şampiyon adı + bu şampiyon maç/WR */}
+          {/* ÜST: ortalı şampiyon adı + bu şampiyon maç/WR/KDA (önemli veri ön yüzde) */}
           <div className="relative pt-3 px-3 text-center">
             <div className="text-base font-extrabold text-white drop-shadow truncate">{p.champion?.name}</div>
             {stat && stat.games > 0 ? (
-              <div className="text-[12px] text-gray-200 drop-shadow">
-                {stat.games} maç · <span className="font-bold">%{stat.winRate} WR</span>
-              </div>
+              <>
+                <div className="text-[12px] text-gray-200 drop-shadow">
+                  {stat.games} maç · <span className="font-bold">%{stat.winRate} WR</span>
+                </div>
+                {stat.avgKda && (
+                  <div className="text-[11px] drop-shadow tabular-nums mt-0.5">
+                    <span className="text-gray-100 font-semibold">{stat.avgKda.kills}</span>
+                    <span className="text-gray-400"> / </span>
+                    <span className="text-red-400 font-semibold">{stat.avgKda.deaths}</span>
+                    <span className="text-gray-400"> / </span>
+                    <span className="text-gray-100 font-semibold">{stat.avgKda.assists}</span>
+                    <span className="text-amber-300 font-bold"> · {stat.avgKda.ratio === "Perfect" ? "Mükemmel" : `${stat.avgKda.ratio} KDA`}</span>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-[12px] text-gray-300 drop-shadow">{loading ? "yükleniyor…" : "bu şampiyonda yeni"}</div>
             )}
