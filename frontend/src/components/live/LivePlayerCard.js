@@ -220,13 +220,15 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
   const lastClickRef = useRef(0);
   // flipped = localFlip XOR flipAll → flipAll değişince herkes döner.
   const flipped = localFlip !== !!flipAll;
-  // Tek tık ANINDA bu kartı çevirir (gecikmesiz). Geniş pencerede (≤700ms) ikinci tık
-  // gelirse ÇİFT TIK = tüm kartları çevir (ilk flip 2. toggle ile geri alınır → net flipAll).
-  // Date.now() güvenilir (bazı tarayıcılarda e.timeStamp 0 dönebiliyordu).
-  function handleCardClick() {
+  // Tek tık ANINDA bu kartı çevirir (gecikmesiz). ÇİFT TIK = tüm kartları çevir.
+  // Çift tık algısı çok TOLERANSLI: tarayıcının kendi sayacı (e.detail≥2, OS hızı) VEYA
+  // geniş 900ms zaman penceresi — ikisinden biri yakalarsa yeter (yavaş tıklayan da yapabilsin).
+  // İlk tık'ın bireysel flip'i 2. toggle ile geri alınır → net sadece flipAll (wobble yok, batch).
+  function handleCardClick(e) {
     const now = Date.now();
     setLocalFlip((f) => !f);
-    if (now - lastClickRef.current < 700) {
+    const isDouble = e.detail >= 2 || (lastClickRef.current > 0 && now - lastClickRef.current < 900);
+    if (isDouble) {
       lastClickRef.current = 0;
       onFlipAll?.();
     } else {
