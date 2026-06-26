@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { getLivePlayer } from "@/lib/api";
 import LiveGameTimer from "@/components/live/LiveGameTimer";
 import LivePlayerCard from "@/components/live/LivePlayerCard";
@@ -190,12 +191,20 @@ export default function LiveGameBoard({ game }) {
           onFlipAll={toggleFlipAll}
         />
 
-        {/* Takımlar arası ayraç — taraf renkleriyle (Mavi/Kırmızı), senin tarafın işaretli */}
+        {/* Takımlar arası ayraç — taraf renkleriyle (Mavi/Kırmızı); ortadaki buton TÜM kartları çevirir */}
         <div className="flex items-center gap-4 px-1 py-0.5">
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-edge to-edge" />
           <span className="flex items-center gap-2.5 text-[11px] font-bold tracking-[0.25em] whitespace-nowrap">
             <span className={allySide.textClass}>{allySide.label.toUpperCase()} TAKIM <span className="text-gray-500 tracking-normal">(Sen)</span></span>
-            <span className="px-2 py-0.5 rounded-full bg-soft border border-edge text-gray-300 tracking-[0.15em]">VS</span>
+            <button
+              type="button"
+              onClick={toggleFlipAll}
+              title="Tüm kartları çevir (ön ↔ arka)"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-soft border border-edge text-gray-300 tracking-[0.15em] hover:bg-hover hover:text-white hover:border-blue-500/50 transition-colors cursor-pointer"
+            >
+              <RefreshCw size={11} strokeWidth={2.4} className="tracking-normal" />
+              VS
+            </button>
             <span className={enemySide.textClass}>{enemySide.label.toUpperCase()} TAKIM</span>
           </span>
           <div className="flex-1 h-px bg-gradient-to-l from-transparent via-edge to-edge" />
@@ -215,7 +224,7 @@ export default function LiveGameBoard({ game }) {
       </div>
 
       <p className="mt-6 text-center text-[11px] text-gray-600">
-        Karta tıkla → build, rün ve detaylar. <span className="text-gray-500">Çift tıkla → tüm kartları çevir.</span> Veriler oyuncunun son maçlarından türetilir.
+        Karta tıkla → build, rün ve detaylar. <span className="text-gray-500">Ortadaki <span className="text-gray-400 font-semibold">VS</span> butonu (veya bir karta çift tık) → tüm kartları çevirir.</span> Veriler oyuncunun son maçlarından türetilir.
       </p>
     </div>
   );

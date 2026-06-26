@@ -225,7 +225,7 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
   function handleCardClick(e) {
     const dt = e.timeStamp - lastClickRef.current;
     setLocalFlip((f) => !f);
-    if (dt > 0 && dt < 450) {
+    if (dt > 0 && dt < 550) {
       lastClickRef.current = 0;
       onFlipAll?.();
     } else {
