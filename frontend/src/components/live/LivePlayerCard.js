@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { Flame, Snowflake, Users } from "lucide-react";
 import { miniCrestUrl, tierLabel, tierColor } from "@/components/summoner/pro/rankUtils";
@@ -217,9 +217,21 @@ function PremadeChip({ premade }) {
 
 export default function LivePlayerCard({ participant: p, enrichment, loading, isEnemy, premade, flipAll, onFlipAll }) {
   const [localFlip, setLocalFlip] = useState(false);
-  // Tek tık ANINDA bu kartı çevirir (gecikme yok). Çift tık TÜM kartları çevirir.
+  const lastClickRef = useRef(0);
   // flipped = localFlip XOR flipAll → flipAll değişince herkes döner.
   const flipped = localFlip !== !!flipAll;
+  // Tek tık ANINDA bu kartı çevirir (gecikmesiz). Toleranslı pencerede (≤450ms) ikinci
+  // tık gelirse ÇİFT TIK = tüm kartları çevir (ilk flip 2. toggle ile geri alınır → net flipAll).
+  function handleCardClick(e) {
+    const dt = e.timeStamp - lastClickRef.current;
+    setLocalFlip((f) => !f);
+    if (dt > 0 && dt < 450) {
+      lastClickRef.current = 0;
+      onFlipAll?.();
+    } else {
+      lastClickRef.current = e.timeStamp;
+    }
+  }
 
   const solo = p.rank?.solo;
   const stat = enrichment?.championStat;
@@ -260,8 +272,7 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
   return (
     <div style={{ perspective: 1400 }} className="h-[480px]">
       <div
-        onClick={() => setLocalFlip((f) => !f)}
-        onDoubleClick={() => onFlipAll?.()}
+        onClick={handleCardClick}
         className="relative w-full h-full cursor-pointer rounded-xl"
         style={{ transformStyle: "preserve-3d", transition: "transform 0.4s", transform: flipped ? "rotateY(180deg)" : "none" }}
       >

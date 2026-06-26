@@ -20,6 +20,10 @@ async function runThrottled(items, worker, limit = 3) {
 // Premade grup renkleri (WIN mavi / LOSS kırmızı'dan ayrı, belirgin tonlar)
 const PREMADE_COLORS = ["#f59e0b", "#a855f7", "#ec4899", "#22d3ee", "#84cc16"];
 
+// Takım tarafları — LoL'de teamId 100 = Mavi, 200 = Kırmızı.
+const BLUE_SIDE = { label: "Mavi", textClass: "text-blue-400", dotClass: "bg-blue-400" };
+const RED_SIDE = { label: "Kırmızı", textClass: "text-rose-400", dotClass: "bg-rose-400" };
+
 /**
  * Aynı TAKIMDAKİ oyuncuların premade (duo/trio) gruplarını sezgisel bul.
  * Sinyal: enrichment.recentGames[].matchId ORTAK olanlar birlikte oynamış →
@@ -53,12 +57,13 @@ function premadeGroups(players, enrichments, threshold = 2) {
   return Object.values(groups).filter((g) => g.length >= 2);
 }
 
-function TeamColumn({ title, dotClass, players, enrichments, loadingSet, isEnemy, premadeMap, flipAll, onFlipAll }) {
+function TeamColumn({ title, side, players, enrichments, loadingSet, isEnemy, premadeMap, flipAll, onFlipAll }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-2.5">
-        <span className={`w-2 h-2 rounded-full ${dotClass}`} />
+        <span className={`w-2 h-2 rounded-full ${side.dotClass}`} />
         <h2 className="text-sm font-bold text-gray-200">{title}</h2>
+        <span className={`text-[11px] font-semibold ${side.textClass}`}>· {side.label} Takım</span>
         <span className="text-xs text-gray-500">({players.length})</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -86,6 +91,11 @@ export default function LiveGameBoard({ game }) {
 
   const ally = game.allyTeam || [];
   const enemy = game.enemyTeam || [];
+
+  // Aranan oyuncunun (senin takımının) tarafı — API'den teamId (100=Mavi, 200=Kırmızı).
+  const allyBlue = (game.searchedTeamId ?? 100) === 100;
+  const allySide = allyBlue ? BLUE_SIDE : RED_SIDE;
+  const enemySide = allyBlue ? RED_SIDE : BLUE_SIDE;
 
   // Premade (duo/trio) grupları — takım bazında, ortak son maçlardan. Renk ata.
   const premadeMap = useMemo(() => {
@@ -170,7 +180,7 @@ export default function LiveGameBoard({ game }) {
       <div className="space-y-5">
         <TeamColumn
           title="Senin Takımın"
-          dotClass="bg-emerald-400"
+          side={allySide}
           players={ally}
           enrichments={enrichments}
           loadingSet={loading}
@@ -180,20 +190,20 @@ export default function LiveGameBoard({ game }) {
           onFlipAll={toggleFlipAll}
         />
 
-        {/* Takımlar arası ayraç — VS */}
+        {/* Takımlar arası ayraç — taraf renkleriyle (Mavi/Kırmızı), senin tarafın işaretli */}
         <div className="flex items-center gap-4 px-1 py-0.5">
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-edge to-edge" />
-          <span className="flex items-center gap-2.5 text-[11px] font-bold tracking-[0.25em] text-gray-500 whitespace-nowrap">
-            <span className="text-emerald-400/80">MAVİ TAKIM</span>
+          <span className="flex items-center gap-2.5 text-[11px] font-bold tracking-[0.25em] whitespace-nowrap">
+            <span className={allySide.textClass}>{allySide.label.toUpperCase()} TAKIM <span className="text-gray-500 tracking-normal">(Sen)</span></span>
             <span className="px-2 py-0.5 rounded-full bg-soft border border-edge text-gray-300 tracking-[0.15em]">VS</span>
-            <span className="text-rose-400/80">KIRMIZI TAKIM</span>
+            <span className={enemySide.textClass}>{enemySide.label.toUpperCase()} TAKIM</span>
           </span>
           <div className="flex-1 h-px bg-gradient-to-l from-transparent via-edge to-edge" />
         </div>
 
         <TeamColumn
           title="Rakip Takım"
-          dotClass="bg-rose-400"
+          side={enemySide}
           players={enemy}
           enrichments={enrichments}
           loadingSet={loading}
