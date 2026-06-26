@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Flame, Snowflake, TrendingUp } from "lucide-react";
 import { miniCrestUrl, tierLabel, tierColor } from "@/components/summoner/pro/rankUtils";
 import BadgeChip from "@/components/shared/BadgeChip";
@@ -77,8 +78,8 @@ function RoleBadge({ role, roleStats }) {
   const st = laneStatus(role, stats);
   return (
     <span className="relative inline-flex" onMouseEnter={(e) => setAnchor(e.currentTarget)} onMouseLeave={() => setAnchor(null)}>
-      <span className="w-7 h-7 rounded-md bg-black/45 border border-white/15 flex items-center justify-center">
-        {icon && <img src={icon} alt="" width={18} height={18} />}
+      <span className="w-9 h-9 rounded-md bg-black/45 border border-white/15 flex items-center justify-center">
+        {icon && <img src={icon} alt="" width={24} height={24} />}
       </span>
       {st?.marker === "fill" ? (
         <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 border border-black/50 flex items-center justify-center text-[8px] font-bold leading-none text-black">F</span>
@@ -123,8 +124,8 @@ function RunesCluster({ runes }) {
   if (!runes) return null;
   return (
     <span className="relative inline-flex items-center gap-1" onMouseEnter={(e) => setAnchor(e.currentTarget)} onMouseLeave={() => setAnchor(null)}>
-      {runes.keystone?.icon && <img src={runes.keystone.icon} alt="" width={24} height={24} className="rounded-full bg-black/40" onError={hideOnError} />}
-      {runes.secondary?.icon && <img src={runes.secondary.icon} alt="" width={16} height={16} className="opacity-85" onError={hideOnError} />}
+      {runes.keystone?.icon && <img src={runes.keystone.icon} alt="" width={30} height={30} className="rounded-full bg-black/40" onError={hideOnError} />}
+      {runes.secondary?.icon && <img src={runes.secondary.icon} alt="" width={20} height={20} className="opacity-85" onError={hideOnError} />}
       {anchor && (
         <Tooltip anchorEl={anchor}>
           <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 w-48">
@@ -226,27 +227,39 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
             </div>
           )}
 
-          {/* ÜST: ortalı şampiyon adı + bu şampiyon maç/WR/KDA (önemli veri ön yüzde) */}
-          <div className="relative pt-3 px-3 text-center">
-            <div className="text-base font-extrabold text-white drop-shadow truncate">{p.champion?.name}</div>
+          {/* ÜST: şampiyon adı + yatay istatistik şeridi (maç · WR · KDA) — önemli veri, ferah */}
+          <div className="relative pt-3 px-2.5">
+            <div className="text-center text-lg font-extrabold text-white drop-shadow-lg truncate leading-tight">{p.champion?.name}</div>
             {stat && stat.games > 0 ? (
-              <>
-                <div className="text-[12px] text-gray-200 drop-shadow">
-                  {stat.games} maç · <span className="font-bold">%{stat.winRate} WR</span>
+              <div className="mt-2 rounded-lg bg-black/50 border border-white/10 backdrop-blur-sm">
+                <div className="flex items-stretch">
+                  <div className="flex-1 py-1.5 text-center">
+                    <div className="text-[15px] font-extrabold text-white tabular-nums leading-none">{stat.games}</div>
+                    <div className="text-[8px] uppercase tracking-wider text-gray-400 mt-1">maç</div>
+                  </div>
+                  <div className="w-px bg-white/10 my-1.5" />
+                  <div className="flex-1 py-1.5 text-center">
+                    <div className={`text-[15px] font-extrabold tabular-nums leading-none ${stat.winRate >= 50 ? "text-emerald-300" : "text-rose-300"}`}>%{stat.winRate}</div>
+                    <div className="text-[8px] uppercase tracking-wider text-gray-400 mt-1">WR</div>
+                  </div>
+                  <div className="w-px bg-white/10 my-1.5" />
+                  <div className="flex-1 py-1.5 text-center">
+                    <div className="text-[15px] font-extrabold text-amber-300 tabular-nums leading-none">{stat.avgKda?.ratio === "Perfect" ? "∞" : stat.avgKda?.ratio}</div>
+                    <div className="text-[8px] uppercase tracking-wider text-gray-400 mt-1">KDA</div>
+                  </div>
                 </div>
                 {stat.avgKda && (
-                  <div className="text-[11px] drop-shadow tabular-nums mt-0.5">
+                  <div className="text-center text-[10px] tabular-nums pb-1 -mt-0.5 drop-shadow">
                     <span className="text-gray-100 font-semibold">{stat.avgKda.kills}</span>
-                    <span className="text-gray-400"> / </span>
+                    <span className="text-gray-500"> / </span>
                     <span className="text-red-400 font-semibold">{stat.avgKda.deaths}</span>
-                    <span className="text-gray-400"> / </span>
+                    <span className="text-gray-500"> / </span>
                     <span className="text-gray-100 font-semibold">{stat.avgKda.assists}</span>
-                    <span className="text-amber-300 font-bold"> · {stat.avgKda.ratio === "Perfect" ? "Mükemmel" : `${stat.avgKda.ratio} KDA`}</span>
                   </div>
                 )}
-              </>
+              </div>
             ) : (
-              <div className="text-[12px] text-gray-300 drop-shadow">{loading ? "yükleniyor…" : "bu şampiyonda yeni"}</div>
+              <div className="mt-2 text-center text-[12px] text-gray-300 drop-shadow">{loading ? "yükleniyor…" : "bu şampiyonda yeni"}</div>
             )}
           </div>
 
@@ -265,26 +278,39 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
 
             {/* Spell (sol) │ Koridor (orta) │ Rün (sağ) — çizgi ayraçlı */}
             <div className="flex items-center w-full">
-              <div className="flex-1 flex items-center justify-center gap-1">
+              <div className="flex-1 flex items-center justify-center gap-1.5">
                 {(p.spells || []).slice(0, 2).map((s, i) =>
-                  s?.image ? <img key={i} src={s.image} alt={s.name} title={s.name} width={22} height={22} className="rounded border border-white/10" /> : null
+                  s?.image ? <img key={i} src={s.image} alt={s.name} title={s.name} width={30} height={30} className="rounded-md border border-white/10" /> : null
                 )}
               </div>
-              <span className="w-px h-6 bg-white/15" />
-              <div className="px-2">
+              <span className="w-px h-8 bg-white/15" />
+              <div className="px-2.5">
                 <RoleBadge role={p.role} roleStats={roleStats} />
               </div>
-              <span className="w-px h-6 bg-white/15" />
-              <div className="flex-1 flex items-center justify-center gap-1">
+              <span className="w-px h-8 bg-white/15" />
+              <div className="flex-1 flex items-center justify-center gap-1.5">
                 <RunesCluster runes={p.runes} />
               </div>
             </div>
 
-            {/* Sum adı + Formunda */}
+            {/* Sum adı (tıkla → yeni sekmede profil) + Formunda */}
             <div className="flex items-center justify-center gap-1.5 max-w-full">
-              <span className="text-[15px] font-extrabold text-white drop-shadow truncate" title={`${p.summonerName}#${p.tagLine}`}>
-                {p.summonerName}
-              </span>
+              {p.summonerName && p.tagLine ? (
+                <Link
+                  href={`/summoner/${encodeURIComponent(p.summonerName)}/${encodeURIComponent(p.tagLine)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[15px] font-extrabold text-white drop-shadow truncate hover:text-blue-300 hover:underline underline-offset-2 transition-colors"
+                  title={`${p.summonerName}#${p.tagLine} — profili yeni sekmede aç`}
+                >
+                  {p.summonerName}
+                </Link>
+              ) : (
+                <span className="text-[15px] font-extrabold text-white drop-shadow truncate" title={`${p.summonerName}#${p.tagLine}`}>
+                  {p.summonerName}
+                </span>
+              )}
               {inForm && (
                 <span
                   className="flex items-center gap-0.5 flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold text-amber-300 bg-amber-400/20 border border-amber-400/40"
