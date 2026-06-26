@@ -357,20 +357,43 @@ html.light .hero-bg-btn:hover {
   background: rgba(249, 250, 252, 0.96);
 }
 
+/* ===== Arka plan görseli varken kart YÜZEYLERİ (kaybolma önleme) =====
+   Görsel aktifken (html.has-bg) ANA SAYFA .card/.bigsearch zemini --surface
+   (%2 opak) görselin içinde kaybolurdu (kartlar "komple saydam" görünürdü).
+   DEFAULT'ta (saydam-kart KAPALI) opak koyu zemin ver → kartlar net dursun.
+   Saydam-kart AÇILINCA alttaki .glass-cards kuralı bunu yarı-saydam cama çevirir
+   (bu kural ondan ÖNCE durmalı — eşit spesifiklikte sonraki kazanır). */
+html.has-bg .card,
+html.has-bg .bigsearch {
+  background: color-mix(in oklab, var(--bg-1) 88%, transparent);
+}
+/* dpm-scope sayfaları (profil/sıralama/şampiyonlar/tier/şampiyon-detay): kartlar
+   görsel üstünde de her zaman NAVY kalmalı → üstteki gri kuralı ez (daha spesifik). */
+html.has-bg .dpm-scope .card {
+  background: color-mix(in oklab, #161c30 92%, transparent);
+}
+
 /* ===== Kullanıcı tercihi: SAYDAM (cam) kartlar =====
    Tema popover'ından açılır, localStorage 'elw-glass-cards' → html.glass-cards.
-   Arka plan görseli kartın içinden süzülür; blur sayesinde içerik okunur kalır.
-   İki temada da çalışır (--bg-1 dark'ta koyu, light'ta kırık beyaz).
-   NOT: html.light .card kuralından SONRA durmalı (eşit spesifiklikte sonraki
-   kazanır) — saydam tercihi opak off-white varsayılanını ezsin diye. */
+   ANA SAYFA için BAYA saydam (%14): arka plan görseli kartın içinden net süzülsün
+   (kullanıcı isteği). Okunabilirliği güçlü blur taşır. dpm-scope sayfaları bu
+   kurala TAKILMAZ — altta navy %52 ile daha opak kalırlar (orada bu kadar şeffaflık
+   istenmedi). NOT: html.light .card + html.has-bg .card kurallarından SONRA durmalı
+   (eşit spesifiklikte sonraki kazanır) — saydam tercihi opak varsayılanı ezsin diye. */
 html.glass-cards .card,
 html.glass-cards .bigsearch,
 html.glass-cards .glass {
-  /* %40: gerçekten saydam hissedilsin (55 zemin perdesiyle birleşince opak
-     gibi duruyordu); okunabilirliği blur taşıyor.
-     .glass de dahil: tier-list, şampiyon detay, sıralama .glass kullanıyordu →
-     saydam kart toggle'ı onları da etkilesin (tam tutarlılık). */
-  background: color-mix(in oklab, var(--bg-1) 40%, transparent);
+  background: color-mix(in oklab, var(--bg-1) 14%, transparent);
+  backdrop-filter: blur(var(--card-blur, 18px));
+}
+/* Saydam kartlar AÇIKKEN dpm-scope sayfalarında NAVY tint KORUNSUN (gri --bg-1
+   değil) → yarı-saydam navy cam. .glass-cards kuralından daha spesifik, onu ezer.
+   Image 14'teki "saydam açınca mavilik gidiyor" sorununu çözer.
+   NOT: blur SABİT (14px) — "Kart Bulanıklığı" ayarı (var(--card-blur)) yalnızca
+   ANA SAYFAYA özel; diğer sayfalar bundan etkilenmez (kullanıcı isteği). */
+html.glass-cards .dpm-scope .glass,
+html.glass-cards .dpm-scope .card {
+  background: color-mix(in oklab, #161c30 52%, transparent);
   backdrop-filter: blur(14px);
 }
 

@@ -28,6 +28,9 @@ export function ThemeProvider({ children }) {
   // tarayıcıya özel (localStorage). Gerçek uygulama no-flash script'te;
   // burada React state senkronu + canlı değişiklik.
   const [bgBlur, setBgBlurState] = useState(0);
+  // Saydam kart bulanıklığı (backdrop-filter blur px). Kart içinden görünen arka
+  // plan görselinin netliğini ayarlar. Default 18 (globals.css fallback'iyle aynı).
+  const [cardBlur, setCardBlurState] = useState(18);
   const [glassCards, setGlassCardsState] = useState(false);
   // Zemin perdesi (arka plan görseli üstündeki örtü). Varsayılan AÇIK.
   const [bgVeil, setBgVeilState] = useState(true);
@@ -43,6 +46,8 @@ export function ThemeProvider({ children }) {
     const savedBlur = parseInt(localStorage.getItem("elw-bg-blur") || "0", 10);
     if (savedBlur > 0) setBgBlurState(savedBlur);
     if (localStorage.getItem("elw-glass-cards") === "1") setGlassCardsState(true);
+    const savedCardBlur = localStorage.getItem("elw-card-blur");
+    if (savedCardBlur !== null) setCardBlurState(parseInt(savedCardBlur, 10));
     if (localStorage.getItem("elw-bg-veil") === "0") setBgVeilState(false);
   }, []);
 
@@ -73,6 +78,12 @@ export function ThemeProvider({ children }) {
     }
   }
 
+  function setCardBlur(px) {
+    setCardBlurState(px);
+    document.documentElement.style.setProperty("--card-blur", `${px}px`);
+    localStorage.setItem("elw-card-blur", String(px));
+  }
+
   function setGlassCards(on) {
     setGlassCardsState(on);
     document.documentElement.classList.toggle("glass-cards", on);
@@ -93,6 +104,7 @@ export function ThemeProvider({ children }) {
         accent, setAccent, accents: ACCENTS,
         mode, setMode: applyMode, toggleMode,
         bgBlur, setBgBlur,
+        cardBlur, setCardBlur,
         glassCards, setGlassCards,
         bgVeil, setBgVeil,
       }}

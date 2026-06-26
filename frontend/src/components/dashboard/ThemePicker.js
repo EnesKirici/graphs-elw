@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Palette, HelpCircle, Swords } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 import { useBackground } from "@/context/BackgroundContext";
@@ -49,10 +50,12 @@ function BgHelp({ background, removeBg }) {
 /* Topbar tema seçici — accent rengi + arka plan (görsel/bulanıklık/perde) + saydam kartlar.
    Hepsi kullanıcının tarayıcısında saklanır (localStorage, ThemeContext/BackgroundContext). */
 export default function ThemePicker() {
-  const { accent, setAccent, accents, bgBlur, setBgBlur, glassCards, setGlassCards, bgVeil, setBgVeil } = useTheme();
+  const { accent, setAccent, accents, bgBlur, setBgBlur, cardBlur, setCardBlur, glassCards, setGlassCards, bgVeil, setBgVeil } = useTheme();
   const { background, enabled, toggleEnabled, removeBg } = useBackground();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  // Kart Bulanıklığı ayarı YALNIZCA ana sayfada çalışır → slider'ı da yalnız orada göster.
+  const isHome = usePathname() === "/";
 
   useEffect(() => {
     function onClick(e) {
@@ -145,6 +148,35 @@ export default function ThemePicker() {
               {glassCards ? "Açık" : "Kapalı"}
             </span>
           </button>
+
+          {/* Kart bulanıklığı — kart içinden görünen arka plan görselinin netliği
+              (0 = net, yüksek = bulanık cam). Her zaman aktif: slider'a dokununca
+              saydam kartlar kapalıysa otomatik açılır → kullanıcı ayarı anında görür.
+              YALNIZCA ana sayfada gösterilir (etkisi de yalnız orada). */}
+          {isHome && (
+            <>
+              <div className="theme-pop-title" style={{ marginTop: 12 }}>Kart Bulanıklığı</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input
+                  type="range"
+                  min={0}
+                  max={30}
+                  step={2}
+                  value={cardBlur}
+                  onChange={(e) => {
+                    if (!glassCards) setGlassCards(true);
+                    setCardBlur(Number(e.target.value));
+                  }}
+                  className="stat-slider"
+                  style={{ width: 132 }}
+                  aria-label="Kart bulanıklığı"
+                />
+                <span className="mono" style={{ fontSize: 11, color: "var(--txt-2)", minWidth: 40, textAlign: "right" }}>
+                  {cardBlur === 0 ? "Net" : `${cardBlur}px`}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
