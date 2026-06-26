@@ -1,12 +1,16 @@
 /**
  * Açık mavi zemin kartı — Şampiyonlar + Meta Tier List için ortak component
- * bg-blue-500/8: çok açık mavi (görsel arkada görünsün)
- * border-blue-500/20: hafif mavi kenarlık
- * backdrop-blur-sm: cam efekti (profesyonel)
+ * 
+ * Site-wide kullanımı:
+ * - AllChampionsContent (Şampiyonlar sekmesi tablosu)
+ * - RecentChampionsCard (Profil "Son Maçlar Özeti")
+ * - TierList (Meta Tier List kartları)
+ * 
+ * Renk: bg-blue-500/15 (açık mavi, profesyonel) + backdrop-blur
  */
 export default function Card({ children, className = "" }) {
   return (
-    <div className={`rounded-xl border border-blue-500/20 bg-blue-500/8 backdrop-blur-sm shadow-lg ${className}`}>
+    <div className={`rounded-xl border border-blue-500/25 bg-blue-500/15 backdrop-blur-sm shadow-lg ${className}`}>
       {children}
     </div>
   );
