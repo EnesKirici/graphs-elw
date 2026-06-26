@@ -135,6 +135,33 @@ class ChampionStatsService
     }
 
     /**
+     * Tier list için per-position ham sayaçlar: her şampiyonun ALL + her pozisyon
+     * games/wins/bans değerleri. Koridor dağılımı + rol-bazlı WR/pick MetaService'te
+     * bundan hesaplanır. (getMetaStats yalnız ALL verir; bu hepsini verir.)
+     *
+     * @return array{total: int, champions: array<string, array<string, array{games:int,wins:int,bans:int}>>}
+     */
+    public function getPositionStats(string $patch): array
+    {
+        $patchRow = StatPatch::find($patch);
+        $total = $patchRow ? (int) $patchRow->total_games : 0;
+        if ($total < 1) {
+            return ['total' => 0, 'champions' => []];
+        }
+
+        $champions = [];
+        foreach (ChampionStat::where('patch', $patch)->get() as $r) {
+            $champions[$r->champion_id][$r->position] = [
+                'games' => (int) $r->games,
+                'wins'  => (int) $r->wins,
+                'bans'  => (int) $r->bans,
+            ];
+        }
+
+        return ['total' => $total, 'champions' => $champions];
+    }
+
+    /**
      * Ranked maçlardan ADC+Support duo sayaçlarını (champion_duo_stats) yeniden hesaplar.
      * Her maçta her takımın BOTTOM+UTILITY ikilisi sayılır (tam rebuild).
      *

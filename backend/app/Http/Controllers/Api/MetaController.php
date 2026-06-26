@@ -38,4 +38,13 @@ class MetaController extends Controller
     {
         return response()->json($this->meta->getSiteStats());
     }
+
+    /**
+     * Rol-bazlı meta tier list (gerçek champion_stats verisinden).
+     * GET /api/v1/meta/tier-list
+     */
+    public function tierList(): JsonResponse
+    {
+        return response()->json($this->meta->getTierList());
+    }
 }

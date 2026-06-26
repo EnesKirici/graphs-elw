@@ -9,11 +9,12 @@ import { pctTR } from "./primitives";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 // Havuzdan deterministik slayt seçimi (her kategoriden 2, sıraya göre serpiştir).
+// "Yeni Şampiyon" (varsa) HER ZAMAN ilk slayt → ilk açılışta o görünür, sonra döngü.
 function selectSlides(pool) {
   const byCat = {};
   for (const c of pool) (byCat[c.sliderCategory] ||= []).push(c);
-  const cats = Object.keys(byCat);
-  const out = [];
+  const out = [...(byCat["Yeni Şampiyon"] || [])];
+  const cats = Object.keys(byCat).filter((c) => c !== "Yeni Şampiyon");
   for (let i = 0; i < 2; i++) for (const cat of cats) if (byCat[cat][i]) out.push(byCat[cat][i]);
   return out.length ? out : pool.slice(0, 6);
 }
@@ -28,6 +29,7 @@ function initSkins(slides) {
 // Slider kategorisine göre vurgu rengi + öne çıkan stat (büyük sayı = şampiyonun
 // slider'da olma SEBEBİ). Ban → kırmızı, Popüler → mavi, WR → yeşil (ayarlı WR).
 function categoryStyle(category) {
+  if (category?.includes("Yeni")) return { color: "#f59e0b", valueKey: "banRate", label: "YENİ ŞAMPİYON" };
   if (category?.includes("Banlanan")) return { color: "var(--loss)", valueKey: "banRate", label: "BAN" };
   if (category?.includes("Popüler")) return { color: "#4f8cff", valueKey: "pickRate", label: "PICK" };
   return { color: "var(--win)", valueKey: "adjWr", fallback: "winRate", label: "WIN RATE" };

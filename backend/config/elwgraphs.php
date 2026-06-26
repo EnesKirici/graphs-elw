@@ -59,16 +59,18 @@ return [
 
         // Kompozit skor (0–1) → tier. Skor >= sınır olan ilk tier atanır.
         'thresholds' => [
-            'S+' => 0.82,
-            'S'  => 0.68,
-            'A'  => 0.52,
+            'S+' => 0.70,
+            'S'  => 0.60,
+            'A'  => 0.50,
             'B'  => 0.36,
             'C'  => 0.20,
             // altı → D
         ],
 
         // Örneklem güveni normalizasyonu: n bu değere ulaşınca güven = 1.0.
-        'sample_full_confidence_at' => 200,
+        // Mevcut örneklem küçük (çoğu <200) → 80'de tam güven (yoksa skorlar bastırılır,
+        // S+ hiç çıkmaz). Production key + crawler ile örneklem büyüyünce yükseltilebilir.
+        'sample_full_confidence_at' => 80,
 
         // Bileşenleri 0–1'e çevirme çapaları.
         'normalize' => [

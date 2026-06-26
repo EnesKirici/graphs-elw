@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AdminSetting;
 use App\Models\CachedPlayer;
+use App\Models\ChampionStat;
 use App\Models\MatchRecord;
 use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
@@ -34,7 +35,7 @@ class MetaService
 
     public function getDashboardStats(): array
     {
-        return Cache::remember('meta:dashboard_stats_v8', config('riot.cache_ttl.meta_stats'), function () {
+        return Cache::remember('meta:dashboard_stats_v9', config('riot.cache_ttl.meta_stats'), function () {
             $champions = $this->ddragon->getChampions();
             $version = $this->ddragon->getCurrentVersion();
             $positionMap = $this->ddragon->getChampionPositions();
@@ -180,6 +181,30 @@ class MetaService
                 }
             }
 
+            // Yeni şampiyon Locke — slider'ın BAŞINA sabitle (tanıtım): "Yeni Şampiyon" rozetiyle
+            // ilk açılır, sonra döngüyle diğerlerine geçer. Ban'ı az-oynanma guard'ına takılmasın
+            // diye doğrudan sayaçtan (yeni şampiyon az oynanır ama çok banlanır).
+            $lockeStat = collect($stats)->firstWhere('id', 'Locke');
+            if ($lockeStat) {
+                $lockeRow = ChampionStat::where('patch', $currentPatch)
+                    ->where('champion_id', 'Locke')->where('position', 'ALL')->first();
+                $patchTotal = optional(StatPatch::find($currentPatch))->total_games ?? 0;
+                $detail = $this->ddragon->getChampionDetail('Locke');
+                $lastRealSkin = $this->getLastRealSkin($detail['skins'] ?? []);
+
+                $entry = $lockeStat;
+                $entry['banRate'] = ($lockeRow && $patchTotal > 0)
+                    ? round($lockeRow->bans / $patchTotal * 100, 1)
+                    : $lockeStat['banRate'];
+                $entry['latestSkinSplash'] = "{$ddragonBase}/cdn/img/champion/splash/Locke_{$lastRealSkin}.jpg";
+                $entry['latestSkinName'] = $lockeStat['name'];
+                $entry['sliderCategory'] = 'Yeni Şampiyon';
+                $entry['sliderRank'] = 1;
+                $entry['sliderValue'] = ($entry['banRate'] ?? 0).'%';
+                $entry['skins'] = $this->ddragon->formatSkins($detail);
+                array_unshift($sliderPool, $entry);
+            }
+
             $risers = collect($rankable)->where('wrChange', '>', 0)
                 ->sortByDesc('wrChange')->values()->take(3)->all();
             $fallers = collect($rankable)->where('wrChange', '<', 0)
@@ -195,6 +220,104 @@ class MetaService
                 'topBanRate'  => $topBanRate,
                 'risers'      => array_values($risers),
                 'fallers'     => array_values($fallers),
+            ];
+        });
+    }
+
+    /**
+     * Rol-bazlı meta tier list: her şampiyonun OYNANDIĞI her koridor için
+     * WR/pick/ban/shrinkage + kompozit tier + koridor dağılımı (laneShare).
+     * Kaynak: champion_stats per-position. Eşik daha düşük (10) → tier-list daha dolu;
+     * 30 altı "düşük örneklem" işaretlenir. Production key + crawler ile gerçek meta'ya oturur.
+     * GET /api/v1/meta/tier-list
+     */
+    public function getTierList(): array
+    {
+        return Cache::remember('meta:tier_list_v2', config('riot.cache_ttl.meta_stats'), function () {
+            $version = $this->ddragon->getCurrentVersion();
+            $patch = $this->stats->currentPatchBucket();
+            $data = $this->stats->getPositionStats($patch);
+            $total = $data['total'];
+            $byChamp = $data['champions'];
+
+            $minGames = 10;       // tier-list rol eşiği (dashboard MIN_SAMPLE=20'den ayrı, daha dolu)
+            $lowSampleUnder = 30; // bunun altı "düşük örneklem" rozeti
+            $positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'];
+
+            $out = [];
+            foreach ($this->ddragon->getChampions() as $champ) {
+                $id = $champ['id'];
+                $st = $byChamp[$id] ?? null;
+                if (! $st) {
+                    continue;
+                }
+                $allGames = $st['ALL']['games'] ?? 0;
+                $bans = $st['ALL']['bans'] ?? 0;
+                if ($allGames < 1) {
+                    continue;
+                }
+
+                $ban = $total > 0 ? round($bans / $total * 100, 1) : 0.0; // ban rol-bağımsız (şampiyon banlanır)
+
+                $roles = [];
+
+                // "Tümü" sekmesi (ALL) — tüm rollerin toplamı, genel sıralama.
+                if ($allGames >= $minGames) {
+                    $allW = $st['ALL']['wins'] ?? 0;
+                    $adjAll = Statistics::shrunkWinRate($allW, $allGames);
+                    $pickAll = $total > 0 ? round($allGames / $total * 100, 1) : 0.0;
+                    $roles['ALL'] = [
+                        'wr'        => round($allW / $allGames * 100, 1),
+                        'adjWr'     => round($adjAll * 100, 1),
+                        'pick'      => $pickAll,
+                        'ban'       => $ban,
+                        'games'     => $allGames,
+                        'laneShare' => 100,
+                        'tier'      => $this->tierFromScore($this->compositeTierScore($adjAll, $pickAll, $ban, $allGames)),
+                        'lowSample' => $allGames < $lowSampleUnder,
+                    ];
+                }
+
+                foreach ($positions as $pos) {
+                    $ps = $st[$pos] ?? null;
+                    if (! $ps || $ps['games'] < $minGames) {
+                        continue;
+                    }
+                    $g = $ps['games'];
+                    $w = $ps['wins'];
+                    $adj = Statistics::shrunkWinRate($w, $g);
+                    $pick = $total > 0 ? round($g / $total * 100, 1) : 0.0;
+
+                    $roles[$pos] = [
+                        'wr'        => round($w / $g * 100, 1),
+                        'adjWr'     => round($adj * 100, 1),
+                        'pick'      => $pick,
+                        'ban'       => $ban,
+                        'games'     => $g,
+                        'laneShare' => $allGames > 0 ? (int) round($g / $allGames * 100) : 0,
+                        'tier'      => $this->tierFromScore($this->compositeTierScore($adj, $pick, $ban, $g)),
+                        'lowSample' => $g < $lowSampleUnder,
+                    ];
+                }
+                if (empty($roles)) {
+                    continue;
+                }
+
+                $out[] = [
+                    'id'    => $id,
+                    'name'  => $champ['name'],
+                    'tags'  => $champ['tags'],
+                    'image' => $this->ddragon->championIconUrl($id),
+                    'roles' => $roles,
+                ];
+            }
+
+            return [
+                'version'    => $version,
+                'patch'      => $patch,
+                'totalGames' => $total,
+                'minGames'   => $minGames,
+                'champions'  => $out,
             ];
         });
     }
