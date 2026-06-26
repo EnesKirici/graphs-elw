@@ -17,8 +17,11 @@ Etiket admin paneli ✅ + şampiyon-stat KDA ✅ + kart redizayn ✅ + premade t
   gölgeli metin. Orta satır ikonları (spell/rol/rün) büyütüldü. Summoner adı **tıklanınca yeni
   sekmede profil** (`Link target=_blank` + stopPropagation).
 - **Şampiyon KDA** ön yüzde (maç/WR altında, ölüm kırmızı, oran amber).
-- **Seri animasyonu:** alev/buz ikonları yalnız **4+ seride** animasyonlu
-  (`globals.css` streakFlame/streakFrost). Mock'ta elw 5G, elwyore 4M demo.
+- **Seri animasyonu:** yalnız **4+ seride** — ikon yanıp sönmez, **parçacıklar** ikon
+  üzerindeki noktalardan doğup yükselir (alev kıvılcımı/buz tozu; `globals.css` .streak-fx/.ember/.frost).
+- **Kart etkileşim/cila (son tur):** çift-tık → TÜM kartları çevir (localFlip XOR flipAll); takımlar
+  arası **VS ayracı**; Duo rozeti dolu renkli pill; "Gününde" modern degrade; SEN rozeti + K/D/A
+  kırılımı kaldırıldı; sert rank border yerine **çok minimal** rank renginde iç ışıma (`faceShadow`).
 
 ## ⚠️ DEV SERVER / OOM NOTU (önemli — bu session'da yaşandı)
 `live-game?mock=1` (en ağır SSR sayfası: 10 kart + radar + splash) **OOM ile 500** verebiliyor:
