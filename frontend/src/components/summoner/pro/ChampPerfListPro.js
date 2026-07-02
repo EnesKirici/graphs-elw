@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { HelpCircle } from "lucide-react";
+import Tooltip from "@/components/shared/Tooltip";
 import QueueTabs from "@/components/summoner/QueueTabs";
 
 const GAME_TYPES = [
@@ -17,21 +19,33 @@ function wrColor(wr) {
   return "text-red-400";
 }
 
-// PLACEHOLDER/DEMO (TEST VERİSİ) — şampiyon Dünya + TR sırası worker ile gelecek (c.championRank).
-const DEMO_RANKS = [
-  { global: 1840, tr: 142 },
-  { global: 12503, tr: 961 },
-  { global: 6720, tr: 503 },
-];
-function placeholderChampRank(name, games, i) {
-  if (i != null && DEMO_RANKS[i]) return DEMO_RANKS[i];
-  let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const global = Math.max(8000, 40000 + (h % 1200000) - (games || 0) * 2000);
-  const tr = Math.max(500, Math.round(global / 13));
-  return { global, tr };
-}
 const fmt = (n) => n.toLocaleString("tr-TR");
+
+// Gerçek şampiyon sırası (championRank) worker'dan gelene kadar test verisi yerine
+// "yapım aşamasında" ipucu göster (Dünya + TR sırası birlikte).
+function InDevRankHint() {
+  const [anchor, setAnchor] = useState(null);
+  return (
+    <span
+      className="inline-flex items-center gap-1 cursor-help"
+      onMouseEnter={(e) => setAnchor(e.currentTarget)}
+      onMouseLeave={() => setAnchor(null)}
+    >
+      <span className="text-gray-500">Sıra</span>
+      <span className="text-gray-400 font-medium">—</span>
+      <HelpCircle size={11} className="text-gray-600" />
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[210px]">
+            <p className="text-[11px] text-gray-300 leading-relaxed">
+              Dünya ve TR şampiyon sıralaması <b className="text-gray-100">yapım aşamasında</b> — yakında eklenecek.
+            </p>
+          </div>
+        </Tooltip>
+      )}
+    </span>
+  );
+}
 
 export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
   const [gameType, setGameType] = useState("all");
@@ -63,8 +77,8 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
 
           <div className="divide-y divide-edge/25">
             {list.slice(0, 6).map((c, i) => {
-              // Gerçek sıra (championRank) gelene kadar placeholder/demo göster.
-              const rk = c.championRank?.global != null ? c.championRank : placeholderChampRank(c.championName, c.games, i);
+              // Gerçek sıra (championRank) worker'dan gelirse göster; yoksa "yapım aşamasında".
+              const rk = c.championRank?.global != null ? c.championRank : null;
               return (
                 <Link
                   key={c.championName + i}
@@ -75,12 +89,20 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
                   <div className="flex-1 min-w-0">
                     {/* Ad + Dünya sırası + TR sırası — okunur boyut, sayılar parlak (sönük kalmasın) */}
                     <p className="text-[13px] text-gray-100 font-semibold truncate leading-tight">{c.championName}</p>
-                    <p className="text-[11.5px] leading-tight mt-1 tabular-nums whitespace-nowrap">
-                      <span className="text-gray-500">Sıra </span><span className="text-gray-200 font-medium">{fmt(rk.global)}</span>
-                    </p>
-                    <p className="text-[11.5px] leading-tight mt-0.5 tabular-nums whitespace-nowrap">
-                      <span className="text-gray-500">{region} </span><span className="text-gray-100 font-medium">{fmt(rk.tr)}</span>
-                    </p>
+                    {rk ? (
+                      <>
+                        <p className="text-[11.5px] leading-tight mt-1 tabular-nums whitespace-nowrap">
+                          <span className="text-gray-500">Sıra </span><span className="text-gray-200 font-medium">{fmt(rk.global)}</span>
+                        </p>
+                        <p className="text-[11.5px] leading-tight mt-0.5 tabular-nums whitespace-nowrap">
+                          <span className="text-gray-500">{region} </span><span className="text-gray-100 font-medium">{fmt(rk.tr)}</span>
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-[11.5px] leading-tight mt-1 whitespace-nowrap">
+                        <InDevRankHint />
+                      </p>
+                    )}
                   </div>
                   <span className="w-9 text-center text-[13px] text-gray-200 font-medium tabular-nums">{c.games}</span>
                   <span className="w-[68px] text-center text-[11px] text-gray-400 tabular-nums">

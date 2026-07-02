@@ -25,6 +25,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | ELW maç skoru — role-relatif / ham etki karışımı (α)
+    |--------------------------------------------------------------------------
+    | roleAdjusted ham skoru rolün baseline'ına böler (role-relatif). baseline_blend (α)
+    | bu böleni global ham ortalamaya doğru karıştırır:
+    |   effectiveBaseline = (1-α)·roleBaseline + α·global_baseline
+    | α=0 → tam role-relatif ("rolüne göre ne kadar iyi"); α=1 → tam ham etki ("maçta kim
+    | daha çok iş yaptı", carry'ler öne çıkar). α=0.5 dengeli (DPM-uyumlu): koridoru
+    | kaybeden ama yüksek hasar/KP'li ADC, az-ölen-ama-denk-koridor top'un üstüne çıkar;
+    | destekler ezilmez. global_baseline = 1493 maçlık ölçümün frekans-ağırlıklı role ort.
+    | (elw:calibrate-baselines ile yeniden ölçülür; ROLE_W değişince güncelle).
+    */
+    'elw_score' => [
+        'baseline_blend'  => 0.5,
+        'global_baseline' => 9.28, // 2026-06-30: #7 granül metrikler sonrası yeniden ölçüldü (156 maç)
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Maç kartı "takım kalitesi" etiketi (DPM tarzı — takım arkadaşlarının MUTLAK seviyesi)
     |--------------------------------------------------------------------------
     | diff = takım arkadaşlarımın (ben hariç) ortalama ELW − lobi ortalaması (10 oyuncu).
@@ -38,7 +56,11 @@ return [
         'great'    => 1.9,  // diff >= → "Çok iyi takım" (takım arkadaşların lobi üstü, net)
         'good'     => 0.7,  // diff >= → "İyi takım"
         'bad'      => -0.7, // diff <= → "Kötü takım" (takım arkadaşların lobi altı)
-        'terrible' => -1.9, // diff <= → "Çok kötü takım"
+        'terrible' => -1.7, // diff <= → "Çok kötü takım" (2026-07: -1.9→-1.7 gevşetildi)
+        // MUTLAK taban: relatif diff lobiyle sınırlı olduğundan (lobi kendi kötü takımımı da
+        // içerir) 0/10-1/10 hard-inter'li takım -1.9'a ulaşamayabilir. Takım arkadaşlarının
+        // MUTLAK ortalaması bunun altındaysa → relatiften bağımsız "Çok kötü takım".
+        'terrible_abs' => 3.8,
         // ikisinin arası → "Ortalama takım"
     ],
 

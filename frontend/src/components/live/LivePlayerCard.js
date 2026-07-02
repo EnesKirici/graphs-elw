@@ -69,11 +69,11 @@ function laneStatus(role, roleStats) {
 }
 
 /* Galibiyet/mağlubiyet serisi — solid çip + alev (galibiyet) / kar tanesi (mağlubiyet) ikonu.
-   3'ten FAZLA (4+) seride parçacıklı efekt: alevden yükselen kıvılcımlar / buz tozu. */
+   3+ seride parçacıklı efekt: alevden yükselen kıvılcımlar / buz tozu. */
 function StreakBadge({ streak }) {
   if (!streak) return null;
   const Icon = streak.win ? Flame : Snowflake;
-  const animated = streak.count > 3;
+  const animated = streak.count >= 3;
   const iconColor = streak.win ? "text-amber-400" : "text-cyan-300";
   const pClass = streak.win ? "ember" : "frost";
   return (

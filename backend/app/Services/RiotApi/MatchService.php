@@ -23,8 +23,17 @@ class MatchService
      *  v7: role-relatif kalibrasyon (ham skor / rol-baseline) + KP ağırlığı artırıldı.
      *  v8: multikill (triple/quadra/penta) küçük + bonusu (UNIVERSAL_W) + baseline güncel.
      *  v9: summary_json items/runes SLIM saklanır (sadece id) → okurken DataDragon'dan
-     *      hydrate edilir (hydrateSummary). Özet ~%66 küçülür; frontend kontratı aynı. */
-    private const ALGO_VERSION = 9;
+     *      hydrate edilir (hydrateSummary). Özet ~%66 küçülür; frontend kontratı aynı.
+     *  v10: roleAdjusted HİBRİT — role-relatif ile ham etki karışımı (config baseline_blend
+     *       α=0.5). Carry'ler (koridoru kaybetse de yüksek hasar/KP'li ADC) ham etkide
+     *       hak ettiği sıraya çıkar; baseline'lar 1493 maçla doğrulandı (zaten isabetli).
+     *  v11: #7 granül metrikler (destek: wards killed/placed, pick kill, save ally, vizyon farkı;
+     *       genel: grub, kule katkısı, dalış, erken üstünlük; orman: counter-jungle, erken gank;
+     *       roam) + tank-sup rebalansı (tank/cc kısıldı) + 156 maçla baseline yeniden ölçüldü.
+     *       elwyore lobisi DPM ile 10'da 8 birebir (elwyore 5./NAMNAMMM 6./999 7.). + yeni rozetler.
+     *  v12: takım kalitesi "Çok kötü takım" MUTLAK taban (terrible_abs=3.8) + eşik -1.9→-1.7
+     *       → 0/10-1/10 hard-inter'li takım artık doğru "Çok kötü" etiketleniyor. */
+    private const ALGO_VERSION = 12;
 
     public function __construct(
         private MatchDataService $matchData,

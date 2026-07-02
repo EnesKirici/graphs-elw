@@ -309,6 +309,32 @@ class MatchDataService
                     'dragonTakedowns' => $p['challenges']['dragonTakedowns'] ?? 0,
                     'baronTakedowns' => $p['challenges']['baronTakedowns'] ?? 0,
                     'riftHeraldTakedowns' => $p['challenges']['riftHeraldTakedowns'] ?? 0,
+                    // ELW #7 (2026-06-30) — destek + genel granül metrikler (SKOR) + rozet alanları.
+                    // Eski maçlarda yok → 0 gelir (worker yeniden çektikçe dolar).
+                    'wardTakedowns' => $p['challenges']['wardTakedowns'] ?? 0,                       // "wards killed"
+                    'stealthWardsPlaced' => $p['challenges']['stealthWardsPlaced'] ?? 0,             // "wards placed"
+                    'pickKillWithAlly' => $p['challenges']['pickKillWithAlly'] ?? 0,                 // koordineli pick kill
+                    'saveAllyFromDeath' => $p['challenges']['saveAllyFromDeath'] ?? 0,               // clutch peel
+                    'effectiveHealAndShielding' => $p['challenges']['effectiveHealAndShielding'] ?? 0, // overheal hariç
+                    'enemyChampionImmobilizations' => $p['challenges']['enemyChampionImmobilizations'] ?? 0, // CC adedi
+                    'visionScoreAdvantageLaneOpponent' => $p['challenges']['visionScoreAdvantageLaneOpponent'] ?? 0,
+                    'voidMonsterKill' => $p['challenges']['voidMonsterKill'] ?? 0,                   // grublar
+                    'turretTakedowns' => $p['challenges']['turretTakedowns'] ?? 0,                   // kule katkısı
+                    'killsNearEnemyTurret' => $p['challenges']['killsNearEnemyTurret'] ?? 0,         // agresif dalış
+                    'earlyLaningPhaseGoldExpAdvantage' => $p['challenges']['earlyLaningPhaseGoldExpAdvantage'] ?? 0,
+                    'laningPhaseGoldExpAdvantage' => $p['challenges']['laningPhaseGoldExpAdvantage'] ?? 0,
+                    'jungleCsBefore10Minutes' => $p['challenges']['jungleCsBefore10Minutes'] ?? 0,
+                    'enemyJungleMonsterKills' => $p['challenges']['enemyJungleMonsterKills'] ?? 0,   // counter-jungle
+                    'killsOnLanersEarlyJungleAsJungler' => $p['challenges']['killsOnLanersEarlyJungleAsJungler'] ?? 0,
+                    'killsOnOtherLanesEarlyJungleAsLaner' => $p['challenges']['killsOnOtherLanesEarlyJungleAsLaner'] ?? 0,
+                    'buffsStolen' => $p['challenges']['buffsStolen'] ?? 0,
+                    'killsWithHelpFromEpicMonster' => $p['challenges']['killsWithHelpFromEpicMonster'] ?? 0,
+                    // ROZET alanları (skora girmez)
+                    'multiKillOneSpell' => $p['challenges']['multiKillOneSpell'] ?? 0,
+                    'highestWardKills' => $p['challenges']['highestWardKills'] ?? 0,
+                    'hadOpenNexus' => $p['challenges']['hadOpenNexus'] ?? 0,
+                    'killedChampTookFullTeamDamageSurvived' => $p['challenges']['killedChampTookFullTeamDamageSurvived'] ?? 0,
+                    'outnumberedKills' => $p['challenges']['outnumberedKills'] ?? 0,
                 ],
                 'missions' => $p['missions'] ?? null,
             ];

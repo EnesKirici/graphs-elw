@@ -60,6 +60,18 @@ class ElwScoreService
         'controlWard' => ['cat' => 'role', 'label' => 'Kontrol Ward'],
         'heal'        => ['cat' => 'role', 'label' => 'Heal / Kalkan'],
         'cc'          => ['cat' => 'role', 'label' => 'CC (Kontrol)'],
+        // ELW #7 (2026-06-30) — yeni granül metrikler (destek + genel; DPM-uyumlu)
+        'wardsKilled' => ['cat' => 'role',      'label' => 'Ward Temizleme'],   // wardTakedowns
+        'pickKill'    => ['cat' => 'team',      'label' => 'Koordineli Kill'],  // pickKillWithAlly
+        'saveAlly'    => ['cat' => 'role',      'label' => 'Clutch Kurtarma'],  // saveAllyFromDeath
+        'visionAdv'   => ['cat' => 'vsOpp',     'label' => 'Vizyon Farkı'],     // visionScoreAdvantageLaneOpponent
+        'grubs'       => ['cat' => 'objective', 'label' => 'Grub'],             // voidMonsterKill
+        'turretTd'    => ['cat' => 'objective', 'label' => 'Kule Katkısı'],     // turretTakedowns
+        'diveKill'    => ['cat' => 'role',      'label' => 'Kule Dalış Kill'],  // killsNearEnemyTurret
+        'counterJg'   => ['cat' => 'objective', 'label' => 'Counter-Jungle'],   // enemyJungleMonsterKills
+        'earlyGank'   => ['cat' => 'team',      'label' => 'Erken Gank'],       // killsOnLanersEarlyJungleAsJungler
+        'roamKill'    => ['cat' => 'team',      'label' => 'Roam Kill'],        // killsOnOtherLanesEarlyJungleAsLaner
+        'earlyLead'   => ['cat' => 'vsOpp',     'label' => 'Erken Üstünlük'],   // earlyLaningPhaseGoldExpAdvantage
     ];
 
     // ===== ROLE AĞIRLIKLARI — her role hangi metrik ne kadar (puan = norm × ağırlık) =====
@@ -71,6 +83,7 @@ class ElwScoreService
             'dragon' => 0.3, 'baron' => 0.5, 'herald' => 0.5, 'objDmg' => 0.3, 'steal' => 0.5,
             'kp' => 1.8, 'teamDmg' => 1.2, 'tank' => 1.0,
             'turretPlate' => 0.7, 'soloKills' => 0.8, 'csAt10' => 0.7, 'towerDmg' => 0.7, 'cc' => 0.7,
+            'visionAdv' => 0.3, 'grubs' => 0.3, 'turretTd' => 0.4, 'diveKill' => 0.3, 'pickKill' => 0.3, 'roamKill' => 0.3, 'earlyLead' => 0.5, 'wardsKilled' => 0.2,
         ],
         'JUNGLE' => [
             'kills' => 1.0, 'deaths' => -1.5, 'assists' => 0.8, 'cs' => 0.8, 'gold' => 0.8, 'dmg' => 1.0, 'vision' => 1.0, 'firstBlood' => 0.5,
@@ -78,6 +91,7 @@ class ElwScoreService
             'dragon' => 1.5, 'baron' => 1.2, 'herald' => 1.2, 'objDmg' => 1.5, 'steal' => 1.0,
             'kp' => 2.2, 'teamDmg' => 1.0, 'tank' => 0.8,
             'soloKills' => 0.8, 'csAt10' => 0.5, 'wards' => 0.5, 'controlWard' => 0.5, 'cc' => 1.0,
+            'grubs' => 0.8, 'counterJg' => 0.6, 'earlyGank' => 0.8, 'pickKill' => 0.6, 'wardsKilled' => 0.4, 'visionAdv' => 0.3, 'diveKill' => 0.3, 'turretTd' => 0.3,
         ],
         'MIDDLE' => [
             'kills' => 1.2, 'deaths' => -1.5, 'assists' => 0.8, 'cs' => 1.1, 'gold' => 1.1, 'dmg' => 1.8, 'vision' => 0.6, 'firstBlood' => 0.5,
@@ -85,6 +99,7 @@ class ElwScoreService
             'dragon' => 0.3, 'baron' => 0.5, 'herald' => 0.3, 'objDmg' => 0.3, 'steal' => 0.5,
             'kp' => 1.7, 'teamDmg' => 1.4, 'tank' => 0.0,
             'turretPlate' => 0.7, 'soloKills' => 0.8, 'csAt10' => 0.7, 'towerDmg' => 0.7, 'cc' => 0.5,
+            'roamKill' => 0.5, 'grubs' => 0.3, 'visionAdv' => 0.3, 'diveKill' => 0.3, 'turretTd' => 0.3, 'pickKill' => 0.4, 'earlyLead' => 0.5, 'wardsKilled' => 0.2,
         ],
         'BOTTOM' => [
             'kills' => 1.2, 'deaths' => -1.5, 'assists' => 0.7, 'cs' => 1.3, 'gold' => 1.2, 'dmg' => 2.0, 'vision' => 0.4, 'firstBlood' => 0.4,
@@ -92,6 +107,7 @@ class ElwScoreService
             'dragon' => 0.4, 'baron' => 0.5, 'herald' => 0.3, 'objDmg' => 0.4, 'steal' => 0.4,
             'kp' => 1.8, 'teamDmg' => 1.6, 'tank' => 0.0,
             'turretPlate' => 0.5, 'soloKills' => 0.5, 'csAt10' => 0.9, 'towerDmg' => 0.9, 'cc' => 0.3,
+            'visionAdv' => 0.3, 'grubs' => 0.3, 'turretTd' => 0.4, 'diveKill' => 0.3, 'pickKill' => 0.4, 'roamKill' => 0.2, 'earlyLead' => 0.5, 'wardsKilled' => 0.2,
         ],
         'UTILITY_ENCHANTER' => [
             'kills' => 0.5, 'deaths' => -1.2, 'assists' => 1.5, 'cs' => 0.3, 'gold' => 0.3, 'dmg' => 0.5, 'vision' => 1.6, 'firstBlood' => 0.3,
@@ -99,6 +115,7 @@ class ElwScoreService
             'dragon' => 0.3, 'baron' => 0.3, 'herald' => 0.3, 'objDmg' => 0.2, 'steal' => 0.3,
             'kp' => 2.7, 'teamDmg' => 0.5, 'tank' => 0.8,
             'wards' => 1.6, 'controlWard' => 1.3, 'heal' => 2.2, 'cc' => 1.1,
+            'wardsKilled' => 0.7, 'pickKill' => 0.6, 'saveAlly' => 0.9, 'visionAdv' => 0.6, 'turretTd' => 0.2, 'grubs' => 0.2,
         ],
         'UTILITY_DAMAGE' => [
             'kills' => 0.7, 'deaths' => -1.2, 'assists' => 1.4, 'cs' => 0.3, 'gold' => 0.3, 'dmg' => 1.3, 'vision' => 1.4, 'firstBlood' => 0.3,
@@ -106,13 +123,15 @@ class ElwScoreService
             'dragon' => 0.3, 'baron' => 0.3, 'herald' => 0.3, 'objDmg' => 0.2, 'steal' => 0.3,
             'kp' => 2.7, 'teamDmg' => 1.2, 'tank' => 0.5,
             'wards' => 1.3, 'controlWard' => 1.1, 'heal' => 0.8, 'cc' => 1.1,
+            'wardsKilled' => 0.7, 'pickKill' => 0.6, 'saveAlly' => 0.5, 'visionAdv' => 0.6, 'diveKill' => 0.2, 'turretTd' => 0.2, 'grubs' => 0.2,
         ],
         'UTILITY_TANK' => [
             'kills' => 0.5, 'deaths' => -1.0, 'assists' => 1.5, 'cs' => 0.3, 'gold' => 0.3, 'dmg' => 0.6, 'vision' => 1.4, 'firstBlood' => 0.3,
             'goldDiff' => 0.3, 'csDiff' => 0.0, 'xpDiff' => 0.0,
             'dragon' => 0.3, 'baron' => 0.3, 'herald' => 0.3, 'objDmg' => 0.2, 'steal' => 0.3,
-            'kp' => 2.7, 'teamDmg' => 0.5, 'tank' => 1.9,
-            'wards' => 1.4, 'controlWard' => 1.1, 'heal' => 0.5, 'cc' => 1.9,
+            'kp' => 2.7, 'teamDmg' => 0.5, 'tank' => 1.4,
+            'wards' => 1.4, 'controlWard' => 1.1, 'heal' => 0.5, 'cc' => 1.4,
+            'wardsKilled' => 0.6, 'pickKill' => 0.6, 'saveAlly' => 0.5, 'visionAdv' => 0.5, 'diveKill' => 0.2, 'turretTd' => 0.2, 'grubs' => 0.2,
         ],
     ];
 
@@ -120,9 +139,11 @@ class ElwScoreService
     // Skor, oyuncunun ham skorunu KENDİ ROLÜNÜN ortalamasına bölerek normalize edilir →
     // ROLE-RELATİF: "mükemmel destek" = "mükemmel ADC" (DPM gibi). ADC çok ham biriktirdiği
     // için baseline'ı yüksek; bölünce dengelenir. ROLE_W değişirse yeniden ölçülmeli.
+    // 2026-06-30: #7 granül metrikler eklendikten SONRA 156 taze maçla yeniden ölçüldü
+    // (elw:calibrate-baselines mantığı, tam-veri). Destek/orman yeni metriklerden çok kazandı.
     private const ROLE_BASELINE = [
-        'TOP' => 7.34, 'JUNGLE' => 8.03, 'MIDDLE' => 7.42, 'BOTTOM' => 8.37,
-        'UTILITY_ENCHANTER' => 8.37, 'UTILITY_DAMAGE' => 6.88, 'UTILITY_TANK' => 7.13,
+        'TOP' => 8.43, 'JUNGLE' => 10.28, 'MIDDLE' => 8.69, 'BOTTOM' => 9.19,
+        'UTILITY_ENCHANTER' => 10.64, 'UTILITY_DAMAGE' => 9.3, 'UTILITY_TANK' => 9.56,
     ];
 
     // Tüm rollere EŞİT uygulanan metrikler (role-bağımsız bonuslar) — ROLE_W ile birleştirilir.
@@ -135,6 +156,25 @@ class ElwScoreService
         'TOP' => 'Top', 'JUNGLE' => 'Orman', 'MIDDLE' => 'Orta', 'BOTTOM' => 'ADC',
         'UTILITY_ENCHANTER' => 'Destek (Şifa)', 'UTILITY_DAMAGE' => 'Destek (Hasar)', 'UTILITY_TANK' => 'Destek (Tank)',
     ];
+
+    // Hibrit baseline (role-relatif ↔ ham etki) — config/elwgraphs.php#elw_score. Bkz. roleAdjusted.
+    private readonly float $baselineBlend;
+    private readonly float $globalBaseline;
+
+    public function __construct()
+    {
+        // config konteyneri yoksa (saf unit test) varsayılana düş → servis framework'süz de çalışır.
+        $blend = 0.5;
+        $global = 7.72;
+        try {
+            $blend  = (float) config('elwgraphs.elw_score.baseline_blend', 0.5);
+            $global = (float) config('elwgraphs.elw_score.global_baseline', 7.72);
+        } catch (\Throwable $e) {
+            // varsayılan kalır
+        }
+        $this->baselineBlend  = $blend;
+        $this->globalBaseline = $global;
+    }
 
     /**
      * Tüm 10 oyuncunun ELW Score'unu hesapla — puuid → score map döner.
@@ -154,6 +194,24 @@ class ElwScoreService
         return $mode === 'team'
             ? $this->normalizeScores($scores)
             : $this->normalizeScoresGenerous($scores);
+    }
+
+    /**
+     * KALİBRASYON yardımcısı — her katılımcının rolü + ham (baseline öncesi) skoru.
+     * calculateAllElwScores ile AYNI bağlamı kullanır (timeline yok → xpDiff yok),
+     * böylece maç-kartı skoruyla tutarlı baseline ölçülür. ROLE_BASELINE'ı bu çıktının
+     * role-göre ortalamasından yeniden hesaplamak için `elw:calibrate-baselines` kullanır.
+     * @return array<int, array{role:string, raw:float}>
+     */
+    public function participantRawScores(array $participants, int $duration): array
+    {
+        $ctx = $this->buildContext($participants, $duration);
+        $out = [];
+        foreach ($participants as $p) {
+            $role = $this->resolveRole($p);
+            $out[] = ['role' => $role, 'raw' => $this->categorizedScore($p, $role, $ctx)['raw']];
+        }
+        return $out;
     }
 
     /**
@@ -322,6 +380,19 @@ class ElwScoreService
             'controlWard' => ['stat' => (string) ($c['controlWardsPlaced'] ?? 0),   'norm' => min(($c['controlWardsPlaced'] ?? 0) / 4, 1)],
             'heal'        => ['stat' => number_format(round($heal)),                'norm' => min($heal / $minutes / 700, 1)],
             'cc'          => ['stat' => round($cc) . ' sn',                         'norm' => min(($cc / $minutes) / 1.5, 1)],
+
+            // ELW #7 (2026-06-30) — granül metrikler (DPM-uyumlu). norm 0..1, visionAdv işaretli.
+            'wardsKilled' => ['stat' => (string) ($c['wardTakedowns'] ?? 0),                          'norm' => min(($c['wardTakedowns'] ?? 0) / 6, 1)],
+            'pickKill'    => ['stat' => (string) ($c['pickKillWithAlly'] ?? 0),                       'norm' => min(($c['pickKillWithAlly'] ?? 0) / 12, 1)],
+            'saveAlly'    => ['stat' => (string) ($c['saveAllyFromDeath'] ?? 0),                      'norm' => min(($c['saveAllyFromDeath'] ?? 0) / 2, 1)],
+            'visionAdv'   => ['stat' => number_format($c['visionScoreAdvantageLaneOpponent'] ?? 0, 1), 'norm' => max(-1, min(($c['visionScoreAdvantageLaneOpponent'] ?? 0) / 1.2, 1))],
+            'grubs'       => ['stat' => (string) ($c['voidMonsterKill'] ?? 0),                        'norm' => min(($c['voidMonsterKill'] ?? 0) / 5, 1)],
+            'turretTd'    => ['stat' => (string) ($c['turretTakedowns'] ?? 0),                        'norm' => min(($c['turretTakedowns'] ?? 0) / 6, 1)],
+            'diveKill'    => ['stat' => (string) ($c['killsNearEnemyTurret'] ?? 0),                   'norm' => min(($c['killsNearEnemyTurret'] ?? 0) / 3, 1)],
+            'counterJg'   => ['stat' => (string) ($c['enemyJungleMonsterKills'] ?? 0),               'norm' => min(($c['enemyJungleMonsterKills'] ?? 0) / 12, 1)],
+            'earlyGank'   => ['stat' => (string) ($c['killsOnLanersEarlyJungleAsJungler'] ?? 0),     'norm' => min(($c['killsOnLanersEarlyJungleAsJungler'] ?? 0) / 4, 1)],
+            'roamKill'    => ['stat' => (string) ($c['killsOnOtherLanesEarlyJungleAsLaner'] ?? 0),    'norm' => min(($c['killsOnOtherLanesEarlyJungleAsLaner'] ?? 0) / 3, 1)],
+            'earlyLead'   => ['stat' => (($c['earlyLaningPhaseGoldExpAdvantage'] ?? 0) >= 1) ? 'Evet' : 'Hayır', 'norm' => (($c['earlyLaningPhaseGoldExpAdvantage'] ?? 0) >= 1) ? 1 : 0],
         ];
 
         // vs Rakip — koridor rakibiyle fark (işaretli -1..1).
@@ -481,10 +552,17 @@ class ElwScoreService
         return $role ?: 'MIDDLE';
     }
 
-    /** Ham skoru rolün ortalamasına böl → role-relatif (mükemmel destek = mükemmel ADC). */
+    /**
+     * Ham skoru rolün ortalamasına böl → role-relatif (mükemmel destek = mükemmel ADC).
+     * HİBRİT: böleni baselineBlend (α) kadar global ham ortalamaya karıştırır →
+     * effectiveBaseline = (1-α)·roleBaseline + α·globalBaseline. α=0 tam role-relatif,
+     * α=1 tam ham etki (carry'ler öne çıkar). Bkz. config/elwgraphs.php#elw_score.
+     */
     private function roleAdjusted(float $raw, string $role): float
     {
-        return $raw / (self::ROLE_BASELINE[$role] ?? 7.5);
+        $base = self::ROLE_BASELINE[$role] ?? 7.5;
+        $eff  = (1 - $this->baselineBlend) * $base + $this->baselineBlend * $this->globalBaseline;
+        return $raw / ($eff > 0 ? $eff : 7.5);
     }
 
     // ────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ArrowDownUp } from "lucide-react";
+import { ChevronDown, ArrowDownUp, HelpCircle } from "lucide-react";
 import ReactDOM from "react-dom";
 import QueueTabs from "./QueueTabs";
 
@@ -131,29 +131,42 @@ function MasteryBadge({ level, points, size = 28 }) {
   );
 }
 
-/*
-  PLACEHOLDER (TEST VERİSİ) — şampiyon dünya/TR sıralaması DB/worker ile gelecek.
-  Bkz. PROFILE_RANKINGS_PLAN.md. İsim+oyun sayısından deterministik makul sıra üretir.
-*/
-function placeholderChampRank(name, games) {
-  let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const global = Math.max(800, 9000 + (h % 230000) - (games || 0) * 120);
-  const tr = Math.max(60, Math.round(global / 13));
-  return { global, tr };
-}
-
-function ChampRank({ name, games, region = "TR" }) {
-  const { global, tr } = placeholderChampRank(name, games);
+// Gerçek şampiyon sırası (championRank) worker'dan gelirse Dünya + TR sırasını göster;
+// gelmediyse test verisi yerine "yapım aşamasında" ipucu (bkz. PROFILE_RANKINGS_PLAN.md).
+function ChampRank({ rank, region = "TR" }) {
+  const [anchor, setAnchor] = useState(null);
   const fmt = (n) => n.toLocaleString("tr-TR");
 
-  // Dünya + bölge sırası — op.gg tarzı etiketli, # yok, net 2 satır.
+  if (rank?.global != null) {
+    return (
+      <div className="mt-1 leading-tight">
+        <p className="text-[10px] text-gray-400">
+          Sıra: <span className="text-gray-200 font-semibold">{fmt(rank.global)}</span>
+        </p>
+        <p className="text-[10px] text-gray-500">({region}: {fmt(rank.tr)})</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-1 leading-tight">
-      <p className="text-[10px] text-gray-400">
-        Sıra: <span className="text-gray-200 font-semibold">{fmt(global)}</span>
-      </p>
-      <p className="text-[10px] text-gray-500">({region}: {fmt(tr)})</p>
+      <span
+        className="inline-flex items-center gap-1 text-[10px] text-gray-500 cursor-help"
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+      >
+        Sıra: <span className="text-gray-400 font-medium">—</span>
+        <HelpCircle size={10} className="text-gray-600" />
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="tip-dark bg-[#0a0e14] border border-edge rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[200px]">
+            <p className="text-[11px] text-gray-300 leading-relaxed">
+              Dünya ve TR şampiyon sıralaması <b className="text-gray-100">yapım aşamasında</b> — yakında.
+            </p>
+          </div>
+        </Tooltip>
+      )}
     </div>
   );
 }
@@ -329,7 +342,7 @@ function ChampionList({ champions, sortKey, sortAsc, onSort, isMastery, champion
                 {isMastery ? (
                   <p className="text-[10px] text-gray-500">{formatPoints(c.masteryPoints)} puan</p>
                 ) : (
-                  !noGames && <ChampRank name={c.championName} games={c.games} region={region} />
+                  !noGames && <ChampRank rank={c.championRank} region={region} />
                 )}
               </div>
 

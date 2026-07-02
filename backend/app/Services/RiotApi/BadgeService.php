@@ -72,6 +72,23 @@ class BadgeService
             $tier = $ssDodge >= 70 ? 'challenger' : ($ssDodge >= 50 ? 'diamond' : ($ssDodge >= 35 ? 'emerald' : 'gold'));
             $badges[] = ['key' => 'dodge_master', 'label' => 'Kaçış Ustası', 'desc' => "{$ssDodge} skillshot savuşturdu", 'category' => 'combat', 'tier' => $tier];
         }
+
+        // Tek yetenekle multikill (ör. Brand R, Annie R)
+        if (($c['multiKillOneSpell'] ?? 0) >= 1) {
+            $badges[] = ['key' => 'one_spell_multi', 'label' => 'Tek Büyü Katliamı', 'desc' => 'Tek yetenekle multikill', 'category' => 'combat', 'tier' => ($c['multiKillOneSpell'] >= 2) ? 'challenger' : 'diamond'];
+        }
+
+        // Sayıca dezavantajlıyken alınan kill'ler (1vX outplay)
+        $outnumbered = $c['outnumberedKills'] ?? 0;
+        if ($outnumbered >= 2) {
+            $tier = $outnumbered >= 6 ? 'challenger' : ($outnumbered >= 4 ? 'diamond' : 'emerald');
+            $badges[] = ['key' => 'outnumbered', 'label' => 'Sayıca Az, Yürekçe Çok', 'desc' => "{$outnumbered}x dezavantajlı kill", 'category' => 'combat', 'tier' => $tier];
+        }
+
+        // Açık nexus'tan geri dönüp kazanma (klutch komeback)
+        if (($c['hadOpenNexus'] ?? 0) >= 1 && ($p['win'] ?? false)) {
+            $badges[] = ['key' => 'comeback', 'label' => 'Geri Dönüş', 'desc' => "Açık nexus'tan döndü, kazandı", 'category' => 'combat', 'tier' => 'diamond'];
+        }
     }
 
     private function addDamageBadges(array &$badges, array $p, array $c, string $role): void
@@ -92,6 +109,13 @@ class BadgeService
         if ($tankPct >= 0.28 && in_array($role, ['TOP', 'JUNGLE', 'UTILITY'])) {
             $tier = $tankPct >= 0.45 ? 'diamond' : ($tankPct >= 0.35 ? 'emerald' : 'gold');
             $badges[] = ['key' => 'tank', 'label' => 'Duvar', 'desc' => "Takım hasarının %" . round($tankPct * 100) . "'ini aldı", 'category' => 'damage', 'tier' => $tier];
+        }
+
+        // Tüm takım hasarını yiyip sağ kalıp kill (ön saf tank/top klutch)
+        $fullTeamSurvived = $c['killedChampTookFullTeamDamageSurvived'] ?? 0;
+        if ($fullTeamSurvived >= 1 && in_array($role, ['TOP', 'JUNGLE', 'UTILITY'])) {
+            $tier = $fullTeamSurvived >= 3 ? 'challenger' : ($fullTeamSurvived >= 2 ? 'diamond' : 'emerald');
+            $badges[] = ['key' => 'unbreakable', 'label' => 'Yıkılmaz', 'desc' => "Tüm takım hasarını yiyip sağ kaldı ({$fullTeamSurvived}x)", 'category' => 'damage', 'tier' => $tier];
         }
     }
 
@@ -147,6 +171,14 @@ class BadgeService
         if ($controlWards >= 4) {
             $tier = $controlWards >= 15 ? 'diamond' : ($controlWards >= 10 ? 'emerald' : ($controlWards >= 7 ? 'gold' : 'silver'));
             $badges[] = ['key' => 'ward_master', 'label' => 'Ward Ustası', 'desc' => "{$controlWards} kontrol ward'ı koydu", 'category' => 'vision', 'tier' => $tier];
+        }
+
+        // Ward Avcısı — düşman wardı temizleme (wardTakedowns); lobide en çok yıkansa tier +1
+        $wardKills = $c['wardTakedowns'] ?? 0;
+        if ($wardKills >= 5) {
+            $tier = $wardKills >= 20 ? 'challenger' : ($wardKills >= 14 ? 'diamond' : ($wardKills >= 9 ? 'emerald' : 'gold'));
+            if (($c['highestWardKills'] ?? 0) >= 1 && $tier !== 'challenger') $tier = 'diamond';
+            $badges[] = ['key' => 'ward_hunter', 'label' => 'Ward Avcısı', 'desc' => "{$wardKills} düşman wardı temizledi", 'category' => 'vision', 'tier' => $tier];
         }
     }
 
@@ -223,6 +255,41 @@ class BadgeService
                 ];
             }
         }
+
+        // 3) Zor Koridor — koridor rakibine karşı belirgin geride (erken ezildi).
+        // "Her Q'yu yedi" doğrudan veride yok; sonucu = altın/XP geriliği ile yakalanır (DPM-mantıklı).
+        $role = ($p['teamPosition'] ?: $p['individualPosition'] ?: '');
+        if ($role === 'BOT') $role = 'BOTTOM';
+        if (in_array($role, ['TOP', 'MIDDLE', 'BOTTOM', 'JUNGLE'])) {
+            $opp = $this->findLaneOpponent($p, $info);
+            if ($opp) {
+                $goldDiff = ($p['goldEarned'] ?? 0) - ($opp['goldEarned'] ?? 0);
+                $earlyAhead = ($c['earlyLaningPhaseGoldExpAdvantage'] ?? 0) >= 1;
+                if ($goldDiff <= -2500 && !$earlyAhead) {
+                    $tier = $goldDiff <= -5000 ? 'gold' : 'silver'; // negatifte "tier" sadece vurgu
+                    $badges[] = [
+                        'key' => 'rough_lane',
+                        'label' => 'Zor Koridor',
+                        'desc' => "Koridor rakibine " . number_format(abs($goldDiff)) . " altın geride",
+                        'category' => 'negative',
+                        'tier' => $tier,
+                    ];
+                }
+            }
+        }
+    }
+
+    /** Aynı pozisyondaki düşman oyuncuyu bul (Zor Koridor için). Yoksa null. */
+    private function findLaneOpponent(array $p, array $info): ?array
+    {
+        $pos = $p['teamPosition'] ?: $p['individualPosition'] ?: '';
+        if (!$pos) return null;
+        foreach ($info['participants'] ?? [] as $other) {
+            if (($other['teamId'] ?? 0) === ($p['teamId'] ?? 0)) continue;
+            $oPos = $other['teamPosition'] ?: $other['individualPosition'] ?: '';
+            if ($oPos === $pos) return $other;
+        }
+        return null;
     }
 
     private function addFallbackBadge(array &$badges, array $p): void

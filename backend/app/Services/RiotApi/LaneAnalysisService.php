@@ -114,13 +114,17 @@ class LaneAnalysisService
             $lobbyAvg = ($myTeamSum + $myScore + $enemySum) / ($myTeamCount + 1 + $enemyCount);
             $diff = $teammatesAvg - $lobbyAvg;
             $t = config('elwgraphs.team_quality');
+            // MUTLAK taban: relatif diff lobiyle sınırlı (lobi kendi kötü takımımı da içerir),
+            // 0/10-1/10 hard-inter'li takım -1.7'ye ulaşamayabilir → takım arkadaşlarının MUTLAK
+            // ortalaması bunun altındaysa relatiften bağımsız "Çok kötü takım".
+            $terribleAbs = $t['terrible_abs'] ?? 3.8;
             if ($diff >= $t['great']) {
                 $teamQuality = ['key' => 'great', 'label' => 'Çok iyi takım'];
             } elseif ($diff >= $t['good']) {
                 $teamQuality = ['key' => 'good', 'label' => 'İyi takım'];
-            } elseif ($diff > $t['bad']) {
+            } elseif ($diff > $t['bad'] && $teammatesAvg > $terribleAbs) {
                 $teamQuality = ['key' => 'avg', 'label' => 'Ortalama takım'];
-            } elseif ($diff > $t['terrible']) {
+            } elseif ($diff > $t['terrible'] && $teammatesAvg > $terribleAbs) {
                 $teamQuality = ['key' => 'bad', 'label' => 'Kötü takım'];
             } else {
                 $teamQuality = ['key' => 'terrible', 'label' => 'Çok kötü takım'];
