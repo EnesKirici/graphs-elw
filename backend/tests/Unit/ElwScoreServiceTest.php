@@ -57,6 +57,12 @@ class ElwScoreServiceTest extends TestCase
                 'damagePerMinute' => 1400, 'goldPerMinute' => 650,
                 'killParticipation' => 0.80, 'visionScorePerMinute' => 1.5,
                 'damageTakenOnTeamPercentage' => 0.20,
+                // 40k hasarlı carry → yüksek takım hasar payı + #7 metrikleri (baseline'lar bekliyor)
+                'teamDamagePercentage' => 0.38, 'maxCsAdvantageOnLaneOpponent' => 35,
+                'laneMinionsFirst10Minutes' => 85, 'turretPlatesTaken' => 3, 'soloKills' => 2,
+                'pickKillWithAlly' => 9, 'wardTakedowns' => 4, 'stealthWardsPlaced' => 9,
+                'turretTakedowns' => 5, 'killsNearEnemyTurret' => 2, 'voidMonsterKill' => 2,
+                'earlyLaningPhaseGoldExpAdvantage' => 1,
             ],
         ]);
         for ($i = 2; $i <= 9; $i++) {

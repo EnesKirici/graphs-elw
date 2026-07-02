@@ -77,7 +77,7 @@ function RankCharts({ lpTl, wrTl, tier }) {
         )}
       </div>
       {mode === "lp" && hasLp && (
-        <LpRiseChart timeline={lpTl.timeline} peak={lpTl.peak} estimated={lpTl.estimated} tier={tier} showHeaderLabel={false} />
+        <LpRiseChart timeline={lpTl.timeline} peak={lpTl.peak} estimated={lpTl.estimated} tracked={lpTl.tracked} tier={tier} showHeaderLabel={false} />
       )}
       {mode === "wr" && hasWr && (
         <LpRiseChart timeline={wrTl} variant="wr" showHeaderLabel={false} />
@@ -163,7 +163,7 @@ function FlexBlock({ data, region, lpTl }) {
       </button>
       {open && hasChart && (
         <div className="mt-3">
-          <LpRiseChart timeline={lpTl.timeline} peak={lpTl.peak} estimated={lpTl.estimated} tier={data.tier} />
+          <LpRiseChart timeline={lpTl.timeline} peak={lpTl.peak} estimated={lpTl.estimated} tracked={lpTl.tracked} tier={data.tier} />
         </div>
       )}
     </div>

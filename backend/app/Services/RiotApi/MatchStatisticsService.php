@@ -240,12 +240,16 @@ class MatchStatisticsService
     {
         $soloKey = ($ranked['solo']['tier'] ?? '') . ($ranked['solo']['rank'] ?? '') . ($ranked['solo']['lp'] ?? '');
         $flexKey = ($ranked['flex']['tier'] ?? '') . ($ranked['flex']['rank'] ?? '') . ($ranked['flex']['lp'] ?? '');
-        $cacheKey = "lp_timeline:v4:{$puuid}:{$soloKey}:{$flexKey}";
+        $cacheKey = "lp_timeline:v5:{$puuid}:{$soloKey}:{$flexKey}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid, $ranked) {
             $result = ['solo' => null, 'flex' => null];
             $deltaWin = 20;
             $deltaLoss = 18;
+
+            // Worker'ın LP'sini organik takip ettiği hesap mı? (6 takip hesabı → gerçek snapshot
+            // birikir → "organik"; diğerleri maç dizisinden tahmin → "tahmini" damgası.)
+            $isTracked = \App\Models\TrackedPlayer::where('puuid', $puuid)->exists();
 
             foreach ([420 => 'solo', 440 => 'flex'] as $queueId => $key) {
                 $cur = $ranked[$key] ?? null;
@@ -320,8 +324,8 @@ class MatchStatisticsService
                     ];
                 }
 
-                // Okunabilirlik için son 60 maç (peak tüm seri üzerinden hesaplandı)
-                if (count($timeline) > 60) $timeline = array_slice($timeline, -60);
+                // "Tümü" sezon başını göstersin diye tüm sezon (max 300 nokta; peak tüm seriden).
+                if (count($timeline) > 300) $timeline = array_slice($timeline, -300);
 
                 $result[$key] = [
                     'timeline'  => $timeline,
@@ -329,6 +333,8 @@ class MatchStatisticsService
                     // Aradaki noktalar tahmin edildiyse işaretle (gerçek snapshot azsa true).
                     'estimated' => $realCount < $n,
                     'realPoints' => $realCount,
+                    // Takip hesabı → worker organik LP topluyor (damga "organik"); değilse "tahmini".
+                    'tracked'   => $isTracked,
                 ];
             }
 

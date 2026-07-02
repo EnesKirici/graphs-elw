@@ -32,8 +32,11 @@ class MatchService
      *       roam) + tank-sup rebalansı (tank/cc kısıldı) + 156 maçla baseline yeniden ölçüldü.
      *       elwyore lobisi DPM ile 10'da 8 birebir (elwyore 5./NAMNAMMM 6./999 7.). + yeni rozetler.
      *  v12: takım kalitesi "Çok kötü takım" MUTLAK taban (terrible_abs=3.8) + eşik -1.9→-1.7
-     *       → 0/10-1/10 hard-inter'li takım artık doğru "Çok kötü" etiketleniyor. */
-    private const ALGO_VERSION = 12;
+     *       → 0/10-1/10 hard-inter'li takım artık doğru "Çok kötü" etiketleniyor.
+     *  v13: #2 PERFECT — zToElw asimptot 10.5 (dominant z≈2.55 → 10) + abs bileşeni ÇAPALI
+     *       mutlak (adj 1.0→5, perfect_adj 1.5→10) → gerçekten iyi oynayan 10 alabilir;
+     *       tüm dağılım DPM'e yakınsadı (elwyore 4.4 ≈ DPM 4.6). */
+    private const ALGO_VERSION = 13;
 
     public function __construct(
         private MatchDataService $matchData,

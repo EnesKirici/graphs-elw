@@ -23,11 +23,18 @@ function wrColor(wr) {
   variant="wr": winRate, yeşil/kırmızı çizgi, %50 referans çizgisi.
   Grafiğin her yerine gelince tooltip + dikey kılavuz.
 */
-export default function LpRiseChart({ timeline, peak, estimated, showHeaderLabel = true, variant = "lp", tier }) {
+export default function LpRiseChart({ timeline, peak, estimated, tracked, showHeaderLabel = true, variant = "lp", tier }) {
   const uid = useId().replace(/:/g, "");
   const [filter, setFilter] = useState("all");
   const [hovIdx, setHovIdx] = useState(null);
   const isWr = variant === "wr";
+
+  // Durum damgası: takip hesabı → "organik" (worker gerçek LP topluyor); değilse tahminliyse → "tahmini".
+  const statusBadge = !isWr && (tracked ? (
+    <span className="text-[8px] text-cyan-400/80 border border-cyan-500/30 rounded px-1 py-px cursor-help" title="Bu hesabın LP'si worker ile organik takip ediliyor (gerçek snapshot'lar).">organik</span>
+  ) : estimated ? (
+    <span className="text-[8px] text-gray-600 border border-edge rounded px-1 py-px cursor-help" title="Henüz yeterli LP geçmişi kaydı yok; eğri kısmen tahmini.">tahmini</span>
+  ) : null);
 
   const wrapRef = useRef(null);
   const [chartWidth, setChartWidth] = useState(300);
@@ -138,14 +145,10 @@ export default function LpRiseChart({ timeline, peak, estimated, showHeaderLabel
         {showHeaderLabel ? (
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-gray-400">{isWr ? "WR Geçmişi" : "LP Gelişimi"}</span>
-            {!isWr && estimated && (
-              <span className="text-[8px] text-gray-600 border border-edge rounded px-1 py-px cursor-help" title="Henüz yeterli LP geçmişi kaydı yok; eğri kısmen tahmini.">tahmini</span>
-            )}
+            {statusBadge}
           </div>
         ) : (
-          (!isWr && estimated) ? (
-            <span className="text-[8px] text-gray-600 border border-edge rounded px-1 py-px cursor-help" title="Henüz yeterli LP geçmişi kaydı yok; eğri kısmen tahmini.">tahmini</span>
-          ) : <span />
+          statusBadge || <span />
         )}
         <div className="flex items-center gap-1">
           {TIME_FILTERS.map((f) => (

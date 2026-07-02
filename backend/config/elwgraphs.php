@@ -39,6 +39,11 @@ return [
     'elw_score' => [
         'baseline_blend'  => 0.5,
         'global_baseline' => 9.28, // 2026-06-30: #7 granül metrikler sonrası yeniden ölçüldü (156 maç)
+        // MUTLAK mükemmellik referansı (perfect). blendedElw'in 'abs' bileşeni ÇAPALI lineer:
+        // adj (roleAdjusted, 1.0=rol ortalaması) 1.0→abs 5, perfect_adj→abs 10. Yani gerçekten
+        // dominant oynayan (adj≈perfect, hard-carry/Penta) lobiden bağımsız 10'a çıkabilir.
+        // Ölçüm (500 maç): dominant maçların adj'si 1.15–1.54 (medyan 1.37) → perfect_adj=1.5.
+        'perfect_adj'     => 1.5,
     ],
 
     /*

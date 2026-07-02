@@ -160,20 +160,24 @@ class ElwScoreService
     // Hibrit baseline (role-relatif ↔ ham etki) — config/elwgraphs.php#elw_score. Bkz. roleAdjusted.
     private readonly float $baselineBlend;
     private readonly float $globalBaseline;
+    private readonly float $perfectAdj;
 
     public function __construct()
     {
         // config konteyneri yoksa (saf unit test) varsayılana düş → servis framework'süz de çalışır.
         $blend = 0.5;
         $global = 7.72;
+        $perfect = 1.5;
         try {
-            $blend  = (float) config('elwgraphs.elw_score.baseline_blend', 0.5);
-            $global = (float) config('elwgraphs.elw_score.global_baseline', 7.72);
+            $blend   = (float) config('elwgraphs.elw_score.baseline_blend', 0.5);
+            $global  = (float) config('elwgraphs.elw_score.global_baseline', 7.72);
+            $perfect = (float) config('elwgraphs.elw_score.perfect_adj', 1.5);
         } catch (\Throwable $e) {
             // varsayılan kalır
         }
         $this->baselineBlend  = $blend;
         $this->globalBaseline = $global;
+        $this->perfectAdj     = $perfect > 0 ? $perfect : 1.85;
     }
 
     /**
@@ -583,29 +587,30 @@ class ElwScoreService
     }
 
     /**
-     * Z-score → 0-10 ELW skoru. Asimetrik eğri: iyi tarafta cömert (z=0 → 5.4,
-     * MVP z≈2.5 → ~9.5), kötü tarafta lineer/düşük.
+     * Z-score → 0-10 ELW skoru. Asimetrik eğri: iyi tarafta cömert (z=0 → 5.4),
+     * kötü tarafta lineer/düşük. Asimptot 10.5'e demirlenip 10'a KIRPILIR → dominant
+     * MVP (z≈2.5) tam 10 alabilir (eski hâlde 10'a hiç ulaşmıyordu).
      */
     private function zToElw(float $z): float
     {
         $base = 5.4;
         $elw = $z >= 0
-            ? $base + (10 - $base) * (1 - exp(-$z / 1.09))
+            ? $base + (10.5 - $base) * (1 - exp(-$z / 1.1))
             : $base + $z * 1.6;
         return round(max(0, min(10, $elw)), 1);
     }
 
     /**
-     * Harman ELW — göreceli (lobi z-score) + mutlak (ham skor). Mutlak bileşen sayesinde
-     * iyi oynayan BİRDEN ÇOK oyuncu da ~10'a çıkabilir. Ham ölçek metrik sayısına göre
-     * değiştiğinden mutlak referans dinamik (ortalama + 1.5×std ≈ "mükemmel").
+     * Harman ELW — göreceli (lobi z-score) + MUTLAK (mükemmellik referansı). Mutlak bileşen
+     * artık lobiden bağımsız: adj/perfectAdj×10 → gerçekten dominant oynayan (Penta/hard-carry)
+     * güçlü lobide bile 10'a çıkabilir ("iyi oynadıysan 10 al"). Hem rel hem abs 10 olunca 10.
      */
     private function blendedElw(float $raw, float $avg, float $stdDev): float
     {
         $z = ($raw - $avg) / max($stdDev, 0.5);
         $rel = $this->zToElw($z);
-        $absRef = max($avg + 1.5 * $stdDev, 0.5);
-        $abs = max(0, min(10, $raw / $absRef * 10));
+        // ÇAPALI lineer mutlak bileşen: adj 1.0 (rol ort.) → 5, perfect_adj → 10.
+        $abs = max(0, min(10, 5 + ($raw - 1.0) / max($this->perfectAdj - 1.0, 0.1) * 5));
         return round(0.5 * $rel + 0.5 * $abs, 1);
     }
 
