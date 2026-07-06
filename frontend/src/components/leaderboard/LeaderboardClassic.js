@@ -121,17 +121,17 @@ export default function LeaderboardClassic() {
 
       {/* Tablo — overflow-visible for tooltips */}
       <div className="glass rounded-xl overflow-visible">
-        {/* Header */}
-        <div className="grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 px-6 py-3.5 text-[11px] text-gray-500 uppercase tracking-wider border-b border-edge/50 font-medium">
+        {/* Header — mobilde yalnız #/Oyuncu/LP/WR (sabit ~750px grid 390'ı taşırıyordu) */}
+        <div className="grid grid-cols-[34px_minmax(0,1fr)_64px_48px] md:grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 px-3 md:px-6 py-3.5 text-[11px] text-gray-500 uppercase tracking-wider border-b border-edge/50 font-medium">
           <span>#</span>
           <span>Oyuncu</span>
-          <span className="text-center">Şampiyonlar</span>
-          <span className="text-center">Koridor</span>
+          <span className="hidden md:block text-center">Şampiyonlar</span>
+          <span className="hidden md:block text-center">Koridor</span>
           <span className="text-center">LP</span>
-          <span className="text-center">Oyun</span>
-          <span className="text-center">Zafer / Yenilgi</span>
+          <span className="hidden md:block text-center">Oyun</span>
+          <span className="hidden md:block text-center">Zafer / Yenilgi</span>
           <span className="text-center">WR</span>
-          <span className="text-center">Rozetler</span>
+          <span className="hidden md:block text-center">Rozetler</span>
         </div>
 
         {loading && (
@@ -144,7 +144,7 @@ export default function LeaderboardClassic() {
         {!loading && data?.entries?.map((entry, i) => (
           <div
             key={entry.puuid || i}
-            className={`grid grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 items-center px-6 py-3 hover:bg-hover transition-colors border-b border-edge/15 ${
+            className={`grid grid-cols-[34px_minmax(0,1fr)_64px_48px] md:grid-cols-[50px_1fr_160px_80px_90px_70px_110px_60px_80px] gap-2 items-center px-3 md:px-6 py-3 hover:bg-hover transition-colors border-b border-edge/15 ${
               i < 3 ? "bg-white/[0.015]" : ""
             }`}
           >
@@ -156,7 +156,7 @@ export default function LeaderboardClassic() {
             </span>
 
             {/* Oyuncu */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <img src={tierInfo?.badge} alt={tier} width={36} height={36} />
               {entry.name?.gameName ? (
                 <Link
@@ -172,7 +172,7 @@ export default function LeaderboardClassic() {
             </div>
 
             {/* Şampiyonlar — 5 tane, büyük */}
-            <div className="flex items-center justify-center gap-1">
+            <div className="hidden md:flex items-center justify-center gap-1">
               {entry.topChamps ? (
                 entry.topChamps.slice(0, 5).map((c, ci) => (
                   <img key={ci} src={c.image} alt={c.name} width={28} height={28}
@@ -184,7 +184,7 @@ export default function LeaderboardClassic() {
             </div>
 
             {/* Koridor */}
-            <div className="flex items-center justify-center gap-1.5">
+            <div className="hidden md:flex items-center justify-center gap-1.5">
               {entry.topRoles ? (
                 entry.topRoles.map((r, ri) => (
                   <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role}
@@ -201,10 +201,10 @@ export default function LeaderboardClassic() {
             </span>
 
             {/* Oyun */}
-            <span className="text-sm text-gray-300 text-center">{entry.games}</span>
+            <span className="hidden md:block text-sm text-gray-300 text-center">{entry.games}</span>
 
             {/* W/L */}
-            <div className="text-center">
+            <div className="hidden md:block text-center">
               <span className="text-xs text-emerald-400 font-medium">{entry.wins}W</span>
               <span className="text-xs text-gray-600 mx-1">/</span>
               <span className="text-xs text-red-400 font-medium">{entry.losses}L</span>
@@ -218,7 +218,7 @@ export default function LeaderboardClassic() {
             </span>
 
             {/* Rozetler — hover tooltip */}
-            <div className="flex items-center justify-center gap-1">
+            <div className="hidden md:flex items-center justify-center gap-1">
               <BadgeIcon type="hotStreak" active={entry.hotStreak} />
               <BadgeIcon type="freshBlood" active={entry.freshBlood} />
               <BadgeIcon type="veteran" active={entry.veteran} />

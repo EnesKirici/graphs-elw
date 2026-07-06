@@ -39,7 +39,8 @@ function BadgeIcon({ type, active }) {
   );
 }
 
-const GRID = "grid-cols-[50px_1fr_150px_80px_90px_64px_104px_60px_76px]";
+// Mobil: yalnız # / Oyuncu / LP / WR (sabit ~750px grid 390'ı taşırıyordu — diğer kolonlar md+)
+const GRID = "grid-cols-[34px_minmax(0,1fr)_64px_48px] md:grid-cols-[50px_1fr_150px_80px_90px_64px_104px_60px_76px]";
 
 export default function LeaderboardPro() {
   const [tier, setTier] = useState("challenger");
@@ -97,16 +98,16 @@ export default function LeaderboardPro() {
 
         {/* Tablo */}
         <div className="glass rounded-xl overflow-visible">
-          <div className={`grid ${GRID} gap-2 px-6 py-3 text-[11px] text-gray-500 uppercase tracking-wider border-b border-edge/50 font-medium`}>
+          <div className={`grid ${GRID} gap-2 px-3 md:px-6 py-3 text-[11px] text-gray-500 uppercase tracking-wider border-b border-edge/50 font-medium`}>
             <span>#</span>
             <span>Oyuncu</span>
-            <span className="text-center">Şampiyonlar</span>
-            <span className="text-center">Koridor</span>
+            <span className="hidden md:block text-center">Şampiyonlar</span>
+            <span className="hidden md:block text-center">Koridor</span>
             <span className="text-center">LP</span>
-            <span className="text-center">Oyun</span>
-            <span className="text-center">G / M</span>
+            <span className="hidden md:block text-center">Oyun</span>
+            <span className="hidden md:block text-center">G / M</span>
             <span className="text-center">WR</span>
-            <span className="text-center">Rozet</span>
+            <span className="hidden md:block text-center">Rozet</span>
           </div>
 
           {loading && (
@@ -118,7 +119,7 @@ export default function LeaderboardPro() {
 
           {!loading && data?.entries?.map((entry, i) => (
             <div key={entry.puuid || i}
-              className={`grid ${GRID} gap-2 items-center px-6 py-3 hover:bg-hover transition-colors border-b border-edge/15 ${i < 3 ? "bg-white/[0.015]" : ""}`}>
+              className={`grid ${GRID} gap-2 items-center px-3 md:px-6 py-3 hover:bg-hover transition-colors border-b border-edge/15 ${i < 3 ? "bg-white/[0.015]" : ""}`}>
               {/* Sıra — ilk 3 madalya rengi */}
               <span className={`text-base font-bold font-mono ${
                 i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : "text-gray-500"
@@ -143,14 +144,14 @@ export default function LeaderboardPro() {
               </div>
 
               {/* Şampiyonlar */}
-              <div className="flex items-center justify-center gap-1">
+              <div className="hidden md:flex items-center justify-center gap-1">
                 {entry.topChamps ? entry.topChamps.slice(0, 5).map((c, ci) => (
                   <img key={ci} src={c.image} alt={c.name} width={26} height={26} className="rounded-md" title={`${c.name} (Lvl ${c.level})`} />
                 )) : <span className="text-[10px] text-gray-600">—</span>}
               </div>
 
               {/* Koridor */}
-              <div className="flex items-center justify-center gap-1.5">
+              <div className="hidden md:flex items-center justify-center gap-1.5">
                 {entry.topRoles ? entry.topRoles.map((r, ri) => (
                   <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role} width={22} height={22} title={r.role} />
                 )) : <span className="text-[10px] text-gray-600">—</span>}
@@ -162,10 +163,10 @@ export default function LeaderboardPro() {
               </span>
 
               {/* Oyun */}
-              <span className="text-sm text-gray-300 text-center">{entry.games}</span>
+              <span className="hidden md:block text-sm text-gray-300 text-center">{entry.games}</span>
 
               {/* G / M */}
-              <div className="text-center">
+              <div className="hidden md:block text-center">
                 <span className="text-xs text-emerald-400 font-medium">{entry.wins}G</span>
                 <span className="text-xs text-gray-600 mx-1">·</span>
                 <span className="text-xs text-red-400 font-medium">{entry.losses}M</span>
@@ -179,7 +180,7 @@ export default function LeaderboardPro() {
               </span>
 
               {/* Rozet */}
-              <div className="flex items-center justify-center gap-1">
+              <div className="hidden md:flex items-center justify-center gap-1">
                 <BadgeIcon type="hotStreak" active={entry.hotStreak} />
                 <BadgeIcon type="freshBlood" active={entry.freshBlood} />
                 <BadgeIcon type="veteran" active={entry.veteran} />

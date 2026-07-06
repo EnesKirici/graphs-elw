@@ -40,15 +40,16 @@ function LaneCell({ c, role }) {
 }
 
 // Sıralanabilir sütun başlığı. 3 durum: iyiden-kötüye → kötüden-iyiye → default.
-function SortHeader({ col, label, sort, onSort, align = "right" }) {
+// className: responsive gizleme için (ör. "hidden md:table-cell")
+function SortHeader({ col, label, sort, onSort, align = "right", className = "" }) {
   const active = sort.col === col;
   const arrow = active ? (sort.dir === "good" ? "▾" : "▴") : "↕";
   return (
     <th
       onClick={() => onSort(col)}
-      className={`px-3 py-3 text-${align} text-[11px] font-semibold uppercase tracking-wider cursor-pointer select-none transition-colors ${
+      className={`px-2 md:px-3 py-3 text-${align} text-[11px] font-semibold uppercase tracking-wider cursor-pointer select-none transition-colors ${
         active ? "text-blue-300" : "text-gray-500 hover:text-gray-300"
-      }`}
+      } ${className}`}
       title="Sırala (iyiden kötüye → kötüden iyiye → varsayılan)"
     >
       <span className="inline-flex items-center gap-1">
@@ -168,7 +169,7 @@ export default function TierList({ data }) {
     <div className="glass rounded-xl overflow-hidden">
       {/* Filtre çubuğu */}
       <div className="px-4 py-3 flex items-center gap-2 flex-wrap border-b border-edge/60 bg-edge/10">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {TIER_ROLES.map((r) => (
             <button
               key={r.key}
@@ -199,14 +200,15 @@ export default function TierList({ data }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-edge/60 bg-edge/15">
-              <th className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 w-12">#</th>
-              <th className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Şampiyon</th>
+              {/* Mobilde yalnız #/Şampiyon/Derece/Kazanma — diğerleri md+ (dar ekranda isim eziliyordu) */}
+              <th className="px-2 md:px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 w-9 md:w-12">#</th>
+              <th className="px-2 md:px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Şampiyon</th>
               <SortHeader col="tier" label="Derece" sort={sort} onSort={toggleSort} align="left" />
-              <th className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Koridor</th>
+              <th className="hidden md:table-cell px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Koridor</th>
               <SortHeader col="wr" label="Kazanma" sort={sort} onSort={toggleSort} />
-              <SortHeader col="pick" label="Seçilme" sort={sort} onSort={toggleSort} />
-              <SortHeader col="ban" label="Banlanma" sort={sort} onSort={toggleSort} />
-              <SortHeader col="games" label="Maç" sort={sort} onSort={toggleSort} />
+              <SortHeader col="pick" label="Seçilme" sort={sort} onSort={toggleSort} className="hidden md:table-cell" />
+              <SortHeader col="ban" label="Banlanma" sort={sort} onSort={toggleSort} className="hidden md:table-cell" />
+              <SortHeader col="games" label="Maç" sort={sort} onSort={toggleSort} className="hidden md:table-cell" />
             </tr>
           </thead>
           <tbody>
@@ -214,26 +216,26 @@ export default function TierList({ data }) {
               const meta = TIER_META[c.rs.tier];
               return (
                 <tr key={c.id} className="border-b border-edge/30 last:border-0 hover:bg-hover/60 transition-colors">
-                  <td className="py-2.5 pl-3 pr-2 text-gray-500 tabular-nums text-center" style={{ boxShadow: `inset 3px 0 0 ${meta?.color}` }}>
+                  <td className="py-2.5 pl-2 pr-1 md:pl-3 md:pr-2 text-gray-500 tabular-nums text-center" style={{ boxShadow: `inset 3px 0 0 ${meta?.color}` }}>
                     {idx + 1}
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className="px-2 md:px-3 py-2.5">
                     <Link href={`/champions/${c.id}`} className="flex items-center gap-3 group">
                       <img src={c.image} alt={c.name} width={46} height={46} className={`rounded-lg ${c.rs.lowSample ? "opacity-60" : ""}`} />
                       <div className="min-w-0">
-                        <span className="font-semibold text-gray-100 group-hover:text-white transition-colors block leading-tight">{c.name}</span>
+                        <span className="font-semibold text-gray-100 group-hover:text-white transition-colors block leading-tight truncate">{c.name}</span>
                         {c.rs.lowSample && <span className="text-[10px] text-amber-500/70" title={`Düşük örneklem (${c.rs.games} maç)`}>az veri</span>}
                       </div>
                     </Link>
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className="px-2 md:px-3 py-2.5">
                     <span className="font-extrabold text-base" style={{ color: meta?.color }}>{c.rs.tier}</span>
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap"><LaneCell c={c} role={role} /></td>
-                  <td className={`px-3 py-2.5 text-right font-bold tabular-nums ${wrColor(c.rs.wr)}`}>%{c.rs.wr}</td>
-                  <td className="px-3 py-2.5 text-right text-gray-300 tabular-nums">%{c.rs.pick}</td>
-                  <td className="px-3 py-2.5 text-right text-gray-300 tabular-nums">%{c.rs.ban}</td>
-                  <td className="px-3 py-2.5 text-right text-gray-200 font-medium tabular-nums">{c.rs.games.toLocaleString("tr-TR")}</td>
+                  <td className="hidden md:table-cell px-3 py-2.5 whitespace-nowrap"><LaneCell c={c} role={role} /></td>
+                  <td className={`px-2 md:px-3 py-2.5 text-right font-bold tabular-nums ${wrColor(c.rs.wr)}`}>%{c.rs.wr}</td>
+                  <td className="hidden md:table-cell px-3 py-2.5 text-right text-gray-300 tabular-nums">%{c.rs.pick}</td>
+                  <td className="hidden md:table-cell px-3 py-2.5 text-right text-gray-300 tabular-nums">%{c.rs.ban}</td>
+                  <td className="hidden md:table-cell px-3 py-2.5 text-right text-gray-200 font-medium tabular-nums">{c.rs.games.toLocaleString("tr-TR")}</td>
                 </tr>
               );
             })}
