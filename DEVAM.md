@@ -1,5 +1,18 @@
 # DEVAM — Sonraki Session İçin Kaldığımız Yer (2026-06-25; triyaj+ayıklama 2026-06-26)
 
+## 🟢 DEPLOY YAPILDI (2026-07-06) — responsive turu + hata sayfaları canlıda
+**11 commit canlıya alındı** (`4ae57a8..41f7e4c`): mobil responsive baştan sona
+(navbar/hero/maç kartı/tablolar/canlı maç — CDP 390px ölçümlü, taşma sıfır),
+hero splash mobilde kart arkası, header mobil sade (logo+arama+menü; mod/admin
+hamburger'da), stat kartları 2x2, BigSearch önerisinde rank+koridor, Koridorlar+
+Metrikler tek kart, **özel 404/500 sayfaları (LoL recall temalı, animasyonlu)**,
+`champions/{id}` geçersiz isimde 500→404 (26 Haz "rotation 500" gizemi buydu —
+rotation diye endpoint yok, {id} rotası yakalıyordu). ALGO değişmedi (13) →
+`summaries:flush` GEREKMEDİ; migration/lock yok. Canlı doğrulandı: tüm sayfalar
+200 (~0.1-0.4s), 404 sayfası ve champion-404 canlıda çalışıyor.
+⚠️ Mobil screenshot alırken `--window-size` <500px GÜVENİLMEZ → CDP emülasyon şart
+(memory: reference-screenshot-setup).
+
 > Bu dosya bir SONRAKİ session'ın kaldığı yerden devam etmesi için. Tüm proje durumu için
 > `PROJE_DURUM.md` + `LIVE_GAME_PLAN.md` + memory dosyaları (`project_elw_scoring`,
 > `project_live_game`). **Her şey LOCAL, CANLIYA ALINMADI (deploy en son).**
