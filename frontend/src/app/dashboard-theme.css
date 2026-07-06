@@ -192,23 +192,25 @@
 @media (max-width: 640px) {
   .elw-topbar { gap: 10px; padding: 0 14px; }
 }
-/* Mobil: topbar 390px'e sığmalı — sabit parçalar kompaktlaşır, arama esner.
-   Rozet & Skor pill'i gizlenir (mobil menü dropdown'ında zaten var). */
+/* Menüye taşınan öğeler (mod/admin) yalnız ≤560'ta görünür — base: gizli */
+.tb-mobile-nav .tb-m-extra { display: none; }
+/* Mobil: topbar 390px'e sığmalı — telefonda yalnız LOGO + ARAMA + MENÜ kalır.
+   Mod/accent/admin/rozet pill'leri gizlenir; mod+admin hamburger menüye taşınır
+   (.tb-m-extra satırları yalnız bu genişlikte menüde görünür). */
 @media (max-width: 560px) {
   .elw-topbar { gap: 8px; padding: 0 12px; }
   .elw-topbar .tb-spacer { display: none; } /* boş alan aramaya kalsın */
   .elw-topbar .tb-server { display: none; }
   .elw-topbar .tb-badge-btn { display: none; }
   .elw-topbar .tb-rate { display: none; } /* admin rate-limit göstergesi (xp-bar 132px) */
-  .tb-brand .brand-word { height: 16px; }
+  .elw-topbar .tb-mode { display: none; }       /* açık/koyu — menüde */
+  .elw-topbar .tb-theme-pick { display: none; } /* accent seçici */
+  .elw-topbar .tb-pill.admin { display: none; } /* ADMIN — menüde */
+  .tb-brand .brand-word { height: 18px; } /* masaüstüyle aynı — küçük kalmasın */
   .tb-pill { padding: 0 9px; gap: 5px; }
   .tb-right { gap: 6px; }
   .tb-search { padding: 0 12px; gap: 8px; height: 38px; }
-}
-/* Çok dar ekran: accent renk seçici gizlenir (mod toggle kalır) → arama alanı genişler */
-@media (max-width: 480px) {
-  .elw-topbar .tb-theme-pick { display: none; }
-  .tb-brand .brand-word { height: 14px; }
+  .tb-mobile-nav .tb-m-extra { display: flex; }
 }
 
 .tb-pill {
@@ -491,7 +493,10 @@
 @media (max-width: 720px) {
   .content { padding: 18px 16px 60px; }
   .patch-grid { grid-template-columns: 1fr; }
-  .meta-ribbon { grid-template-columns: 1fr; }
+  /* Stat kartları mobilde 2x2 (tek kolon çok uzuyordu — kullanıcı isteği) */
+  .meta-ribbon { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .meta-stat { padding: 14px 16px; }
+  .meta-stat .ms-val { font-size: 24px; }
   .hero-info { padding: 28px 24px 56px; }
   .hero-name { font-size: 44px; }
   .hero-stats { gap: 20px; }

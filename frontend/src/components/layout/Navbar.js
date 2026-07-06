@@ -18,13 +18,13 @@ const NAV_ITEMS = [
   { href: "/champions", label: "Tüm Şampiyonlar", icon: Swords },
 ];
 
-/* Açık/koyu mod geçişi — topbar pill'i (güneş/ay). */
+/* Açık/koyu mod geçişi — topbar pill'i (güneş/ay). ≤560'ta gizli (menüde). */
 function ModeToggle() {
   const { mode, toggleMode } = useTheme();
   const isLight = mode === "light";
   return (
     <button
-      className="tb-pill"
+      className="tb-pill tb-mode"
       onClick={toggleMode}
       title={isLight ? "Koyu moda geç" : "Açık moda geç"}
       aria-label="Tema modu"
@@ -154,6 +154,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const analytics = useAnalytics();
   const { isAdmin } = useAdmin();
+  const { mode, toggleMode } = useTheme(); // mobil menüdeki mod satırı için
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -403,6 +404,20 @@ export default function Navbar() {
             <Award size={18} />
             <span>Rozet & Skor</span>
           </button>
+
+          {/* ≤560: topbar'dan kaldırılan öğeler menüde (tb-m-extra yalnız o genişlikte görünür) */}
+          <button onClick={toggleMode} className="tb-link tb-m-extra" style={{ width: "100%", textAlign: "left" }}>
+            {mode === "light" ? <Moon size={18} /> : <Sun size={18} />}
+            <span>{mode === "light" ? "Koyu Mod" : "Açık Mod"}</span>
+          </button>
+          {isAdmin && (
+            <Link href="/admin" className="tb-link tb-m-extra" style={{ color: "var(--gold)" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span>Admin Paneli</span>
+            </Link>
+          )}
         </div>
       )}
 
