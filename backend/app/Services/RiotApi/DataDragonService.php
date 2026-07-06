@@ -51,14 +51,16 @@ class DataDragonService
 
     /**
      * Tek bir şampiyonun detaylı bilgisini getir (skill'ler, lore, istatistikler).
+     * Geçersiz/bilinmeyen isimde null döner (eskiden undefined-key ile 500 atıyordu;
+     * ör. canlıda /champions/rotation denemesi). Null, remember() tarafından CACHE'LENMEZ.
      */
-    public function getChampionDetail(string $championName): array
+    public function getChampionDetail(string $championName): ?array
     {
         $version = $this->getCurrentVersion();
 
         return Cache::remember("ddragon:champion:{$championName}", config('riot.cache_ttl.ddragon'), function () use ($version, $championName) {
             $data = Http::get("{$this->baseUrl}/cdn/{$version}/data/{$this->lang}/champion/{$championName}.json")->json();
-            return $data['data'][$championName];
+            return $data['data'][$championName] ?? null;
         });
     }
 

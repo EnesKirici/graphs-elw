@@ -8,6 +8,7 @@
 */
 
 import { fetchApi } from "@/lib/api";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import ChampionRadar from "@/components/champion/ChampionRadar";
 import StatsTable from "@/components/champion/StatsTable";
@@ -46,10 +47,12 @@ const positionConfig = {
 export default async function ChampionDetail({ params }) {
   const { id } = await params;
   const [data, listData, runesResp] = await Promise.all([
-    fetchApi(`/champions/${id}`),
+    fetchApi(`/champions/${id}`).catch(() => null), // geçersiz isim → API 404 → aşağıda notFound()
     fetchApi("/champions").catch(() => null),
     fetchApi("/runes").catch(() => null),
   ]);
+  // Bilinmeyen şampiyon: 500 hata ekranı yerine özel 404 (Amumu) sayfası
+  if (!data?.champion) notFound();
   const champ = data.champion;
   const championList = listData?.champions || [];
   const runesData = runesResp?.runes || [];

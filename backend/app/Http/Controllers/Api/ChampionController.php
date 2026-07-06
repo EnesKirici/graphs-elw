@@ -51,6 +51,12 @@ class ChampionController extends Controller
     public function show(string $id): JsonResponse
     {
         $champion = $this->ddragon->getChampionDetail($id);
+
+        // Geçersiz şampiyon adı (ör. canlıdaki /champions/rotation denemesi) → 500 yerine düzgün 404
+        if ($champion === null) {
+            return response()->json(['error' => 'champion_not_found'], 404);
+        }
+
         $version = $this->ddragon->getCurrentVersion();
         $positionMap = $this->ddragon->getChampionPositions();
 
