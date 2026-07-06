@@ -152,8 +152,20 @@ export default function BigSearch({ chips = [] }) {
                         {p.gameName}
                         <span style={{ color: "var(--txt-3)", fontSize: 12, marginLeft: 2 }}>#{p.tagLine}</span>
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--txt-3)", marginTop: 2 }}>{rankText}</div>
+                      {/* Rank rozeti + metin (Navbar dropdown'ıyla aynı — eksikti) */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                        {tierName && <img src={`/ranks/badges/${p.tier.toLowerCase()}.webp`} alt="" width={16} height={16} />}
+                        <span style={{ fontSize: 11, color: "var(--txt-2)" }}>{rankText}</span>
+                      </div>
                     </div>
+                    {/* Koridor ikonları (API topRoles.icon verir) */}
+                    {p.topRoles?.length > 0 && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        {p.topRoles.map((r, i) => (
+                          <img key={i} src={r.icon || ""} alt={r.label || r.role} title={r.label} width={20} height={20} style={{ opacity: 0.7 }} />
+                        ))}
+                      </div>
+                    )}
                   </button>
                 );
               })}
