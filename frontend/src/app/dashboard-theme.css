@@ -469,15 +469,30 @@
   .meta-ribbon { grid-template-columns: repeat(2, 1fr); }
   .two-col { grid-template-columns: 1fr; }
   .hero-slide { grid-template-columns: 1fr; }
-  .hero-art { display: none; }
+  /* Tek sütunda splash GİZLENMEZ → kartın arkasına tam-alan loş görsel
+     (üstüne koyu perde: metin okunur kalır; tıklayınca kostüm değişimi korunur) */
+  .hero-art { position: absolute; inset: 0; z-index: 0; }
+  .hero-art::before {
+    background: linear-gradient(180deg,
+      color-mix(in oklab, var(--bg-1) 52%, transparent) 0%,
+      color-mix(in oklab, var(--bg-1) 68%, transparent) 55%,
+      color-mix(in oklab, var(--bg-1) 94%, transparent) 100%);
+  }
+  .hero-art .art-label { display: none; } /* fallback etiketi metnin arkasında kalmasın */
   /* Tek sütunda büyük WR, CTA ile çakışıyor; istatistik satırında zaten görünür → gizle */
   .hero-wr { display: none; }
+  /* Tek sütunda oklar orta-kenarda metne biniyor → alt-sağa (dots alt-solda) */
+  .hero-info { padding-bottom: 56px; }
+  .hero-nav { width: 32px; height: 32px; top: auto; bottom: 12px; transform: none; }
+  .hero-nav.prev { left: auto; right: 54px; }
+  .hero-nav.next { right: 12px; }
+  .hero-dots { left: 18px; bottom: 22px; }
 }
 @media (max-width: 720px) {
   .content { padding: 18px 16px 60px; }
   .patch-grid { grid-template-columns: 1fr; }
   .meta-ribbon { grid-template-columns: 1fr; }
-  .hero-info { padding: 28px 24px; }
+  .hero-info { padding: 28px 24px 56px; }
   .hero-name { font-size: 44px; }
   .hero-stats { gap: 20px; }
 }
@@ -492,8 +507,5 @@
   .hero-stat .hs-val { font-size: 22px; }
   .hero-cta { margin-top: 16px; }
   .hero-cta .btn { height: 38px; padding: 0 14px; font-size: 12.5px; }
-  .hero-nav { width: 32px; height: 32px; top: auto; bottom: 12px; transform: none; }
-  .hero-nav.prev { left: auto; right: 54px; }
-  .hero-nav.next { right: 12px; }
-  .hero-dots { left: 18px; bottom: 22px; }
+  /* (ok/dot konumlandırması ≤1080 bloğunda) */
 }
