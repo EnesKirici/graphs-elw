@@ -365,16 +365,17 @@ export default function MatchCardPro({ match: m, expanded }) {
 
   return (
     <div className={`${rowAccent} ${rowBg} hover:bg-hover transition-colors`}>
-      <div className="flex items-stretch px-3.5 py-2">
+      {/* Mobil (<640): eşya satırı 2. satıra sarar (basis-full order-last), dial 1. satırın sağında kalır */}
+      <div className="flex flex-wrap sm:flex-nowrap items-stretch px-3 sm:px-3.5 py-2 gap-y-1.5">
         {/* 1) ŞAMPİYON + RUNE — sabit sol kolon (spell'ler eşyaların soluna taşındı) */}
-        <div className="flex items-center gap-1.5 flex-shrink-0 basis-[84px]">
+        <div className="flex items-center gap-1.5 flex-shrink-0 basis-[76px] sm:basis-[84px]">
           <ChampPortrait champ={m.champion} corner={m.laneDuo} cornerRole={m.laneDuo?.role || m.partnerRole}
             size={50} cornerSize={26} role={m.role} roleSize={17} />
           <RuneTooltip runes={m.runes} keystoneSize={21} subTreeSize={21} />
         </div>
 
         {/* 2) SONUÇ + queue/LP + süre·zaman */}
-        <div className="flex flex-col justify-center flex-shrink-0 basis-[80px] leading-tight border-l border-edge/25 pl-3">
+        <div className="flex flex-col justify-center flex-shrink-0 basis-[72px] sm:basis-[80px] leading-tight border-l border-edge/25 pl-2 sm:pl-3">
           <p className={`text-[13px] font-bold ${resClr}`}>{resTxt}</p>
           {m.lpChange != null ? (
             <p className={`text-[11px] font-bold ${m.lpChange > 0 ? "text-blue-400" : "text-red-400"}`}>
@@ -389,21 +390,22 @@ export default function MatchCardPro({ match: m, expanded }) {
         </div>
 
         {/* 3) KDA (k/d/a) + ALTINDA takım kalitesi pill (KP stat bloğunda) */}
-        <div className="flex flex-col items-center justify-center flex-shrink-0 basis-[100px] text-center border-l border-edge/25 px-3">
+        <div className="flex flex-col items-center justify-center flex-shrink-0 basis-[86px] sm:basis-[100px] text-center border-l border-edge/25 px-2 sm:px-3">
           <p className="text-[15px] font-bold text-gray-50 leading-tight">
             {m.kills}<span className="text-gray-500 font-normal"> / </span><span className="text-red-400">{m.deaths}</span><span className="text-gray-500 font-normal"> / </span>{m.assists}
           </p>
           {!remake && tq && <TeamQualityTag tq={tq} />}
         </div>
 
-        {/* 4) SPELL'LER (eşyaların solunda, üst üste) + ITEMS tek satır */}
-        <div className="flex items-center justify-center flex-1 border-l border-edge/25 px-3">
+        {/* 4) SPELL'LER (eşyaların solunda, üst üste) + ITEMS tek satır — mobilde dial ile 2. satırda
+            (basis-auto: içerik 1. satıra sığmayınca sarar; sm:basis-0 = eski flex-1) */}
+        <div className="order-9 sm:order-none grow min-w-0 basis-auto sm:basis-0 flex items-center justify-center border-l-0 sm:border-l border-edge/25 px-0 sm:px-3">
           <div className="flex items-center gap-1.5">
             <div className="flex flex-col gap-0.5 flex-shrink-0">
               {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={22} height={22} className="rounded" title={m.spells[0].name} />}
               {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={22} height={22} className="rounded" title={m.spells[1].name} />}
             </div>
-            <div className="flex gap-1">
+            <div className="mc-itemrow flex gap-1">
               {[0, 1, 2, 3, 4, 5].map((i) => (m.items[i]
                 ? <ItemTooltip key={i} item={m.items[i]} size={26} />
                 : <div key={i} className="w-[26px] h-[26px] rounded bg-edge" />))}
@@ -419,8 +421,8 @@ export default function MatchCardPro({ match: m, expanded }) {
           {!remake && <StatBlock m={m} />}
         </div>
 
-        {/* 6) ELW SKOR dial + aç/kapa — sabit sağ kolon */}
-        <div className="flex items-center justify-center gap-1 flex-shrink-0 border-l border-edge/25 pl-3">
+        {/* 6) ELW SKOR dial + aç/kapa — sabit sağ kolon (mobilde eşya satırının sağında) */}
+        <div className="order-10 sm:order-none flex items-center justify-center gap-0.5 sm:gap-1 flex-shrink-0 ml-auto sm:ml-0 border-l border-edge/25 pl-1.5 sm:pl-3">
           {!remake && m.ranking
             ? <ScoreBlock m={m} />
             : <div className="w-[58px] flex-shrink-0" />}
