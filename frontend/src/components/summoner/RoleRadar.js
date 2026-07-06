@@ -82,7 +82,8 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
         <p className="text-xs text-gray-600 py-8">Bu filtrede veri yok</p>
       ) : (
         <>
-          <svg width={260} height={280} viewBox="0 0 260 280">
+          {/* Sabit 260px dar kartlarda (canlı maç arka yüzü) taşıyordu → viewBox ile oransal küçülür */}
+          <svg viewBox="0 0 260 280" className="w-full max-w-[260px] h-auto">
             <defs>
               <linearGradient id="radarFill" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />

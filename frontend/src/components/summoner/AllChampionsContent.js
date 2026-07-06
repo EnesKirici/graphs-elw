@@ -86,8 +86,9 @@ export default function AllChampionsContent({ seasonChampions, region = "TR" }) 
 
             {/* Filtre + Sıralama */}
             <Card className="overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-edge/50">
-                    <div className="flex items-center gap-1">
+                {/* Mobil: sıralama butonları sarar (390px'te sağdan taşıyordu) */}
+                <div className="flex flex-wrap items-center justify-between gap-y-2 px-3 md:px-5 py-3 border-b border-edge/50">
+                    <div className="flex items-center gap-1 flex-wrap">
                         {GAME_TYPES.map((g) => (
                             <button
                                 key={g.key}
@@ -100,7 +101,7 @@ export default function AllChampionsContent({ seasonChampions, region = "TR" }) 
                             </button>
                         ))}
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                         {SORT_OPTIONS.map((s) => (
                             <button
                                 key={s.key}

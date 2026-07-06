@@ -291,8 +291,9 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
             </div>
           )}
 
-          {/* ÜST: şampiyon adı + bu şampiyon maç/WR — KUTU YOK (splash'i kapatmaz), gölgeyle okunur */}
-          <div className="relative pt-2.5 px-3 text-center">
+          {/* ÜST: şampiyon adı + bu şampiyon maç/WR — KUTU YOK (splash'i kapatmaz), gölgeyle okunur.
+              Mobil (2 kolonlu dar kart): pt-8 → isim, köşedeki Duo/seri rozetlerinin ALTINA iner (çakışmasın) */}
+          <div className="relative pt-8 sm:pt-2.5 px-3 text-center">
             <div className="text-lg font-extrabold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] truncate leading-tight">{p.champion?.name}</div>
             {stat && stat.games > 0 ? (
               <div className="mt-0.5 text-[13px] font-semibold text-gray-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] tabular-nums">
