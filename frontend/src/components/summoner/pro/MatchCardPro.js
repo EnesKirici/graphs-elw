@@ -391,7 +391,8 @@ export default function MatchCardPro({ match: m, expanded }) {
 
         {/* 3) KDA (k/d/a) + ALTINDA takım kalitesi pill (KP stat bloğunda) */}
         <div className="flex flex-col items-center justify-center flex-shrink-0 basis-[86px] sm:basis-[100px] text-center border-l border-edge/25 px-2 sm:px-3">
-          <p className="text-[15px] font-bold text-gray-50 leading-tight">
+          {/* nowrap: "14 / 2 / 12" gibi çift haneli KDA dar kolonda iki satıra kırılmasın */}
+          <p className="text-[15px] font-bold text-gray-50 leading-tight whitespace-nowrap">
             {m.kills}<span className="text-gray-500 font-normal"> / </span><span className="text-red-400">{m.deaths}</span><span className="text-gray-500 font-normal"> / </span>{m.assists}
           </p>
           {!remake && tq && <TeamQualityTag tq={tq} />}

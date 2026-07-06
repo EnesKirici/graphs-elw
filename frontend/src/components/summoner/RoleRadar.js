@@ -22,9 +22,11 @@ const RADAR_ROLES = [
 
 /*
   embedded=true  → kart chrome'u yok; İstatistik merkezi içinde gömülü çalışır.
+  plain=true     → başlık + sekmeler VAR ama dış .glass kart yok (ebeveyn kart sağlar;
+                   profildeki "Koridorlar + Performans Metrikleri" birleşik kartı için).
   filter (kontrollü) verilirse dışarıdan sürülür (StatsHub queue'su); yoksa kendi sekmesi.
 */
-export default function RoleRadar({ seasonRoles, filter: controlledFilter, embedded = false, hideHeading = false, hideLegend = false }) {
+export default function RoleRadar({ seasonRoles, filter: controlledFilter, embedded = false, plain = false, hideHeading = false, hideLegend = false }) {
   const [internalFilter, setInternalFilter] = useState("all");
   const filter = controlledFilter ?? internalFilter;
   const [hovIdx, setHovIdx] = useState(null);
@@ -206,9 +208,9 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
     );
   }
 
-  // Standalone kart
-  return (
-    <div className="glass rounded-xl overflow-hidden">
+  // Standalone kart (plain: aynı içerik, dış kartı ebeveyn sağlar)
+  const inner = (
+    <>
       <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">
           Koridorlar <span className="text-gray-500 font-normal">(Sezon)</span>
@@ -217,6 +219,8 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
       </div>
       {content}
       {tooltip}
-    </div>
+    </>
   );
+  if (plain) return inner;
+  return <div className="glass rounded-xl overflow-hidden">{inner}</div>;
 }

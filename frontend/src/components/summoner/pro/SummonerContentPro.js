@@ -30,8 +30,11 @@ export default function SummonerContentPro({ data, profile, region, initialMatch
       <div className="w-full lg:w-[350px] lg:shrink-0 space-y-4">
         <RankBoxPro solo={solo} flex={flex} region={region} lpTimeline={data.lpTimeline} winrateTimeline={data.winrateTimeline} avgGameRank={data.avgGameRank} />
         <ChampPerfListPro seasonChampions={data.seasonChampions || {}} region={region} />
-        <RoleRadar seasonRoles={data.seasonRoles} />
-        <ChallengesCard challenges={data.challengeAverages} />
+        {/* Koridorlar + Performans Metrikleri TEK kartta (kart kalabalığını azalt) */}
+        <div className="glass rounded-xl overflow-hidden">
+          <RoleRadar seasonRoles={data.seasonRoles} plain />
+          <ChallengesCard challenges={data.challengeAverages} plain />
+        </div>
         <DuoPartnersCard duoPartners={data.duoPartners} />
       </div>
 

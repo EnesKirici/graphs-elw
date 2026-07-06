@@ -12,15 +12,16 @@ const metrics = [
   { key: "firstBloodKill",              label: "First Blood",    format: (v) => `${(v * 100).toFixed(0)}%`, max: 1, color: "#eab308", isRatio: true },
 ];
 
-export default function ChallengesCard({ challenges }) {
+// plain=true → dış .glass kart yok; birleşik kartın (Koridorlar altı) bölümü olur.
+export default function ChallengesCard({ challenges, plain = false }) {
   if (!challenges?.averages || Object.keys(challenges.averages).length === 0) return null;
 
   const avgs = challenges.averages;
   const totalGames = challenges.totalGames;
 
-  return (
-    <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
+  const inner = (
+    <>
+      <div className={`px-5 py-3.5 border-b border-edge/50 flex items-center justify-between ${plain ? "border-t" : ""}`}>
         <h3 className="text-sm font-semibold text-gray-200">Performans Metrikleri</h3>
         <span className="text-[10px] text-gray-600">{totalGames} maç</span>
       </div>
@@ -45,6 +46,9 @@ export default function ChallengesCard({ challenges }) {
           );
         })}
       </div>
-    </div>
+    </>
   );
+
+  if (plain) return inner;
+  return <div className="glass rounded-xl overflow-hidden">{inner}</div>;
 }
