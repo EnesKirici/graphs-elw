@@ -477,4 +477,23 @@
   .content { padding: 18px 16px 60px; }
   .patch-grid { grid-template-columns: 1fr; }
   .meta-ribbon { grid-template-columns: 1fr; }
+  .hero-info { padding: 28px 24px; }
+  .hero-name { font-size: 44px; }
+  .hero-stats { gap: 20px; }
+}
+/* Hero mobil: sabit 52px başlık + 40px padding 390px'te taşıyordu (CDP: 431px).
+   Oklar orta-kenardan alt-sağa alınır (alt başlığın üstüne binmesin). */
+@media (max-width: 560px) {
+  .hero-stage { min-height: 360px; }
+  .hero-info { padding: 22px 18px 56px; } /* alt: ok/dot şeridine yer */
+  .hero-name { font-size: 34px; letter-spacing: -0.02em; }
+  .hero-sub { font-size: 13.5px; }
+  .hero-stats { gap: 16px; margin-top: 16px; }
+  .hero-stat .hs-val { font-size: 22px; }
+  .hero-cta { margin-top: 16px; }
+  .hero-cta .btn { height: 38px; padding: 0 14px; font-size: 12.5px; }
+  .hero-nav { width: 32px; height: 32px; top: auto; bottom: 12px; transform: none; }
+  .hero-nav.prev { left: auto; right: 54px; }
+  .hero-nav.next { right: 12px; }
+  .hero-dots { left: 18px; bottom: 22px; }
 }
