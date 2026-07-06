@@ -155,7 +155,8 @@
   color: var(--txt-3); transition: border-color .2s, background .2s;
 }
 .tb-search:hover, .tb-search:focus-within { border-color: var(--border-strong); background: var(--surface-2); }
-.tb-search input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--txt); font-size: 14px; font-family: var(--f-body); }
+/* width:0 → input'un içsel min genişliği (size attr ~200px) topbar'ı şişirmesin; flex:1 zaten doldurur */
+.tb-search input { flex: 1; min-width: 0; width: 0; background: none; border: none; outline: none; color: var(--txt); font-size: 14px; font-family: var(--f-body); }
 .tb-search input::placeholder { color: var(--txt-3); }
 .tb-spacer { flex: 1; }
 
@@ -172,6 +173,7 @@
 .tb-link:hover { background: var(--surface-2); color: var(--txt); }
 .tb-link.active { color: var(--txt); background: var(--accent-soft); }
 .tb-badge-btn { cursor: pointer; }
+.tb-right { gap: 10px; } /* topbar sağ ikon kümesi — mobil media query'de daralır */
 /* .tb-pill display:flex'i ezmek için .elw-topbar ile scope (specificity) */
 .tb-menu-btn { padding: 0 10px; }
 .elw-topbar .tb-menu-btn { display: none; }
@@ -187,9 +189,26 @@
   .tb-nav { display: none; }
   .elw-topbar .tb-menu-btn { display: flex; }
 }
+@media (max-width: 640px) {
+  .elw-topbar { gap: 10px; padding: 0 14px; }
+}
+/* Mobil: topbar 390px'e sığmalı — sabit parçalar kompaktlaşır, arama esner.
+   Rozet & Skor pill'i gizlenir (mobil menü dropdown'ında zaten var). */
 @media (max-width: 560px) {
+  .elw-topbar { gap: 8px; padding: 0 12px; }
+  .elw-topbar .tb-spacer { display: none; } /* boş alan aramaya kalsın */
   .elw-topbar .tb-server { display: none; }
+  .elw-topbar .tb-badge-btn { display: none; }
+  .elw-topbar .tb-rate { display: none; } /* admin rate-limit göstergesi (xp-bar 132px) */
   .tb-brand .brand-word { height: 16px; }
+  .tb-pill { padding: 0 9px; gap: 5px; }
+  .tb-right { gap: 6px; }
+  .tb-search { padding: 0 12px; gap: 8px; height: 38px; }
+}
+/* Çok dar ekran: accent renk seçici gizlenir (mod toggle kalır) → arama alanı genişler */
+@media (max-width: 480px) {
+  .elw-topbar .tb-theme-pick { display: none; }
+  .tb-brand .brand-word { height: 14px; }
 }
 
 .tb-pill {

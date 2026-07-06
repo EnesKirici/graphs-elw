@@ -81,7 +81,7 @@ function RateLimitIndicator() {
   const color = noKey || isCooldown || isHot ? "var(--loss)" : pct > 40 ? "var(--gold)" : "var(--win)";
 
   return (
-    <div className="relative" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div className="tb-rate relative" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {/* Kompakt XP gauge */}
       <div className="tb-pill" style={{ gap: 10 }}>
         {noKey ? (
@@ -359,8 +359,8 @@ export default function Navbar() {
 
       <div className="tb-spacer" />
 
-      {/* Sağ */}
-      <div className="flex items-center" style={{ gap: 10, flexShrink: 0 }}>
+      {/* Sağ — gap CSS'te (.tb-right): mobilde media query ile daralır */}
+      <div className="tb-right flex items-center" style={{ flexShrink: 0 }}>
         <button onClick={() => setBadgeGuideOpen(true)} className="tb-pill tb-badge-btn" style={{ gap: 7 }} title="Rozet & Skor rehberi">
           <Award size={15} />
           <span className="tb-badge-label">Rozet & Skor</span>

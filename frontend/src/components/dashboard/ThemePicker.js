@@ -66,7 +66,7 @@ export default function ThemePicker() {
   }, []);
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="tb-theme-pick relative" ref={ref}>
       <button className="tb-pill" onClick={() => setOpen((o) => !o)} title="Tema rengi" style={{ gap: 7 }}>
         <Palette size={15} />
         <span style={{ width: 11, height: 11, borderRadius: 4, background: "var(--accent)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,.2)" }} />
