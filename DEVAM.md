@@ -1,5 +1,15 @@
 # DEVAM — Sonraki Session İçin Kaldığımız Yer (2026-06-25; triyaj+ayıklama 2026-06-26)
 
+## 🟢 DEPLOY YAPILDI (2026-07-07) — 15 commit: couple + rank ikonları + tier-list + SEO + hero pill
+**15 commit canlıya alındı** (`79a871b..a6071c6`, hepsi FRONTEND — backend/lock/migration YOK,
+ALGO 13 sabit → `summaries:flush` GEREKMEDİ). İçerik: couple profil teması (nurayore ♥ elwyore,
+minimal arka plan kalpleri + isim-yanı rozet, cursor normal), LP grafik + PEAK/MMR **gerçek Riot
+rank amblemleri**, meta tier-list mobil filtre/tablo hizalama, hero "Aktif geliştiriliyor" pill
+(gösterişli, slider kenarı), mobil maç kartı + detay tablosu yeni düzen, duyuru→pill, /iletisim
+(enes@elw.com.tr), tüm sayfalara zengin+dinamik SEO + JSON-LD. Akış: GitHub+Plesk push → checkout
+→ `npm run build` + pm2 restart. Canlı doğrulandı: tüm sayfalar 200 (~0.05-0.36s), couple/mail/
+hero-pill/champion-SEO çalışıyor. ⚠️ BEKLEYEN: Google IndexNow (opsiyonel), Search Console sitemap gönderimi.
+
 ## 🟢 DEPLOY YAPILDI (2026-07-06) — responsive turu + hata sayfaları canlıda
 **11 commit canlıya alındı** (`4ae57a8..41f7e4c`): mobil responsive baştan sona
 (navbar/hero/maç kartı/tablolar/canlı maç — CDP 390px ölçümlü, taşma sıfır),
