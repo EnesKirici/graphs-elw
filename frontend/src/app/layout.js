@@ -35,7 +35,12 @@ export const metadata = {
     template: "%s | ElwGraphs",
   },
   description: "League of Legends oyuncu profilleri, maç analizleri, ELW Score performans puanlama, şampiyon istatistikleri ve meta takibi.",
-  keywords: ["league of legends", "lol", "oyuncu istatistikleri", "maç analizi", "elw score", "lol türkiye", "şampiyon istatistikleri", "tier list", "lol meta"],
+  keywords: [
+    "league of legends", "lol", "lol graph", "lol graphs", "league of graphs", "graphs lol",
+    "oyuncu istatistikleri", "maç analizi", "canlı maç analizi", "elw score", "lol türkiye",
+    "lol champions", "lol şampiyonlar", "lol karakterleri", "şampiyon istatistikleri",
+    "tier list", "lol meta", "lol sıralama", "lol profil",
+  ],
   applicationName: "ElwGraphs",
   alternates: { canonical: "/" },
   openGraph: {

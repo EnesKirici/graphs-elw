@@ -15,9 +15,18 @@ export async function generateMetadata({ params }) {
   const { name, tag } = await params;
   const dn = decodeURIComponent(name);
   const dt = decodeURIComponent(tag);
+  const id = `${dn}#${dt}`;
+  const description = `${id} League of Legends oyuncu profili: maç geçmişi, ELW Score performans puanı, LP grafiği, şampiyon istatistikleri, rol analizi ve duo partnerleri.`;
   return {
-    title: `${dn}#${dt}`,
-    description: `${dn}#${dt} League of Legends oyuncu profili, maç geçmişi, ELW Score ve istatistikler.`,
+    title: `${id} — LoL Profili`,
+    description,
+    keywords: [dn, id, "lol profil", "maç geçmişi", "elw score", "lol graph", "op.gg"],
+    alternates: { canonical: `/summoner/${encodeURIComponent(dn)}/${encodeURIComponent(dt)}` },
+    openGraph: {
+      title: `${id} — LoL Oyuncu Profili`,
+      description,
+      type: "profile",
+    },
   };
 }
 

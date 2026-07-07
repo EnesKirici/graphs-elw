@@ -2,8 +2,17 @@ import { fetchApi, getPublicSettings } from "@/lib/api";
 import ChampionGrid from "@/components/champion/ChampionGrid";
 
 export const metadata = {
-  title: "Tüm Şampiyonlar",
-  description: "League of Legends şampiyonlarının tam listesi.",
+  title: "Tüm LoL Şampiyonları — Build, Rün ve İstatistik",
+  description:
+    "League of Legends'ın tüm şampiyonları tek listede: yetenekler, build önerileri, rünler, tier sıralaması ve istatistikler. Aradığın LoL karakterini bul ve incele.",
+  keywords: ["lol şampiyonlar", "lol champions", "champions lol", "lol karakterleri", "şampiyon listesi", "lol graph", "league of legends şampiyonlar"],
+  alternates: { canonical: "/champions" },
+  openGraph: {
+    title: "Tüm LoL Şampiyonları — Build, Rün ve İstatistik",
+    description: "Tüm League of Legends şampiyonları: yetenekler, build'ler, rünler ve tier sıralaması.",
+    url: "https://elwgraphs.elw.com.tr/champions",
+    type: "website",
+  },
 };
 
 export default async function ChampionsPage() {

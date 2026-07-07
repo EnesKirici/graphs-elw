@@ -17,12 +17,29 @@ import ChampionBuild from "@/components/champion/ChampionBuild";
 import ChampionTabs from "@/components/champion/ChampionTabs";
 import DuoPartners from "@/components/champion/DuoPartners";
 
-// Dinamik metadata - her şampiyonun kendi title'ı olur (SEO)
+// Dinamik metadata — şampiyon verisinden zengin SEO (aynı fetch component'te de var → Next dedupe eder)
 export async function generateMetadata({ params }) {
   const { id } = await params;
+  const data = await fetchApi(`/champions/${id}`).catch(() => null);
+  const champ = data?.champion;
+  if (!champ) {
+    return { title: id, description: `${id} — League of Legends şampiyon bilgileri.` };
+  }
+  const name = champ.name;
+  const title = `${name} Build, Rünler ve İstatistikler`;
+  const description = `${name} (${champ.title}) için güncel build, rün önerileri, yetenek sırası, eşya dizilimi, tier sıralaması ve maç istatistikleri. En iyi ${name} rehberi.`;
   return {
-    title: id,
-    description: `${id} şampiyon yetenekleri, skinleri ve istatistikleri.`,
+    title,
+    description,
+    keywords: [name, `${name} build`, `${name} rünler`, champ.title, ...(champ.tags || []), "lol", "lol champions", "league of legends"],
+    alternates: { canonical: `/champions/${id}` },
+    openGraph: {
+      title: `${name} — ${champ.title}`,
+      description,
+      url: `https://elwgraphs.elw.com.tr/champions/${id}`,
+      type: "article",
+      images: champ.splash ? [{ url: champ.splash, alt: name }] : undefined,
+    },
   };
 }
 

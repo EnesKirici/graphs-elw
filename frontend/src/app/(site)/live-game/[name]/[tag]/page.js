@@ -7,9 +7,17 @@ export async function generateMetadata({ params }) {
   const { name, tag } = await params;
   const dn = decodeURIComponent(name);
   const dt = decodeURIComponent(tag);
+  const id = `${dn}#${dt}`;
+  const description = `${id} oyuncusunun canlı maçı: takım ve rakip istatistikleri, oyuncu rozetleri, şampiyon performansı ve build ön-analizi.`;
   return {
-    title: `${dn}#${dt} — Canlı Maç`,
-    description: `${dn}#${dt} oyuncusunun canlı maçı: takım ve rakip istatistikleri, rozetler ve build.`,
+    title: `${id} — Canlı Maç Analizi`,
+    description,
+    keywords: [dn, id, "canlı maç", "lol canlı maç", "canlı maç analizi", "lol graph", "spectator"],
+    openGraph: {
+      title: `${id} — Canlı Maç Analizi`,
+      description,
+      type: "website",
+    },
   };
 }
 
