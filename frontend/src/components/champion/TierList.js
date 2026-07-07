@@ -40,10 +40,17 @@ function LaneCell({ c, role }) {
 }
 
 // Sıralanabilir sütun başlığı. 3 durum: iyiden-kötüye → kötüden-iyiye → default.
-// className: responsive gizleme için (ör. "hidden md:table-cell")
-function SortHeader({ col, label, sort, onSort, align = "right", className = "" }) {
+// className: responsive gizleme için (ör. "hidden md:table-cell").
+// shortLabel: mobilde daha kısa başlık (kolon daralır → şampiyon adına yer açılır).
+function SortHeader({ col, label, shortLabel, sort, onSort, align = "right", className = "" }) {
   const active = sort.col === col;
   const arrow = active ? (sort.dir === "good" ? "▾" : "▴") : "↕";
+  const labelEl = shortLabel ? (
+    <>
+      <span className="sm:hidden">{shortLabel}</span>
+      <span className="hidden sm:inline">{label}</span>
+    </>
+  ) : label;
   return (
     <th
       onClick={() => onSort(col)}
@@ -52,9 +59,9 @@ function SortHeader({ col, label, sort, onSort, align = "right", className = "" 
       } ${className}`}
       title="Sırala (iyiden kötüye → kötüden iyiye → varsayılan)"
     >
-      <span className="inline-flex items-center gap-1">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap">
         {align !== "left" && <span className="text-[10px] opacity-70">{arrow}</span>}
-        {label}
+        {labelEl}
         {align === "left" && <span className="text-[10px] opacity-70">{arrow}</span>}
       </span>
     </th>
@@ -165,31 +172,41 @@ export default function TierList({ data }) {
     return arr;
   }, [inRole, sort]);
 
+  // maç / queue / patch etiketleri — hem masaüstü (sağ) hem mobil (alt satır) kullanır
+  const metaTags = (
+    <>
+      <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400 whitespace-nowrap flex-shrink-0" title="Topladığımız maçlardan. Production key + ladder crawler ile Emerald+ filtresi gelecek.">
+        {totalGames.toLocaleString("tr-TR")} maç
+      </span>
+      <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400 whitespace-nowrap flex-shrink-0">Ranked Solo/Flex</span>
+      <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400 whitespace-nowrap flex-shrink-0">Patch {version || patch}</span>
+    </>
+  );
+
   return (
     <div className="glass rounded-xl overflow-hidden">
-      {/* Filtre çubuğu */}
-      <div className="px-4 py-3 flex items-center gap-2 flex-wrap border-b border-edge/60 bg-edge/10">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {TIER_ROLES.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setRole(r.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                role === r.key ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"
-              }`}
-            >
-              {r.icon && <img src={r.icon} alt={r.label} width={16} height={16} className={role === r.key ? "" : "opacity-70"} />}
-              {r.label}
-            </button>
-          ))}
+      {/* Filtre çubuğu — mobilde rol sekmeleri TEK SATIR yatay kaydırma (wrap yok),
+          maç/patch bilgisi altta düzenli satır. Masaüstünde: roller sol, bilgi sağ. */}
+      <div className="border-b border-edge/60 bg-edge/10 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0">
+            {TIER_ROLES.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => setRole(r.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex-shrink-0 whitespace-nowrap ${
+                  role === r.key ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"
+                }`}
+              >
+                {r.icon && <img src={r.icon} alt={r.label} width={16} height={16} className={role === r.key ? "" : "opacity-70"} />}
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <div className="hidden md:flex items-center gap-2 text-[11px] flex-shrink-0">{metaTags}</div>
         </div>
-        <div className="ml-auto flex items-center gap-2 text-[11px]">
-          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400" title="Topladığımız maçlardan. Production key + ladder crawler ile Emerald+ filtresi gelecek.">
-            {totalGames.toLocaleString("tr-TR")} maç
-          </span>
-          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Ranked Solo/Flex</span>
-          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Patch {version || patch}</span>
-        </div>
+        {/* mobil/tablet: maç/patch ayrı düzenli satır */}
+        <div className="md:hidden flex items-center gap-2 text-[11px] mt-2.5 overflow-x-auto no-scrollbar">{metaTags}</div>
       </div>
 
       {/* Öne çıkan slider (S tier'lar arası) */}
@@ -202,10 +219,10 @@ export default function TierList({ data }) {
             <tr className="border-b border-edge/60 bg-edge/15">
               {/* Mobilde yalnız #/Şampiyon/Derece/Kazanma — diğerleri md+ (dar ekranda isim eziliyordu) */}
               <th className="px-2 md:px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 w-9 md:w-12">#</th>
-              <th className="px-2 md:px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Şampiyon</th>
-              <SortHeader col="tier" label="Derece" sort={sort} onSort={toggleSort} align="left" />
+              <th className="px-2 md:px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 w-full">Şampiyon</th>
+              <SortHeader col="tier" label="Derece" shortLabel="Tier" sort={sort} onSort={toggleSort} align="left" />
               <th className="hidden md:table-cell px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Koridor</th>
-              <SortHeader col="wr" label="Kazanma" sort={sort} onSort={toggleSort} />
+              <SortHeader col="wr" label="Kazanma" shortLabel="WR" sort={sort} onSort={toggleSort} />
               <SortHeader col="pick" label="Seçilme" sort={sort} onSort={toggleSort} className="hidden md:table-cell" />
               <SortHeader col="ban" label="Banlanma" sort={sort} onSort={toggleSort} className="hidden md:table-cell" />
               <SortHeader col="games" label="Maç" sort={sort} onSort={toggleSort} className="hidden md:table-cell" />

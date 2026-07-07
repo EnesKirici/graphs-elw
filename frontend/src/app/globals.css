@@ -878,3 +878,7 @@ html.light .dpm-scope .glass { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   .err-ring::before, .err-float { animation: none; }
 }
+
+/* Yatay kaydırma çubuğunu gizle (rol sekmeleri / etiket şeritleri tek satır scroll) */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
