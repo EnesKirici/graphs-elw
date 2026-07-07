@@ -100,10 +100,9 @@ export default function MatchListPro({ initialMatches, puuid, onMatchesChange })
                 const isOpen = expandedId === match.matchId;
                 return (
                   <div key={match.matchId}>
-                    {/* Satıra tıklayınca accordion açılır; cursor default kalır */}
-                    <div onClick={() => setExpandedId(isOpen ? null : match.matchId)} className="cursor-default">
-                      <MatchCardPro match={match} expanded={isOpen} />
-                    </div>
+                    {/* Accordion YALNIZ kart içindeki ok (chevron) ile açılır — karta rastgele
+                        tıklamak (eşya/skor tooltip'leri vb.) artık detayı açmıyor. */}
+                    <MatchCardPro match={match} expanded={isOpen} onToggle={() => setExpandedId(isOpen ? null : match.matchId)} />
                     {/* Inline maç detayı (ayrı sekme yerine accordion) — Pro kompakt */}
                     {isOpen && (
                       <div className="border-t border-edge/40 bg-base/40 px-2 py-2.5">
