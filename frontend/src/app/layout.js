@@ -72,6 +72,30 @@ export const metadata = {
 // arka plan bulanıklığı + saydam kart tercihini okur (hepsi tarayıcıya özel).
 const THEME_INIT = `(function(){try{var m=localStorage.getItem('elw-mode');if(m==='light')document.documentElement.classList.add('light');var a=localStorage.getItem('elw-accent');if(a)document.documentElement.style.setProperty('--accent',a);var b=localStorage.getItem('elw-bg-blur');if(b&&b!=='0')document.documentElement.style.setProperty('--bg-blur',b+'px');var cb=localStorage.getItem('elw-card-blur');if(cb!==null)document.documentElement.style.setProperty('--card-blur',cb+'px');var g=localStorage.getItem('elw-glass-cards');if(g==='1')document.documentElement.classList.add('glass-cards');var v=localStorage.getItem('elw-bg-veil');if(v==='0')document.documentElement.classList.add('no-veil');var bg=localStorage.getItem('site-background');var be=localStorage.getItem('elw-bg-enabled');if(bg&&be!=='0')document.documentElement.classList.add('has-bg');}catch(e){}})();`;
 
+// SEO: yapılandırılmış veri (schema.org) — WebSite + Organization. Arama motorları
+// için site kimliği. "geliştirme aşaması" gibi ibareler BURADA yer almaz.
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://elwgraphs.elw.com.tr/#website",
+      url: "https://elwgraphs.elw.com.tr",
+      name: "ElwGraphs",
+      description:
+        "League of Legends oyuncu profilleri, maç analizi, ELW Score performans puanlaması, canlı maç ön-analizi ve şampiyon meta/tier verileri.",
+      inLanguage: "tr-TR",
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://elwgraphs.elw.com.tr/#org",
+      name: "ElwGraphs",
+      url: "https://elwgraphs.elw.com.tr",
+      logo: "https://elwgraphs.elw.com.tr/apple-touch-icon.png",
+    },
+  ],
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="tr" suppressHydrationWarning className={`${geist.variable} ${archivo.variable} ${manrope.variable} ${jetbrains.variable}`}>
@@ -80,6 +104,8 @@ export default function RootLayout({ children }) {
         {/* Google Analytics (gtag.js) */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-CF9094L00G" />
         <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-CF9094L00G');` }} />
+        {/* Yapılandırılmış veri (schema.org) */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
       </head>
       <body className="min-h-screen bg-base text-gray-100 font-sans antialiased">
         <Providers>

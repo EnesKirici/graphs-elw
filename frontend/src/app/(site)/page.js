@@ -9,6 +9,24 @@ import Players from "@/components/dashboard/Players";
 import RateLimitBanner from "@/components/summoner/RateLimitBanner";
 import AnnouncementCard from "@/components/site/AnnouncementCard";
 
+// Ana sayfa SEO metadata — kök template'i geçersiz kılan tam başlık + açıklama.
+// NOT: "geliştirme aşaması / beta" gibi ibareler META'ya GİRMEZ (yalnız görünür duyuru kartında).
+export const metadata = {
+  title: {
+    absolute: "ElwGraphs — LoL Oyuncu İstatistikleri, Maç Analizi ve Meta",
+  },
+  description:
+    "League of Legends oyuncu profilleri, detaylı maç analizi, ELW Score performans puanlaması, canlı maç ön-analizi ve güncel şampiyon meta/tier listesi. Riot ID ile oyuncu ara, performansını incele.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "ElwGraphs — LoL Oyuncu İstatistikleri, Maç Analizi ve Meta",
+    description:
+      "Oyuncu profilleri, maç analizi, ELW Score, canlı maç ön-analizi ve şampiyon meta/tier verileri tek yerde.",
+    url: "https://elwgraphs.elw.com.tr",
+    type: "website",
+  },
+};
+
 /* ---- Öne çıkan oyuncular: ayrı (challenger) uç, Suspense ile stream ---- */
 async function PlayersSection() {
   let lb = null;
