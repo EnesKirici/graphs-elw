@@ -282,23 +282,25 @@ function DiffArrow({ diff }) {
 }
 
 // Takım kalitesi etiketi (KDA altında) — hover'da zengin tooltip (güç farkı + açıklama)
-function TeamQualityTag({ tq }) {
+// inline=true → sarmalayıcı div yok; satır içinde pill (mobil düzen)
+function TeamQualityTag({ tq, inline = false }) {
   const [anchor, setAnchor] = useState(null);
   const color = TQ_DOT[tq.key] || "#94a3b8";
   const diff = tq.diff ?? 0;
   const teammatesAvg = tq.teammatesAvg, lobbyAvg = tq.lobbyAvg;
   const hasAvg = teammatesAvg != null && lobbyAvg != null;
+  const pill = (
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border cursor-help whitespace-nowrap ${TQ_PILL[tq.key] || "text-gray-400 bg-gray-500/10 border-gray-500/30"}`}
+      onMouseEnter={(e) => setAnchor(e.currentTarget)}
+      onMouseLeave={() => setAnchor(null)}
+    >
+      {tq.label}
+    </span>
+  );
   return (
     <>
-      <div className="flex justify-center mt-1">
-        <span
-          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border cursor-help whitespace-nowrap ${TQ_PILL[tq.key] || "text-gray-400 bg-gray-500/10 border-gray-500/30"}`}
-          onMouseEnter={(e) => setAnchor(e.currentTarget)}
-          onMouseLeave={() => setAnchor(null)}
-        >
-          {tq.label}
-        </span>
-      </div>
+      {inline ? pill : <div className="flex justify-center mt-1">{pill}</div>}
       {anchor && (
         <Tooltip anchorEl={anchor}>
           <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-xl px-3.5 py-3 shadow-2xl shadow-black/90 w-60">
@@ -365,17 +367,74 @@ export default function MatchCardPro({ match: m, expanded }) {
 
   return (
     <div className={`${rowAccent} ${rowBg} hover:bg-hover transition-colors`}>
-      {/* Mobil (<640): eşya satırı 2. satıra sarar (basis-full order-last), dial 1. satırın sağında kalır */}
-      <div className="flex flex-wrap sm:flex-nowrap items-stretch px-3 sm:px-3.5 py-2 gap-y-1.5">
+      {/* ── MOBİL (<640): op.gg tarzı kompakt düzen — sol şampiyon, ORTADA sola hizalı
+          bilgi sütunu (sonuç/LP·süre → KDA+takım → spell/rün/eşyalar), sağda skor dial.
+          Ayrı blok: masaüstü düzenine responsive hack'lerle dokunmamak için. */}
+      <div className="sm:hidden flex items-center gap-2.5 px-3 py-2.5">
+        <div className="flex-shrink-0">
+          <ChampPortrait champ={m.champion} corner={m.laneDuo} cornerRole={m.laneDuo?.role || m.partnerRole}
+            size={52} cornerSize={24} role={m.role} roleSize={16} />
+        </div>
+
+        <div className="flex-1 min-w-0 space-y-1.5">
+          {/* 1) sonuç · LP · süre · zaman */}
+          <p className="flex items-baseline gap-1.5 text-[11px] leading-none min-w-0">
+            <span className={`text-[12px] font-bold ${resClr}`}>{resTxt}</span>
+            {m.lpChange != null ? (
+              <span className={`font-bold ${m.lpChange > 0 ? "text-blue-400" : "text-red-400"}`}>
+                {m.lpChange > 0 ? "+" : ""}{m.lpChange} LP
+              </span>
+            ) : (
+              <span className="text-gray-400">{m.queueType || ""}</span>
+            )}
+            <span className="text-gray-500 truncate" suppressHydrationWarning>
+              {fmtDur(m.duration)} · {timeAgo(m.gameCreation)}
+            </span>
+          </p>
+
+          {/* 2) KDA + takım kalitesi pill (yan yana) */}
+          <p className="flex items-center gap-2 leading-none">
+            <span className="text-[15px] font-bold text-gray-50 whitespace-nowrap">
+              {m.kills}<span className="text-gray-500 font-normal"> / </span><span className="text-red-400">{m.deaths}</span><span className="text-gray-500 font-normal"> / </span>{m.assists}
+            </span>
+            {!remake && tq && <TeamQualityTag tq={tq} inline />}
+          </p>
+
+          {/* 3) spell + rün + eşyalar (tek hizalı satır) */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex flex-col gap-0.5 flex-shrink-0">
+              {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={17} height={17} className="rounded" title={m.spells[0].name} />}
+              {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={17} height={17} className="rounded" title={m.spells[1].name} />}
+            </div>
+            <RuneTooltip runes={m.runes} keystoneSize={17} subTreeSize={17} />
+            <div className="flex gap-[3px]">
+              {[0, 1, 2, 3, 4, 5].map((i) => (m.items[i]
+                ? <ItemTooltip key={i} item={m.items[i]} size={20} />
+                : <div key={i} className="w-5 h-5 rounded bg-edge" />))}
+              {m.items[6]
+                ? <ItemTooltip item={m.items[6]} size={20} />
+                : <div className="w-5 h-5 rounded-full bg-edge" />}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center justify-center gap-0.5 flex-shrink-0">
+          {!remake && m.ranking ? <ScoreBlock m={m} /> : <div className="w-[58px]" />}
+          <ChevronDown size={14} className={`text-gray-500 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </div>
+      </div>
+
+      {/* ── MASAÜSTÜ (sm+): yoğun tek satır — orijinal düzen ── */}
+      <div className="hidden sm:flex items-stretch px-3.5 py-2">
         {/* 1) ŞAMPİYON + RUNE — sabit sol kolon (spell'ler eşyaların soluna taşındı) */}
-        <div className="flex items-center gap-1.5 flex-shrink-0 basis-[76px] sm:basis-[84px]">
+        <div className="flex items-center gap-1.5 flex-shrink-0 basis-[84px]">
           <ChampPortrait champ={m.champion} corner={m.laneDuo} cornerRole={m.laneDuo?.role || m.partnerRole}
             size={50} cornerSize={26} role={m.role} roleSize={17} />
           <RuneTooltip runes={m.runes} keystoneSize={21} subTreeSize={21} />
         </div>
 
         {/* 2) SONUÇ + queue/LP + süre·zaman */}
-        <div className="flex flex-col justify-center flex-shrink-0 basis-[72px] sm:basis-[80px] leading-tight border-l border-edge/25 pl-2 sm:pl-3">
+        <div className="flex flex-col justify-center flex-shrink-0 basis-[80px] leading-tight border-l border-edge/25 pl-3">
           <p className={`text-[13px] font-bold ${resClr}`}>{resTxt}</p>
           {m.lpChange != null ? (
             <p className={`text-[11px] font-bold ${m.lpChange > 0 ? "text-blue-400" : "text-red-400"}`}>
@@ -390,23 +449,21 @@ export default function MatchCardPro({ match: m, expanded }) {
         </div>
 
         {/* 3) KDA (k/d/a) + ALTINDA takım kalitesi pill (KP stat bloğunda) */}
-        <div className="flex flex-col items-center justify-center flex-shrink-0 basis-[86px] sm:basis-[100px] text-center border-l border-edge/25 px-2 sm:px-3">
-          {/* nowrap: "14 / 2 / 12" gibi çift haneli KDA dar kolonda iki satıra kırılmasın */}
+        <div className="flex flex-col items-center justify-center flex-shrink-0 basis-[100px] text-center border-l border-edge/25 px-3">
           <p className="text-[15px] font-bold text-gray-50 leading-tight whitespace-nowrap">
             {m.kills}<span className="text-gray-500 font-normal"> / </span><span className="text-red-400">{m.deaths}</span><span className="text-gray-500 font-normal"> / </span>{m.assists}
           </p>
           {!remake && tq && <TeamQualityTag tq={tq} />}
         </div>
 
-        {/* 4) SPELL'LER (eşyaların solunda, üst üste) + ITEMS tek satır — mobilde dial ile 2. satırda
-            (basis-auto: içerik 1. satıra sığmayınca sarar; sm:basis-0 = eski flex-1) */}
-        <div className="order-9 sm:order-none grow min-w-0 basis-auto sm:basis-0 flex items-center justify-center border-l-0 sm:border-l border-edge/25 px-0 sm:px-3">
+        {/* 4) SPELL'LER (eşyaların solunda, üst üste) + ITEMS tek satır */}
+        <div className="flex items-center justify-center flex-1 border-l border-edge/25 px-3">
           <div className="flex items-center gap-1.5">
             <div className="flex flex-col gap-0.5 flex-shrink-0">
               {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={22} height={22} className="rounded" title={m.spells[0].name} />}
               {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={22} height={22} className="rounded" title={m.spells[1].name} />}
             </div>
-            <div className="mc-itemrow flex gap-1">
+            <div className="flex gap-1">
               {[0, 1, 2, 3, 4, 5].map((i) => (m.items[i]
                 ? <ItemTooltip key={i} item={m.items[i]} size={26} />
                 : <div key={i} className="w-[26px] h-[26px] rounded bg-edge" />))}
@@ -417,13 +474,13 @@ export default function MatchCardPro({ match: m, expanded }) {
           </div>
         </div>
 
-        {/* 5) STAT bloğu — KDA/KP/CS-dk (skorun solunda; mobilde gizli) */}
+        {/* 5) STAT bloğu — KDA/KP/CS-dk (skorun solunda; dar masaüstünde gizli) */}
         <div className="hidden md:flex items-center justify-center flex-shrink-0 basis-[86px] border-l border-edge/25 px-3">
           {!remake && <StatBlock m={m} />}
         </div>
 
-        {/* 6) ELW SKOR dial + aç/kapa — sabit sağ kolon (mobilde eşya satırının sağında) */}
-        <div className="order-10 sm:order-none flex items-center justify-center gap-0.5 sm:gap-1 flex-shrink-0 ml-auto sm:ml-0 border-l border-edge/25 pl-1.5 sm:pl-3">
+        {/* 6) ELW SKOR dial + aç/kapa — sabit sağ kolon */}
+        <div className="flex items-center justify-center gap-1 flex-shrink-0 border-l border-edge/25 pl-3">
           {!remake && m.ranking
             ? <ScoreBlock m={m} />
             : <div className="w-[58px] flex-shrink-0" />}

@@ -772,13 +772,6 @@ html.light .dpm-scope .glass { box-shadow: none; }
 .dpm-team-bad  { color: var(--dpm-bad-team); }
 .dpm-team-avg  { color: var(--dpm-avg-team); }
 
-/* MatchCardPro mobil: eşya ikonları 26→24px — spell+eşya+skor dial'ı aynı satıra
-   (~308px kapasite) sığdırmak için. !important: ItemTooltip placeholder'ının
-   inline style'ını da ezer (img'lerde width attribute → normal CSS yeterdi). */
-@media (max-width: 639px) {
-  .mc-itemrow > img, .mc-itemrow > div { width: 24px !important; height: 24px !important; }
-}
-
 /* Canlı maç seri ikonu — 4+ seride PARÇACIKLI yanma / buz efekti.
    İkonun kendisi YANIP SÖNMEZ (kullanıcı isteği); sadece parçacıklar animasyonlu. */
 
