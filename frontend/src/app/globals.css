@@ -883,35 +883,32 @@ html.light .dpm-scope .glass { box-shadow: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
-/* ── Couple profil efektleri (CoupleFX) — yükselen pembe kalpler ── */
-.couple-fx { position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+/* ── Couple profil arka plan efekti (CoupleFX) — subtle, içeriğin ARKASINDA ── */
+.couple-fx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .couple-heart {
-  position: absolute; bottom: -8%;
-  color: #f472b6; line-height: 1;
-  text-shadow: 0 0 10px rgba(244,114,182,.55);
-  animation-name: coupleRise; animation-timing-function: ease-in; animation-iteration-count: infinite;
-  will-change: transform, opacity;
+  position: absolute; bottom: -10%;
+  color: #f9a8d4; line-height: 1;
+  filter: blur(1.5px);
+  animation-name: coupleRise; animation-timing-function: linear; animation-iteration-count: infinite;
+  will-change: transform;
 }
 @keyframes coupleRise {
-  0%   { transform: translateY(0) rotate(-8deg) scale(.8); opacity: 0; }
-  12%  { opacity: 1; }
-  85%  { opacity: .9; }
-  100% { transform: translateY(-118vh) rotate(10deg) scale(1.05); opacity: 0; }
+  0%   { transform: translateY(0) rotate(-6deg); }
+  100% { transform: translateY(-120vh) rotate(6deg); }
 }
 @media (prefers-reduced-motion: reduce) { .couple-heart { display: none; } }
 
-/* Couple rozeti — profil başlığında partnere bağlantı */
-.couple-badge {
-  background: linear-gradient(135deg, #ec4899, #f472b6);
-  color: #fff; border: 1px solid rgba(255,255,255,.22);
-  box-shadow: 0 4px 14px rgba(236,72,153,.4);
-  transition: transform .15s, box-shadow .2s;
+/* Couple etiketi — profil başlığında isim yanında, minimal (dolu rozet değil, soft pembe) */
+.couple-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 600; color: #f9a8d4;
+  transition: color .15s, transform .15s;
 }
-.couple-badge:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(236,72,153,.55); }
-.couple-badge-heart { display: inline-block; animation: heartbeat 1.2s ease-in-out infinite; }
+.couple-tag:hover { color: #f472b6; transform: translateY(-1px); }
+.couple-tag-heart { display: inline-block; animation: heartbeat 1.6s ease-in-out infinite; }
 @keyframes heartbeat {
   0%, 100% { transform: scale(1); }
-  15% { transform: scale(1.28); } 30% { transform: scale(1); }
-  45% { transform: scale(1.22); } 60% { transform: scale(1); }
+  15% { transform: scale(1.25); } 30% { transform: scale(1); }
+  45% { transform: scale(1.18); } 60% { transform: scale(1); }
 }
-@media (prefers-reduced-motion: reduce) { .couple-badge-heart { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .couple-tag-heart { animation: none; } }

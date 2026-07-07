@@ -77,22 +77,23 @@ export default function ProfileHeader({
               />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-lg">
-                {profile.gameName}
-                <span className="text-white/55 text-base font-normal ml-1">#{profile.tagLine}</span>
-              </h1>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-lg flex items-baseline gap-2.5 flex-wrap">
+                <span>
+                  {profile.gameName}
+                  <span className="text-white/55 text-base font-normal ml-1">#{profile.tagLine}</span>
+                </span>
                 {couple && (
                   <Link
                     href={`/summoner/${encodeURIComponent(couple.partnerName)}/${encodeURIComponent(couple.partnerTag)}`}
-                    className="couple-badge flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                    className="couple-tag"
                     title={`${couple.partnerName} ile couple — profiline git`}
                   >
-                    <span className="couple-badge-heart">♥</span>
+                    <span className="couple-tag-heart">♥</span>
                     {couple.partnerName}
-                    <span className="opacity-80">ile couple</span>
                   </Link>
                 )}
+              </h1>
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
                 {(() => {
                   const mainRole = data.seasonRoles?.mainRole || recentStats?.mainRole;
                   if (!mainRole) return null;
