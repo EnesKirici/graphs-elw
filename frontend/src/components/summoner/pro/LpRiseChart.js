@@ -194,8 +194,15 @@ export default function LpRiseChart({ timeline, peak, estimated, tracked, showHe
                 <line x1={pad.l} y1={lv.boundaryY} x2={width - pad.r} y2={lv.boundaryY}
                   stroke="var(--c-grid)" strokeWidth="1" strokeDasharray="3,4" />
               )}
+              {/* Tier göstergesi: renk-kodlu daire + tier baş harfi (resmi mini-crest'ler 16px'te
+                  tanınmıyordu — Emerald/Platinum ikisi de yeşil kanatlı görünüyordu). */}
               {lv.visH >= 17 && (
-                <image href={miniCrestUrl(lv.tier)} x={1} y={lv.y - 8} width={16} height={16} preserveAspectRatio="xMidYMid meet" opacity="0.95" />
+                <g>
+                  <circle cx={9} cy={lv.y} r={7.5} fill={tierColor(lv.tier)} opacity="0.92" />
+                  <text x={9} y={lv.y + 3} textAnchor="middle" style={{ fontSize: "9px", fontWeight: 800 }} fill="#0a0e14">
+                    {lv.tier[0]}
+                  </text>
+                </g>
               )}
             </g>
           ))}

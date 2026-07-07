@@ -395,21 +395,34 @@
 .hero-wr .wr-num { font-family: var(--f-display); font-weight: 900; font-size: 46px; color: var(--win); line-height: 1; text-shadow: 0 0 26px color-mix(in oklab, var(--win) 50%, transparent); }
 .hero-wr .wr-lab { font-size: 10px; font-family: var(--f-mono); letter-spacing: .22em; color: var(--txt-3); }
 
-/* "Aktif geliştiriliyor" pill — slider alt kenarında, ortada; canlı yanıp sönen nokta */
+/* Hero sarmalayıcı — pill'in slider kenarından taşabilmesi için (hero-stage overflow:hidden) */
+.hero-wrap { position: relative; }
+
+/* "Aktif geliştiriliyor" pill — slider alt kenarına oturan, accent renkli GÖSTERİŞLİ rozet.
+   Kenardan hafif taşar (bottom negatif) → slider'ın parçası değil, üstüne konmuş hissi. */
 .hero-dev-pill {
-  position: absolute; z-index: 6; bottom: 12px; left: 50%; transform: translateX(-50%);
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 12px; border-radius: 30px;
-  font-size: 11px; font-weight: 600; white-space: nowrap; letter-spacing: .01em;
-  color: var(--txt-2);
-  background: color-mix(in oklab, var(--bg-0) 78%, transparent);
-  border: 1px solid var(--border-strong);
-  backdrop-filter: blur(10px);
-  transition: color .2s, border-color .2s, transform .2s;
+  position: absolute; z-index: 7; bottom: -13px; left: 50%; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 16px; border-radius: 30px;
+  font-size: 12px; font-weight: 700; white-space: nowrap; letter-spacing: .01em;
+  color: #04110c;
+  background: linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 70%, var(--info, #38bdf8)));
+  border: 1px solid color-mix(in oklab, var(--accent) 60%, #fff 10%);
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--accent) 45%, transparent),
+              0 0 0 4px color-mix(in oklab, var(--bg-0) 88%, transparent);
+  transition: transform .2s, box-shadow .2s;
 }
-.hero-dev-pill:hover { color: var(--txt); border-color: var(--accent); transform: translateX(-50%) translateY(-2px); }
-.hero-dev-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: devpulse 2s ease-in-out infinite; }
-@keyframes devpulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.65); } }
+.hero-dev-pill:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 12px 30px color-mix(in oklab, var(--accent) 60%, transparent),
+              0 0 0 4px color-mix(in oklab, var(--bg-0) 88%, transparent);
+}
+.hero-dev-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: #04110c; box-shadow: 0 0 0 2px color-mix(in oklab, #04110c 30%, transparent);
+  animation: devpulse 1.6s ease-in-out infinite;
+}
+@keyframes devpulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.6); } }
 @media (prefers-reduced-motion: reduce) { .hero-dev-dot { animation: none; } }
 
 /* ========================= Big search ========================= */
