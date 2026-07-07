@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useId, useRef, useEffect } from "react";
-import { TIER_TR, tierColor, miniCrestUrl } from "./rankUtils";
+import { TIER_TR, tierColor, rankBadgeUrl } from "./rankUtils";
 
 const TIME_FILTERS = [
   { key: "all", label: "Tümü" },
@@ -194,15 +194,9 @@ export default function LpRiseChart({ timeline, peak, estimated, tracked, showHe
                 <line x1={pad.l} y1={lv.boundaryY} x2={width - pad.r} y2={lv.boundaryY}
                   stroke="var(--c-grid)" strokeWidth="1" strokeDasharray="3,4" />
               )}
-              {/* Tier göstergesi: renk-kodlu daire + tier baş harfi (resmi mini-crest'ler 16px'te
-                  tanınmıyordu — Emerald/Platinum ikisi de yeşil kanatlı görünüyordu). */}
+              {/* Sol eksende gerçek rank amblemi (Riot rank badge webp) — her tier bandının hizasında */}
               {lv.visH >= 17 && (
-                <g>
-                  <circle cx={9} cy={lv.y} r={7.5} fill={tierColor(lv.tier)} opacity="0.92" />
-                  <text x={9} y={lv.y + 3} textAnchor="middle" style={{ fontSize: "9px", fontWeight: 800 }} fill="#0a0e14">
-                    {lv.tier[0]}
-                  </text>
-                </g>
+                <image href={rankBadgeUrl(lv.tier)} x={-2} y={lv.y - 12} width={24} height={24} preserveAspectRatio="xMidYMid meet" />
               )}
             </g>
           ))}
@@ -244,7 +238,7 @@ export default function LpRiseChart({ timeline, peak, estimated, tracked, showHe
                 <span className="text-[13px] font-bold leading-none" style={{ color: hovColor }}>{hov.winRate}% WR</span>
               ) : (
                 <div className="flex items-center justify-center gap-1.5">
-                  <img src={miniCrestUrl(apexTier(hov.tier))} alt="" width={18} height={18} />
+                  <img src={rankBadgeUrl(apexTier(hov.tier))} alt="" width={20} height={20} />
                   <span className="text-[13px] font-bold leading-none" style={{ color: hovColor }}>
                     {TIER_TR[apexTier(hov.tier)] || apexTier(hov.tier)}{hov.rank ? ` ${hov.rank}` : ""} · {hov.divLp} LP
                   </span>

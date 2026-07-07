@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import LpRiseChart from "./LpRiseChart";
 import {
-  rankBadgeUrl, miniCrestUrl, placeholderLeagueRank, rankToAbsolute, absoluteToDisplay, tierLabel, tierColor, TIER_TR,
+  rankBadgeUrl, placeholderLeagueRank, rankToAbsolute, absoluteToDisplay, tierLabel, tierColor, TIER_TR,
 } from "./rankUtils";
 
 const trNum = (n) => n.toLocaleString("tr-TR");
@@ -42,7 +42,7 @@ function ChangeBadge({ label, value }) {
 function MiniRank({ label, tier, rank, lp, title }) {
   return (
     <div className="flex items-center gap-1.5" title={title}>
-      <img src={miniCrestUrl(tier)} alt="" width={22} height={22} className="flex-shrink-0" />
+      <img src={rankBadgeUrl(tier)} alt="" width={24} height={24} className="flex-shrink-0" />
       <div className="min-w-0">
         <p className="text-[9px] text-gray-400 uppercase tracking-wide leading-none">{label}</p>
         <p className="text-[12px] text-gray-100 font-semibold leading-tight mt-0.5">
