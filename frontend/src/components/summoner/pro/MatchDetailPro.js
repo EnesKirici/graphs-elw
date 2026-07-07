@@ -53,89 +53,126 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
   const badgeLabel = isMvp ? "MVP" : isAce ? "ACE" : p.matchRank;
   const badgeCls = isMvp ? "text-amber-400" : isAce ? "text-cyan-300" : p.matchRank <= 3 ? "text-blue-400" : p.matchRank >= 8 ? "text-red-400" : "text-gray-500";
 
+  const kdaEl = (
+    <>
+      {p.kills}<span className="text-gray-600">/</span><span className="text-red-400">{p.deaths}</span><span className="text-gray-600">/</span>{p.assists}
+    </>
+  );
+  const csEl = p.role === "UTILITY"
+    ? `${(p.challenges?.visionScorePerMin ?? 0).toFixed(1)} vizyon`
+    : `${p.csPerMin} cs/dk`;
+
   return (
-    <div className={`flex items-center gap-2.5 px-5 py-2.5 ${isMe ? "bg-cyan-500/[0.07]" : ""} ${rowHL} hover:bg-hover transition-colors`}>
-      {/* Sıra / MVP / ACE */}
-      <span className={`w-8 text-center text-[11px] font-bold flex-shrink-0 ${badgeCls}`}>
-        {badgeLabel}
-      </span>
-
-      {/* Şampiyon + lvl */}
-      <div className="relative flex-shrink-0">
-        <img src={p.champion.image} alt="" width={40} height={40} className="rounded-md" />
-        <span className="absolute -bottom-1 -right-1 text-[9px] bg-card text-gray-300 px-0.5 rounded border border-edge font-mono">{p.champLevel}</span>
-      </div>
-
-      {/* Spell + Rune */}
-      <div className="hidden sm:flex flex-col gap-0.5 flex-shrink-0">
-        {p.spells?.[0]?.image && <img src={p.spells[0].image} alt="" width={19} height={19} className="rounded-sm" title={p.spells[0].name} />}
-        {p.spells?.[1]?.image && <img src={p.spells[1].image} alt="" width={19} height={19} className="rounded-sm" title={p.spells[1].name} />}
-      </div>
-      <div className="hidden sm:block flex-shrink-0">
-        <RuneTooltip runes={p.runes} keystoneSize={21} subTreeSize={15} />
-      </div>
-
-      {/* İsim + rank — küçülebilir (flex-shrink yok = satır taşmasını bu emer, skor kırpılmaz) */}
-      <div className="w-[122px] min-w-0">
-        <p className={`text-[13px] truncate leading-tight ${p.isBot ? "text-gray-500 italic" : isMe ? "text-cyan-300 font-semibold" : "text-gray-100"}`}>
-          {p.summonerName}
-        </p>
-        <div className="flex items-center gap-1.5 leading-tight mt-0.5">
-          {p.tier ? (
-            <>
-              <img src={rankBadgeUrl(p.tier)} alt={p.tier} title={rank} width={22} height={22} className="flex-shrink-0" />
-              <span className="text-[11px] text-gray-300 font-semibold whitespace-nowrap">
-                {p.isBot ? "BOT" : rankShort(p.tier, p.rankDivision, p.leaguePoints)}
-              </span>
-            </>
-          ) : (
-            <span className="text-[11px] text-gray-500">{p.isBot ? "BOT" : "—"}</span>
-          )}
+    <>
+      {/* ── MOBİL (<640): 2-satır kompakt — sabit kolonlar 366px'e sığmıyordu (rank/KDA çakışıyordu).
+          Sol: sıra+şampiyon · orta: isim/rank + KDA·CS·KP (dikey) · sağ: eşyalar 4+3 grid + ELW. */}
+      <div className={`sm:hidden flex items-center gap-2 px-2.5 py-2 ${isMe ? "bg-cyan-500/[0.07]" : ""} ${rowHL} hover:bg-hover transition-colors`}>
+        <span className={`w-4 text-center text-[10px] font-bold flex-shrink-0 ${badgeCls}`}>{badgeLabel}</span>
+        <div className="relative flex-shrink-0">
+          <img src={p.champion.image} alt="" width={34} height={34} className="rounded-md" />
+          <span className="absolute -bottom-1 -right-1 text-[8px] bg-card text-gray-300 px-0.5 rounded border border-edge font-mono">{p.champLevel}</span>
         </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1 leading-tight">
+            {p.tier && <img src={rankBadgeUrl(p.tier)} alt="" title={rank} width={15} height={15} className="flex-shrink-0" />}
+            <p className={`text-[12px] truncate ${p.isBot ? "text-gray-500 italic" : isMe ? "text-cyan-300 font-semibold" : "text-gray-100"}`}>
+              {p.summonerName}
+            </p>
+          </div>
+          {/* KP mobilde çıkarıldı (dar satırda kesiliyordu; KP Detaylar sekmesinde var) */}
+          <p className="text-[10px] text-gray-400 leading-tight mt-0.5 truncate">
+            <span className="text-gray-200 font-medium">{kdaEl}</span>
+            <span className="text-gray-600"> · </span>{csEl}
+          </p>
+        </div>
+        {/* eşyalar 4+3 grid (kompakt, yatay yer yarıya iner) */}
+        <div className="grid grid-cols-4 gap-[2px] flex-shrink-0">
+          {(p.items || []).slice(0, 7).map((item, i) => <ItemTooltip key={i} item={item} size={18} />)}
+        </div>
+        <span className="w-8 text-right text-[15px] font-extrabold flex-shrink-0 tabular-nums"
+          style={{ color: scoreColor(sc), textShadow: scGlow ? `0 0 9px ${scoreColor(sc)}` : undefined }}>
+          {sc != null ? sc.toFixed(1) : "—"}
+        </span>
       </div>
 
-      {/* KDA */}
-      <div className="w-[70px] text-center flex-shrink-0">
-        <p className="text-[13px] text-gray-100 leading-tight">
-          {p.kills}<span className="text-gray-600">/</span><span className="text-red-400">{p.deaths}</span><span className="text-gray-600">/</span>{p.assists}
-        </p>
-        <p className={`text-[11px] font-semibold leading-tight ${kdaColor(p.kda)}`}>
-          {p.kda === "Perfect" ? "Perfect" : `${p.kda.toFixed(1)}`}
-          {mk && <span className="ml-1 text-[9px] font-bold text-amber-400">{{ TRIPLE: "Triple Kill", QUADRA: "Quadra Kill", PENTA: "Penta Kill" }[mk]}</span>}
-        </p>
-      </div>
+      {/* ── MASAÜSTÜ (sm+): tek satır — mevcut düzen ── */}
+      <div className={`hidden sm:flex items-center gap-2.5 px-5 py-2.5 ${isMe ? "bg-cyan-500/[0.07]" : ""} ${rowHL} hover:bg-hover transition-colors`}>
+        {/* Sıra / MVP / ACE */}
+        <span className={`w-8 text-center text-[11px] font-bold flex-shrink-0 ${badgeCls}`}>
+          {badgeLabel}
+        </span>
 
-      {/* CS / KP — destek rolünde CS yerine vizyon (DPM gibi: farmlamayan destek için anlamlı) */}
-      <div className="w-[64px] text-center text-[11px] text-gray-400 flex-shrink-0 leading-tight">
-        {p.role === "UTILITY" ? (
-          <p>{(p.challenges?.visionScorePerMin ?? 0).toFixed(1)} vizyon</p>
-        ) : (
-          <p>{p.csPerMin} cs/dk</p>
-        )}
-        <p>{p.killParticipation}% KP</p>
-      </div>
+        {/* Şampiyon + lvl */}
+        <div className="relative flex-shrink-0">
+          <img src={p.champion.image} alt="" width={40} height={40} className="rounded-md" />
+          <span className="absolute -bottom-1 -right-1 text-[9px] bg-card text-gray-300 px-0.5 rounded border border-edge font-mono">{p.champLevel}</span>
+        </div>
 
-      {/* Items */}
-      <div className="flex items-center gap-0.5 flex-shrink-0">
-        {(p.items || []).slice(0, 7).map((item, i) => <ItemTooltip key={i} item={item} size={26} />)}
-      </div>
+        {/* Spell + Rune */}
+        <div className="flex flex-col gap-0.5 flex-shrink-0">
+          {p.spells?.[0]?.image && <img src={p.spells[0].image} alt="" width={19} height={19} className="rounded-sm" title={p.spells[0].name} />}
+          {p.spells?.[1]?.image && <img src={p.spells[1].image} alt="" width={19} height={19} className="rounded-sm" title={p.spells[1].name} />}
+        </div>
+        <div className="flex-shrink-0">
+          <RuneTooltip runes={p.runes} keystoneSize={21} subTreeSize={15} />
+        </div>
 
-      {/* Hasar barı */}
-      <div className="flex-1 min-w-[40px] hidden lg:block">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-red-400/80 font-mono w-10 text-right">{fmtDmg(p.damage)}</span>
-          <div className="flex-1 h-2 bg-edge rounded-full overflow-hidden">
-            <div className="h-full bg-red-500/60 rounded-full" style={{ width: `${dmgPct}%` }} />
+        {/* İsim + rank — küçülebilir (flex-shrink yok = satır taşmasını bu emer, skor kırpılmaz) */}
+        <div className="w-[122px] min-w-0">
+          <p className={`text-[13px] truncate leading-tight ${p.isBot ? "text-gray-500 italic" : isMe ? "text-cyan-300 font-semibold" : "text-gray-100"}`}>
+            {p.summonerName}
+          </p>
+          <div className="flex items-center gap-1.5 leading-tight mt-0.5">
+            {p.tier ? (
+              <>
+                <img src={rankBadgeUrl(p.tier)} alt={p.tier} title={rank} width={22} height={22} className="flex-shrink-0" />
+                <span className="text-[11px] text-gray-300 font-semibold whitespace-nowrap">
+                  {p.isBot ? "BOT" : rankShort(p.tier, p.rankDivision, p.leaguePoints)}
+                </span>
+              </>
+            ) : (
+              <span className="text-[11px] text-gray-500">{p.isBot ? "BOT" : "—"}</span>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* ELW — MVP/yüksek skorda glow (w-12 + pr ile sağ kenarda kırpılmaz) */}
-      <span className="w-12 pr-0.5 text-right text-[16px] font-extrabold flex-shrink-0 tabular-nums"
-        style={{ color: scoreColor(sc), textShadow: scGlow ? `0 0 9px ${scoreColor(sc)}` : undefined }}>
-        {sc != null ? sc.toFixed(1) : "—"}
-      </span>
-    </div>
+        {/* KDA */}
+        <div className="w-[70px] text-center flex-shrink-0">
+          <p className="text-[13px] text-gray-100 leading-tight">{kdaEl}</p>
+          <p className={`text-[11px] font-semibold leading-tight ${kdaColor(p.kda)}`}>
+            {p.kda === "Perfect" ? "Perfect" : `${p.kda.toFixed(1)}`}
+            {mk && <span className="ml-1 text-[9px] font-bold text-amber-400">{{ TRIPLE: "Triple Kill", QUADRA: "Quadra Kill", PENTA: "Penta Kill" }[mk]}</span>}
+          </p>
+        </div>
+
+        {/* CS / KP — destek rolünde CS yerine vizyon */}
+        <div className="w-[64px] text-center text-[11px] text-gray-400 flex-shrink-0 leading-tight">
+          <p>{csEl}</p>
+          <p>{p.killParticipation}% KP</p>
+        </div>
+
+        {/* Items */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {(p.items || []).slice(0, 7).map((item, i) => <ItemTooltip key={i} item={item} size={26} />)}
+        </div>
+
+        {/* Hasar barı */}
+        <div className="flex-1 min-w-[40px] hidden lg:block">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-red-400/80 font-mono w-10 text-right">{fmtDmg(p.damage)}</span>
+            <div className="flex-1 h-2 bg-edge rounded-full overflow-hidden">
+              <div className="h-full bg-red-500/60 rounded-full" style={{ width: `${dmgPct}%` }} />
+            </div>
+          </div>
+        </div>
+
+        {/* ELW */}
+        <span className="w-12 pr-0.5 text-right text-[16px] font-extrabold flex-shrink-0 tabular-nums"
+          style={{ color: scoreColor(sc), textShadow: scGlow ? `0 0 9px ${scoreColor(sc)}` : undefined }}>
+          {sc != null ? sc.toFixed(1) : "—"}
+        </span>
+      </div>
+    </>
   );
 }
 
@@ -145,7 +182,7 @@ function TeamBlock({ team, searchedPuuid, maxDmg, mvpPuuid, acePuuid }) {
   const assists = team?.players?.reduce((s, p) => s + p.assists, 0) || 0;
   return (
     <div className={`rounded-lg overflow-hidden border ${isWin ? "border-blue-500/25" : "border-red-500/25"}`}>
-      <div className={`px-5 py-2 flex items-center justify-between ${isWin ? "bg-blue-500/10" : "bg-red-500/10"}`}>
+      <div className={`px-3 sm:px-5 py-2 flex items-center justify-between ${isWin ? "bg-blue-500/10" : "bg-red-500/10"}`}>
         <div className="flex items-center gap-2">
           <span className={`text-[13px] font-bold ${isWin ? "text-blue-400" : "text-red-400"}`}>{isWin ? "Zafer" : "Yenilgi"}</span>
           <span className="text-[11px] text-gray-500">{team?.info?.totalKills}/{deaths}/{assists}</span>
