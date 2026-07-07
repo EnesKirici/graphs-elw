@@ -284,6 +284,12 @@ export default function HeroCarousel({ sliderPool = [], version }) {
         <div className="wr-lab">{curStyle.label}</div>
       </div>
 
+      {/* "Aktif geliştiriliyor" — slider alt kenarında ufak canlı pill (→ iletişim) */}
+      <Link href="/iletisim" className="hero-dev-pill" title="Site aktif geliştiriliyor — geri bildirim & iletişim">
+        <span className="hero-dev-dot" />
+        Aktif geliştiriliyor
+      </Link>
+
       {total > 1 && (
         <>
           <button className="hero-nav prev" onClick={() => { go(i - 1); setResetKey((k) => k + 1); }} aria-label="Önceki">

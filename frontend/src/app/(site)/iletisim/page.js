@@ -3,7 +3,7 @@ export const metadata = {
   description: "ElwGraphs ile iletişim ve LP takip talebi.",
 };
 
-const EMAIL = "isavond18@gmail.com";
+const EMAIL = "enes@elw.com.tr";
 
 export default function ContactPage() {
   return (

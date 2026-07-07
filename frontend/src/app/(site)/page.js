@@ -7,7 +7,6 @@ import RankColumns from "@/components/dashboard/RankColumns";
 import PatchAndTier from "@/components/dashboard/PatchAndTier";
 import Players from "@/components/dashboard/Players";
 import RateLimitBanner from "@/components/summoner/RateLimitBanner";
-import AnnouncementCard from "@/components/site/AnnouncementCard";
 
 // Ana sayfa SEO metadata — kök template'i geçersiz kılan tam başlık + açıklama.
 // NOT: "geliştirme aşaması / beta" gibi ibareler META'ya GİRMEZ (yalnız görünür duyuru kartında).
@@ -93,8 +92,6 @@ async function DashboardContent() {
       {rateLimited && <RateLimitBanner />}
 
       <div className="content">
-        <AnnouncementCard />
-
         <HeroCarousel sliderPool={data.sliderPool} version={data.version} />
 
         <BigSearch chips={chips} />

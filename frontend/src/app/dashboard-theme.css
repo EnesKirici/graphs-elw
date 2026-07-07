@@ -395,6 +395,23 @@
 .hero-wr .wr-num { font-family: var(--f-display); font-weight: 900; font-size: 46px; color: var(--win); line-height: 1; text-shadow: 0 0 26px color-mix(in oklab, var(--win) 50%, transparent); }
 .hero-wr .wr-lab { font-size: 10px; font-family: var(--f-mono); letter-spacing: .22em; color: var(--txt-3); }
 
+/* "Aktif geliştiriliyor" pill — slider alt kenarında, ortada; canlı yanıp sönen nokta */
+.hero-dev-pill {
+  position: absolute; z-index: 6; bottom: 12px; left: 50%; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 30px;
+  font-size: 11px; font-weight: 600; white-space: nowrap; letter-spacing: .01em;
+  color: var(--txt-2);
+  background: color-mix(in oklab, var(--bg-0) 78%, transparent);
+  border: 1px solid var(--border-strong);
+  backdrop-filter: blur(10px);
+  transition: color .2s, border-color .2s, transform .2s;
+}
+.hero-dev-pill:hover { color: var(--txt); border-color: var(--accent); transform: translateX(-50%) translateY(-2px); }
+.hero-dev-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: devpulse 2s ease-in-out infinite; }
+@keyframes devpulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.65); } }
+@media (prefers-reduced-motion: reduce) { .hero-dev-dot { animation: none; } }
+
 /* ========================= Big search ========================= */
 .bigsearch-wrap { display: flex; justify-content: center; }
 .bigsearch {
