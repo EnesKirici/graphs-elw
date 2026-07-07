@@ -878,3 +878,19 @@ html.light .dpm-scope .glass { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   .err-ring::before, .err-float { animation: none; }
 }
+
+/* ── Duyuru kartı (AnnouncementCard) giriş/çıkış animasyonu ──
+   Giriş: aşağıdan yukarı slide-in. Çıkış: yukarı slide-up + fade. */
+@keyframes announceIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes announceOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-14px); }
+}
+.announce-in  { animation: announceIn .45s var(--ease, cubic-bezier(.22,.61,.36,1)) both; }
+.announce-out { animation: announceOut .3s ease-in both; }
+@media (prefers-reduced-motion: reduce) {
+  .announce-in, .announce-out { animation: none; }
+}

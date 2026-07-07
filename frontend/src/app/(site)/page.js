@@ -7,6 +7,7 @@ import RankColumns from "@/components/dashboard/RankColumns";
 import PatchAndTier from "@/components/dashboard/PatchAndTier";
 import Players from "@/components/dashboard/Players";
 import RateLimitBanner from "@/components/summoner/RateLimitBanner";
+import AnnouncementCard from "@/components/site/AnnouncementCard";
 
 /* ---- Öne çıkan oyuncular: ayrı (challenger) uç, Suspense ile stream ---- */
 async function PlayersSection() {
@@ -74,6 +75,8 @@ async function DashboardContent() {
       {rateLimited && <RateLimitBanner />}
 
       <div className="content">
+        <AnnouncementCard />
+
         <HeroCarousel sliderPool={data.sliderPool} version={data.version} />
 
         <BigSearch chips={chips} />
