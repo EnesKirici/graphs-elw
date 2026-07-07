@@ -882,3 +882,36 @@ html.light .dpm-scope .glass { box-shadow: none; }
 /* Yatay kaydırma çubuğunu gizle (rol sekmeleri / etiket şeritleri tek satır scroll) */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Couple profil efektleri (CoupleFX) — yükselen pembe kalpler ── */
+.couple-fx { position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.couple-heart {
+  position: absolute; bottom: -8%;
+  color: #f472b6; line-height: 1;
+  text-shadow: 0 0 10px rgba(244,114,182,.55);
+  animation-name: coupleRise; animation-timing-function: ease-in; animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+@keyframes coupleRise {
+  0%   { transform: translateY(0) rotate(-8deg) scale(.8); opacity: 0; }
+  12%  { opacity: 1; }
+  85%  { opacity: .9; }
+  100% { transform: translateY(-118vh) rotate(10deg) scale(1.05); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .couple-heart { display: none; } }
+
+/* Couple rozeti — profil başlığında partnere bağlantı */
+.couple-badge {
+  background: linear-gradient(135deg, #ec4899, #f472b6);
+  color: #fff; border: 1px solid rgba(255,255,255,.22);
+  box-shadow: 0 4px 14px rgba(236,72,153,.4);
+  transition: transform .15s, box-shadow .2s;
+}
+.couple-badge:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(236,72,153,.55); }
+.couple-badge-heart { display: inline-block; animation: heartbeat 1.2s ease-in-out infinite; }
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.28); } 30% { transform: scale(1); }
+  45% { transform: scale(1.22); } 60% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .couple-badge-heart { animation: none; } }

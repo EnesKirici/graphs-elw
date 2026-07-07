@@ -10,6 +10,8 @@ import SummonerContentPro from "@/components/summoner/pro/SummonerContentPro";
 import ChallengesCard from "@/components/summoner/ChallengesCard";
 import DuoPartnersCard from "@/components/summoner/DuoPartnersCard";
 import ProfileHeader from "@/components/summoner/ProfileHeader";
+import CoupleFX from "@/components/summoner/CoupleFX";
+import { getCoupleProfile } from "@/lib/coupleProfiles";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
@@ -85,8 +87,12 @@ export default async function SummonerPage({ params }) {
   const settings = await getPublicSettings();
   const design = settings?.profile_design === "pro" ? "pro" : "classic";
 
+  // Özel "couple" profili mi? (kalpli tema + partner bağlantısı)
+  const couple = getCoupleProfile(profile.gameName, profile.tagLine);
+
   return (
     <div className={design === "pro" ? "dpm-scope min-h-screen" : undefined}>
+      {couple && <CoupleFX />}
       <ProfileHeader
         profile={profile}
         data={data}
@@ -94,6 +100,7 @@ export default async function SummonerPage({ params }) {
         bannerChamp={bannerChamp}
         bannerSkins={bannerSkins}
         activeTab="overview"
+        couple={couple}
       />
 
       {/* ===== CONTENT ===== */}

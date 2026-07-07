@@ -38,6 +38,7 @@ export default function ProfileHeader({
   bannerChamp,
   bannerSkins,
   activeTab = "overview",
+  couple = null,
 }) {
   const basePath = `/summoner/${encodeURIComponent(profile.gameName)}/${encodeURIComponent(profile.tagLine)}`;
 
@@ -80,7 +81,18 @@ export default function ProfileHeader({
                 {profile.gameName}
                 <span className="text-white/55 text-base font-normal ml-1">#{profile.tagLine}</span>
               </h1>
-              <div className="flex items-center gap-3 mt-1">
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                {couple && (
+                  <Link
+                    href={`/summoner/${encodeURIComponent(couple.partnerName)}/${encodeURIComponent(couple.partnerTag)}`}
+                    className="couple-badge flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                    title={`${couple.partnerName} ile couple — profiline git`}
+                  >
+                    <span className="couple-badge-heart">♥</span>
+                    {couple.partnerName}
+                    <span className="opacity-80">ile couple</span>
+                  </Link>
+                )}
                 {(() => {
                   const mainRole = data.seasonRoles?.mainRole || recentStats?.mainRole;
                   if (!mainRole) return null;
