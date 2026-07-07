@@ -9,6 +9,7 @@ export default function sitemap() {
     { path: "/champions", priority: 0.8, changeFrequency: "daily" },
     { path: "/tier-list", priority: 0.8, changeFrequency: "daily" },
     { path: "/leaderboard", priority: 0.8, changeFrequency: "daily" },
+    { path: "/iletisim", priority: 0.4, changeFrequency: "monthly" },
     { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
     { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
   ];
