@@ -369,36 +369,42 @@ export default function MatchCardPro({ match: m, expanded, onToggle }) {
     <div className={`${rowAccent} ${rowBg} hover:bg-hover transition-colors`}>
       {/* ── MOBİL (<640): op.gg tarzı — 2 satır. Üst: portre · sonuç/süre · (sağ) KDA/pill + dial + ok.
           Alt: spell/rün/eşyalar. Rozetler ayrı alt şeritte. Kart gövdesi tıklamayla AÇILMAZ — yalnız ok. */}
-      <div className="sm:hidden px-3 py-2.5">
-        <div className="flex items-center gap-2.5">
+      <div className="sm:hidden px-3 py-3">
+        {/* 3 dengeli bölge: SOL sonuç/süre · ORTA KDA+pill (ortalı) · SAĞ dial+ok */}
+        <div className="flex items-center gap-2">
           <div className="flex-shrink-0">
             <ChampPortrait champ={m.champion} corner={m.laneDuo} cornerRole={m.laneDuo?.role || m.partnerRole}
               size={46} cornerSize={22} role={m.role} roleSize={15} />
           </div>
 
-          {/* sonuç + LP (satır1) · queue·süre·zaman (satır2) */}
-          <div className="min-w-0 leading-tight">
+          {/* SOL — sonuç + LP / queue·süre·zaman (sabit dar) */}
+          <div className="w-[88px] flex-shrink-0 leading-tight">
             <p className="text-[12px] font-bold leading-none whitespace-nowrap">
               <span className={resClr}>{resTxt}</span>
               {m.lpChange != null && (
-                <span className={`ml-1.5 ${m.lpChange > 0 ? "text-blue-400" : "text-red-400"}`}>
-                  {m.lpChange > 0 ? "+" : ""}{m.lpChange} LP
+                <span className={`ml-1 ${m.lpChange > 0 ? "text-blue-400" : "text-red-400"}`}>
+                  {m.lpChange > 0 ? "+" : ""}{m.lpChange}
                 </span>
               )}
             </p>
             <p className="text-[10px] text-gray-500 mt-1 truncate" suppressHydrationWarning>
-              {m.queueType ? `${m.queueType} · ` : ""}{fmtDur(m.duration)} · {timeAgo(m.gameCreation)}
+              {m.queueType || fmtDur(m.duration)}
+            </p>
+            <p className="text-[9px] text-gray-600 truncate" suppressHydrationWarning>
+              {timeAgo(m.gameCreation)}
             </p>
           </div>
 
-          {/* sağ: KDA + takım pill (sağa yaslı) · skor dial · ok */}
-          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-            <div className="text-right leading-tight">
-              <p className="text-[14px] font-bold text-gray-50 whitespace-nowrap leading-none">
-                {m.kills}<span className="text-gray-500 font-normal"> / </span><span className="text-red-400">{m.deaths}</span><span className="text-gray-500 font-normal"> / </span>{m.assists}
-              </p>
-              {!remake && tq && <div className="flex justify-end mt-1"><TeamQualityTag tq={tq} inline /></div>}
-            </div>
+          {/* ORTA — KDA + takım pill, ortalı (esner) */}
+          <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center">
+            <p className="text-[15px] font-bold text-gray-50 whitespace-nowrap leading-none">
+              {m.kills}<span className="text-gray-500 font-normal"> / </span><span className="text-red-400">{m.deaths}</span><span className="text-gray-500 font-normal"> / </span>{m.assists}
+            </p>
+            {!remake && tq && <div className="mt-1.5"><TeamQualityTag tq={tq} inline /></div>}
+          </div>
+
+          {/* SAĞ — skor dial + ok */}
+          <div className="flex items-center gap-1 flex-shrink-0">
             {!remake && m.ranking ? <ScoreBlock m={m} /> : <div className="w-[58px]" />}
             <button onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
               className="flex-shrink-0 p-1 -mr-1 cursor-pointer" aria-label={expanded ? "Kapat" : "Detayları aç"}>
@@ -407,8 +413,8 @@ export default function MatchCardPro({ match: m, expanded, onToggle }) {
           </div>
         </div>
 
-        {/* alt: spell + rün + eşyalar (tek hizalı satır) */}
-        <div className="flex items-center gap-1.5 mt-2">
+        {/* alt: spell + rün + eşyalar (ortalı) */}
+        <div className="flex items-center justify-center gap-1.5 mt-2.5">
           <div className="flex gap-0.5 flex-shrink-0">
             {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={18} height={18} className="rounded" title={m.spells[0].name} />}
             {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={18} height={18} className="rounded" title={m.spells[1].name} />}
