@@ -29,12 +29,11 @@ export default function LpRiseChart({ timeline, peak, estimated, tracked, showHe
   const [hovIdx, setHovIdx] = useState(null);
   const isWr = variant === "wr";
 
-  // Durum damgası: takip hesabı → "organik" (worker gerçek LP topluyor); değilse tahminliyse → "tahmini".
-  const statusBadge = !isWr && (tracked ? (
-    <span className="text-[8px] text-cyan-400/80 border border-cyan-500/30 rounded px-1 py-px cursor-help" title="Bu hesabın LP'si worker ile organik takip ediliyor (gerçek snapshot'lar).">organik</span>
-  ) : estimated ? (
+  // Durum damgası: gerçek veri (worker takibi) DAMGASIZ — varsayılan zaten gerçek olması.
+  // Yalnız eğri kısmen maç geçmişinden kurgulanmışsa "tahmini" uyarısı göster.
+  const statusBadge = !isWr && estimated && !tracked ? (
     <span className="text-[8px] text-gray-600 border border-edge rounded px-1 py-px cursor-help" title="Henüz yeterli LP geçmişi kaydı yok; eğri kısmen tahmini.">tahmini</span>
-  ) : null);
+  ) : null;
 
   const wrapRef = useRef(null);
   const [chartWidth, setChartWidth] = useState(300);
@@ -70,12 +69,6 @@ export default function LpRiseChart({ timeline, peak, estimated, tracked, showHe
   const apexTier = (t) => (t === "MASTER" && APEX.includes(curTier) ? curTier : t);
   const segColor = (d) => (isWr ? wrColor(d.winRate) : tierColor(apexTier(d.tier)));
 
-  const width = chartWidth;
-  const height = 78;
-  const pad = { l: isWr ? 18 : 22, r: 6, y: 13 };
-  const chartW = width - pad.l - pad.r;
-  const chartH = height - pad.y * 2;
-
   const vals = data.map(val);
   let yMin, yMax;
   if (isWr) {
@@ -92,23 +85,46 @@ export default function LpRiseChart({ timeline, peak, estimated, tracked, showHe
   }
   const range = Math.max(yMax - yMin, 1);
 
+  // dpm.lol tarzı TIER BANTLARI (LP varyantı) — mutlak LP sınırları (rankUtils TBASE ile aynı:
+  // tier başına 400). Görünür aralıkla kesişen her tier bir bant; bantlar kesikli çizgiyle
+  // ayrılır, emblem bandın ortasında. Eski "ortalama y" yaklaşımı çok tier'lı yükselişte
+  // emblemleri üst üste bindiriyordu.
+  const TIER_BOUNDS = [
+    ["IRON", 0], ["BRONZE", 400], ["SILVER", 800], ["GOLD", 1200],
+    ["PLATINUM", 1600], ["EMERALD", 2000], ["DIAMOND", 2400], ["MASTER", 2800],
+  ];
+  let bands = [];
+  if (!isWr) {
+    for (let i = 0; i < TIER_BOUNDS.length; i++) {
+      const [t, lo] = TIER_BOUNDS[i];
+      const hi = i < TIER_BOUNDS.length - 1 ? TIER_BOUNDS[i + 1][1] : Infinity;
+      const visLo = Math.max(lo, yMin);
+      const visHi = Math.min(hi, yMax);
+      if (visHi > visLo) bands.push({ tier: apexTier(t), lo, visLo, visHi });
+    }
+  }
+
+  const width = chartWidth;
+  // Çok tier'lı aralıkta grafik uzar (her banda emblem sığsın); tek tier'da eski 78px.
+  const height = isWr ? 78 : Math.max(78, Math.min(210, bands.length * 34 + 10));
+  const pad = { l: isWr ? 18 : 22, r: 6, y: 13 };
+  const chartW = width - pad.l - pad.r;
+  const chartH = height - pad.y * 2;
+
   const getX = (i) => pad.l + (i / (data.length - 1)) * chartW;
   const getY = (v) => pad.y + chartH - ((v - yMin) / range) * chartH;
 
-  // Sol eksen tier emblemleri — verideki HER distinct tier için bir emblem, o tier'ın
-  // noktalarının ortalama y'sinde. Geçmişte Diamond'san Diamond emblemi görünür; hep
-  // Master'san tek Master. (LP sınırına değil, gerçek tier geçmişine göre.)
-  let levels = [];
-  if (!isWr) {
-    const acc = {};
-    for (const d of data) {
-      const t = apexTier(d.tier);
-      if (!t) continue;
-      if (!acc[t]) acc[t] = { tier: t, sum: 0, n: 0 };
-      acc[t].sum += getY(val(d)); acc[t].n++;
-    }
-    levels = Object.values(acc).map((o) => ({ tier: o.tier, y: o.sum / o.n }));
-  }
+  // Bant → çizim bilgisi: ayraç çizgisi (bandın alt sınırı) + emblem (görünür merkez).
+  // Çok ince bantta (<17px) emblem gizlenir ki üst üste binmesin.
+  const levels = bands.map((b) => {
+    const yTop = getY(b.visHi), yBot = getY(b.visLo);
+    return {
+      tier: b.tier,
+      y: (yTop + yBot) / 2,
+      visH: yBot - yTop,
+      boundaryY: b.lo > yMin && b.lo > 0 ? getY(b.lo) : null,
+    };
+  });
 
   // Referans çizgisi: LP → peak; WR → %50
   const refV = isWr ? 50 : (peak?.lp ?? Math.max(...vals));
@@ -171,9 +187,17 @@ export default function LpRiseChart({ timeline, peak, estimated, tracked, showHe
             ))}
           </defs>
 
-          {/* Tier emblemleri (sol eksen) — verideki her tier için, o tier'ın ortalama y'sinde */}
+          {/* Tier bantları (sol eksen) — kesikli ayraç + bant ortasında emblem (dpm.lol tarzı) */}
           {levels.map((lv, i) => (
-            <image key={`lv${i}`} href={miniCrestUrl(lv.tier)} x={1} y={lv.y - 8} width={16} height={16} preserveAspectRatio="xMidYMid meet" opacity="0.95" />
+            <g key={`lv${i}`}>
+              {lv.boundaryY != null && (
+                <line x1={pad.l} y1={lv.boundaryY} x2={width - pad.r} y2={lv.boundaryY}
+                  stroke="var(--c-grid)" strokeWidth="1" strokeDasharray="3,4" />
+              )}
+              {lv.visH >= 17 && (
+                <image href={miniCrestUrl(lv.tier)} x={1} y={lv.y - 8} width={16} height={16} preserveAspectRatio="xMidYMid meet" opacity="0.95" />
+              )}
+            </g>
           ))}
 
           {/* Referans çizgisi */}
