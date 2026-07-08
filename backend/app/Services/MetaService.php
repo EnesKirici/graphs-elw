@@ -18,6 +18,7 @@ class MetaService
         private DataDragonService $ddragon,
         private RiotApiService $riot,
         private ChampionStatsService $stats,
+        private PatchService $patch,
     ) {}
 
     public function getFreeRotation(): array
@@ -35,15 +36,18 @@ class MetaService
 
     public function getDashboardStats(): array
     {
-        return Cache::remember('meta:dashboard_stats_v9', config('riot.cache_ttl.meta_stats'), function () {
+        return Cache::remember('meta:dashboard_stats_v10', config('riot.cache_ttl.meta_stats'), function () {
             $champions = $this->ddragon->getChampions();
             $version = $this->ddragon->getCurrentVersion();
             $positionMap = $this->ddragon->getChampionPositions();
             $ddragonBase = config('riot.ddragon_url');
 
-            // Gerçek istatistikler (yeterli örneklemli) + önceki patch (gerçek wrChange için).
+            // Görüntülenen istatistikler: tutulan patch penceresi (güncel + önceki) BİRLEŞİK
+            // → küçük örneklemde listeler dolu kalır. wrChange için ayrıca tek-patch (güncel/önceki).
             $currentPatch = $this->stats->currentPatchBucket();
-            $realStats = $this->stats->getMetaStats($currentPatch);
+            $keptPatches = $this->patch->keptPatches();
+            $realStats = $this->stats->getMetaStats($keptPatches);
+            $currentStats = $this->stats->getMetaStats($currentPatch);
             $prevPatch = $this->previousPatch($currentPatch);
             $prevStats = $prevPatch ? $this->stats->getMetaStats($prevPatch) : [];
 
@@ -64,9 +68,10 @@ class MetaService
                     $banRate = $r['banRate'];
                     $dataSource = 'real';
                     $sampleSize = $r['sampleSize'];
-                    // Gerçek patch değişimi: önceki patch'te de yeterli veri varsa fark, yoksa null.
-                    $wrChange = isset($prevStats[$champ['id']])
-                        ? round($winRate - $prevStats[$champ['id']]['winRate'], 1)
+                    // Gerçek patch değişimi: GÜNCEL vs ÖNCEKİ patch (ikisinde de yeterli veri varsa).
+                    // Display birleşik pencereden gelse de wrChange tek-patch farkıdır (dürüst trend).
+                    $wrChange = (isset($currentStats[$champ['id']], $prevStats[$champ['id']]))
+                        ? round($currentStats[$champ['id']]['winRate'] - $prevStats[$champ['id']]['winRate'], 1)
                         : null;
                     // Shrinkage WR (adil + gerçekçi; sistematik düşürmez) + kompozit tier + düşük örneklem.
                     $wins = $r['wins'] ?? (int) round($winRate / 100 * $sampleSize);
@@ -244,10 +249,11 @@ class MetaService
      */
     public function getTierList(): array
     {
-        return Cache::remember('meta:tier_list_v2', config('riot.cache_ttl.meta_stats'), function () {
+        return Cache::remember('meta:tier_list_v3', config('riot.cache_ttl.meta_stats'), function () {
             $version = $this->ddragon->getCurrentVersion();
             $patch = $this->stats->currentPatchBucket();
-            $data = $this->stats->getPositionStats($patch);
+            // Tutulan patch penceresi (güncel + önceki) birleşik → tier-list dolu kalır.
+            $data = $this->stats->getPositionStats($this->patch->keptPatches());
             $total = $data['total'];
             $byChamp = $data['champions'];
 

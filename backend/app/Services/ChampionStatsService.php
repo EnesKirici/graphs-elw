@@ -108,27 +108,36 @@ class ChampionStatsService
      *
      * @return array<string, array{winRate: float, pickRate: float, banRate: float, sampleSize: int}>
      */
-    public function getMetaStats(string $patch): array
+    public function getMetaStats(string|array $patches): array
     {
-        $patchRow = StatPatch::find($patch);
-        if (! $patchRow || $patchRow->total_games < 1) {
+        $list = (array) $patches;
+        $total = (int) StatPatch::whereIn('patch', $list)->sum('total_games');
+        if ($total < 1) {
             return [];
         }
-        $total = $patchRow->total_games;
 
-        $rows = ChampionStat::where('patch', $patch)->where('position', 'ALL')->get();
+        // Birden çok patch verilirse (güncel+önceki pencere) şampiyon başına games/wins/bans
+        // TOPLANIR → küçük örneklemde listeler dolu kalır.
+        $agg = [];
+        foreach (ChampionStat::whereIn('patch', $list)->where('position', 'ALL')->get() as $r) {
+            $id = $r->champion_id;
+            $agg[$id] ??= ['games' => 0, 'wins' => 0, 'bans' => 0];
+            $agg[$id]['games'] += $r->games;
+            $agg[$id]['wins']  += $r->wins;
+            $agg[$id]['bans']  += $r->bans;
+        }
 
         $out = [];
-        foreach ($rows as $r) {
-            if ($r->games < self::MIN_SAMPLE) {
+        foreach ($agg as $champId => $a) {
+            if ($a['games'] < self::MIN_SAMPLE) {
                 continue;
             }
-            $out[$r->champion_id] = [
-                'winRate'    => round($r->wins / $r->games * 100, 1),
-                'pickRate'   => round($r->games / $total * 100, 1),
-                'banRate'    => round($r->bans / $total * 100, 1),
-                'sampleSize' => $r->games,
-                'wins'       => $r->wins, // Wilson alt sınırı için
+            $out[$champId] = [
+                'winRate'    => round($a['wins'] / $a['games'] * 100, 1),
+                'pickRate'   => round($a['games'] / $total * 100, 1),
+                'banRate'    => round($a['bans'] / $total * 100, 1),
+                'sampleSize' => $a['games'],
+                'wins'       => $a['wins'], // Wilson alt sınırı için
             ];
         }
 
@@ -142,21 +151,22 @@ class ChampionStatsService
      *
      * @return array{total: int, champions: array<string, array<string, array{games:int,wins:int,bans:int}>>}
      */
-    public function getPositionStats(string $patch): array
+    public function getPositionStats(string|array $patches): array
     {
-        $patchRow = StatPatch::find($patch);
-        $total = $patchRow ? (int) $patchRow->total_games : 0;
+        $list = (array) $patches;
+        $total = (int) StatPatch::whereIn('patch', $list)->sum('total_games');
         if ($total < 1) {
             return ['total' => 0, 'champions' => []];
         }
 
+        // Birden çok patch → şampiyon×pozisyon başına TOPLA (güncel+önceki pencere).
         $champions = [];
-        foreach (ChampionStat::where('patch', $patch)->get() as $r) {
-            $champions[$r->champion_id][$r->position] = [
-                'games' => (int) $r->games,
-                'wins'  => (int) $r->wins,
-                'bans'  => (int) $r->bans,
-            ];
+        foreach (ChampionStat::whereIn('patch', $list)->get() as $r) {
+            $cur = $champions[$r->champion_id][$r->position] ?? ['games' => 0, 'wins' => 0, 'bans' => 0];
+            $cur['games'] += (int) $r->games;
+            $cur['wins']  += (int) $r->wins;
+            $cur['bans']  += (int) $r->bans;
+            $champions[$r->champion_id][$r->position] = $cur;
         }
 
         return ['total' => $total, 'champions' => $champions];
