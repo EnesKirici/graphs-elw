@@ -36,6 +36,32 @@ class DataDragonService
     }
 
     /**
+     * Son N patch bucket'ı ("16.13", "16.12", ...) — versions.json'dan major.minor'a
+     * indirgenip benzersizleştirilerek, yeni→eski sırada. Meta + prune penceresi
+     * (keptPatches) bundan gelir → Riot yeni patch atınca pencere OTOMATİK kayar.
+     */
+    public function getRecentPatches(int $count): array
+    {
+        $versions = Cache::remember('ddragon:versions', 3600, function () {
+            return Http::get("{$this->baseUrl}/api/versions.json")->json();
+        });
+
+        $buckets = [];
+        foreach ($versions as $v) {
+            $parts = explode('.', $v);
+            if (count($parts) < 2 || ! ctype_digit($parts[0])) {
+                continue; // "lolpatch_3.9" gibi eski format → atla
+            }
+            $buckets[$parts[0] . '.' . $parts[1]] = true; // sıra korunur (versions yeni→eski)
+            if (count($buckets) >= $count) {
+                break;
+            }
+        }
+
+        return array_keys($buckets);
+    }
+
+    /**
      * Tüm şampiyonların listesini getir.
      * 24 saat cache'lenir çünkü sadece yeni patch'te değişir.
      */

@@ -58,12 +58,17 @@ class PatchService
         return null; // listelenen en eski patch'ten de eski → bilinmiyor (prune hedefi)
     }
 
-    /** Tutulacak patch'ler (config keep_patches kadar), en yeniden eskiye. */
+    /**
+     * Tutulacak patch'ler (config keep_patches kadar), en yeniden eskiye.
+     * Kaynak: DataDragon versions.json → Riot yeni patch atınca pencere OTOMATİK kayar
+     * (config'e dokunmadan). config patch_starts yalnız eski/tarihsel maçları patch'e
+     * atamak ve prune eşiği (keepSince) içindir.
+     */
     public function keptPatches(): array
     {
         $keep = max(1, (int) config('elwgraphs.meta.keep_patches', 2));
 
-        return array_slice(array_keys($this->startsDesc()), 0, $keep);
+        return $this->ddragon->getRecentPatches($keep);
     }
 
     /** Prune eşiği: tutulacak en eski patch'in başlangıç günü (00:00). Yoksa null → prune yapma. */
