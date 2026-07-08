@@ -182,8 +182,9 @@ class MetaService
             }
 
             // Yeni şampiyon Locke — slider'ın BAŞINA sabitle (tanıtım): "Yeni Şampiyon" rozetiyle
-            // ilk açılır, sonra döngüyle diğerlerine geçer. Ban'ı az-oynanma guard'ına takılmasın
-            // diye doğrudan sayaçtan (yeni şampiyon az oynanır ama çok banlanır).
+            // ilk açılır, sonra döngüyle diğerlerine geçer. Yeni şampiyon az oynanır → dashboard
+            // MIN_SAMPLE eşiğine takılıp WR/pick "0,0%" (null) görünürdü. Öne çıkan kartta bu yanıltıcı;
+            // WR/pick/ban'ı doğrudan sayaçtan hesapla + "düşük örneklem" işaretiyle dürüstçe göster.
             $lockeStat = collect($stats)->firstWhere('id', 'Locke');
             if ($lockeStat) {
                 $lockeRow = ChampionStat::where('patch', $currentPatch)
@@ -193,14 +194,24 @@ class MetaService
                 $lastRealSkin = $this->getLastRealSkin($detail['skins'] ?? []);
 
                 $entry = $lockeStat;
-                $entry['banRate'] = ($lockeRow && $patchTotal > 0)
-                    ? round($lockeRow->bans / $patchTotal * 100, 1)
-                    : $lockeStat['banRate'];
+                if ($lockeRow && $lockeRow->games > 0) {
+                    $g = (int) $lockeRow->games;
+                    $wns = (int) $lockeRow->wins;
+                    $adj = Statistics::shrunkWinRate($wns, $g);
+                    $entry['winRate']    = round($wns / $g * 100, 1);
+                    $entry['adjWr']      = round($adj * 100, 1);
+                    $entry['pickRate']   = $patchTotal > 0 ? round($g / $patchTotal * 100, 1) : 0.0;
+                    $entry['banRate']    = $patchTotal > 0 ? round($lockeRow->bans / $patchTotal * 100, 1) : ($lockeStat['banRate'] ?? 0);
+                    $entry['sampleSize'] = $g;
+                    $entry['lowSample']  = $g < $minGames;
+                    $entry['dataSource'] = 'real';
+                    $entry['tier']       = $this->tierFromScore($this->compositeTierScore($adj, $entry['pickRate'], $entry['banRate'], $g));
+                }
                 $entry['latestSkinSplash'] = "{$ddragonBase}/cdn/img/champion/splash/Locke_{$lastRealSkin}.jpg";
                 $entry['latestSkinName'] = $lockeStat['name'];
                 $entry['sliderCategory'] = 'Yeni Şampiyon';
                 $entry['sliderRank'] = 1;
-                $entry['sliderValue'] = ($entry['banRate'] ?? 0).'%';
+                $entry['sliderValue'] = ($entry['adjWr'] ?? $entry['winRate'] ?? 0).'%';
                 $entry['skins'] = $this->ddragon->formatSkins($detail);
                 array_unshift($sliderPool, $entry);
             }
