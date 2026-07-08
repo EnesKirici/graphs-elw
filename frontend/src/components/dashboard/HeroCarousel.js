@@ -29,7 +29,7 @@ function initSkins(slides) {
 // Slider kategorisine göre vurgu rengi + öne çıkan stat (büyük sayı = şampiyonun
 // slider'da olma SEBEBİ). Ban → kırmızı, Popüler → mavi, WR → yeşil (ayarlı WR).
 function categoryStyle(category) {
-  if (category?.includes("Yeni")) return { color: "#f59e0b", valueKey: "banRate", label: "YENİ ŞAMPİYON" };
+  if (category?.includes("Yeni")) return { color: "#f59e0b", valueKey: "adjWr", fallback: "winRate", label: "YENİ ŞAMPİYON" };
   if (category?.includes("Banlanan")) return { color: "var(--loss)", valueKey: "banRate", label: "BAN" };
   if (category?.includes("Popüler")) return { color: "#4f8cff", valueKey: "pickRate", label: "PICK" };
   return { color: "var(--win)", valueKey: "adjWr", fallback: "winRate", label: "WIN RATE" };
@@ -266,6 +266,11 @@ export default function HeroCarousel({ sliderPool = [], version }) {
                   <div className="hs-lab">Ban</div>
                 </div>
               </div>
+              {s.sampleSize ? (
+                <div className="hero-sample" style={s.lowSample ? { color: "var(--loss)" } : undefined}>
+                  {s.sampleSize} maç{s.lowSample ? " · düşük örneklem" : ""}
+                </div>
+              ) : null}
               <div className="hero-cta">
                 <Link className="btn btn-primary" href={`/champions/${s.id}`}>
                   Şampiyonu İncele
@@ -302,11 +307,11 @@ export default function HeroCarousel({ sliderPool = [], version }) {
       )}
     </div>
 
-      {/* "Aktif geliştiriliyor" — slider alt kenarına oturan gösterişli rozet (→ iletişim).
+      {/* "Beta sürüm" durum etiketi — slider alt kenarında sade rozet (→ iletişim/geri bildirim).
           hero-stage'in DIŞINDA (overflow:hidden'ı aşmak için) → kenardan taşabilir. */}
-      <Link href="/iletisim" className="hero-dev-pill" title="Site aktif geliştiriliyor — geri bildirim & iletişim">
+      <Link href="/iletisim" className="hero-dev-pill" title="Site beta sürümde — geri bildirim & iletişim">
         <span className="hero-dev-dot" />
-        Aktif geliştiriliyor
+        Beta sürüm
       </Link>
     </div>
   );
