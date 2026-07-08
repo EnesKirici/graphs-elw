@@ -30,6 +30,7 @@ class ChampionStatsService
 
     public function __construct(
         private DataDragonService $ddragon,
+        private PatchService $patch,
     ) {}
 
     /**
@@ -40,23 +41,23 @@ class ChampionStatsService
     public function aggregateFromMatches(): array
     {
         $keyToId = $this->championKeyMap();
-        $currentBucket = $this->currentPatchBucket();
 
         $acc = [];        // "patch|champId|pos" => ['key','games','wins','bans']
         $patchGames = []; // patch => int
 
         MatchRecord::whereIn('queue_id', self::RANKED_QUEUES)
             ->select(['match_id', 'data'])
-            ->chunk(200, function ($rows) use (&$acc, &$patchGames, $keyToId, $currentBucket) {
+            ->chunk(200, function ($rows) use (&$acc, &$patchGames, $keyToId) {
                 foreach ($rows as $row) {
                     $info = $row->data['info'] ?? null;
                     if (!$info || empty($info['participants'])) {
                         continue;
                     }
 
-                    // gameVersion trim'lenmiş olabilir → yoksa mevcut patch'e say.
-                    $patch = $this->patchBucket($info['gameVersion'] ?? '') ?? $currentBucket;
-                    if ($patch === '') {
+                    // Maçı patch'e ata: gameVersion varsa ondan, yoksa (eski/trim'li
+                    // kayıt) gameCreation tarihinden (PatchService). Çözülemezse atla.
+                    $patch = $this->patch->patchForMatch($info);
+                    if (! $patch) {
                         continue;
                     }
                     $patchGames[$patch] = ($patchGames[$patch] ?? 0) + 1;
@@ -268,7 +269,7 @@ class ChampionStatsService
 
     public function currentPatchBucket(): string
     {
-        return $this->patchBucket($this->ddragon->getCurrentVersion()) ?? '';
+        return $this->patch->current();
     }
 
     // ---- iç yardımcılar ----
@@ -329,14 +330,4 @@ class ChampionStatsService
         return $map;
     }
 
-    /** gameVersion "16.11.123.456" → "16.11"; geçersizse null. */
-    private function patchBucket(string $gameVersion): ?string
-    {
-        $parts = explode('.', $gameVersion);
-        if (count($parts) < 2 || $parts[0] === '') {
-            return null;
-        }
-
-        return $parts[0].'.'.$parts[1];
-    }
 }

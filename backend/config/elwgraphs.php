@@ -107,4 +107,27 @@ return [
             'ban_max'  => 40,   // ban% bu değerde 1 puan
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Meta patch penceresi (istatistik kapsamı + eski maç prune'u)
+    |--------------------------------------------------------------------------
+    | Meta istatistikleri GÜNCEL patch'e göre hesaplanır. gameVersion'ı olan maçlar
+    | doğrudan ondan; gameVersion'ı OLMAYAN eski maçlar (bir dönem kayıtta trim'lendi)
+    | aşağıdaki patch başlangıç tarihlerinden patch'e atanır (PatchService). Böylece
+    | 6 aylık veri tek patch'e yığılmaz, gerçek patch'e oturur.
+    |
+    | Yeni patch çıkınca en ÜSTE 1 satır ekle (~2 haftada bir; resmi yama notu günü).
+    | NOT: DataDragon major 16 = 2026 (14=2024,15=2025,16=2026). LoL'ün resmi yama
+    | notları yıl-bazlı "26.x" der ama minor aynıdır: 16.13 = 26.13.
+    */
+    'meta' => [
+        'patch_starts' => [
+            '16.13' => '2026-06-23',
+            '16.12' => '2026-06-09',
+            '16.11' => '2026-05-27',
+        ],
+        // Meta + prune kaç patch tutsun (güncel dahil). 2 = güncel + önceki.
+        'keep_patches' => 2,
+    ],
 ];

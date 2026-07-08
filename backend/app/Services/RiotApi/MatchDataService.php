@@ -344,6 +344,7 @@ class MatchDataService
             'metadata' => $raw['metadata'] ?? [],
             'info' => [
                 'queueId' => $info['queueId'] ?? 0,
+                'gameVersion' => $info['gameVersion'] ?? '', // patch bucketing (meta istatistik) için ŞART
                 'gameDuration' => $info['gameDuration'] ?? 0,
                 'gameCreation' => $info['gameCreation'] ?? 0,
                 'teams' => $info['teams'] ?? [],
