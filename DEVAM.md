@@ -18,8 +18,9 @@ Locke yeni-şampiyon fix + "Beta sürüm" pill canlıda. Riot **production key b
 3. **config `meta.patch_starts`** — yeni patch çıkınca (yama notlarından) 1 satır tarih ekle. Bu yalnız
    eski gameVersion'sız maçları patch'e atamak + prune eşiği için; yeni maçlar zaten gameVersion taşır.
    `keptPatches` DataDragon'dan geldiği için pencere otomatik kayar.
-4. **(Opsiyonel) prune otomasyonu:** `matches:prune --force`'u cron'a bağla → patch kayınca kendiliğinden
-   temizler (patch-bazlı siler, yaşa göre değil; güvenli). Şu an elle.
+4. **(Opsiyonel) prune otomasyonu + cleanup:** `matches:prune --force`'u cron'a bağla → patch kayınca
+   kendiliğinden temizler (patch-bazlı siler, yaşa göre değil; güvenli). Şu an elle. Ayrıca (DB_OPT'tan kalan
+   tek madde) **6 ay+ eski `match_summaries` cleanup cron'u** — DB büyüyünce; şu an DB küçük, acil değil.
 5. **(Opsiyonel) `BuildAggregationService`** aynı gameVersion patch-scoping'e geçmeli (builds için, aynı
    latent bug — eski maçlar current'a yığılıyor). Meta hattı düzeldi, builds hattı henüz değil.
 6. **(Opsiyonel) IndexNow** kurulumu. Search Console sitemap gönderimi → YAPILDI.
