@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
+use App\Services\MetaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -78,7 +79,7 @@ class SettingsController extends Controller
 
         // Meta modu değişince ana sayfa dashboard cache'ini tazele (anında yansısın).
         if ($key === 'meta_insufficient_mode') {
-            Cache::forget('meta:dashboard_stats_v8');
+            Cache::forget(MetaService::DASHBOARD_STATS_CACHE_KEY);
         }
 
         return response()->json([

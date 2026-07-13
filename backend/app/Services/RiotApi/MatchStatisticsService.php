@@ -16,6 +16,46 @@ class MatchStatisticsService
     private const ROLE_LABELS = ['TOP' => 'Top', 'JUNGLE' => 'Jungle', 'MIDDLE' => 'Mid', 'BOTTOM' => 'ADC', 'UTILITY' => 'Support'];
     private const ROLE_ICONS  = ['TOP' => 'top', 'JUNGLE' => 'jungle', 'MIDDLE' => 'mid', 'BOTTOM' => 'bot', 'UTILITY' => 'support'];
 
+    /**
+     * Profil cache anahtarlarının sürümleri — TEK KAYNAK.
+     * Bir hesaplama değişip cache'i tazelemek gerektiğinde yalnızca buradaki sürümü artır;
+     * hem yazan metod (self::ck) hem "Yenile" invalidasyonu (self::profileCacheKeys) senkron kalır.
+     */
+    private const CACHE_VERSIONS = [
+        'avg_game_rank'    => 'v2',
+        'season_roles'     => 'v4',
+        'winrate_timeline' => 'v6',
+        'lp_timeline'      => 'v5',
+        'season_champs'    => 'v6',
+        'season_badges'    => 'v4',
+        'challenge_avgs'   => 'v5',
+        'duo_partners'     => 'v6',
+    ];
+
+    /** Bir profil cache anahtarını merkezî sürümle üretir: "name:vN:{puuid}". */
+    private static function ck(string $name, string $puuid): string
+    {
+        return $name . ':' . self::CACHE_VERSIONS[$name] . ':' . $puuid;
+    }
+
+    /**
+     * "Yenile" (refresh) sonrası temizlenecek, yalnızca puuid'e bağlı profil cache anahtarları.
+     * lp_timeline dinamik ekler (soloKey/flexKey) taşıdığından buraya dahil DEĞİL —
+     * o, refresh'te queue-bazlı pattern temizliğiyle birlikte ele alınır.
+     */
+    public static function profileCacheKeys(string $puuid): array
+    {
+        return [
+            self::ck('avg_game_rank', $puuid),
+            self::ck('season_roles', $puuid),
+            self::ck('winrate_timeline', $puuid),
+            self::ck('season_champs', $puuid),
+            self::ck('season_badges', $puuid),
+            self::ck('challenge_avgs', $puuid),
+            self::ck('duo_partners', $puuid),
+        ];
+    }
+
     public function __construct(
         private MatchDataService $matchData,
         private DataDragonService $ddragon,
@@ -54,7 +94,7 @@ class MatchStatisticsService
      */
     public function getAvgGameRank(string $puuid, int $matchCount = 20): ?array
     {
-        return Cache::remember("avg_game_rank:v2:{$puuid}", config('riot.cache_ttl.summoner'), function () use ($puuid, $matchCount) {
+        return Cache::remember(self::ck('avg_game_rank', $puuid), config('riot.cache_ttl.summoner'), function () use ($puuid, $matchCount) {
             $rows = $this->seasonStatRecords($puuid)->take($matchCount);
             if ($rows->isEmpty()) return null;
 
@@ -100,7 +140,7 @@ class MatchStatisticsService
      */
     public function getSeasonRoleStats(string $puuid): array
     {
-        $cacheKey = "season_roles:v4:{$puuid}";
+        $cacheKey = self::ck('season_roles', $puuid);
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $queues = [
@@ -176,7 +216,7 @@ class MatchStatisticsService
      */
     public function getWinrateTimeline(string $puuid): array
     {
-        $cacheKey = "winrate_timeline:v6:{$puuid}";
+        $cacheKey = self::ck('winrate_timeline', $puuid);
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $result = ['solo' => null, 'flex' => null];
@@ -240,7 +280,7 @@ class MatchStatisticsService
     {
         $soloKey = ($ranked['solo']['tier'] ?? '') . ($ranked['solo']['rank'] ?? '') . ($ranked['solo']['lp'] ?? '');
         $flexKey = ($ranked['flex']['tier'] ?? '') . ($ranked['flex']['rank'] ?? '') . ($ranked['flex']['lp'] ?? '');
-        $cacheKey = "lp_timeline:v5:{$puuid}:{$soloKey}:{$flexKey}";
+        $cacheKey = self::ck('lp_timeline', $puuid) . ":{$soloKey}:{$flexKey}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid, $ranked) {
             $result = ['solo' => null, 'flex' => null];
@@ -386,7 +426,7 @@ class MatchStatisticsService
      */
     public function getSeasonChampionStats(string $puuid): array
     {
-        $cacheKey = "season_champs:v6:{$puuid}";
+        $cacheKey = self::ck('season_champs', $puuid);
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             // Queue → bucket. solo/flex AYRI tutulur; 'ranked' ve 'all' sonradan birleştirilir.
@@ -524,7 +564,7 @@ class MatchStatisticsService
 
     public function getPersonalityBadges(string $puuid): array
     {
-        $cacheKey = "season_badges:v4:{$puuid}";
+        $cacheKey = self::ck('season_badges', $puuid);
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             $games = [];
@@ -1065,7 +1105,7 @@ class MatchStatisticsService
      */
     public function getChallengeAverages(string $puuid): array
     {
-        $cacheKey = "challenge_avgs:v5:{$puuid}";
+        $cacheKey = self::ck('challenge_avgs', $puuid);
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             // Summoner's Rift queue'ları — Arena/ARAM/Bot/özel modları hariç
@@ -1119,7 +1159,7 @@ class MatchStatisticsService
      */
     public function getDuoPartners(string $puuid): array
     {
-        $cacheKey = "duo_partners:v6:{$puuid}";
+        $cacheKey = self::ck('duo_partners', $puuid);
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid) {
             // Summoner's Rift queue'ları — Arena, ARAM, Bot ve özel modları hariç tut

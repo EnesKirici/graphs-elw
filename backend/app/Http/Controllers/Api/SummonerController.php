@@ -9,6 +9,7 @@ use App\Services\RiotApi\SummonerService;
 use App\Services\RiotApi\LeagueService;
 use App\Services\RiotApi\ChampionMasteryService;
 use App\Services\RiotApi\MatchService;
+use App\Services\RiotApi\MatchStatisticsService;
 use App\Services\RiotApi\MatchDataService;
 use App\Services\RiotApi\DataDragonService;
 use App\Services\LpTrackingService;
@@ -163,22 +164,21 @@ class SummonerController extends Controller
             }
         }
 
-        // Sezon/match bazlı cache'ler — versiyon prefix'li
-        $seasonKeys = [
-            "season_match_ids:v2:{$puuid}:420",
-            "season_match_ids:v2:{$puuid}:440",
-            "season_match_ids:v2:{$puuid}:400",
-            "season_match_ids:v2:{$puuid}:430",
-            "season_match_ids:v2:{$puuid}:490",
-            "winrate_timeline:v5:{$puuid}",
-            "season_roles:v3:{$puuid}",
-            "season_champs:v3:{$puuid}",
-            "match:ids:{$puuid}:10:0",
-            "match:ids:{$puuid}:20:0",
-            "challenge_avgs:v2:{$puuid}",
-            "duo_partners:v3:{$puuid}",
-            "season_badges:v2:{$puuid}",
-        ];
+        // Sezon/match bazlı cache'ler. Sürüm-bağlı profil anahtarları TEK KAYNAKtan
+        // (MatchStatisticsService::CACHE_VERSIONS) gelir → sürüm bump'ında burası otomatik senkron
+        // kalır. Buradaki liste yalnızca queue-bazlı sabit anahtarları ekler.
+        $seasonKeys = array_merge(
+            MatchStatisticsService::profileCacheKeys($puuid),
+            [
+                "season_match_ids:v2:{$puuid}:420",
+                "season_match_ids:v2:{$puuid}:440",
+                "season_match_ids:v2:{$puuid}:400",
+                "season_match_ids:v2:{$puuid}:430",
+                "season_match_ids:v2:{$puuid}:490",
+                "match:ids:{$puuid}:10:0",
+                "match:ids:{$puuid}:20:0",
+            ]
+        );
 
         foreach ($seasonKeys as $key) {
             Cache::forget($key);

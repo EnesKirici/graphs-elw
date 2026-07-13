@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\ChampionStatsService;
+use App\Services\MetaService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
@@ -19,7 +20,7 @@ class RebuildChampionStats extends Command
 
         $result = $stats->aggregateFromMatches();
         $duoPairs = $stats->aggregateDuosFromMatches(); // ADC+Support sinerji sayaçları
-        Cache::forget('meta:dashboard_stats_v8'); // dashboard yeni veriyi hemen göstersin
+        Cache::forget(MetaService::DASHBOARD_STATS_CACHE_KEY); // dashboard yeni veriyi hemen göstersin
 
         $secs = round(microtime(true) - $start, 2);
         $this->info("Bitti ({$secs}s).");

@@ -14,6 +14,13 @@ use Illuminate\Support\Facades\Cache;
 
 class MetaService
 {
+    /**
+     * Ana sayfa dashboard istatistiklerinin cache anahtarı — TEK KAYNAK.
+     * Hesaplama değişip sürüm artarsa yalnızca burayı güncelle; hem üreten (getDashboardStats)
+     * hem invalidasyon (stats:rebuild, SettingsController) bu sabiti kullanır → senkron kalır.
+     */
+    public const DASHBOARD_STATS_CACHE_KEY = 'meta:dashboard_stats_v10';
+
     public function __construct(
         private DataDragonService $ddragon,
         private RiotApiService $riot,
@@ -36,7 +43,7 @@ class MetaService
 
     public function getDashboardStats(): array
     {
-        return Cache::remember('meta:dashboard_stats_v10', config('riot.cache_ttl.meta_stats'), function () {
+        return Cache::remember(self::DASHBOARD_STATS_CACHE_KEY, config('riot.cache_ttl.meta_stats'), function () {
             $champions = $this->ddragon->getChampions();
             $version = $this->ddragon->getCurrentVersion();
             $positionMap = $this->ddragon->getChampionPositions();
