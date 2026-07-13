@@ -130,4 +130,31 @@ return [
         // Meta + prune kaç patch tutsun (güncel dahil). 2 = güncel + önceki.
         'keep_patches' => 2,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kule plakası (turret plate) — rol-bazlı normalizasyon
+    |--------------------------------------------------------------------------
+    | Plaka YALNIZ 3 dış kulede (top/mid/bot outer) ve maçın ilk 14 dakikasında var;
+    | her dış kulede 5 plaka → bir takım rakipten en fazla 15 plaka alabilir. İç/nexus
+    | kulelerinde plaka yoktur. Bir oyuncunun aldığı plaka rolüne çok bağlıdır (solo
+    | laner çok, jungle/support az), bu yüzden "Performans Metrikleri" kartındaki Plaka
+    | barını sabit bir max yerine ROLE göre normalize ederiz: oyuncunun sezon ortalama
+    | turretPlatesTaken değeri, ana rolünün 'expected' hedefine ulaşınca bar dolu (%100).
+    | Böylece top laner'ın 4 plakası ile jungle'ın 1 plakası kendi bağlamında okunur.
+    |
+    | Değerler ayarlanabilir hedeflerdir (rolün iyi bir oyuncu için tipik üst bandı).
+    | Şu an küçük örneklem (~6 hesap) nedeniyle sabit; production key + geniş veri
+    | sonrası DB-dinamik rol ortalamasına geçilebilir.
+    */
+    'plate' => [
+        'expected_by_role' => [
+            'TOP'     => 5.0,
+            'MIDDLE'  => 3.5,
+            'BOTTOM'  => 3.5,
+            'JUNGLE'  => 1.5,
+            'UTILITY' => 1.5,
+        ],
+        'expected_default' => 3.0, // ana rol belirlenemezse
+    ],
 ];

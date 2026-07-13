@@ -28,7 +28,7 @@ class MatchStatisticsService
         'lp_timeline'      => 'v5',
         'season_champs'    => 'v6',
         'season_badges'    => 'v4',
-        'challenge_avgs'   => 'v5',
+        'challenge_avgs'   => 'v6', // v6: payload'a 'plate' (rol-normalize bağlamı) eklendi
         'duo_partners'     => 'v6',
     ];
 
@@ -1113,6 +1113,7 @@ class MatchStatisticsService
 
             $totals = [];
             $counts = []; // Metrik başına ayrı sayaç (support filtrelemesi için)
+            $roleCounts = []; // Ana rol tespiti (Plaka barını role göre normalize etmek için)
 
             foreach ($this->seasonStatRecords($puuid, $allowedQueues) as $row) {
                 $p = $row->stat_json['p'] ?? null;
@@ -1121,6 +1122,9 @@ class MatchStatisticsService
 
                 $role = $p['teamPosition'] ?? '';
                 $isSupport = ($role === 'UTILITY');
+                if ($role !== '') {
+                    $roleCounts[$role] = ($roleCounts[$role] ?? 0) + 1;
+                }
 
                 // NOT: firstBloodKill artık extractMatchData'da ham participant top-düzeyinden
                 // doğru doldurulup slim challenges'a yazılıyor; burada challenges'tan okunması yeterli.
@@ -1146,7 +1150,18 @@ class MatchStatisticsService
 
             $totalGames = max($counts);
 
-            return ['averages' => $averages, 'totalGames' => $totalGames];
+            // Plaka (turretPlatesTaken) barını ana role göre normalize etmek için bağlam.
+            // Ana rol = en çok oynanan rol; expected = o rolün config'teki hedef plaka bandı.
+            // (Frontend: turretPlatesTaken ortalaması bu 'expected'e ulaşınca bar dolu.)
+            arsort($roleCounts);
+            $primaryRole = $roleCounts ? (string) array_key_first($roleCounts) : null;
+            $expectedByRole = config('elwgraphs.plate.expected_by_role', []);
+            $plate = [
+                'role'     => $primaryRole,
+                'expected' => $expectedByRole[$primaryRole] ?? config('elwgraphs.plate.expected_default', 3.0),
+            ];
+
+            return ['averages' => $averages, 'totalGames' => $totalGames, 'plate' => $plate];
         });
     }
 

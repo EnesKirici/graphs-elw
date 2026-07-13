@@ -378,6 +378,7 @@ export default function MatchDetail({ matchId, puuid: searchedPuuid, onBack }) {
       {tab === "stats" && (
         <div className="p-6">
           <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-5">Detaylı İstatistikler</h3>
+          <PlateWarSummary bluePlayers={bluePlayersM} redPlayers={redPlayersM} />
           <StatsTable bluePlayers={bluePlayersM} redPlayers={redPlayersM} allPlayers={allPlayers} />
         </div>
       )}
@@ -1075,6 +1076,52 @@ function DamageDistribution({ bluePlayers, redPlayers, allPlayers, maxDmg, mode 
         <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" />Fiziksel</span>
         <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Büyü</span>
         <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-gray-400" />Gerçek</span>
+      </div>
+    </div>
+  );
+}
+
+/* ===== PLAKA SAVAŞI — takım bağlamı (bireysel değil, takımın toplam plakası + pay) ===== */
+function PlateWarSummary({ bluePlayers, redPlayers }) {
+  const dist = (players) =>
+    (players || [])
+      .map(p => ({ name: p.summonerName, img: p.champion?.image, plates: p.challenges?.turretPlatesTaken ?? 0 }))
+      .filter(p => p.plates > 0)
+      .sort((a, b) => b.plates - a.plates);
+
+  const blue = dist(bluePlayers);
+  const red = dist(redPlayers);
+  const blueTotal = blue.reduce((s, p) => s + p.plates, 0);
+  const redTotal = red.reduce((s, p) => s + p.plates, 0);
+  // Hiç plaka yoksa (çok erken biten maç / veri yok) bölümü gösterme.
+  if (blueTotal === 0 && redTotal === 0) return null;
+
+  const Chips = ({ players, align }) => (
+    <div className={`flex flex-wrap gap-1.5 ${align === "right" ? "justify-end" : ""}`}>
+      {players.map((p, i) => (
+        <div key={i} title={`${p.name}: ${p.plates} plaka`}
+          className="flex items-center gap-1 bg-card/60 border border-edge/40 rounded-md px-1.5 py-0.5">
+          <img src={p.img} alt="" width={18} height={18} className="rounded" />
+          <span className="text-[11px] font-bold text-gray-300">{p.plates}</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="mb-6 rounded-xl border border-edge/40 bg-card/30 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Plaka Savaşı</h4>
+        <span className="text-[10px] text-gray-600">ilk 14 dk · dış kuleler · takım maks 15</span>
+      </div>
+      <div className="flex items-center gap-4 mb-3">
+        <span className="text-xl font-bold text-blue-400 w-6 text-center">{blueTotal}</span>
+        <div className="flex-1"><CompBar v1={blueTotal} v2={redTotal} h="h-2.5" /></div>
+        <span className="text-xl font-bold text-red-400 w-6 text-center">{redTotal}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Chips players={blue} align="left" />
+        <Chips players={red} align="right" />
       </div>
     </div>
   );
