@@ -1,14 +1,16 @@
-# DEVAM — Kaldığımız Yer (güncel: 2026-07-08)
+# DEVAM — Kaldığımız Yer (güncel: 2026-07-13)
 
 > Bu dosya **güncel durum + bekleyen işler**. Tamamlanan işlerin kaydı → `YAPILANLAR.md`.
 > Kalıcı proje bilgisi → memory dosyaları (`project_*`, `reference_*`, `feedback_*`).
 
-## 🟢 Son durum (2026-07-08) — hepsi canlıda, doğrulandı
-Meta artık gerçek patch'e oturdu: `matches` kaydına **gameVersion** eklendi, **PatchService** patch
-mantığını topladı (gameVersion→yoksa tarih; `keptPatches` DataDragon'dan otomatik), meta **güncel+önceki
-patch birleşik** (~625 maç → listeler dolu), **`matches:prune`** eski maçları temizledi (2417→725).
-Locke yeni-şampiyon fix + "Beta sürüm" pill canlıda. Riot **production key başvurusu** yapıldı
-(App 853618, Pending Review). Detaylar: `YAPILANLAR.md` (2026-07-08).
+## 🟢 Son durum (2026-07-13) — hepsi canlıda, doğrulandı
+Bugün: (1) **Cache invalidasyon fix** — üreten/temizleyen sürüm uyuşmazlığı yüzünden "Yenile" ve
+`stats:rebuild` fiilen hiçbir şeyi silmiyordu → anahtar sürümleri tek kaynak
+(`MatchStatisticsService::CACHE_VERSIONS` + `MetaService::DASHBOARD_STATS_CACHE_KEY`).
+(2) **Plaka Savaşı** — maç detayında (klasik+pro) takım plaka toplamları/chip'ler/oyuncu payı;
+Performans Metrikleri'nde plaka barı ana role göre normalize (config `elwgraphs.plate`), `challenge_avgs` v6.
+(3) **Riot API key rotasyonu** (local+sunucu, Riot'a karşı 200 doğrulandı).
+Önceki durum (2026-07-08: meta patch-scoping + prune + Locke fix + Riot başvurusu) → `YAPILANLAR.md`.
 
 ## ⏳ BEKLEYEN
 1. **Riot production key** bekleniyor (App **853618**, Pending Review). Gelince: `ladder:crawl` +

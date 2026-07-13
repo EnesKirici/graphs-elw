@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-07-13 — Cache invalidasyon fix + Plaka Savaşı + key rotasyonu (`4d7d6c2`, `d482ca5`)
+
+**Cache anahtarları tek kaynak — kırık invalidasyon düzeldi** (`4d7d6c2`)
+- Üreten ile temizleyen taraflar farklı sürümler kullanıyordu (dashboard **v10** cache'lenirken
+  rebuild **v8** siliyordu; winrate_timeline v6↔v5, season_champs v6↔v3, duo_partners v6↔v3 vb.)
+  → "Yenile" butonu ve `stats:rebuild` fiilen hiçbir cache'i temizlemiyordu.
+- Fix: `MatchStatisticsService::CACHE_VERSIONS` + `ck()` + `profileCacheKeys()` (profil anahtarı
+  sürümleri tek kaynak) + `MetaService::DASHBOARD_STATS_CACHE_KEY`. Sürüm bump'ında invalidasyon
+  otomatik senkron kalır.
+
+**Plaka Savaşı + rol-normalize plaka barı** (`d482ca5`)
+- Maç detayı (klasik "İstatistikler" + pro "Detaylar"): takım plaka toplamları (maks 15/takım),
+  oyuncu chip dağılımı; pro tarafta aranan oyuncunun takım payı (%).
+- Performans Metrikleri: Plaka barı sabit max(5) yerine ana role göre hedef — config
+  `elwgraphs.plate.expected_by_role` (Top 5.0 · Mid/ADC 3.5 · Jungle/Support 1.5), tooltip'te rol.
+- Backend `getChallengeAverages` payload'ına `plate {role, expected}`; `challenge_avgs` cache **v6**.
+- Canlı doğrulama: API yanıtında `plate:{role:"JUNGLE",expected:1.5}` ✓ (Elwoidy, jungle main).
+
+**Riot API key rotasyonu:** local + sunucu `.env` güncellendi, `config:clear`+`cache:clear`,
+yeni key Riot'a karşı **200** doğrulandı. ALGO 13 sabit → `summaries:flush` gerekmedi.
+
+---
+
 ## 2026-07-08 — Meta patch-scoping + prune + yeni şampiyon fix + Beta pill + Riot başvurusu
 
 **Yeni şampiyon (Locke) istatistik fix** (`8c4e3d8`, `1aefe50`)
