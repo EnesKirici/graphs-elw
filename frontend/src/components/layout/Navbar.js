@@ -9,6 +9,7 @@ import { useAdmin } from "@/context/AdminContext";
 import { useTheme } from "@/context/ThemeContext";
 import ThemePicker from "@/components/dashboard/ThemePicker";
 import BadgeGuideModal from "@/components/summoner/BadgeGuideModal";
+import WorkerChip from "@/components/layout/WorkerChip";
 
 // Site navigasyonu — eskiden sol sidebar'daydı, header'a taşındı.
 const NAV_ITEMS = [
@@ -367,6 +368,7 @@ export default function Navbar() {
           <span className="tb-badge-label">Rozet & Skor</span>
         </button>
         <RateLimitIndicator />
+        <WorkerChip />
         <ModeToggle />
         <ThemePicker />
         {isAdmin && (

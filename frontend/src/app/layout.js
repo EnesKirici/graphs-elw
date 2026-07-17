@@ -3,6 +3,7 @@ import "./globals.css";
 import "./dashboard-theme.css";
 import Providers from "@/components/Providers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import RateLimitToast from "@/components/shared/RateLimitToast";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -116,6 +117,7 @@ export default function RootLayout({ children }) {
         <Providers>
           {children}
         </Providers>
+        <RateLimitToast />
         <GoogleAnalytics />
       </body>
     </html>

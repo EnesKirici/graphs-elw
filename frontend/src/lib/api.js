@@ -16,6 +16,16 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 /**
+ * 429 yakalanınca tarayıcıda RateLimitToast'a haber ver (sağ üst bildirim).
+ * SSR'da window yok → sessizce atlanır.
+ */
+function notifyRateLimited() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("elw:rate-limited"));
+  }
+}
+
+/**
  * Laravel API'sine GET isteği atar.
  *
  * @param {string} endpoint - API endpoint'i (örnek: "/champions")
@@ -31,6 +41,7 @@ export async function fetchApi(endpoint) {
   // Rate limit (429): JSON body'yi parse et ve döndür (throw etme)
   // Backend rateLimited flag ile kısmi veya hata verisi döner
   if (res.status === 429) {
+    notifyRateLimited();
     try {
       const data = await res.json();
       return { ...data, rateLimited: true };
@@ -75,6 +86,7 @@ export async function getLiveGame(name, tag) {
     }
   }
   if (res.status === 429) {
+    notifyRateLimited();
     try {
       return { ...(await res.json()), rateLimited: true };
     } catch {
