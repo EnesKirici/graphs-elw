@@ -414,9 +414,10 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
                 // RoleRadar SVG'si responsive (w-full) — genişliksiz sarmalayıcıda büzülüp küçük
                 // görünüyordu. sm+: sabit 260px + min-width (flex-shrink'e karşı) ve büyük scale →
                 // beşgen sol bölmeyi doldurur (translateY SVG'nin iç üst boşluğunu kırpar, taşan
-                // kenarları overflow-hidden yutar). Mobil: w-full → küçük ama komple görünüm.
+                // kenarları overflow-hidden yutar). sideValues: sayılar ikon YANINDA (dikey kazanç,
+                // 170px blokta sayı/ikon kırpılmaz). Mobil: w-full → küçük ama komple görünüm.
                 <div className="w-full min-w-0 sm:w-[260px] sm:min-w-[260px] sm:origin-top sm:[transform:translateY(-8px)_scale(0.78)]">
-                  <RoleRadar seasonRoles={{ all: roleStats }} filter="all" embedded hideHeading hideLegend />
+                  <RoleRadar seasonRoles={{ all: roleStats }} filter="all" embedded hideHeading hideLegend sideValues />
                 </div>
               ) : (
                 <div className="text-[11px] text-gray-600 self-center">Koridor verisi yok</div>

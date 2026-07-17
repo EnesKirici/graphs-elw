@@ -26,7 +26,7 @@ const RADAR_ROLES = [
                    profildeki "Koridorlar + Performans Metrikleri" birleşik kartı için).
   filter (kontrollü) verilirse dışarıdan sürülür (StatsHub queue'su); yoksa kendi sekmesi.
 */
-export default function RoleRadar({ seasonRoles, filter: controlledFilter, embedded = false, plain = false, hideHeading = false, hideLegend = false }) {
+export default function RoleRadar({ seasonRoles, filter: controlledFilter, embedded = false, plain = false, hideHeading = false, hideLegend = false, sideValues = false }) {
   const [internalFilter, setInternalFilter] = useState("all");
   const filter = controlledFilter ?? internalFilter;
   const [hovIdx, setHovIdx] = useState(null);
@@ -68,13 +68,23 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
   const outerPts = angles.map((a) => pt(a, 1));
 
   const iconSize = 22;
-  const iconOffsets = [
-    { dx: -iconSize / 2, dy: -46 },
-    { dx: 16, dy: -12 },
-    { dx: 12, dy: 6 },
-    { dx: -iconSize - 12, dy: 6 },
-    { dx: -iconSize - 16, dy: -12 },
-  ];
+  // sideValues: sayı ikonun yanına geçtiği için yatay yer daralır → sağ/sol uç ikonları
+  // beşgene biraz yaklaştır (dar bloklarda sayı kenardan kırpılmasın).
+  const iconOffsets = sideValues
+    ? [
+        { dx: -iconSize / 2, dy: -46 },
+        { dx: 6, dy: -12 },
+        { dx: 12, dy: 6 },
+        { dx: -iconSize - 12, dy: 6 },
+        { dx: -iconSize - 6, dy: -12 },
+      ]
+    : [
+        { dx: -iconSize / 2, dy: -46 },
+        { dx: 16, dy: -12 },
+        { dx: 12, dy: 6 },
+        { dx: -iconSize - 12, dy: 6 },
+        { dx: -iconSize - 16, dy: -12 },
+      ];
 
   const hov = hovIdx !== null ? roles[hovIdx] : null;
 
@@ -136,19 +146,22 @@ export default function RoleRadar({ seasonRoles, filter: controlledFilter, embed
               />
             ))}
 
-            {/* Rol ikonları + oyun sayıları */}
+            {/* Rol ikonları + oyun sayıları.
+                sideValues (canlı maç kartı): sayı ikonun ALTINDA değil YANINDA (beşgenden dışa
+                bakan tarafta) → dikeyde ~24px kazanılır, dar 170px blokta kırpılma biter. */}
             {outerPts.map((p, i) => {
               const off = iconOffsets[i];
               const ix = p.x + off.dx;
               const iy = p.y + off.dy;
+              const right = i <= 2; // 0=üst, 1-2=sağ köşeler → sayı sağa; 3-4=sol köşeler → sola
               return (
                 <g key={`label-${i}`} className="pointer-events-none">
                   <image href={roles[i].icon} x={ix} y={iy} width={iconSize} height={iconSize}
                     style={{ opacity: roles[i].games > 0 ? 1 : 0.3 }} />
                   <text
-                    x={ix + iconSize / 2}
-                    y={iy + iconSize + 12}
-                    textAnchor="middle"
+                    x={sideValues ? (right ? ix + iconSize + 5 : ix - 5) : ix + iconSize / 2}
+                    y={sideValues ? iy + iconSize / 2 + 4 : iy + iconSize + 12}
+                    textAnchor={sideValues ? (right ? "start" : "end") : "middle"}
                     style={{ fontSize: "11px", fontWeight: roles[i].games > 0 ? 700 : 400 }}
                     className={roles[i].games > 0 ? "fill-gray-200" : "fill-gray-600"}
                   >
