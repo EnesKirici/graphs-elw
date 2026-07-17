@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-07-17 (2) — META WORKER: Zümrüt+ tarama + admin kontrolü CANLI (`b178059`, `13c9cd7`)
+
+**Backend (worker çekirdeği)**
+- `ladder:crawl`: apex ligler (tek istek/lig) + **Emerald/Diamond entries sayfalama**
+  (division başına `entry_pages_per_division` sayfa). Seçili ligler admin ayarı `worker_tiers`.
+  İlk tarama: havuz **7.803 oyuncu** (Chall 201 + GM 508 + Master 5.454 + Zümrüt 820 + Elmas 820).
+  Entries endpoint'i TR1'de puuid veriyor ✓. Emerald/Diamond `ladder_buckets`'a YAZILMAZ
+  (sınırlı sayfa = tam sayım değil; percentile bozulmasın).
+- `matches:collect`: tur bütçesi (`match_budget`=40 maç) + oyuncu başına son N maç
+  (`recent_per_player`=10) + `startTime` filtresi (admin ayarı `worker_collect_since`,
+  default 2026-07-16) + tier filtresi + **user-yield** (web'den Riot isteği damgalanır
+  [`RiotApiService` → `riot:last_user_request`], worker kullanıcı trafiğinde turu bırakır;
+  429 cooldown'da da). 429'da tur biter; kaçan maçlar claim geri alındığı için sonraki turda gelir.
+- `ProcessMatchJob`: kaynak lig damgası → **`matches.tier_bucket`** (migration
+  `2026_07_17_120000`). İleride kullanıcıya elo filtresi bu kolondan (rebuild tam hesap
+  yaptığı için veri baştan damgalı birikmeli — bu yüzden ŞİMDİ eklendi).
+- `WorkerControlService`: `worker_enabled`/`worker_tiers`/`worker_collect_since`
+  (admin_settings, panelden deploy'suz değişir) + `status()` (havuz/kuyruk/işlenen/rate) +
+  `shouldYield()`. Sabit bütçeler config `elwgraphs.worker`.
+- Scheduler: `ladder:crawl` 04:15 (off-peak) + `matches:collect` 10dk — ikisi de
+  `->when(worker_enabled)`; `queue:work --stop-when-empty --max-time=480 --tries=3` 10dk koşulsuz.
+- Admin API: `GET /admin/worker` (durum), `POST /admin/worker/crawl|collect` (elle tetik),
+  `PUT /admin/settings/worker_*` (validasyonlu).
+
+**Frontend**
+- `/admin/worker` sayfası: aç/kapa switch, lig çipleri (havuz sayılarıyla, çoklu seçim),
+  başlangıç tarihi, durum kartları (havuz/kuyruk/bugün işlenen/rate), "Havuzu Tara"+"Maç Topla"
+  elle tetik, 15sn'de bir canlı durum (form kirliyse otomatik yenileme seçimi ezmez).
+- `WorkerChip` (Navbar, RateLimitIndicator yanı): YALNIZ admin oturumunda görünür;
+  tek tık aç/kapa (optimistic), hover mini durum + "Yönet →". Admin panele girmeden kontrol.
+- `RateLimitToast`: `api.js` 429 yakalayınca `elw:rate-limited` event → sağ üstte sakin
+  bildirim ("Yoğunluk var…"), dakikada en fazla 1 kez. Worker'ın varlığı kullanıcıya sızmaz.
+
+**Uçtan uca doğrulama (canlı):** crawl 7.803 oyuncu → collect 13 oyuncu/40 maç → queue:work
+34 işlendi (6 rate-limit fail → flush + sonraki turda telafi) → `matches` 730→764, hepsi
+tier damgalı → `stats:rebuild`: **16.14 penceresi 1→35 maç**. `worker_enabled=true` bırakıldı.
+
+**Karar:** "Patch Değişimleri" kutusu için ayrı iş yok — 16.14+16.13 örneklemi worker'la
+dolunca kendiliğinden dolacak (wrChange kodu zaten gerçek).
+
+---
+
 ## 2026-07-17 — Key kesintisi teşhisi + patch_starts 16.14 + ssh kısayolu
 
 **Riot key kesintisi (14-16 Tem) teşhis + düzeltme**

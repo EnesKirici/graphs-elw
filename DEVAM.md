@@ -4,24 +4,21 @@
 > Kalıcı proje bilgisi → memory dosyaları (`project_*`, `reference_*`, `feedback_*`).
 
 ## 🟢 Son durum (2026-07-17)
-Bugün: (1) **Key kesintisi teşhis+fix** — 16.14 patch'i 14 Tem'de geldi, aynı gün key öldü →
-14-16 Tem maç toplanamadı; yeni key CANLI, `lp:capture` doğrulandı, kaçan maçlar geri doluyor.
-(2) **`patch_starts`'a `'16.14' => '2026-07-14'`** eklendi — sunucuya scp basıldı + rebuild;
-⚠️ **local'de COMMIT BEKLİYOR** (commit'lenmezse sonraki deploy'un `checkout -f`'i sunucudaki
-düzeltmeyi geri alır!). (3) **`ssh graphs-elw`** kısayolu kuruldu (şifresiz, proje dizininde açılır).
-Detay → `YAPILANLAR.md` 2026-07-17. Önceki durum (07-13: cache fix + Plaka Savaşı) → `YAPILANLAR.md`.
+Bugün: (1) **Key kesintisi teşhis+fix** (14-16 Tem 401'leri; yeni key CANLI, kaçanlar geri doldu).
+(2) **`patch_starts` 16.14** eklendi (commit `6953bb5`, canlıda). (3) **`ssh graphs-elw`** kısayolu.
+(4) **META WORKER CANLI & AÇIK** (`b178059`+`13c9cd7`): Zümrüt+ ladder tarama (havuz 7.803 oyuncu) +
+bütçeli maç toplama (tur ~40 maç, 10dk cron) + `/admin/worker` paneli + navbar WorkerChip (admin'e
+görünür aç/kapa) + 429 toast + user-yield. İlk tur doğrulandı: 34 maç tier damgalı girdi, 16.14
+penceresi 1→35 maç. Detay → `YAPILANLAR.md` 2026-07-17.
 
 ## ⏳ BEKLEYEN
-1. **Riot production key** bekleniyor (App **853618**, Pending Review). Gelince: `ladder:crawl` +
-   `matches:collect` + `queue:work` **off-peak cron** → gerçek TR meta (şu an 6 hesap → küçük örneklem).
-   ⚠️ Ara ara developer portal **MESSAGES** sekmesini kontrol et (Riot soru sorarsa askıda kalır).
-2. **Worker aktivasyonu (Personal key ile, bütçeli) + admin toggle** — kullanıcı istedi (2026-07-17):
-   Zümrüt+ taransın, admin panelden aç/kapa olsun, ayrıca admin oturumuyla sitede görünen hızlı bir
-   kontrol/durum bölmesi. Plan: `ladder:crawl`'a Emerald+ entries sayfalama (sınırlı sayfa) +
-   `matches:collect`'e istek bütçesi (`--budget`) + oyuncu başına son N maç + `AdminSetting`
-   `worker_crawl_enabled` toggle + scheduler `->when(...)` + queue çözümü (QUEUE=database →
-   pm2 `queue:work` YA DA schedule'da `--stop-when-empty`). ⚠️ Personal key ~100 istek/2dk —
-   bütçesiz `matches:collect` ÇALIŞTIRMA (tüm sezon ID'lerini çekip yüzlerce job dispatch eder).
+1. **Riot production key** bekleniyor (App **853618**, Pending Review). Gelince: worker bütçelerini
+   büyüt (config `elwgraphs.worker`: match_budget, entry_pages_per_division, --players) + supervisor
+   `queue:work`. ⚠️ Ara ara developer portal **MESSAGES** sekmesini kontrol et.
+2. **Kullanıcıya elo filtresi** (dashboard/tier-list "hangi elodan istatistik", default Tümü) —
+   veri altyapısı HAZIR (`matches.tier_bucket` damgalı birikiyor). Kalan: `champion_stats`'a
+   tier kırılımı (rebuild'de `tier_bucket` gruplaması) + endpoint `?tier=` + frontend seçici.
+   Veri birikince yap (şu an tek günlük damga var).
 3. **LP grafik** — kullanıcı prompt yazacaktı.
 4. **config `meta.patch_starts`** — SONRAKİ patch çıkınca (yama notlarından) 1 satır tarih ekle
    (16.14 eklendi ✓). Yalnız eski gameVersion'sız maçları patch'e atamak + prune eşiği için;
