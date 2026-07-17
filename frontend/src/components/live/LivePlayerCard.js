@@ -411,7 +411,9 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
           <div className="relative z-10 flex items-stretch border-b border-edge/60" style={{ height: 170 }}>
             <div className="flex-1 flex justify-center overflow-hidden">
               {roleStats.length > 0 ? (
-                <div style={{ transform: "scale(0.64)", transformOrigin: "top center" }}>
+                // w-[260px]: RoleRadar SVG'si responsive (w-full) — genişliksiz sarmalayıcıda
+                // büzülüp küçük görünüyordu; radara tam 260px ver, scale karta sığdırır (eski boyut).
+                <div className="w-[260px]" style={{ transform: "scale(0.64)", transformOrigin: "top center" }}>
                   <RoleRadar seasonRoles={{ all: roleStats }} filter="all" embedded hideHeading hideLegend />
                 </div>
               ) : (
