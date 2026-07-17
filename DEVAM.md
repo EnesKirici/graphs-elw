@@ -1,32 +1,40 @@
-# DEVAM — Kaldığımız Yer (güncel: 2026-07-13)
+# DEVAM — Kaldığımız Yer (güncel: 2026-07-17)
 
 > Bu dosya **güncel durum + bekleyen işler**. Tamamlanan işlerin kaydı → `YAPILANLAR.md`.
 > Kalıcı proje bilgisi → memory dosyaları (`project_*`, `reference_*`, `feedback_*`).
 
-## 🟢 Son durum (2026-07-13) — hepsi canlıda, doğrulandı
-Bugün: (1) **Cache invalidasyon fix** — üreten/temizleyen sürüm uyuşmazlığı yüzünden "Yenile" ve
-`stats:rebuild` fiilen hiçbir şeyi silmiyordu → anahtar sürümleri tek kaynak
-(`MatchStatisticsService::CACHE_VERSIONS` + `MetaService::DASHBOARD_STATS_CACHE_KEY`).
-(2) **Plaka Savaşı** — maç detayında (klasik+pro) takım plaka toplamları/chip'ler/oyuncu payı;
-Performans Metrikleri'nde plaka barı ana role göre normalize (config `elwgraphs.plate`), `challenge_avgs` v6.
-(3) **Riot API key rotasyonu** (local+sunucu, Riot'a karşı 200 doğrulandı).
-Önceki durum (2026-07-08: meta patch-scoping + prune + Locke fix + Riot başvurusu) → `YAPILANLAR.md`.
+## 🟢 Son durum (2026-07-17)
+Bugün: (1) **Key kesintisi teşhis+fix** — 16.14 patch'i 14 Tem'de geldi, aynı gün key öldü →
+14-16 Tem maç toplanamadı; yeni key CANLI, `lp:capture` doğrulandı, kaçan maçlar geri doluyor.
+(2) **`patch_starts`'a `'16.14' => '2026-07-14'`** eklendi — sunucuya scp basıldı + rebuild;
+⚠️ **local'de COMMIT BEKLİYOR** (commit'lenmezse sonraki deploy'un `checkout -f`'i sunucudaki
+düzeltmeyi geri alır!). (3) **`ssh graphs-elw`** kısayolu kuruldu (şifresiz, proje dizininde açılır).
+Detay → `YAPILANLAR.md` 2026-07-17. Önceki durum (07-13: cache fix + Plaka Savaşı) → `YAPILANLAR.md`.
 
 ## ⏳ BEKLEYEN
 1. **Riot production key** bekleniyor (App **853618**, Pending Review). Gelince: `ladder:crawl` +
    `matches:collect` + `queue:work` **off-peak cron** → gerçek TR meta (şu an 6 hesap → küçük örneklem).
    ⚠️ Ara ara developer portal **MESSAGES** sekmesini kontrol et (Riot soru sorarsa askıda kalır).
-2. **LP grafik** — kullanıcı prompt yazacaktı.
-3. **config `meta.patch_starts`** — yeni patch çıkınca (yama notlarından) 1 satır tarih ekle. Bu yalnız
-   eski gameVersion'sız maçları patch'e atamak + prune eşiği için; yeni maçlar zaten gameVersion taşır.
-   `keptPatches` DataDragon'dan geldiği için pencere otomatik kayar.
-4. **(Opsiyonel) prune otomasyonu + cleanup:** `matches:prune --force`'u cron'a bağla → patch kayınca
-   kendiliğinden temizler (patch-bazlı siler, yaşa göre değil; güvenli). Şu an elle. Ayrıca (DB_OPT'tan kalan
-   tek madde) **6 ay+ eski `match_summaries` cleanup cron'u** — DB büyüyünce; şu an DB küçük, acil değil.
-5. **(Opsiyonel) `BuildAggregationService`** aynı gameVersion patch-scoping'e geçmeli (builds için, aynı
+2. **Worker aktivasyonu (Personal key ile, bütçeli) + admin toggle** — kullanıcı istedi (2026-07-17):
+   Zümrüt+ taransın, admin panelden aç/kapa olsun, ayrıca admin oturumuyla sitede görünen hızlı bir
+   kontrol/durum bölmesi. Plan: `ladder:crawl`'a Emerald+ entries sayfalama (sınırlı sayfa) +
+   `matches:collect`'e istek bütçesi (`--budget`) + oyuncu başına son N maç + `AdminSetting`
+   `worker_crawl_enabled` toggle + scheduler `->when(...)` + queue çözümü (QUEUE=database →
+   pm2 `queue:work` YA DA schedule'da `--stop-when-empty`). ⚠️ Personal key ~100 istek/2dk —
+   bütçesiz `matches:collect` ÇALIŞTIRMA (tüm sezon ID'lerini çekip yüzlerce job dispatch eder).
+3. **LP grafik** — kullanıcı prompt yazacaktı.
+4. **config `meta.patch_starts`** — SONRAKİ patch çıkınca (yama notlarından) 1 satır tarih ekle
+   (16.14 eklendi ✓). Yalnız eski gameVersion'sız maçları patch'e atamak + prune eşiği için;
+   yeni maçlar gameVersion taşır. `keptPatches` DataDragon'dan → pencere otomatik kayar.
+5. **Prune YAPMA (kullanıcı kararı 2026-07-17):** eski patch maçları (16.12: 543) SİLİNMEYECEK —
+   patch-karşılaştırma (wrChange) için tarihsel veri lazım. Zaten kritik: `stats:rebuild` her saat
+   `matches`'ten TAM yeniden hesap yapıyor → maç silinirse eski patch istatistikleri de kaybolur.
+   (Prune otomasyonu ancak incremental aggregation'a geçilirse gündeme alınır.) Ayrıca (DB_OPT'tan
+   kalan) **6 ay+ eski `match_summaries` cleanup cron'u** — DB büyüyünce; acil değil.
+6. **(Opsiyonel) `BuildAggregationService`** aynı gameVersion patch-scoping'e geçmeli (builds için, aynı
    latent bug — eski maçlar current'a yığılıyor). Meta hattı düzeldi, builds hattı henüz değil.
-6. **(Opsiyonel) IndexNow** kurulumu. Search Console sitemap gönderimi → YAPILDI.
-7. **(Opsiyonel) Mail SSL** — Let's Encrypt reissue (webmail dahil) + Mail Server Settings. Şu an SSL kapalı
+7. **(Opsiyonel) IndexNow** kurulumu. Search Console sitemap gönderimi → YAPILDI.
+8. **(Opsiyonel) Mail SSL** — Let's Encrypt reissue (webmail dahil) + Mail Server Settings. Şu an SSL kapalı
    çalışıyor; acil değil.
 
 ## 🧩 Önemli teknik notlar

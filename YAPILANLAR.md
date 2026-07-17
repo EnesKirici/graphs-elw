@@ -5,6 +5,34 @@
 
 ---
 
+## 2026-07-17 — Key kesintisi teşhisi + patch_starts 16.14 + ssh kısayolu
+
+**Riot key kesintisi (14-16 Tem) teşhis + düzeltme**
+- Yeni patch **16.14** tam 14 Temmuz'da geldi; aynı günlerde API key öldü (log: 14'ünde 28,
+  15'inde 39, 16'sında 11 adet 401 "Unknown apikey") → yeni patch'te neredeyse hiç maç
+  toplanamadı (14 Tem+ yalnız 1 maç). Dashboard'ın "boş/ölü" görünmesinin nedeni buydu;
+  patch göstergesi (16.14.1) aslında DOĞRUYDU (DataDragon'da güncel = 16.14.1).
+- Key rotasyonu (sunucu `.env`) + `config:clear`/`cache:clear` + Riot'a karşı 200 testi.
+  `lp:capture` elle doğrulandı (6 hesap sorunsuz); kaçan maçlar cron'la geri dolmaya başladı
+  (kontrol sırasında 14 Tem+ 1→4 maç).
+- Not: 2-12 Tem arasında da her gün az sayıda 401 varmış (yarısı Sıralama sayfasının canlı
+  Riot çağrısı) → key düzenli ölüyor; kalıcı çözüm production key.
+
+**`patch_starts`'a 16.14 eklendi** (DEVAM bekleyen madde uygulandı)
+- `config/elwgraphs.php` → `'16.14' => '2026-07-14'`. Sunucuya scp ile basıldı +
+  `config:clear`+`cache:clear`+`stats:rebuild` (dağılım: 16.12→543, 16.13→86, 16.14→1).
+  Dashboard API doğrulandı (16.14.1 + gerçek veri). ⚠️ Local'de commit BEKLİYOR.
+
+**`ssh graphs-elw` kısayolu** — `~/.ssh/config`'e RemoteCommand'lı host eklendi; şifresiz,
+doğrudan sunucudaki proje dizininde açılıyor. Tek seferlik komut için `ssh elw@178.251.238.161`.
+
+**DB tespitleri:** `cached_players` 49.154 (dashboard "49B" gerçek sayı), `crawl_players` 0
+(ladder crawler hiç çalışmamış), meta penceresi (16.14+16.13) içinde yalnız ~87 maç →
+"Patch Değişimleri" kutusu bu yüzden boş (wrChange: her iki patch'te de şampiyon başına
+MIN_SAMPLE şartı; kod gerçek, veri yetersiz).
+
+---
+
 ## 2026-07-13 — Cache invalidasyon fix + Plaka Savaşı + key rotasyonu (`4d7d6c2`, `d482ca5`)
 
 **Cache anahtarları tek kaynak — kırık invalidasyon düzeldi** (`4d7d6c2`)
