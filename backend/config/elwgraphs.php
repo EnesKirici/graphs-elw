@@ -134,6 +134,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Meta worker (ladder tarama + maç toplama) — Personal key bütçesi
+    |--------------------------------------------------------------------------
+    | Aç/kapa + hangi ligler + başlangıç tarihi RUNTIME ayarıdır (admin_settings:
+    | worker_enabled / worker_tiers / worker_collect_since — panelden yönetilir).
+    | Buradakiler SABİT bütçe sınırları: Personal key ~100 istek/2dk ve site
+    | trafiğiyle paylaşıldığı için worker her turda küçük ısırıklar alır.
+    */
+    'worker' => [
+        // Seçilebilir ligler (admin panel bu listeden çoklu seçim yaptırır).
+        'tiers_available' => ['EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'],
+        // Emerald/Diamond League-V4 entries: division başına çekilecek sayfa (1 sayfa ≈ 205 oyuncu, 1 istek).
+        'entry_pages_per_division' => 1,
+        // matches:collect turu başına kuyruğa atılacak maksimum YENİ maç (≈ maç-detay isteği bütçesi).
+        'match_budget' => 40,
+        // Oyuncu başına en yeni kaç ranked maç ID'si istensin (count parametresi).
+        'recent_per_player' => 10,
+        // Son N saniyede kullanıcı kaynaklı Riot isteği olduysa worker o turu bırakır (kullanıcı önceliği).
+        'user_yield_seconds' => 8,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Kule plakası (turret plate) — rol-bazlı normalizasyon
     |--------------------------------------------------------------------------
     | Plaka YALNIZ 3 dış kulede (top/mid/bot outer) ve maçın ilk 14 dakikasında var;

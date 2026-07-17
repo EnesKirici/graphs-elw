@@ -23,6 +23,7 @@ class ProcessMatchJob implements ShouldQueue
     public function __construct(
         public string $matchId,
         public string $region = 'tr1',
+        public ?string $tierBucket = null, // maçın bulunduğu havuz ligi (EMERALD..CHALLENGER)
     ) {}
 
     public function handle(MatchDataService $matchData, BuildAggregationService $agg): void
@@ -47,6 +48,14 @@ class ProcessMatchJob implements ShouldQueue
             // patch'i claim sonrası güncelle (claim anında maç detayı yoktu)
             ProcessedMatch::where('match_id', $this->matchId)
                 ->update(['patch' => $this->patchOf($detail)]);
+
+            // Kaynak lig damgası → ileride elo-filtreli istatistik (yalnız boşsa yaz;
+            // aynı maç farklı liglerden bulunursa İLK damga kalır).
+            if ($this->tierBucket) {
+                \App\Models\MatchRecord::where('match_id', $this->matchId)
+                    ->whereNull('tier_bucket')
+                    ->update(['tier_bucket' => $this->tierBucket]);
+            }
         } catch (\Throwable $e) {
             // İşleme başarısızsa claim'i geri al → maç tekrar denenebilir (yine çift sayılmaz)
             ProcessedMatch::where('match_id', $this->matchId)->delete();

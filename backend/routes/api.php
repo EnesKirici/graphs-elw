@@ -97,6 +97,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/settings/{key}', [SettingsController::class, 'show']);
         Route::put('/settings/{key}', [SettingsController::class, 'update']);
 
+        // Meta worker (durum + elle tetikleme; ayarlar settings/worker_* üzerinden)
+        Route::get('/worker', [\App\Http\Controllers\Api\WorkerController::class, 'status']);
+        Route::post('/worker/crawl', [\App\Http\Controllers\Api\WorkerController::class, 'crawl']);
+        Route::post('/worker/collect', [\App\Http\Controllers\Api\WorkerController::class, 'collect']);
+
         // Ban yönetimi
         Route::get('/bans', [AdminController::class, 'bans']);
         Route::post('/bans', [AdminController::class, 'banIp']);

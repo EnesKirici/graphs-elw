@@ -13,3 +13,13 @@ Artisan::command('inspire', function () {
 Schedule::command('lp:capture')->everyTenMinutes()->withoutOverlapping();
 // Şampiyon meta istatistiklerini topladığımız maçlardan tazele.
 Schedule::command('stats:rebuild')->hourly()->withoutOverlapping();
+
+// Meta worker (admin panelden worker_enabled ile aç/kapa; kapalıyken hiçbiri koşmaz).
+$workerOn = fn () => app(\App\Services\WorkerControlService::class)->isEnabled();
+// Ladder havuzunu günde bir tazele (off-peak, TR gece).
+Schedule::command('ladder:crawl')->dailyAt('04:15')->when($workerOn)->withoutOverlapping();
+// Havuzdan bütçeli maç toplama (tur başına ~40 maç; user-yield ile kullanıcıya yol verir).
+Schedule::command('matches:collect')->everyTenMinutes()->when($workerOn)->withoutOverlapping();
+// Kuyruktaki ProcessMatchJob'ları işle; kuyruk boşsa anında çıkar (worker kapansa da kuyruğu boşaltır).
+Schedule::command('queue:work --stop-when-empty --max-time=480 --tries=3')
+    ->everyTenMinutes()->withoutOverlapping();

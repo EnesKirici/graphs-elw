@@ -60,7 +60,11 @@ class SettingsController extends Controller
      */
     public function update(string $key, Request $request): JsonResponse
     {
-        $allowed = ['performance_labels', 'badge_config', 'elw_score', 'profile_design', 'meta_insufficient_mode', 'labels_config'];
+        $allowed = [
+            'performance_labels', 'badge_config', 'elw_score', 'profile_design',
+            'meta_insufficient_mode', 'labels_config',
+            'worker_enabled', 'worker_tiers', 'worker_collect_since',
+        ];
 
         if (!in_array($key, $allowed)) {
             return response()->json(['error' => 'Geçersiz ayar anahtarı.'], 422);
@@ -71,6 +75,14 @@ class SettingsController extends Controller
             $request->validate(['value' => 'required|string|in:classic,pro']);
         } elseif ($key === 'meta_insufficient_mode') {
             $request->validate(['value' => 'required|string|in:label,sim']);
+        } elseif ($key === 'worker_enabled') {
+            $request->validate(['value' => 'required|boolean']);
+        } elseif ($key === 'worker_collect_since') {
+            $request->validate(['value' => 'required|date']);
+        } elseif ($key === 'worker_tiers') {
+            $available = config('elwgraphs.worker.tiers_available', []);
+            $request->validate(['value' => 'present|array']);
+            $request->validate(['value.*' => 'string|in:' . implode(',', $available)]);
         } else {
             $request->validate(['value' => 'required|array']);
         }

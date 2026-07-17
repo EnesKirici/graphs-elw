@@ -23,6 +23,12 @@ class RiotApiService
      */
     private function request(string $url, array $query = []): mixed
     {
+        // Kullanıcı önceliği damgası: web isteği Riot'a gidiyorsa worker
+        // (console) bir süre yol verir (WorkerControlService::shouldYield).
+        if (! app()->runningInConsole()) {
+            Cache::put(\App\Services\WorkerControlService::USER_ACTIVITY_KEY, time(), 60);
+        }
+
         $cooldownKey = 'riot:rate_limit_cooldown';
         $cooldownUntil = Cache::get($cooldownKey);
         if ($cooldownUntil && time() < $cooldownUntil) {
