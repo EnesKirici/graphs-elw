@@ -412,9 +412,10 @@ export default function LivePlayerCard({ participant: p, enrichment, loading, is
             <div className="flex-1 flex justify-center overflow-hidden">
               {roleStats.length > 0 ? (
                 // RoleRadar SVG'si responsive (w-full) — genişliksiz sarmalayıcıda büzülüp küçük
-                // görünüyordu. Sabit 260px + minWidth (flex-shrink'e karşı) → eski büyük boyut;
-                // scale karta sığdırır, taşan kenar overflow-hidden ile kırpılır.
-                <div style={{ width: 260, minWidth: 260, transform: "scale(0.64)", transformOrigin: "top center" }}>
+                // görünüyordu. sm+: sabit 260px + min-width (flex-shrink'e karşı) ve büyük scale →
+                // beşgen sol bölmeyi doldurur (translateY SVG'nin iç üst boşluğunu kırpar, taşan
+                // kenarları overflow-hidden yutar). Mobil: w-full → küçük ama komple görünüm.
+                <div className="w-full min-w-0 sm:w-[260px] sm:min-w-[260px] sm:origin-top sm:[transform:translateY(-8px)_scale(0.78)]">
                   <RoleRadar seasonRoles={{ all: roleStats }} filter="all" embedded hideHeading hideLegend />
                 </div>
               ) : (
