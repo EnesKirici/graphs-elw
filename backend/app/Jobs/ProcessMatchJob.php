@@ -20,6 +20,14 @@ class ProcessMatchJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * Rate limit release'leri deneme sayar → bol hak; GERÇEK hatalar yine
+     * 3 istisnada düşer (maxExceptions). Yoksa bütçe dolunca kuyruğun kalanı
+     * 3'er milisaniyelik denemeyle failed_jobs'a akıyordu (maç kaybı).
+     */
+    public $tries = 15;
+    public $maxExceptions = 3;
+
     public function __construct(
         public string $matchId,
         public string $region = 'tr1',
@@ -59,6 +67,17 @@ class ProcessMatchJob implements ShouldQueue
         } catch (\Throwable $e) {
             // İşleme başarısızsa claim'i geri al → maç tekrar denenebilir (yine çift sayılmaz)
             ProcessedMatch::where('match_id', $this->matchId)->delete();
+
+            // Rate limit (429) hata değil bekleme sinyalidir: fail etme, cooldown
+            // süresi kadar gecikmeyle kuyruğa geri bırak. Süre mesajdan okunur
+            // ("Rate limit aktif. N saniye bekleyin."), yoksa 20 sn varsayılır.
+            if ((int) $e->getCode() === 429) {
+                preg_match('/(\d+) saniye/', $e->getMessage(), $m);
+                $this->release(min(max(((int) ($m[1] ?? 15)) + 5, 10), 150));
+
+                return;
+            }
+
             throw $e; // job retry mekanizması devreye girsin
         }
     }
