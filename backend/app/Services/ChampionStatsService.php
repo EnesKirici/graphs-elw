@@ -80,16 +80,22 @@ class ChampionStatsService
                         }
                     }
 
+                    // Ban = "bu maçta en az bir kez banlandı" — iki takım aynı şampiyonu
+                    // banlayabildiği için maç içinde TEKİLLEŞTİR; yoksa banRate %100'ü
+                    // aşabilir (yeni şampiyonda çift ban → %200'e kadar).
+                    $banned = [];
                     foreach ($info['teams'] ?? [] as $team) {
                         foreach ($team['bans'] ?? [] as $ban) {
                             $cid = $keyToId[(int) ($ban['championId'] ?? -1)] ?? null;
-                            if (! $cid) {
-                                continue;
+                            if ($cid) {
+                                $banned[$cid] = true;
                             }
-                            $k = "{$patch}|{$cid}|ALL";
-                            $acc[$k] ??= ['key' => 0, 'games' => 0, 'wins' => 0, 'bans' => 0];
-                            $acc[$k]['bans']++;
                         }
+                    }
+                    foreach (array_keys($banned) as $cid) {
+                        $k = "{$patch}|{$cid}|ALL";
+                        $acc[$k] ??= ['key' => 0, 'games' => 0, 'wins' => 0, 'bans' => 0];
+                        $acc[$k]['bans']++;
                     }
                 }
             });

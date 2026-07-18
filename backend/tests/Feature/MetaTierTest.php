@@ -36,7 +36,8 @@ class MetaTierTest extends TestCase
     public function test_tier_from_score_maps_thresholds(): void
     {
         $this->assertSame('S+', $this->invokePrivate('tierFromScore', 0.90));
-        $this->assertSame('S',  $this->invokePrivate('tierFromScore', 0.70));
+        $this->assertSame('S+', $this->invokePrivate('tierFromScore', 0.70)); // tam sınır → S+
+        $this->assertSame('S',  $this->invokePrivate('tierFromScore', 0.65));
         $this->assertSame('A',  $this->invokePrivate('tierFromScore', 0.55));
         $this->assertSame('B',  $this->invokePrivate('tierFromScore', 0.40));
         $this->assertSame('C',  $this->invokePrivate('tierFromScore', 0.25));
