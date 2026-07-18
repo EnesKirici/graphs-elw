@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { pickRealRunePage, groupRealItems, runeIcon, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
+import { pickRealRunePage, groupRealItems, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", SUPPORT: "Support" };
 const ROLE_ICON = {
@@ -55,9 +55,11 @@ export default function ChampionBuild({ champion, version, runesData = [], build
   const [role, setRole] = useState(
     positions.some((p) => p.position === urlRole) ? urlRole : positions[0]?.position
   );
+  const [pageIdx, setPageIdx] = useState(0); // seçili rün sayfası (0 = en popüler keystone)
 
   const selectRole = (p) => {
     setRole(p);
+    setPageIdx(0);
     const url = new URL(window.location.href);
     if (p === positions[0]?.position) url.searchParams.delete("role");
     else url.searchParams.set("role", p);
@@ -67,17 +69,20 @@ export default function ChampionBuild({ champion, version, runesData = [], build
   const posInfo = positions.find((p) => p.position === role);
   const cats = build?.byPosition?.[role] || {};
 
+  // Rün sayfası seçenekleri (1. / 2. / 3.) — yalnız ağaçta karşılığı olan keystone'lar.
+  const keystoneOptions = (cats.keystone || []).filter((k) => runeIconById(runesData, Number(k.key)));
+  const safeIdx = Math.min(pageIdx, Math.max(keystoneOptions.length - 1, 0));
   const runePage = useMemo(
-    () => pickRealRunePage(runesData, cats.keystone, cats.rune_minor, cats.shard),
-    [runesData, cats]
+    () => pickRealRunePage(runesData, keystoneOptions, cats.rune_minor, cats.shard, safeIdx),
+    [runesData, keystoneOptions, cats, safeIdx]
   );
+  const activeKeystone = keystoneOptions[safeIdx];
   const items = useMemo(() => groupRealItems(cats.item_full, version), [cats, version]);
   const topSpellPair = cats.spell_pair?.[0];
   const spellIcons = (topSpellPair?.key || "")
     .split("-")
     .map((id) => build?.spellMap?.[id])
     .filter(Boolean);
-  const topKeystone = cats.keystone?.[0];
 
   // Hiç oynanma verisi yok → dürüst boş durum (sahte build göstermeyiz).
   if (!positions.length) {
@@ -105,7 +110,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"}`}>
               <img src={ROLE_ICON[p.position]} alt={ROLE_LABELS[p.position]} width={16} height={16} className={role === p.position ? "" : "opacity-70"} />
               {ROLE_LABELS[p.position] || p.position}
-              <span className="text-[10px] text-gray-500">{p.games}</span>
+              <span className="text-[10px] text-gray-500">{p.share}%</span>
             </button>
           ))}
         </div>
@@ -132,20 +137,19 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 <p className="text-[10px] text-gray-500 mt-0.5">Win Rate</p>
               </div>
               <div className="rounded-lg bg-edge/40 py-2.5">
-                <p className="text-lg font-bold text-gray-200">{posInfo?.games}</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">Maç ({posInfo?.share}%)</p>
+                <p className="text-lg font-bold text-gray-200">{posInfo?.share}%</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Koridor Payı</p>
               </div>
             </div>
           </Section>
 
-          <Section title="En Popüler Itemler" extra={<span className="text-[10px] text-gray-600">Maç · WR</span>}>
+          <Section title="En Popüler Itemler" extra={<span className="text-[10px] text-gray-600">Pick · WR</span>}>
             <div className="space-y-2">
               {(cats.item_full || []).slice(0, 5).map((it) => (
                 <div key={it.key} className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-hover">
                   <img src={`https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${it.key}.png`}
                     alt="" width={28} height={28} className="rounded-md border border-edge" onError={hideOnError} />
-                  <span className="text-[11px] text-gray-400 flex-1">{it.pickRate}% pick</span>
-                  <span className="text-[11px] text-gray-500">{it.games}</span>
+                  <span className="text-[11px] text-gray-400 flex-1">{it.pickRate}%</span>
                   <span className={`text-xs font-bold ${wrCls(it.winRate)}`}>{it.winRate}%</span>
                 </div>
               ))}
@@ -175,28 +179,52 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         {/* ORTA — Rünler (tek kart) */}
         <Panel className="lg:col-span-5">
           <Section title="Rünler" extra={
-            topKeystone && (
+            activeKeystone && (
               <span className="text-[10px] text-gray-600">
-                En popüler · {topKeystone.pickRate}% pick · <b className={wrCls(topKeystone.winRate)}>{topKeystone.winRate}% WR</b>
+                {safeIdx === 0 ? "En popüler" : `${safeIdx + 1}. seçenek`} · {activeKeystone.pickRate}% pick · <b className={wrCls(activeKeystone.winRate)}>{activeKeystone.winRate}% WR</b>
               </span>
             )
           }>
             {runePage ? (
-              <div className="flex gap-6 justify-center">
-                <RuneTree tree={runePage.primary} selected={runePage.selected} />
-                <div className="border-l border-edge/40 pl-6 flex flex-col items-center gap-3">
-                  <RuneTree tree={runePage.secondary} selected={runePage.selected} skipKeystone />
-                  <div className="flex flex-col items-center gap-2 pt-3 mt-1 border-t border-edge/40">
-                    {SHARD_ROWS.map((row, ri) => (
-                      <div key={ri} className="flex items-center gap-2">
-                        {row.map((sh, ci) => (
-                          <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={20} title={sh.name} />
-                        ))}
-                      </div>
+              <>
+                {/* Rün sayfası seçenekleri: 1. en popüler + 2./3. alternatif keystone'lar */}
+                {keystoneOptions.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    {keystoneOptions.map((k, i) => (
+                      <button
+                        key={k.key}
+                        onClick={() => setPageIdx(i)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] transition-colors cursor-pointer ${
+                          i === safeIdx
+                            ? "border-blue-500/60 bg-blue-500/10 text-blue-200"
+                            : "border-edge/60 text-gray-400 hover:text-gray-200 hover:bg-hover"
+                        }`}
+                        title={`${i + 1}. seçenek`}
+                      >
+                        <span className="text-gray-500">{i + 1}.</span>
+                        <img src={runeIconById(runesData, Number(k.key))} alt="" width={22} height={22} className="rounded-full" onError={hideOnError} />
+                        <span>{k.pickRate}%</span>
+                        <span className={`font-bold ${wrCls(k.winRate)}`}>{k.winRate}%</span>
+                      </button>
                     ))}
                   </div>
+                )}
+                <div className="flex gap-6 justify-center">
+                  <RuneTree tree={runePage.primary} selected={runePage.selected} pctOf={runePage.pctOf} />
+                  <div className="border-l border-edge/40 pl-6 flex flex-col items-center gap-3">
+                    <RuneTree tree={runePage.secondary} selected={runePage.selected} pctOf={runePage.pctOf} skipKeystone />
+                    <div className="flex flex-col items-center gap-2 pt-3 mt-1 border-t border-edge/40">
+                      {SHARD_ROWS.map((row, ri) => (
+                        <div key={ri} className="flex items-center gap-2">
+                          {row.map((sh, ci) => (
+                            <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={20} title={sh.name} />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </>
             ) : (
               <ComingSoon>Bu koridor için rün verisi henüz birikmedi.</ComingSoon>
             )}
@@ -264,22 +292,26 @@ export default function ChampionBuild({ champion, version, runesData = [], build
 
 function ItemRow({ items, size = 32 }) {
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-start gap-1.5 flex-wrap">
       {items.map((it, i) => (
-        <img key={i} src={it.icon} alt="" width={size} height={size}
-          className="rounded-md border border-edge" onError={hideOnError}
-          title={`${it.games} maç · ${it.winRate}% WR`} />
+        <div key={i} className="flex flex-col items-center" style={{ width: size + 6 }}>
+          <img src={it.icon} alt="" width={size} height={size}
+            className="rounded-md border border-edge" onError={hideOnError}
+            title={`${it.pickRate}% pick · ${it.winRate}% WR`} />
+          <span className="text-[9px] text-gray-500 mt-0.5 leading-none">{it.pickRate}%</span>
+        </div>
       ))}
     </div>
   );
 }
 
-/* Tam rün ağacı — tüm rünler gösterilir, gerçek maçlarda en çok seçilenler vurgulu. */
-function RuneTree({ tree, selected, skipKeystone }) {
+/* Tam rün ağacı — tüm rünler gösterilir, gerçek maçlarda en çok seçilenler vurgulu.
+   pctOf verilirse oynanmış her rünün altında pick %'si yazar (dpm.lol tarzı). */
+function RuneTree({ tree, selected, pctOf, skipKeystone }) {
   if (!tree) return null;
   const slots = skipKeystone ? tree.slots.slice(1) : tree.slots;
   return (
-    <div className="flex flex-col items-center gap-2.5">
+    <div className="flex flex-col items-center gap-2">
       <div className="flex items-center gap-1.5 mb-1">
         <img src={runeIcon(tree.icon)} alt="" width={20} height={20} onError={hideOnError} />
         <span className="text-xs font-semibold text-gray-300">{TREE_TR[tree.key] || tree.key}</span>
@@ -287,9 +319,11 @@ function RuneTree({ tree, selected, skipKeystone }) {
       {slots.map((slot, i) => {
         const isKeystoneRow = !skipKeystone && i === 0;
         return (
-          <div key={i} className="flex items-center justify-center gap-2">
+          <div key={i} className="flex items-start justify-center gap-2">
             {slot.runes.map((r) => (
-              <RuneDot key={r.id} src={runeIcon(r.icon)} on={selected.has(r.id)} size={isKeystoneRow ? 36 : 28} title={r.name} />
+              <RuneDot key={r.id} src={runeIcon(r.icon)} on={selected.has(r.id)}
+                size={isKeystoneRow ? 36 : 28} title={r.name}
+                pct={pctOf ? pctOf[r.id] : undefined} withLabel={!!pctOf} />
             ))}
           </div>
         );
@@ -298,17 +332,27 @@ function RuneTree({ tree, selected, skipKeystone }) {
   );
 }
 
-function RuneDot({ src, on, size = 28, title }) {
-  return (
+/* withLabel: ikon altında % satırı ayrılır (veri yoksa boş tutulur ki satır hizası bozulmasın). */
+function RuneDot({ src, on, size = 28, title, pct, withLabel = false }) {
+  const img = (
     <img
       src={src}
       alt={title || ""}
-      title={title || ""}
+      title={pct != null ? `${title} · ${pct}%` : title || ""}
       width={size}
       height={size}
       onError={hideOnError}
       className={`rounded-full transition ${on ? "" : "grayscale opacity-25"}`}
       style={on ? { boxShadow: "0 0 0 2px rgba(96,165,250,.85)" } : undefined}
     />
+  );
+  if (!withLabel) return img;
+  return (
+    <div className="flex flex-col items-center" style={{ width: size + 6 }}>
+      {img}
+      <span className={`text-[8px] mt-0.5 leading-none ${on ? "text-blue-300 font-semibold" : "text-gray-600"}`}>
+        {pct != null ? `${pct}%` : " "}
+      </span>
+    </div>
   );
 }

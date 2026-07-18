@@ -45,25 +45,41 @@ const BOOT_IDS = new Set([
   3170, 3171, 3172, 3173, 3174, 3175, 3176,
 ]);
 
+/** Rün id'sinin ikon yolunu ağaçlardan bulur (keystone seçenek çipleri için). */
+export function runeIconById(runesData, id) {
+  for (const tree of runesData || []) {
+    for (const slot of tree.slots || []) {
+      const r = slot.runes.find((x) => x.id === id);
+      if (r) return runeIcon(r.icon);
+    }
+  }
+  return null;
+}
+
 /*
-  Gerçek rün sayfası: keystones/minors = backend sayaçları [{key, games, ...}].
-  Ana ağaç = en çok seçilen keystone'un ağacı; her satırda en çok seçilen rün işaretli.
+  Gerçek rün sayfası: keystones/minors = backend sayaçları [{key, games, pickRate, ...}].
+  pageIdx: hangi keystone seçeneği (0 = en popüler, 1-2 = alternatifler; dpm.lol tarzı).
+  Ana ağaç = seçilen keystone'un ağacı; her satırda en çok oynanan rün işaretli.
   İkincil ağaç = ana ağaç dışındaki minör rünlerden en güçlü ağaç; farklı satırlardan 2 rün.
-  Dönüş: { primary, secondary, selected:Set<runeId>, shardSel:[i,i,i] } | null
+  pctOf: rün id → pick % (ağaçta TÜM oynanmış rünlerin altında gösterilir).
+  Dönüş: { primary, secondary, selected:Set<runeId>, shardSel:[i,i,i], pctOf } | null
 */
-export function pickRealRunePage(runesData, keystones = [], minors = [], shards = []) {
+export function pickRealRunePage(runesData, keystones = [], minors = [], shards = [], pageIdx = 0) {
   if (!Array.isArray(runesData) || runesData.length === 0 || !keystones.length) return null;
 
-  const gamesOf = {};
-  [...keystones, ...minors].forEach((r) => { gamesOf[Number(r.key)] = r.games; });
+  const gamesOf = {}, pctOf = {};
+  [...keystones, ...minors].forEach((r) => {
+    gamesOf[Number(r.key)] = r.games;
+    pctOf[Number(r.key)] = r.pickRate;
+  });
 
-  const topKeystone = Number(keystones[0].key);
+  const keystone = Number((keystones[pageIdx] || keystones[0]).key);
   const primary = runesData.find((t) =>
-    t.slots?.[0]?.runes?.some((r) => r.id === topKeystone)
+    t.slots?.[0]?.runes?.some((r) => r.id === keystone)
   );
   if (!primary) return null;
 
-  const selected = new Set([topKeystone]);
+  const selected = new Set([keystone]);
 
   // Ana ağaç minör satırları: her satırdan en çok oynanan
   primary.slots.slice(1).forEach((slot) => {
@@ -101,7 +117,7 @@ export function pickRealRunePage(runesData, keystones = [], minors = [], shards 
     return idx;
   });
 
-  return { primary, secondary, selected, shardSel };
+  return { primary, secondary, selected, shardSel, pctOf };
 }
 
 /*

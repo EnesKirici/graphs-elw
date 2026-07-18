@@ -25,8 +25,8 @@ class ChampionBuildService
 
     /** Kategori başına döndürülecek satır sayısı. */
     private const TOP_N = [
-        'keystone'   => 3,
-        'rune_minor' => 12,
+        'keystone'   => 3,  // ana sayfa + 2./3. seçenek
+        'rune_minor' => 30, // ağaçtaki TÜM oynanmış rünler %'siyle gösterilir
         'shard'      => 9,
         'spell_pair' => 2,
         'item_full'  => 15,
