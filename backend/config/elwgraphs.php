@@ -12,6 +12,10 @@ return [
         'z'              => 1.96, // %95 güven (Wilson z-değeri)
         'min_games'      => 30,   // "güvenilir" sayılması için min maç; altı = düşük örneklem
         'prior_strength' => 100,  // shrinkage prior gücü: kaç maçlık %50 önsel (büyük=daha temkinli)
+        // Patch değişimi (wrChange) hesaplanması için ÖNCEKİ patch'in toplam maç eşiği.
+        // Altındaysa wrChange üretilmez (küçük örneklem yanıltıcı trend gösterir);
+        // yeni patch gelince önceki pencere dolu olacağından bölüm otomatik devreye girer.
+        'patch_change_min_prev_games' => 300,
     ],
 
     /*

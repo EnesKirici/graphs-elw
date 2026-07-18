@@ -1,24 +1,18 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { buildChampionData, buildMatchups, pickRunePage, runeIcon, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { pickRealRunePage, groupRealItems, runeIcon, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
 
-const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", SUPPORT: "Support" };
-const ROLE_ICON = { TOP: "/roles/top.svg", JUNGLE: "/roles/jungle.svg", MIDDLE: "/roles/mid.svg", BOTTOM: "/roles/bot.svg", SUPPORT: "/roles/support.svg" };
+const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", SUPPORT: "Support" };
+const ROLE_ICON = {
+  TOP: "/roles/top.svg", JUNGLE: "/roles/jungle.svg", MIDDLE: "/roles/mid.svg",
+  BOTTOM: "/roles/bot.svg", UTILITY: "/roles/support.svg", SUPPORT: "/roles/support.svg",
+};
 
 const hideOnError = (e) => { e.currentTarget.style.visibility = "hidden"; };
 const wrCls = (wr) => (wr >= 52 ? "text-emerald-400" : wr >= 49 ? "text-gray-200" : "text-red-400");
-
-function ItemRow({ items, size = 32 }) {
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      {items.map((it, i) => (
-        <img key={i} src={it.icon || it} alt={it.name || ""} width={size} height={size}
-          className="rounded-md border border-edge" onError={hideOnError} title={it.name || ""} />
-      ))}
-    </div>
-  );
-}
 
 // Birleşik kart (tek glass kutu) — içine birden çok Section gelir, divide-y ile ayrılır.
 function Panel({ children, className = "" }) {
@@ -42,83 +36,151 @@ function Section({ title, extra, children }) {
   );
 }
 
-export default function ChampionBuild({ champion, version, championList = [], runesData = [] }) {
-  const positions = champion.positions?.length ? champion.positions : ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "SUPPORT"];
-  const [role, setRole] = useState(positions[0]);
+function ComingSoon({ children }) {
+  return <p className="text-[11px] text-gray-600 leading-relaxed py-2">{children}</p>;
+}
 
-  const data = useMemo(() => buildChampionData(champion, role, version, championList), [champion, role, version, championList]);
-  const matchups = useMemo(() => buildMatchups(champion, role, championList, version), [champion, role, championList, version]);
-  const runePage = useMemo(() => pickRunePage(champion, role, runesData), [champion, role, runesData]);
+/*
+  Gerçek veriyle build sayfası. build = backend /champions/{id} yanıtındaki `build`:
+  { patches, totalGames, positions:[{position,games,winRate,share}], byPosition:{POS:{
+    keystone,rune_minor,shard,spell_pair,item_full: [{key,games,wins,winRate,pickRate}]}},
+    spellMap:{id:{name,image}}, topPlayers:[{name,tag,games,winRate}] }
+  Yalnız gerçekten oynanan koridorlar sekme olur (backend eşiği) — ör. Locke'ta
+  Support görünmez. Veri yoksa dürüst boş durum gösterilir; sahte veri YOK.
+*/
+export default function ChampionBuild({ champion, version, runesData = [], build }) {
+  const positions = build?.positions || [];
+  const params = useSearchParams();
+  const urlRole = params.get("role");
+  const [role, setRole] = useState(
+    positions.some((p) => p.position === urlRole) ? urlRole : positions[0]?.position
+  );
 
-  const phases = [
-    { label: "Başlangıç", items: data.starter, time: "@ 0:00" },
-    { label: "Ayakkabı", items: data.boots, time: "@ 4:00" },
-    { label: "Çekirdek", items: data.core, time: "@ 21:00" },
-  ];
+  const selectRole = (p) => {
+    setRole(p);
+    const url = new URL(window.location.href);
+    if (p === positions[0]?.position) url.searchParams.delete("role");
+    else url.searchParams.set("role", p);
+    window.history.replaceState(null, "", url);
+  };
+
+  const posInfo = positions.find((p) => p.position === role);
+  const cats = build?.byPosition?.[role] || {};
+
+  const runePage = useMemo(
+    () => pickRealRunePage(runesData, cats.keystone, cats.rune_minor, cats.shard),
+    [runesData, cats]
+  );
+  const items = useMemo(() => groupRealItems(cats.item_full, version), [cats, version]);
+  const topSpellPair = cats.spell_pair?.[0];
+  const spellIcons = (topSpellPair?.key || "")
+    .split("-")
+    .map((id) => build?.spellMap?.[id])
+    .filter(Boolean);
+  const topKeystone = cats.keystone?.[0];
+
+  // Hiç oynanma verisi yok → dürüst boş durum (sahte build göstermeyiz).
+  if (!positions.length) {
+    return (
+      <div className="glass rounded-xl p-8 text-center">
+        <p className="text-sm text-gray-300 font-medium">Henüz yeterli maç verisi yok</p>
+        <p className="text-xs text-gray-500 mt-2 leading-relaxed max-w-md mx-auto">
+          {champion.name} için Emerald+ maç havuzumuzda yeterli örneklem birikmedi.
+          Worker maç topladıkça build, rün ve item istatistikleri burada otomatik görünecek.
+        </p>
+      </div>
+    );
+  }
+
+  const lowSample = (posInfo?.games || 0) < 30;
 
   return (
     <div className="space-y-4">
-      {/* Filtre çubuğu */}
+      {/* Filtre çubuğu — yalnız GERÇEKTEN oynanan koridorlar */}
       <div className="glass rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1.5">
           {positions.map((p) => (
-            <button key={p} onClick={() => setRole(p)}
+            <button key={p.position} onClick={() => selectRole(p.position)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                role === p ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"}`}>
-              <img src={ROLE_ICON[p]} alt={ROLE_LABELS[p]} width={16} height={16} className={role === p ? "" : "opacity-70"} />
-              {ROLE_LABELS[p]}
+                role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"}`}>
+              <img src={ROLE_ICON[p.position]} alt={ROLE_LABELS[p.position]} width={16} height={16} className={role === p.position ? "" : "opacity-70"} />
+              {ROLE_LABELS[p.position] || p.position}
+              <span className="text-[10px] text-gray-500">{p.games}</span>
             </button>
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2 text-[11px]">
+          {lowSample && (
+            <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              Düşük örneklem
+            </span>
+          )}
           <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Emerald +</span>
-          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Patch {version}</span>
+          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">
+            Patch {(build.patches || []).join(" + ")}
+          </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* SOL — Önerilen buildler + Top players + Matchup (tek kart) */}
+        {/* SOL — Koridor özeti + popüler itemler + top players (tek kart) */}
         <Panel className="lg:col-span-3">
-          <Section title="Önerilen Buildler" extra={<span className="text-[10px] text-gray-600">WR</span>}>
+          <Section title={`${ROLE_LABELS[role] || role} Performansı`}>
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="rounded-lg bg-edge/40 py-2.5">
+                <p className={`text-lg font-bold ${wrCls(posInfo?.winRate || 0)}`}>{posInfo?.winRate}%</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Win Rate</p>
+              </div>
+              <div className="rounded-lg bg-edge/40 py-2.5">
+                <p className="text-lg font-bold text-gray-200">{posInfo?.games}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Maç ({posInfo?.share}%)</p>
+              </div>
+            </div>
+          </Section>
+
+          <Section title="En Popüler Itemler" extra={<span className="text-[10px] text-gray-600">Maç · WR</span>}>
             <div className="space-y-2">
-              {data.builds.map((b, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-hover">
-                  <ItemRow items={b.items} size={24} />
-                  <div className="ml-auto text-right">
-                    <p className="text-[11px] text-gray-300 leading-tight">{b.name}</p>
-                    <p className={`text-xs font-bold ${wrCls(b.wr)}`}>{b.wr}%</p>
-                  </div>
+              {(cats.item_full || []).slice(0, 5).map((it) => (
+                <div key={it.key} className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-hover">
+                  <img src={`https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${it.key}.png`}
+                    alt="" width={28} height={28} className="rounded-md border border-edge" onError={hideOnError} />
+                  <span className="text-[11px] text-gray-400 flex-1">{it.pickRate}% pick</span>
+                  <span className="text-[11px] text-gray-500">{it.games}</span>
+                  <span className={`text-xs font-bold ${wrCls(it.winRate)}`}>{it.winRate}%</span>
                 </div>
               ))}
+              {!(cats.item_full || []).length && <ComingSoon>Bu koridor için item verisi henüz yok.</ComingSoon>}
             </div>
           </Section>
 
           <Section title="En İyi Oyuncular">
             <div className="space-y-2">
-              {data.topPlayers.map((p, i) => (
-                <div key={i} className="flex items-center gap-2.5">
+              {(build.topPlayers || []).map((p, i) => (
+                <Link key={`${p.name}-${i}`} href={`/summoner/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag || "TR1")}`}
+                  className="flex items-center gap-2.5 group">
                   <span className="text-[11px] text-gray-600 w-3">{i + 1}</span>
-                  <img src={p.icon} alt="" width={28} height={28} className="rounded-md" onError={hideOnError} />
+                  <img src={champion.image} alt="" width={28} height={28} className="rounded-md border border-edge" onError={hideOnError} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-200 truncate">{p.name}</p>
+                    <p className="text-xs text-gray-200 truncate group-hover:text-blue-300 transition-colors">{p.name}</p>
                     <p className="text-[10px] text-gray-500">{p.games} maç</p>
                   </div>
-                  <span className={`text-xs font-bold ${wrCls(p.wr)}`}>{p.wr}%</span>
-                </div>
+                  <span className={`text-xs font-bold ${wrCls(p.winRate)}`}>{p.winRate}%</span>
+                </Link>
               ))}
+              {!(build.topPlayers || []).length && <ComingSoon>Bu şampiyonu düzenli oynayan oyuncu henüz tespit edilmedi.</ComingSoon>}
             </div>
-          </Section>
-
-          <Section title="Eşleşmeler (Matchup)">
-            <MatchupCol label="İyi Eşleşmeler" rows={matchups.easy} good />
-            <div className="my-3 border-t border-edge/40" />
-            <MatchupCol label="Zor Eşleşmeler" rows={matchups.hard} />
           </Section>
         </Panel>
 
-        {/* ORTA — Rünler + Yetenek sırası (tek kart) */}
+        {/* ORTA — Rünler (tek kart) */}
         <Panel className="lg:col-span-5">
-          <Section title="Rünler" extra={<span className="text-[10px] text-gray-600">En popüler · {data.builds[0]?.wr}% WR</span>}>
+          <Section title="Rünler" extra={
+            topKeystone && (
+              <span className="text-[10px] text-gray-600">
+                En popüler · {topKeystone.pickRate}% pick · <b className={wrCls(topKeystone.winRate)}>{topKeystone.winRate}% WR</b>
+              </span>
+            )
+          }>
             {runePage ? (
               <div className="flex gap-6 justify-center">
                 <RuneTree tree={runePage.primary} selected={runePage.selected} />
@@ -136,50 +198,62 @@ export default function ChampionBuild({ champion, version, championList = [], ru
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-gray-600 text-center py-6">Rün verisi yüklenemedi</p>
+              <ComingSoon>Bu koridor için rün verisi henüz birikmedi.</ComingSoon>
             )}
           </Section>
 
-          <Section title="Yetenek Sırası" extra={
-            <span className="text-[11px] text-gray-400">
-              Max: {data.abilityOrder.maxFirst.map((k, i) => (
-                <span key={i}>{i > 0 && <span className="text-gray-600 mx-0.5">›</span>}<b className="text-gray-200">{k}</b></span>
-              ))}
-            </span>
-          }>
-            <AbilityGrid order={data.abilityOrder.order} spells={champion.spells} />
+          <Section title="Yetenek Sırası">
+            <ComingSoon>
+              Yetenek sırası maç zaman çizelgesi (timeline) verisi gerektirir — worker bu
+              veriyi toplamaya başladığında burada gerçek istatistiklerle görünecek.
+            </ComingSoon>
           </Section>
         </Panel>
 
         {/* SAĞ — Sihirdar büyüleri + Itemler (tek kart) */}
         <Panel className="lg:col-span-4">
-          <Section title="Sihirdar Büyüleri">
+          <Section title="Sihirdar Büyüleri" extra={
+            topSpellPair && (
+              <span className="text-[10px] text-gray-600">
+                {topSpellPair.pickRate}% pick · <b className={wrCls(topSpellPair.winRate)}>{topSpellPair.winRate}% WR</b>
+              </span>
+            )
+          }>
             <div className="flex items-center gap-2">
-              {data.spells.map((s, i) => (
-                <img key={i} src={s} alt="" width={40} height={40} className="rounded-lg border border-edge" onError={hideOnError} />
+              {spellIcons.map((s, i) => (
+                <img key={i} src={s.image} alt={s.name} title={s.name} width={40} height={40}
+                  className="rounded-lg border border-edge" onError={hideOnError} />
               ))}
+              {!spellIcons.length && <ComingSoon>Büyü verisi henüz yok.</ComingSoon>}
             </div>
           </Section>
 
           <Section title="Itemler">
             <div className="space-y-4">
-              {phases.map((ph) => (
-                <div key={ph.label}>
+              {items.boots.length > 0 && (
+                <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] text-gray-400 font-medium">{ph.label}</span>
-                    <span className="text-[10px] text-gray-600">{ph.time}</span>
+                    <span className="text-[11px] text-gray-400 font-medium">Ayakkabı</span>
+                    <span className={`text-[10px] font-bold ${wrCls(items.boots[0].winRate)}`}>{items.boots[0].winRate}% WR</span>
                   </div>
-                  <ItemRow items={ph.items} />
+                  <ItemRow items={items.boots} />
                 </div>
-              ))}
+              )}
+              <div>
+                <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Çekirdek</span>
+                <ItemRow items={items.core} />
+              </div>
               <div className="pt-3 border-t border-edge/40">
                 <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Tam Build</span>
-                <ItemRow items={data.full} />
+                <ItemRow items={items.full} />
               </div>
-              <div>
-                <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Duruma Göre</span>
-                <ItemRow items={data.situational} size={28} />
-              </div>
+              {items.situational.length > 0 && (
+                <div>
+                  <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Duruma Göre</span>
+                  <ItemRow items={items.situational} size={28} />
+                </div>
+              )}
+              {!items.full.length && <ComingSoon>Item verisi henüz birikmedi.</ComingSoon>}
             </div>
           </Section>
         </Panel>
@@ -188,66 +262,19 @@ export default function ChampionBuild({ champion, version, championList = [], ru
   );
 }
 
-function MatchupCol({ label, rows, good }) {
+function ItemRow({ items, size = 32 }) {
   return (
-    <div>
-      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">{label}</p>
-      <div className="space-y-1.5">
-        {rows.map((m, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <img src={m.icon} alt={m.name} width={26} height={26} className="rounded-md" onError={hideOnError} />
-            <span className="text-xs text-gray-300 flex-1 truncate">{m.name}</span>
-            <span className={`text-xs font-bold ${good ? "text-emerald-400" : "text-red-400"}`}>{m.wr}%</span>
-          </div>
-        ))}
-      </div>
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {items.map((it, i) => (
+        <img key={i} src={it.icon} alt="" width={size} height={size}
+          className="rounded-md border border-edge" onError={hideOnError}
+          title={`${it.games} maç · ${it.winRate}% WR`} />
+      ))}
     </div>
   );
 }
 
-function AbilityGrid({ order, spells = [] }) {
-  const rows = ["Q", "W", "E", "R"];
-  const keyColor = {
-    Q: "bg-blue-500/25 text-blue-300", W: "bg-green-500/25 text-green-300",
-    E: "bg-purple-500/25 text-purple-300", R: "bg-red-500/25 text-red-300",
-  };
-  return (
-    <div className="overflow-x-auto">
-      <div className="inline-block">
-        {/* Seviye başlıkları */}
-        <div className="flex gap-0.5 mb-1" style={{ paddingLeft: 36 }}>
-          {order.map((_, i) => (
-            <span key={i} className="w-5 text-center text-[8px] text-gray-600">{i + 1}</span>
-          ))}
-        </div>
-        {rows.map((r, ri) => (
-          <div key={r} className="flex gap-0.5 items-center mb-1">
-            {/* Yetenek görseli (Q/W/E/R harfi yerine gerçek skill ikonu) */}
-            <div className="relative w-7 h-7 flex-shrink-0">
-              {spells[ri]?.image ? (
-                <img src={spells[ri].image} alt={r} width={28} height={28}
-                  className="rounded border border-edge" onError={hideOnError} />
-              ) : (
-                <span className={`w-7 h-7 flex items-center justify-center text-[11px] font-bold rounded ${keyColor[r]}`}>{r}</span>
-              )}
-              <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 flex items-center justify-center text-[8px] font-bold rounded ${keyColor[r]}`}>{r}</span>
-            </div>
-            <span className="w-1.5" />
-            {order.map((lvl, i) => (
-              <span key={i}
-                className={`w-5 h-5 rounded text-center text-[9px] flex items-center justify-center ${
-                  lvl === r ? `${keyColor[r]} font-bold` : "bg-edge/40"}`}>
-                {lvl === r ? r : ""}
-              </span>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* Tam rün ağacı — tüm rünler gösterilir, seçili (önerilen) olanlar vurgulu. */
+/* Tam rün ağacı — tüm rünler gösterilir, gerçek maçlarda en çok seçilenler vurgulu. */
 function RuneTree({ tree, selected, skipKeystone }) {
   if (!tree) return null;
   const slots = skipKeystone ? tree.slots.slice(1) : tree.slots;

@@ -37,9 +37,12 @@ function PatchRow({ champ }) {
   );
 }
 
-export default function PatchAndTier({ champions = [], patch }) {
+export default function PatchAndTier({ champions = [], patch, patchChanges }) {
   const { rising, falling } = deriveChanges(champions);
   const tiers = deriveTiers(champions);
+  // Backend önceki patch örneklemini yetersiz bulduysa wrChange üretmez → listeler boş
+  // kalır ve aşağıdaki not gösterilir. Yeni patch'te otomatik dolar.
+  const insufficient = patchChanges && !patchChanges.sufficient;
 
   return (
     <div className="section two-col" data-reveal style={{ "--d": 200 }}>
@@ -48,10 +51,14 @@ export default function PatchAndTier({ champions = [], patch }) {
         <div className="section-head" style={{ marginBottom: 16 }}>
           <h2>Patch {patch} Değişimleri</h2>
         </div>
-        {rising.length === 0 && falling.length === 0 ? (
+        {insufficient || (rising.length === 0 && falling.length === 0) ? (
           <p className="muted" style={{ fontSize: 13, padding: "6px 0", lineHeight: 1.5 }}>
-            Patch değişimleri, önceki yamanın verisi de biriktiğinde hesaplanır
-            (bu yamadan önceki WR ile karşılaştırma). Yeterli geçmiş oluşunca burada görünecek.
+            Patch değişimleri, önceki yamanın verisiyle karşılaştırılarak hesaplanır.
+            {patchChanges?.prevPatch
+              ? ` Önceki yama (${patchChanges.prevPatch}) için henüz yeterli maç toplanmadı` +
+                (patchChanges.prevGames ? ` (${patchChanges.prevGames} maç)` : "") + "."
+              : " Önceki yamaya ait veri henüz yok."}
+            {" "}Bir sonraki yamada bu bölüm otomatik olarak dolacak.
           </p>
         ) : (
           <div className="patch-grid">

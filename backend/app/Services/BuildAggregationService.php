@@ -82,15 +82,21 @@ class BuildAggregationService
             $this->bumpTopPlayer($region, $champId, $p, $win);
         }
 
-        // Banlar → champion_stats.bans (ALL)
+        // Banlar → champion_stats.bans (ALL). Maç içinde TEKİLLEŞTİR: iki takım aynı
+        // şampiyonu banlayabilir; çift sayılırsa banRate %100'ü aşar (stats:rebuild
+        // ile aynı kural — ChampionStatsService::aggregateFromMatches).
+        $banned = [];
         foreach ($info['teams'] ?? [] as $team) {
             foreach ($team['bans'] ?? [] as $ban) {
                 $cid = $keyToId[(int) ($ban['championId'] ?? -1)] ?? null;
                 if ($cid) {
-                    ChampionStat::where(['patch' => $patch, 'champion_id' => $cid, 'position' => 'ALL'])
-                        ->increment('bans');
+                    $banned[$cid] = true;
                 }
             }
+        }
+        foreach (array_keys($banned) as $cid) {
+            ChampionStat::where(['patch' => $patch, 'champion_id' => $cid, 'position' => 'ALL'])
+                ->increment('bans');
         }
 
         return true;

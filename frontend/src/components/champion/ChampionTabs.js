@@ -1,14 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 /*
   Şampiyon sayfası sekme yapısı.
   tabs = [{ key, label, content }]. İlk sekme varsayılan aktif.
   İçerikler mount kalır (hidden ile gizlenir) → sekme değişince state korunur.
+  Aktif sekme ?tab= ile URL'de tutulur → refresh/paylaşımda aynı sekme açılır.
+  (history.replaceState: router.replace gibi RSC yeniden yüklemesi tetiklemez.)
 */
 export default function ChampionTabs({ tabs }) {
-  const [active, setActive] = useState(tabs[0]?.key);
+  const params = useSearchParams();
+  const fromUrl = params.get("tab");
+  const [active, setActive] = useState(
+    tabs.some((t) => t.key === fromUrl) ? fromUrl : tabs[0]?.key
+  );
+
+  const select = (key) => {
+    setActive(key);
+    const url = new URL(window.location.href);
+    if (key === tabs[0]?.key) {
+      url.searchParams.delete("tab"); // varsayılan sekme → temiz URL
+    } else {
+      url.searchParams.set("tab", key);
+    }
+    window.history.replaceState(null, "", url);
+  };
 
   return (
     <div>
@@ -17,7 +35,7 @@ export default function ChampionTabs({ tabs }) {
           {tabs.map((t) => (
             <button
               key={t.key}
-              onClick={() => setActive(t.key)}
+              onClick={() => select(t.key)}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${
                 active === t.key
                   ? "border-blue-500 text-white"

@@ -109,7 +109,7 @@ async function DashboardContent() {
           topBanned={data.topBanRate}
         />
 
-        <PatchAndTier champions={data.champions} patch={data.version} />
+        <PatchAndTier champions={data.champions} patch={data.version} patchChanges={data.patchChanges} />
 
         <Suspense fallback={<PlayersSkeleton />}>
           <PlayersSection />

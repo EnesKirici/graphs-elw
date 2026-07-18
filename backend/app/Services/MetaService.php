@@ -57,6 +57,14 @@ class MetaService
             $currentStats = $this->stats->getMetaStats($currentPatch);
             $prevPatch = $this->previousPatch($currentPatch);
             $prevStats = $prevPatch ? $this->stats->getMetaStats($prevPatch) : [];
+            // Önceki patch örneklemi küçükse wrChange HİÇ üretilmez (23 maçlık örneklemle
+            // "-12.7%" gibi yanıltıcı trendler çıkıyordu). Yeni patch gelince önceki
+            // pencere dolu olacağından bölüm kendiliğinden devreye girer.
+            $prevGames = $prevPatch ? (int) (StatPatch::where('patch', $prevPatch)->value('total_games') ?? 0) : 0;
+            $prevSufficient = $prevGames >= (int) config('elwgraphs.stats.patch_change_min_prev_games', 300);
+            if (! $prevSufficient) {
+                $prevStats = [];
+            }
 
             // Yetersiz örneklemde davranış — admin panelden yönetilir.
             // 'label' = "veri yetersiz" (varsayılan, dürüst) | 'sim' = sahte simülasyonla doldur.
@@ -243,6 +251,12 @@ class MetaService
                 'topBanRate'  => $topBanRate,
                 'risers'      => array_values($risers),
                 'fallers'     => array_values($fallers),
+                // Patch değişimi bölümü meta bilgisi — frontend yetersiz veride dürüst not gösterir.
+                'patchChanges' => [
+                    'prevPatch'  => $prevPatch,
+                    'prevGames'  => $prevGames,
+                    'sufficient' => $prevSufficient,
+                ],
             ];
         });
     }

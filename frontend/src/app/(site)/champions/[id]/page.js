@@ -7,6 +7,7 @@
   Next.js: src/app/champions/[id]/page.js
 */
 
+import { Suspense } from "react";
 import { fetchApi } from "@/lib/api";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -63,15 +64,13 @@ const positionConfig = {
 
 export default async function ChampionDetail({ params }) {
   const { id } = await params;
-  const [data, listData, runesResp] = await Promise.all([
+  const [data, runesResp] = await Promise.all([
     fetchApi(`/champions/${id}`).catch(() => null), // geçersiz isim → API 404 → aşağıda notFound()
-    fetchApi("/champions").catch(() => null),
     fetchApi("/runes").catch(() => null),
   ]);
   // Bilinmeyen şampiyon: 500 hata ekranı yerine özel 404 (Amumu) sayfası
   if (!data?.champion) notFound();
   const champ = data.champion;
-  const championList = listData?.champions || [];
   const runesData = runesResp?.runes || [];
 
   return (
@@ -161,6 +160,8 @@ export default async function ChampionDetail({ params }) {
       </div>
 
       {/* ===== SEKMELER: Build & İstatistik | Şampiyon Detayı ===== */}
+      {/* Suspense: ChampionTabs useSearchParams kullanır (?tab= kalıcılığı) */}
+      <Suspense fallback={null}>
       <ChampionTabs
         tabs={[
           {
@@ -168,7 +169,7 @@ export default async function ChampionDetail({ params }) {
             label: "Build & İstatistik",
             content: (
               <div className="max-w-7xl mx-auto px-6 py-6">
-                <ChampionBuild champion={champ} version={data.version} championList={championList} runesData={runesData} />
+                <ChampionBuild champion={champ} version={data.version} runesData={runesData} build={data.build} />
               </div>
             ),
           },
@@ -360,6 +361,7 @@ export default async function ChampionDetail({ params }) {
           },
         ]}
       />
+      </Suspense>
     </div>
   );
 }

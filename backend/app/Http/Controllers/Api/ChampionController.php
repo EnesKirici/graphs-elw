@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\ChampionBuildService;
 use App\Services\ChampionStatsService;
 use App\Services\RiotApi\DataDragonService;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,7 @@ class ChampionController extends Controller
     public function __construct(
         private DataDragonService $ddragon,
         private ChampionStatsService $stats,
+        private ChampionBuildService $build,
     ) {}
 
     /**
@@ -95,6 +97,9 @@ class ChampionController extends Controller
             ],
             // ADC+Support sinerji partnerleri (shrinkage WR + min_games)
             'duos' => $this->stats->getBestPartners($id),
+            // Gerçek build verisi (worker maçlarından): rün/item/spell sayaçları,
+            // oynanan koridorlar, top oyuncular. Veri yoksa positions boş döner.
+            'build' => $this->build->getChampionBuild($id),
         ]);
     }
 
