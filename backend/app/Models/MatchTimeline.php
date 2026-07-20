@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\GzipJson;
 use Illuminate\Database\Eloquent\Model;
 
 class MatchTimeline extends Model
@@ -16,6 +17,6 @@ class MatchTimeline extends Model
     ];
 
     protected $casts = [
-        'data' => 'array',
+        'data' => GzipJson::class,
     ];
 }
