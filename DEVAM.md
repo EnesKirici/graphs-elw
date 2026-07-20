@@ -1,9 +1,17 @@
-# DEVAM — Kaldığımız Yer (güncel: 2026-07-17)
+# DEVAM — Kaldığımız Yer (güncel: 2026-07-20)
 
 > Bu dosya **güncel durum + bekleyen işler**. Tamamlanan işlerin kaydı → `YAPILANLAR.md`.
 > Kalıcı proje bilgisi → memory dosyaları (`project_*`, `reference_*`, `feedback_*`).
 
-## 🟢 Son durum (2026-07-17)
+## 🟢 Son durum (2026-07-20)
+**matches+timelines GZIP CANLI** (`GzipJson` cast + MEDIUMBLOB + `matches:compress --optimize`):
+matches 585.5→104.7 MB (%82), timelines 4.0→0.4 MB; günlük büyüme ~215→~40 MB → disk krizi
+(%80 doluluk) ~6 ay ertelendi. Round-trip birebir, stats:rebuild sorunsuz, API 200 ~0.2s.
+Worker deploy sırasında kapatılıp geri açıldı. MongoDB önerisi reddedildi (erişim deseni
+blob-store; kazanç yok). **Sunucu kararı bekliyor:** mevcut OpenVZ+4GB'a Rybbit KURULAMAZ
+(Docker yok); öneri TR-VPS5 (6GB, 515₺/ay, önce KVM teyidi) → memory `project_server_migration`.
+
+## 🟢 Önceki durum (2026-07-17)
 Bugün: (1) **Key kesintisi teşhis+fix** (14-16 Tem 401'leri; yeni key CANLI, kaçanlar geri doldu).
 (2) **`patch_starts` 16.14** eklendi (commit `6953bb5`, canlıda). (3) **`ssh graphs-elw`** kısayolu.
 (4) **META WORKER CANLI & AÇIK** (`b178059`+`13c9cd7`): Zümrüt+ ladder tarama (havuz 7.803 oyuncu) +
