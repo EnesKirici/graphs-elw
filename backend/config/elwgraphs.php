@@ -184,4 +184,20 @@ return [
         ],
         'expected_default' => 3.0, // ana rol belirlenemezse
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | API hız limiti (throttle) — IP başına
+    |--------------------------------------------------------------------------
+    | Aynı IP'den gelen istek seli (scraper/yanlış yazılmış script) siteyi ve
+    | Riot bütçesini tüketmesin. Limitler IP başınadır; ofis/CGNAT gibi paylaşımlı
+    | IP'lerde birden çok gerçek kullanıcı aynı kovayı paylaşır — bu yüzden tek
+    | kullanıcının ihtiyacının epey üstünde tutulur. trusted_ips (sunucunun kendisi:
+    | Next.js SSR + worker iç istekleri) limitten muaftır.
+    */
+    'api_throttle' => [
+        'per_second'  => 10,
+        'per_minute'  => 180,
+        'trusted_ips' => ['127.0.0.1', '::1', '178.251.238.161'],
+    ],
 ];

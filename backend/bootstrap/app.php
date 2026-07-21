@@ -12,6 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // 'api' rate limiter'ını tüm API route'larına uygular (AppServiceProvider'da tanımlı)
+        $middleware->throttleApi();
+
         $middleware->api(append: [
             \App\Http\Middleware\CheckBan::class,
         ]);
