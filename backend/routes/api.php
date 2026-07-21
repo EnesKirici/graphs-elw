@@ -30,13 +30,15 @@ Route::prefix('v1')->group(function () {
         ]);
     });
 
-    // Rate limit debug endpoint — sadece local'de açık
+    // Rate limit göstergesi (Navbar admin gauge) — local'de açık, canlıda admin token ister.
+    // (Eskiden yalnız local'de tanımlıydı → canlıda 404 dönüyor, gauge NaN gösteriyordu.)
+    $rateLimitStatus = fn () => response()->json(
+        \App\Services\RiotApi\RiotApiService::getRateLimitStatus()
+    );
     if (app()->environment('local')) {
-        Route::get('/debug/rate-limit', function () {
-            return response()->json(
-                \App\Services\RiotApi\RiotApiService::getRateLimitStatus()
-            );
-        });
+        Route::get('/debug/rate-limit', $rateLimitStatus);
+    } else {
+        Route::get('/debug/rate-limit', $rateLimitStatus)->middleware('admin');
     }
 
     // DDragon versiyon bilgisi

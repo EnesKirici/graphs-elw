@@ -48,7 +48,7 @@ const ROLE_ICONS = {
 /* Riot API kullanım göstergesi — tasarımın topbar "XP gauge"i olarak stillenir.
    Hesaplama mantığı korunur; yalnızca admin görür. */
 function RateLimitIndicator() {
-  const { isAdmin } = useAdmin();
+  const { isAdmin, token } = useAdmin();
   const [data, setData] = useState(null);
   const [hover, setHover] = useState(false);
 
@@ -56,12 +56,16 @@ function RateLimitIndicator() {
     if (!isAdmin) { setData(null); return; }
     let mounted = true;
     const poll = () => {
-      fetch(`${API_BASE}/debug/rate-limit`).then((r) => r.json()).then((d) => { if (mounted) setData(d); }).catch(() => {});
+      // Canlıda endpoint admin korumalı — Bearer token şart (yoksa 401 → veri yok)
+      fetch(`${API_BASE}/debug/rate-limit`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (mounted && d) setData(d); })
+        .catch(() => {});
     };
     poll();
     const id = setInterval(poll, 3000);
     return () => { mounted = false; clearInterval(id); };
-  }, [isAdmin]);
+  }, [isAdmin, token]);
 
   if (!isAdmin || !data) return null;
 
