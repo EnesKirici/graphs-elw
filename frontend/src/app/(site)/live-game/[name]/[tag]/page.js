@@ -77,8 +77,8 @@ export default async function LiveGamePage({ params, searchParams }) {
       {(() => {
         if (data?.rateLimited && data?.status !== "ingame" && data?.status !== "offline") {
           return (
-            <StateShell icon="⏳" title="Sunucu Yoğunluğu" profileHref={profileHref}>
-              Riot API istek limiti aşıldı. Lütfen birkaç dakika sonra tekrar deneyin.
+            <StateShell icon="⏳" title="Şu An Yoğunluk Var" profileHref={profileHref}>
+              Çok fazla istek aldığımız için canlı maç bilgisi şu anda getirilemiyor. Birkaç dakika içinde tekrar deneyebilirsiniz.
             </StateShell>
           );
         }

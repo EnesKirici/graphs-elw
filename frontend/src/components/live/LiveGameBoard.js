@@ -203,7 +203,7 @@ export default function LiveGameBoard({ game }) {
 
       {game.rateLimited && (
         <div className="mb-4 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
-          Riot API yoğunluğu nedeniyle bazı oyuncu verileri eksik/gecikmeli gelebilir.
+          Yoğunluk nedeniyle bazı oyuncu verileri eksik ya da gecikmeli gelebilir.
         </div>
       )}
 
