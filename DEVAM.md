@@ -11,6 +11,13 @@
 mem_limit ~2.3G tavan, DISABLE_SIGNUP=true doğrulandı). İzleme script'i frontend'de canlıda
 (commit `b1ab536`, yalnız production). Sunucu satın alma İPTAL (Contabo notu memory'de).
 ⚠️ `docker compose up` bazen "device or resource busy" → tekrar çalıştır / `systemctl restart docker`.
+(5) **API throttle CANLI** (10/sn+180/dk IP başına, SSR muaf; config `elwgraphs.api_throttle`) —
+arkadaş yük testi sonrası; IP banı YOK (ofis IP paylaşımlı). (6) **DataDragon ikon aynası CANLI**
+(`assets:sync`, saatlik cron; 1836 ikon 16MB → /dd, ikon 0.34-1.0s→0.06s; splash'lar ddragon'da;
+env: backend `DDRAGON_ASSETS_URL` + front `NEXT_PUBLIC_DD_ASSETS`). (7) API hataları artık hep
+JSON (`shouldRenderJsonWhen`) — analytics/batch redirect+CORS gürültüsü bitti. (8) Rybbit bellek
+limitleri düzeltildi (CH 1.5g, backend 640m); kullanıcı mesajları rate-limit ekranlarında API
+detayı sızdırmıyor; kendini kayıttan çıkarma: `localStorage.setItem('disable-rybbit','1')`.
 
 ## 🟢 Önceki durum (2026-07-20)
 **matches+timelines GZIP CANLI** (`GzipJson` cast + MEDIUMBLOB + `matches:compress --optimize`):
