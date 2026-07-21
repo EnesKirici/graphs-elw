@@ -1,9 +1,18 @@
-# DEVAM — Kaldığımız Yer (güncel: 2026-07-20)
+# DEVAM — Kaldığımız Yer (güncel: 2026-07-21)
 
 > Bu dosya **güncel durum + bekleyen işler**. Tamamlanan işlerin kaydı → `YAPILANLAR.md`.
 > Kalıcı proje bilgisi → memory dosyaları (`project_*`, `reference_*`, `feedback_*`).
 
-## 🟢 Son durum (2026-07-20)
+## 🟢 Son durum (2026-07-21)
+(1) **Riot API key yenilendi** (local+sunucu, test 200). (2) **ROOT SSH açıldı** (key root'a eklendi).
+(3) **Disk %79→%56** (journal 3.8G→112M kalıcı 200M limit, apt clean, vscode-server/npm cache;
+17 GB boş → taşıma baskısı yok). (4) **Docker OpenVZ'de ÇALIŞIYOR** (sağlayıcı açık bırakmış) →
+**Rybbit self-host CANLI: https://a.elw.com.tr** (/opt/rybbit, Caddy'siz, Plesk proxy+SSL,
+mem_limit ~2.3G tavan, DISABLE_SIGNUP=true doğrulandı). İzleme script'i frontend'de canlıda
+(commit `b1ab536`, yalnız production). Sunucu satın alma İPTAL (Contabo notu memory'de).
+⚠️ `docker compose up` bazen "device or resource busy" → tekrar çalıştır / `systemctl restart docker`.
+
+## 🟢 Önceki durum (2026-07-20)
 **matches+timelines GZIP CANLI** (`GzipJson` cast + MEDIUMBLOB + `matches:compress --optimize`):
 matches 585.5→104.7 MB (%82), timelines 4.0→0.4 MB; günlük büyüme ~215→~40 MB → disk krizi
 (%80 doluluk) ~6 ay ertelendi. Round-trip birebir, stats:rebuild sorunsuz, API 200 ~0.2s.
