@@ -74,6 +74,12 @@ function RateLimitIndicator() {
     if (parseInt(window) <= 10) { shortLimit = parseInt(limit); shortUsed = parseInt(used); }
     else { longLimit = parseInt(limit); longUsed = parseInt(used); }
   });
+  // Henüz hiç Riot isteği görülmediyse (ör. cache temizliği sonrası) appLimit boş
+  // gelir ve parseInt NaN üretir → "0/NaN" yerine 0/0 göster; ilk istekle dolar.
+  if (!Number.isFinite(shortLimit)) shortLimit = 0;
+  if (!Number.isFinite(shortUsed)) shortUsed = 0;
+  if (!Number.isFinite(longLimit)) longLimit = 0;
+  if (!Number.isFinite(longUsed)) longUsed = 0;
 
   const pct = longLimit > 0 ? Math.round((longUsed / longLimit) * 100) : 0;
   const isHot = pct > 70;
@@ -98,7 +104,7 @@ function RateLimitIndicator() {
               <div className="xp-fill" style={{ width: `${Math.max(pct, 3)}%`, background: color }} />
             </div>
             <span className="xp-meta">
-              {longUsed}/{longLimit}
+              {longUsed}/{longLimit || "—"}
               {data.rateLimited > 0 && <b style={{ color: "var(--gold)", marginLeft: 6 }}>429×{data.rateLimited}</b>}
             </span>
           </>
@@ -120,7 +126,7 @@ function RateLimitIndicator() {
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
               <span style={{ fontSize: 10, color: "var(--txt-3)" }}>2dk Limit</span>
-              <span className="mono" style={{ fontSize: 11, fontWeight: 700, color }}>{longUsed} / {longLimit}</span>
+              <span className="mono" style={{ fontSize: 11, fontWeight: 700, color }}>{longUsed} / {longLimit || "—"}</span>
             </div>
             <div style={{ height: 10, borderRadius: 6, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
               <div style={{ height: "100%", borderRadius: 6, background: color, width: `${Math.max(pct, 1)}%`, transition: "width .5s var(--ease)" }} />
