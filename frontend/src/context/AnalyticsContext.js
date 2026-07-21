@@ -11,6 +11,17 @@ const MAX_QUEUE_SIZE = 10;
 
 let memorySessionId = null; // sessionStorage engelliyse (gizlilik eklentisi vb.) bellek-içi yedek
 
+// Admin (site sahibi) hiç izlenmez — istatistikleri kendi gezintimizle kirletmeyelim.
+// localStorage'tan her seferinde okunur: context zamanlamasından bağımsız, cihaz başına
+// admin girişi yapıldığı andan itibaren geçerli.
+function isAdminBrowser() {
+  try {
+    return !!localStorage.getItem("admin_token");
+  } catch {
+    return false;
+  }
+}
+
 function getSessionId() {
   if (typeof window === "undefined") return "";
   try {
@@ -44,6 +55,7 @@ export function AnalyticsProvider({ children }) {
 
     // Sayfa kapanırken session_end + kalan event'leri gönder
     const handleUnload = () => {
+      if (isAdminBrowser()) return; // site sahibi izlenmez
       const duration = Math.round((Date.now() - sessionStart.current) / 1000);
 
       queue.current.push({
@@ -74,6 +86,7 @@ export function AnalyticsProvider({ children }) {
   }, []);
 
   const enqueue = useCallback((type, page, data) => {
+    if (isAdminBrowser()) return; // site sahibi izlenmez
     queue.current.push({
       type,
       page: page || (typeof window !== "undefined" ? window.location.pathname : ""),

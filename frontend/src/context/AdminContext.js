@@ -8,7 +8,15 @@ export function AdminProvider({ children }) {
   const [token, setToken] = useState(null);
 
   useEffect(() => {
-    const read = () => setToken(localStorage.getItem("admin_token"));
+    const read = () => {
+      const t = localStorage.getItem("admin_token");
+      setToken(t);
+      // Admin cihazı Rybbit'e de görünmesin — script bu anahtara bakar
+      // (bir sonraki sayfa yüklemesinden itibaren geçerli, kalıcı).
+      if (t) {
+        try { localStorage.setItem("disable-rybbit", "1"); } catch {}
+      }
+    };
     read();
     window.addEventListener("storage", read);
     window.addEventListener("admin-auth-change", read);
