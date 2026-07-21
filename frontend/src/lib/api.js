@@ -149,7 +149,7 @@ export async function postAnalytics(endpoint, data) {
   try {
     await fetch(`${API_BASE}${endpoint}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(data),
       cache: "no-store",
     });

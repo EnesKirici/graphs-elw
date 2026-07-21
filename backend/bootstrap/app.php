@@ -24,5 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // API istekleri Accept header'ı göndermese bile hata yanıtları JSON olsun —
+        // yoksa Laravel validasyon hatasında redirect atar, tarayıcıda CORS hatası görünür.
+        $exceptions->shouldRenderJsonWhen(
+            fn ($request, $e) => $request->is('api/*') || $request->expectsJson()
+        );
     })->create();

@@ -9,14 +9,23 @@ const AnalyticsContext = createContext(null);
 const FLUSH_INTERVAL = 10_000; // 10 saniye
 const MAX_QUEUE_SIZE = 10;
 
+let memorySessionId = null; // sessionStorage engelliyse (gizlilik eklentisi vb.) bellek-içi yedek
+
 function getSessionId() {
   if (typeof window === "undefined") return "";
-  let id = sessionStorage.getItem("analytics_sid");
-  if (!id) {
-    id = crypto.randomUUID();
-    sessionStorage.setItem("analytics_sid", id);
+  try {
+    let id = sessionStorage.getItem("analytics_sid");
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem("analytics_sid", id);
+    }
+    return id;
+  } catch {
+    // sessionStorage erişilemez → boş session_id backend validasyonundan döner;
+    // bellek-içi id ile event'ler yine geçerli kalır (sekme ömrü boyunca sabit).
+    if (!memorySessionId) memorySessionId = crypto.randomUUID();
+    return memorySessionId;
   }
-  return id;
 }
 
 export function AnalyticsProvider({ children }) {
