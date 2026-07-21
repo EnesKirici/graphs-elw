@@ -29,6 +29,9 @@ görünür aç/kapa) + 429 toast + user-yield. İlk tur doğrulandı: 34 maç ti
 penceresi 1→35 maç. Detay → `YAPILANLAR.md` 2026-07-17.
 
 ## ⏳ BEKLEYEN
+0. **⏰ Rybbit takibi (2026-07-21'den itibaren):** session replay AÇIK → ara ara disk/RAM kontrol
+   (`df -h /` + `docker system df` + `free -h`; taban: disk %70/12 GB boş, RAM 1.3G, Rybbit veri 50 MB;
+   replay ~0.5-1.5 GB/ay beklenir). Şişerse replay retention/budama kur.
 1. **Riot production key** bekleniyor (App **853618**, Pending Review). Gelince: worker bütçelerini
    büyüt (config `elwgraphs.worker`: match_budget, entry_pages_per_division, --players) + supervisor
    `queue:work`. ⚠️ Ara ara developer portal **MESSAGES** sekmesini kontrol et.
