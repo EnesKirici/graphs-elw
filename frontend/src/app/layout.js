@@ -112,6 +112,10 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-CF9094L00G');` }} />
         {/* Yapılandırılmış veri (schema.org) */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
+        {/* Rybbit analytics (self-host: a.elw.com.tr) — dev trafiği sayılmasın diye yalnız production */}
+        {process.env.NODE_ENV === "production" && (
+          <script src="https://a.elw.com.tr/api/script.js" data-site-id="8a6203c50e34" defer />
+        )}
       </head>
       <body className="min-h-screen bg-base text-gray-100 font-sans antialiased">
         <Providers>
