@@ -35,6 +35,15 @@ return [
     // DDragon CDN - şampiyon görselleri, item görselleri vs.
     'ddragon_url' => 'https://ddragon.leagueoflegends.com',
 
+    // Küçük ikonlar (item/şampiyon karesi/spell/passive/rün) için asset tabanı.
+    // assets:sync bu ikonları frontend/public/dd altına indirir; prod'da
+    // DDRAGON_ASSETS_URL=https://elwgraphs.elw.com.tr/dd ile yerelden servis edilir.
+    // Ayarsızsa doğrudan ddragon'a düşer (local dev ayna gerektirmez).
+    'ddragon_assets_url' => env('DDRAGON_ASSETS_URL', 'https://ddragon.leagueoflegends.com'),
+
+    // assets:sync aynasının yazılacağı dizin (Next public → site kökünden /dd).
+    'ddragon_mirror_path' => env('DDRAGON_MIRROR_PATH', base_path('../frontend/public/dd')),
+
     // Cache süreleri (saniye cinsinden)
     'cache_ttl' => [
         'ddragon'      => 86400,   // 24 saat - şampiyon verileri patch ile değişir

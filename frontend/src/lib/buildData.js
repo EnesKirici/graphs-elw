@@ -7,7 +7,9 @@
   (rün başına toplam) olduğundan sayfa "en popüler tekil seçimlerin" birleşimidir.
 */
 
-const DD = "https://ddragon.leagueoflegends.com/cdn";
+import { DD_ASSETS } from "@/lib/ddragon";
+
+const DD = `${DD_ASSETS}/cdn`;
 
 export const itemIcon = (v, id) => `${DD}/${v}/img/item/${id}.png`;
 export const champIcon = (v, id) => `${DD}/${v}/img/champion/${id}.png`;

@@ -16,11 +16,13 @@ use Illuminate\Support\Facades\Cache;
 class DataDragonService
 {
     private string $baseUrl;
+    private string $assetsUrl; // küçük ikonlar (item/champ/spell/passive/rün) — yerel ayna olabilir
     private string $lang = 'tr_TR';
 
     public function __construct()
     {
         $this->baseUrl = config('riot.ddragon_url');
+        $this->assetsUrl = config('riot.ddragon_assets_url');
     }
 
     /**
@@ -143,7 +145,7 @@ class DataDragonService
                 // Ağaç bilgisi
                 $map[$tree['id']] = [
                     'name' => $tree['name'],
-                    'icon' => "{$this->baseUrl}/cdn/img/{$tree['icon']}",
+                    'icon' => "{$this->assetsUrl}/cdn/img/{$tree['icon']}",
                     'isTree' => true,
                 ];
 
@@ -151,7 +153,7 @@ class DataDragonService
                     foreach ($slot['runes'] as $rune) {
                         $map[$rune['id']] = [
                             'name' => $rune['name'],
-                            'icon' => "{$this->baseUrl}/cdn/img/{$rune['icon']}",
+                            'icon' => "{$this->assetsUrl}/cdn/img/{$rune['icon']}",
                             'tree' => $tree['name'],
                         ];
                     }
@@ -177,7 +179,7 @@ class DataDragonService
             foreach ($spells as $spell) {
                 $map[(int) $spell['key']] = [
                     'name' => $spell['name'],
-                    'image' => "{$this->baseUrl}/cdn/{$version}/img/spell/{$spell['image']['full']}",
+                    'image' => "{$this->assetsUrl}/cdn/{$version}/img/spell/{$spell['image']['full']}",
                 ];
             }
 
@@ -191,13 +193,13 @@ class DataDragonService
     public function championIconUrl(string $championName): string
     {
         $version = $this->getCurrentVersion();
-        return "{$this->baseUrl}/cdn/{$version}/img/champion/{$championName}.png";
+        return "{$this->assetsUrl}/cdn/{$version}/img/champion/{$championName}.png";
     }
 
     public function itemIconUrl(int $itemId): string
     {
         $version = $this->getCurrentVersion();
-        return "{$this->baseUrl}/cdn/{$version}/img/item/{$itemId}.png";
+        return "{$this->assetsUrl}/cdn/{$version}/img/item/{$itemId}.png";
     }
 
     public function profileIconUrl(int $iconId): string

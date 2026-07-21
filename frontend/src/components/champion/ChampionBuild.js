@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { pickRealRunePage, groupRealItems, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
+import { pickRealRunePage, groupRealItems, itemIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", SUPPORT: "Support" };
 const ROLE_ICON = {
@@ -147,7 +147,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             <div className="space-y-2">
               {(cats.item_full || []).slice(0, 5).map((it) => (
                 <div key={it.key} className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-hover">
-                  <img src={`https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${it.key}.png`}
+                  <img src={itemIcon(version, it.key)}
                     alt="" width={28} height={28} className="rounded-md border border-edge" onError={hideOnError} />
                   <span className="text-[11px] text-gray-400 flex-1">{it.pickRate}%</span>
                   <span className={`text-xs font-bold ${wrCls(it.winRate)}`}>{it.winRate}%</span>

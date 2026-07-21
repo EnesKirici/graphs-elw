@@ -79,7 +79,7 @@ class ChampionController extends Controller
                     'id'          => $s['id'],
                     'name'        => $s['name'],
                     'description' => $s['description'],
-                    'image'       => "https://ddragon.leagueoflegends.com/cdn/{$version}/img/spell/{$s['image']['full']}",
+                    'image'       => config('riot.ddragon_assets_url') . "/cdn/{$version}/img/spell/{$s['image']['full']}",
                     'cooldown'    => $s['cooldownBurn'] ?? null,
                     'cost'        => $s['costBurn'] ?? null,
                     'range'       => $s['rangeBurn'] ?? null,
@@ -90,7 +90,7 @@ class ChampionController extends Controller
                 'passive' => [
                     'name'        => $champion['passive']['name'],
                     'description' => $champion['passive']['description'],
-                    'image'       => "https://ddragon.leagueoflegends.com/cdn/{$version}/img/passive/{$champion['passive']['image']['full']}",
+                    'image'       => config('riot.ddragon_assets_url') . "/cdn/{$version}/img/passive/{$champion['passive']['image']['full']}",
                 ],
                 'stats'   => $champion['stats'],
                 'skins'   => $this->ddragon->formatSkins($champion),

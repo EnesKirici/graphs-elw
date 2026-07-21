@@ -108,7 +108,7 @@ class MatchService
         $detail = $this->matchData->getMatchDetail($matchId);
         $info = $detail['info'];
         $version = $this->ddragon->getCurrentVersion();
-        $ddragonBase = config('riot.ddragon_url');
+        $ddragonBase = config('riot.ddragon_assets_url');
 
         $runeMap = $this->ddragon->getRuneMap();
         $spellMap = $this->ddragon->getSpellMap();
@@ -512,7 +512,7 @@ class MatchService
     {
         return [
             'version'     => $this->ddragon->getCurrentVersion(),
-            'ddragonBase' => config('riot.ddragon_url'),
+            'ddragonBase' => config('riot.ddragon_assets_url'),
             'runeMap'     => $this->ddragon->getRuneMap(),
             'spellMap'    => $this->ddragon->getSpellMap(),
             'allItems'    => $this->ddragon->getItems(),

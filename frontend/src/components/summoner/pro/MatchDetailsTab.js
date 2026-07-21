@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Swords, Eye, BarChart3, Package, Zap, MessageSquare, Sparkles, Info, Shield } from "lucide-react";
 import ItemTooltip from "@/components/shared/ItemTooltip";
+import { DD_ASSETS } from "@/lib/ddragon";
 
 /*
   Maç detayı "Detaylar" sekmesi — Porofessor/op.gg "Details" düzeni (Image #7'ye sadık):
@@ -70,7 +71,7 @@ async function fetchAbilityIcons(championImageUrl) {
     const json = await res.json();
     const cd = json.data?.[champId];
     const sp = cd?.spells || [];
-    const url = (s) => s ? `https://ddragon.leagueoflegends.com/cdn/${version}/img/spell/${s.image.full}` : null;
+    const url = (s) => s ? `${DD_ASSETS}/cdn/${version}/img/spell/${s.image.full}` : null;
     const result = { q: url(sp[0]), w: url(sp[1]), e: url(sp[2]), r: url(sp[3]) };
     champSpellCache.set(key, result);
     return result;

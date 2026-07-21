@@ -14,6 +14,9 @@ Schedule::command('lp:capture')->everyTenMinutes()->withoutOverlapping();
 // Şampiyon meta istatistiklerini topladığımız maçlardan tazele.
 Schedule::command('stats:rebuild')->hourly()->withoutOverlapping();
 
+// DataDragon ikon aynası — idempotent; yeni patch çıktığında ayna kendiliğinden dolar.
+Schedule::command('assets:sync')->hourly()->withoutOverlapping();
+
 // Meta worker (admin panelden worker_enabled ile aç/kapa; kapalıyken hiçbiri koşmaz).
 $workerOn = fn () => app(\App\Services\WorkerControlService::class)->isEnabled();
 // Ladder havuzunu günde bir tazele (off-peak, TR gece).

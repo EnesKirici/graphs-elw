@@ -4,7 +4,9 @@
   Şampiyon ADC oynanıyorsa en iyi support'lar, support oynanıyorsa en iyi ADC'ler.
 */
 
-const DDRAGON = "https://ddragon.leagueoflegends.com/cdn";
+import { DD_ASSETS } from "@/lib/ddragon";
+
+const DDRAGON = `${DD_ASSETS}/cdn`;
 
 function pct(v) {
   return v == null ? "-" : `${String(v).replace(".", ",")}%`;
