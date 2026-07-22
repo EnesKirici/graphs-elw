@@ -16,6 +16,12 @@ altın "Admin Modu" şeridine taşındı; header ferahladı, normal kullanıcı 
 en günceli gösterir; `players:dedupe` komutu eklendi ve çalıştırıldı (6261 kopya silindi).
 **⚠️ Production key'e geçince `players:dedupe` TEKRAR çalıştırılmalı** (puuid'ler yine değişir).
 404×2 konusu kapandı: `/$` ve `/&` bot URL'siydi, aksiyon gerekmez.
+**Devam düzeltmeleri (`04df10f`+`693bcfa`):** (a) 429'da profil kaydı artık mevcut rank/rol/mastery'yi
+EZMİYOR (tier=null yazımı "Unranked" bırakıyordu); (b) eski maç verilerindeki ESKİ puuid'ler dedupe
+sonrası çıplak satırı yeniden doğuruyordu → `cacheParticipant` isim#tag zaten kayıtlıysa satır açmaz;
+(c) autocomplete: dolu satır (rank/rol) önce + en yakın isim; (d) HeroCarousel aynı şampiyonu iki
+kategoride göstermez (çift Locke); (e) admin mini-bar paint-öncesi `html.is-admin` ile İLK karede
+görünür (flash/zıplama yok).
 
 ## 🟢 Önceki durum (2026-07-22) — SEO turu (commit `25a50cd`, CANLI)
 (1) **Sitemap'e 171 şampiyon sayfası eklendi** (API'den dinamik, günlük revalidate; canlıda 180 URL
