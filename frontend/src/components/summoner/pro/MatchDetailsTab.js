@@ -133,19 +133,19 @@ function BuildOrder({ itemTimeline }) {
     return <p className="text-[12px] text-gray-600 text-center py-3">Eşya sırası verisi yok (eski maç olabilir).</p>;
   }
   return (
-    <div className="flex flex-wrap items-start gap-x-1 gap-y-3">
+    <div className="flex flex-wrap items-start justify-center gap-x-1.5 gap-y-4">
       {groups.map((g, gi) => (
-        <div key={gi} className="flex items-start gap-1">
+        <div key={gi} className="flex items-start gap-1.5">
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-[3px] rounded-md bg-soft/30 p-1">
               {g.items.map((it, i) =>
                 it.type === "sell" ? (
                   <div key={i} className="relative">
-                    <ItemTooltip item={it} size={26} imgClass="opacity-40 saturate-0" />
-                    <span className="absolute inset-0 flex items-center justify-center text-red-500 font-extrabold text-[14px] pointer-events-none drop-shadow-[0_0_2px_rgba(0,0,0,0.9)]">✕</span>
+                    <ItemTooltip item={it} size={28} imgClass="opacity-40 saturate-0" />
+                    <span className="absolute inset-0 flex items-center justify-center text-red-500 font-extrabold text-[15px] pointer-events-none drop-shadow-[0_0_2px_rgba(0,0,0,0.9)]">✕</span>
                   </div>
                 ) : (
-                  <ItemTooltip key={i} item={it} size={26} />
+                  <ItemTooltip key={i} item={it} size={28} />
                 )
               )}
             </div>
@@ -153,7 +153,7 @@ function BuildOrder({ itemTimeline }) {
               {gi === 0 ? "Başlangıç" : mmFromSec(g.timestamp)}
             </span>
           </div>
-          {gi < groups.length - 1 && <span className="text-gray-600/70 text-[13px] leading-none mt-2">›</span>}
+          {gi < groups.length - 1 && <span className="text-gray-400 text-[16px] leading-none mt-[10px]">›</span>}
         </div>
       ))}
     </div>
@@ -206,9 +206,10 @@ function SkillOrder({ skillOrder, abilityIcons }) {
 function SpellCasts({ p, abilityIcons }) {
   const sc = p.spellCasts;    // { q, w, e, r }
   const su = p.summonerCasts; // { d, f }
-  // Hücre: 40px ikon kutusu + altında sayı (tek satır düzeni için kompakt)
+  // Hücre iskeleti Pingler'inkiyle PİKSEL PİKSEL aynı: w-14 + h-10 ikon kutusu +
+  // sayı + etiket satırı payı (burada görünmez) — iki kartta ikonlar/sayılar aynı hizada.
   const Cell = ({ img, label, badge, count }) => (
-    <div className="flex flex-col items-center w-12">
+    <div className="flex flex-col items-center w-14">
       <div className="relative h-10 flex items-center justify-center mb-2">
         {img
           ? <img src={img} alt={label} title={label} width={40} height={40} className="rounded-lg border border-edge/60" />
@@ -218,16 +219,17 @@ function SpellCasts({ p, abilityIcons }) {
         )}
       </div>
       <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">{count != null ? count : "—"}</span>
+      <span className="text-[10px] leading-tight mt-1 invisible">·</span>
     </div>
   );
-  // TEK SATIR: Q W E R | ayraç | D F — hepsi yan yana, dikey ortalı
+  // TEK SATIR: Q W E R | ayraç | D F — Pingler'le aynı hücre genişliği ve boşluklar
   const grid = (withCounts) => (
-    <div className="h-full py-1 flex items-center justify-center gap-2">
+    <div className="h-full py-1 flex items-center justify-center gap-1">
       {["q", "w", "e", "r"].map((k) => (
         <Cell key={k} img={abilityIcons?.[k]} label={k.toUpperCase()} badge
           count={withCounts ? (sc?.[k] ?? 0) : null} />
       ))}
-      <span className="h-10 border-l border-edge/50 mx-1.5" />
+      <span className="h-10 border-l border-edge/50 mx-1 -mt-4" />
       <Cell img={p.spells?.[0]?.image} label="D" count={withCounts ? (su?.d ?? 0) : null} />
       <Cell img={p.spells?.[1]?.image} label="F" count={withCounts ? (su?.f ?? 0) : null} />
     </div>
@@ -252,8 +254,8 @@ function SpellCasts({ p, abilityIcons }) {
 /* ===== Pings ===== */
 const PING_LABELS = {
   onMyWayPings: "Yoldayım", enemyMissingPings: "Kayıp", assistMePings: "Yardım",
-  needVisionPings: "Görüş", getBackPings: "Geri Çekil", pushPings: "İt",
-  allInPings: "Saldır", holdPings: "Bekle", dangerPings: "Tehlike",
+  needVisionPings: "Görüş", getBackPings: "Geri Çekil", pushPings: "İttir",
+  retreatPings: "Kaç", allInPings: "Saldır", holdPings: "Bekle", dangerPings: "Tehlike",
   commandPings: "Komut", enemyVisionPings: "Düşman Görüş", visionClearedPings: "Görüş Temiz",
   baitPings: "Yem", basicPings: "Temel",
 };
@@ -261,7 +263,7 @@ const PING_LABELS = {
 const PING_ICONS = {
   onMyWayPings: "omw", enemyMissingPings: "missing", assistMePings: "assist",
   needVisionPings: "needvision", getBackPings: "getback", pushPings: "push",
-  allInPings: "allin", holdPings: "hold", dangerPings: "danger",
+  retreatPings: "getback", allInPings: "allin", holdPings: "hold", dangerPings: "danger",
   commandPings: "generic", enemyVisionPings: "enemyvision", visionClearedPings: "cleared",
   baitPings: "bait", basicPings: "generic",
 };

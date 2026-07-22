@@ -243,6 +243,7 @@ class MatchService
                     'needVisionPings'    => $p['needVisionPings'] ?? 0,
                     'getBackPings'       => $p['getBackPings'] ?? 0,
                     'pushPings'          => $p['pushPings'] ?? 0,
+                    'retreatPings'       => $p['retreatPings'] ?? 0,
                     'allInPings'         => $p['allInPings'] ?? 0,
                     'holdPings'          => $p['holdPings'] ?? 0,
                     'dangerPings'        => $p['dangerPings'] ?? 0,
