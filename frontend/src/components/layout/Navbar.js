@@ -262,20 +262,20 @@ export default function Navbar() {
   return (
     <>
       {/* Admin mini-bar — admin araçları (rate limit, worker, panel) ana header'ı
-          kalabalıklaştırmasın diye topbar'ın ÜSTÜNDE ince şerit. Yalnız admin görür. */}
-      {isAdmin && (
-        <div className="elw-adminbar">
-          <span className="ab-label">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-              <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            <span>Admin Modu</span>
-          </span>
-          <RateLimitIndicator />
-          <WorkerChip />
-          <Link href="/admin" className="tb-pill admin">Panel</Link>
-        </div>
-      )}
+          kalabalıklaştırmasın diye topbar'ın ÜSTÜNDE ince şerit. Her zaman DOM'da,
+          görünürlük CSS'te (html.is-admin — paint öncesi script koyar): React'in
+          localStorage okumasını beklemeden ilk karede görünür, geç gelip zıplatmaz. */}
+      <div className="elw-adminbar">
+        <span className="ab-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+            <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          <span>Admin Modu</span>
+        </span>
+        <RateLimitIndicator />
+        <WorkerChip />
+        <Link href="/admin" className="tb-pill admin">Panel</Link>
+      </div>
 
     <nav className="elw-topbar">
       {/* Marka — sidebar yerine artık header'da */}

@@ -10,12 +10,19 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v
 
 // Havuzdan deterministik slayt seçimi (her kategoriden 2, sıraya göre serpiştir).
 // "Yeni Şampiyon" (varsa) HER ZAMAN ilk slayt → ilk açılışta o görünür, sonra döngü.
+// Aynı şampiyon birden çok kategoriye girebilir (ör. Locke hem yeni hem en çok
+// banlanan) → tekilleştir: ilk kategorisi kazanır, diğer kategori sıradaki adayını alır.
 function selectSlides(pool) {
   const byCat = {};
   for (const c of pool) (byCat[c.sliderCategory] ||= []).push(c);
-  const out = [...(byCat["Yeni Şampiyon"] || [])];
+  const used = new Set();
+  const out = [];
+  const push = (c) => { if (c && !used.has(c.id)) { used.add(c.id); out.push(c); } };
+  for (const c of byCat["Yeni Şampiyon"] || []) push(c);
   const cats = Object.keys(byCat).filter((c) => c !== "Yeni Şampiyon");
-  for (let i = 0; i < 2; i++) for (const cat of cats) if (byCat[cat][i]) out.push(byCat[cat][i]);
+  for (let i = 0; i < 2; i++) {
+    for (const cat of cats) push((byCat[cat] || []).find((c) => !used.has(c.id)));
+  }
   return out.length ? out : pool.slice(0, 6);
 }
 

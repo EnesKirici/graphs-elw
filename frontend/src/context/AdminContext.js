@@ -16,6 +16,11 @@ export function AdminProvider({ children }) {
       if (t) {
         try { localStorage.setItem("disable-rybbit", "1"); } catch {}
       }
+      // Admin mini-bar görünürlüğü CSS'te html.is-admin ile — login/logout'ta
+      // sayfa yenilenmeden senkron kalsın (ilk yükleme: layout'taki paint-öncesi script).
+      try {
+        document.documentElement.classList.toggle("is-admin", !!t);
+      } catch {}
     };
     read();
     window.addEventListener("storage", read);

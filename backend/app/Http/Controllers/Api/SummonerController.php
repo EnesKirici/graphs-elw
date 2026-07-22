@@ -216,8 +216,10 @@ class SummonerController extends Controller
         $masteries = [];
         $totalScore = 0;
 
+        $rankedOk = false; // yalnız başarılı yanıtta cached_players'a rank yazılır (429'da ezme!)
         try {
             $ranked = $this->league->getRankedInfo($puuid);
+            $rankedOk = true;
         } catch (\Exception $e) {
             if ($e->getCode() === 429) $rateLimited = true;
         }
@@ -407,29 +409,37 @@ class SummonerController extends Controller
         $retryAfter = $cooldown ? max(0, $cooldown - time()) : 0;
         if ($retryAfter > 0) $rateLimited = true;
 
-        // DB'ye kaydet — autocomplete için
+        // DB'ye kaydet — autocomplete için. KISMİ veride mevcut kaydı EZME:
+        // rank/rol/mastery alanları yalnız o veri gerçekten alındıysa yazılır
+        // (rate limit anında tier=null yazıp "Unranked" bırakma hatası — 2026-07-22).
         try {
-            $topChamps = array_map(fn($m) => [
-                'name' => $m['championName'], 'image' => $m['championImage'],
-            ], array_slice($masteries, 0, 5));
+            $data = [
+                'game_name'       => $profile['gameName'],
+                'tag_line'        => $profile['tagLine'],
+                'profile_icon_id' => $profile['profileIconId'],
+                'summoner_level'  => $profile['summonerLevel'],
+            ];
+            if ($rankedOk) {
+                // Başarılı yanıtta solo null olabilir = gerçekten unranked; o zaman yazmak doğru.
+                $data += [
+                    'tier'   => $ranked['solo']['tier'] ?? null,
+                    'rank'   => $ranked['solo']['rank'] ?? null,
+                    'queue'  => 'RANKED_SOLO_5x5',
+                    'lp'     => $ranked['solo']['lp'] ?? 0,
+                    'wins'   => $ranked['solo']['wins'] ?? 0,
+                    'losses' => $ranked['solo']['losses'] ?? 0,
+                ];
+            }
+            if (!empty($masteries)) {
+                $data['top_champions'] = array_map(fn($m) => [
+                    'name' => $m['championName'], 'image' => $m['championImage'],
+                ], array_slice($masteries, 0, 5));
+            }
+            if (!empty($recentStats['roleStats'])) {
+                $data['top_roles'] = $recentStats['roleStats'];
+            }
 
-            CachedPlayer::updateOrCreate(
-                ['puuid' => $puuid],
-                [
-                    'game_name'      => $profile['gameName'],
-                    'tag_line'       => $profile['tagLine'],
-                    'tier'           => $ranked['solo']['tier'] ?? null,
-                    'rank'           => $ranked['solo']['rank'] ?? null,
-                    'queue'          => 'RANKED_SOLO_5x5',
-                    'lp'             => $ranked['solo']['lp'] ?? 0,
-                    'wins'           => $ranked['solo']['wins'] ?? 0,
-                    'losses'         => $ranked['solo']['losses'] ?? 0,
-                    'top_champions'  => $topChamps,
-                    'top_roles'      => $recentStats['roleStats'] ?? null,
-                    'profile_icon_id' => $profile['profileIconId'],
-                    'summoner_level' => $profile['summonerLevel'],
-                ]
-            );
+            CachedPlayer::updateOrCreate(['puuid' => $puuid], $data);
         } catch (\Exception $e) {}
 
         return response()->json([
@@ -478,11 +488,20 @@ class SummonerController extends Controller
         // Riot, puuid'leri API uygulaması (key) bazında şifreler — key/app değişince
         // aynı oyuncuya YENİ puuid'li ikinci satır açılır. Aynı isim#tag'in yalnız
         // en güncel satırı gösterilir (bkz. players:dedupe komutu — kalıcı temizlik).
+        // Sıralama: profili gerçekten açılmış (ranklı/rollü) oyuncular önce, sonra
+        // en yakın eşleşme (kısa isim) — worker'ın maçlardan tanıdığı çıplak
+        // kayıtlar (tier=null, rol yok) listenin sonuna düşer.
         $players = $query
             ->orderByDesc('updated_at')
-            ->limit(15)
+            ->limit(30)
             ->get()
             ->unique(fn($p) => mb_strtolower($p->game_name . '#' . $p->tag_line))
+            ->sort(function ($a, $b) {
+                $bareA = $a->tier === null && empty($a->top_roles);
+                $bareB = $b->tier === null && empty($b->top_roles);
+                if ($bareA !== $bareB) return $bareA <=> $bareB;
+                return mb_strlen($a->game_name) <=> mb_strlen($b->game_name);
+            })
             ->take(5)
             ->values()
             ->map(fn($p) => [

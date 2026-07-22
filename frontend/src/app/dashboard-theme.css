@@ -226,7 +226,8 @@
    kalabalıklaşmaz, arama inputu daralmaz. Altın tonu = "admin modundasın" sinyali. */
 .elw-adminbar {
   position: relative; z-index: 26;
-  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  display: none; /* yalnız html.is-admin'de görünür (paint-öncesi script) — flash yok */
+  align-items: center; justify-content: flex-end; gap: 10px;
   min-height: 36px; padding: 3px 26px;
   background: color-mix(in oklab, var(--gold) 5%, var(--bg-0));
   border-bottom: 1px solid color-mix(in oklab, var(--gold) 22%, var(--border));
@@ -237,6 +238,7 @@
   font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
   color: var(--gold);
 }
+html.is-admin .elw-adminbar { display: flex; }
 /* Şeritteki pill'ler ana bardakinden ufak — ince bara sığsın */
 .elw-adminbar .tb-pill { height: 26px; padding: 0 10px; font-size: 11px; border-radius: 7px; gap: 6px; }
 .elw-adminbar .xp-bar { width: 110px; height: 7px; }
