@@ -74,12 +74,12 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
         <p className="px-4 py-8 text-center text-sm text-gray-400">Veri bulunamadı</p>
       ) : (
         <>
-          {/* Sütun başlıkları */}
-          <div className="flex items-center gap-2.5 px-4 py-2 text-[10px] text-gray-400 uppercase tracking-wider border-b border-edge/40">
-            <span className="w-[38px]" />
-            <span className="flex-1">Şampiyon</span>
-            <span className="w-[70px] text-center">Oyun · KDA</span>
-            <span className="w-[72px] text-right">WR</span>
+          {/* Sütun başlıkları — satırlarla birebir aynı grid şablonu (piksel hizası garanti) */}
+          <div className="grid grid-cols-[38px_1fr_78px_72px] items-center gap-2.5 px-4 py-2 text-[10px] text-gray-400 uppercase tracking-wider border-b border-edge/40">
+            <span />
+            <span>Şampiyon</span>
+            <span className="text-center">Oyun · KDA</span>
+            <span className="text-right">WR</span>
           </div>
 
           <div className="divide-y divide-edge/25">
@@ -90,10 +90,10 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
                 <Link
                   key={c.championName + i}
                   href={`/champions/${c.championName.replace(/[^a-zA-Z]/g, "") || c.championName}`}
-                  className="flex items-center gap-2.5 px-4 py-2 hover:bg-hover transition-colors"
+                  className="grid grid-cols-[38px_1fr_78px_72px] items-center gap-2.5 px-4 py-2 hover:bg-hover transition-colors"
                 >
-                  <img src={c.championImage} alt={c.championName} width={38} height={38} className="rounded-lg flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
+                  <img src={c.championImage} alt={c.championName} width={38} height={38} className="rounded-lg" />
+                  <div className="min-w-0">
                     {/* Ad + Dünya sırası + TR sırası — okunur boyut, sayılar parlak (sönük kalmasın) */}
                     <p className="text-[13px] text-gray-100 font-semibold truncate leading-tight">{c.championName}</p>
                     {rk ? (
@@ -112,14 +112,14 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
                     )}
                   </div>
                   {/* Oyun + altında KDA (istif) */}
-                  <div className="w-[70px] text-center flex-shrink-0">
+                  <div className="text-center">
                     <p className="text-[13px] text-gray-200 font-semibold tabular-nums leading-tight">{c.games}</p>
                     <p className="text-[10.5px] text-gray-400 tabular-nums leading-tight mt-0.5">
                       {c.avgKda?.kills}/{c.avgKda?.deaths}/{c.avgKda?.assists}
                     </p>
                   </div>
                   {/* WR — yüzde + dolan bar */}
-                  <div className="w-[72px] flex-shrink-0">
+                  <div>
                     <p className={`text-right text-[12px] font-bold font-mono leading-none mb-1 ${wrColor(c.winRate)}`}>
                       {Math.round(c.winRate)}%
                     </p>
