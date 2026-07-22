@@ -206,9 +206,10 @@ function SkillOrder({ skillOrder, abilityIcons }) {
 function SpellCasts({ p, abilityIcons }) {
   const sc = p.spellCasts;    // { q, w, e, r }
   const su = p.summonerCasts; // { d, f }
+  // Hücre yapısı Pingler'inkiyle birebir: 40px ikon kutusu + sayı + (etiket yüksekliği payı)
   const Cell = ({ img, label, badge, count }) => (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative">
+    <div className="flex flex-col items-center w-20">
+      <div className="relative h-10 flex items-center justify-center mb-2">
         {img
           ? <img src={img} alt={label} title={label} width={40} height={40} className="rounded-lg border border-edge/60" />
           : <span className="w-10 h-10 rounded-lg flex items-center justify-center text-[15px] font-bold bg-soft text-gray-300">{label}</span>}
@@ -219,17 +220,15 @@ function SpellCasts({ p, abilityIcons }) {
       <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">{count != null ? count : "—"}</span>
     </div>
   );
-  // 3×2 grid (Q W E / R D F) — Pingler'le aynı ritim, kart altı boş kalmaz
+  // Pingler'le aynı iskelet: kart genişliğine eşit yayılan 3 kolon, dikey ortalı
   const grid = (withCounts) => (
-    <div className="h-full py-1 flex items-center justify-center">
-      <div className="grid grid-cols-3 gap-x-10 gap-y-5">
-        {["q", "w", "e", "r"].map((k) => (
-          <Cell key={k} img={abilityIcons?.[k]} label={k.toUpperCase()} badge
-            count={withCounts ? (sc?.[k] ?? 0) : null} />
-        ))}
-        <Cell img={p.spells?.[0]?.image} label="D" count={withCounts ? (su?.d ?? 0) : null} />
-        <Cell img={p.spells?.[1]?.image} label="F" count={withCounts ? (su?.f ?? 0) : null} />
-      </div>
+    <div className="h-full py-1 grid grid-cols-3 gap-y-6 content-center justify-items-center">
+      {["q", "w", "e", "r"].map((k) => (
+        <Cell key={k} img={abilityIcons?.[k]} label={k.toUpperCase()} badge
+          count={withCounts ? (sc?.[k] ?? 0) : null} />
+      ))}
+      <Cell img={p.spells?.[0]?.image} label="D" count={withCounts ? (su?.d ?? 0) : null} />
+      <Cell img={p.spells?.[1]?.image} label="F" count={withCounts ? (su?.f ?? 0) : null} />
     </div>
   );
   if (!sc) {
@@ -278,16 +277,16 @@ function Pings({ pings }) {
     );
   }
   return (
-    <div className="h-full py-1 flex items-center justify-center">
-      <div className="grid grid-cols-3 gap-x-8 gap-y-5">
-        {entries.map(([k, v]) => (
-          <div key={k} className="flex flex-col items-center text-center w-16">
-            <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt={PING_LABELS[k] || k} title={PING_LABELS[k] || k} width={30} height={30} className="mb-2" />
-            <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">{v}</span>
-            <span className="text-[10px] text-gray-500 mt-1 leading-tight">{PING_LABELS[k] || k}</span>
+    <div className="h-full py-1 grid grid-cols-3 gap-y-6 content-center justify-items-center">
+      {entries.map(([k, v]) => (
+        <div key={k} className="flex flex-col items-center text-center w-20">
+          <div className="h-10 flex items-center justify-center mb-2">
+            <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt={PING_LABELS[k] || k} title={PING_LABELS[k] || k} width={30} height={30} />
           </div>
-        ))}
-      </div>
+          <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">{v}</span>
+          <span className="text-[10px] text-gray-500 mt-1 leading-tight">{PING_LABELS[k] || k}</span>
+        </div>
+      ))}
     </div>
   );
 }
