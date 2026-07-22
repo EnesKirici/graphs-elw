@@ -260,6 +260,23 @@ export default function Navbar() {
   }
 
   return (
+    <>
+      {/* Admin mini-bar — admin araçları (rate limit, worker, panel) ana header'ı
+          kalabalıklaştırmasın diye topbar'ın ÜSTÜNDE ince şerit. Yalnız admin görür. */}
+      {isAdmin && (
+        <div className="elw-adminbar">
+          <span className="ab-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+              <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <span>Admin Modu</span>
+          </span>
+          <RateLimitIndicator />
+          <WorkerChip />
+          <Link href="/admin" className="tb-pill admin">Panel</Link>
+        </div>
+      )}
+
     <nav className="elw-topbar">
       {/* Marka — sidebar yerine artık header'da */}
       <Link href="/" className="tb-brand" aria-label="ELW GRAPHS">
@@ -377,18 +394,8 @@ export default function Navbar() {
           <Award size={15} />
           <span className="tb-badge-label">Rozet & Skor</span>
         </button>
-        <RateLimitIndicator />
-        <WorkerChip />
         <ModeToggle />
         <ThemePicker />
-        {isAdmin && (
-          <Link href="/admin" title="Admin Paneli" className="tb-pill admin">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            ADMIN
-          </Link>
-        )}
         <span className="tb-pill tb-server" style={{ gap: 7 }}>
           <span className="sf-dot" />
           TR1
@@ -422,18 +429,11 @@ export default function Navbar() {
             {mode === "light" ? <Moon size={18} /> : <Sun size={18} />}
             <span>{mode === "light" ? "Koyu Mod" : "Açık Mod"}</span>
           </button>
-          {isAdmin && (
-            <Link href="/admin" className="tb-link tb-m-extra" style={{ color: "var(--gold)" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span>Admin Paneli</span>
-            </Link>
-          )}
         </div>
       )}
 
       <BadgeGuideModal open={badgeGuideOpen} onClose={() => setBadgeGuideOpen(false)} />
     </nav>
+    </>
   );
 }

@@ -221,6 +221,31 @@
 .tb-pill.admin { color: var(--gold); border-color: color-mix(in oklab, var(--gold) 35%, transparent); background: color-mix(in oklab, var(--gold) 10%, transparent); }
 .tb-pill:hover { border-color: var(--border-strong); }
 
+/* Admin mini-bar — topbar'ın üstünde ince şerit (yalnız admin oturumunda render).
+   Rate-limit göstergesi, worker chip'i ve panel linki burada yaşar; ana header
+   kalabalıklaşmaz, arama inputu daralmaz. Altın tonu = "admin modundasın" sinyali. */
+.elw-adminbar {
+  position: relative; z-index: 26;
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  min-height: 36px; padding: 3px 26px;
+  background: color-mix(in oklab, var(--gold) 5%, var(--bg-0));
+  border-bottom: 1px solid color-mix(in oklab, var(--gold) 22%, var(--border));
+  font-family: var(--f-body);
+}
+.elw-adminbar .ab-label {
+  display: flex; align-items: center; gap: 6px; margin-right: auto;
+  font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--gold);
+}
+/* Şeritteki pill'ler ana bardakinden ufak — ince bara sığsın */
+.elw-adminbar .tb-pill { height: 26px; padding: 0 10px; font-size: 11px; border-radius: 7px; gap: 6px; }
+.elw-adminbar .xp-bar { width: 110px; height: 7px; }
+.elw-adminbar .xp-meta { font-size: 10px; }
+@media (max-width: 700px) {
+  .elw-adminbar { padding: 3px 12px; gap: 6px; overflow-x: auto; }
+  .elw-adminbar .ab-label span { display: none; }
+}
+
 /* Tema rengi seçici popover */
 .theme-pop {
   position: absolute; top: 100%; right: 0; margin-top: 8px; z-index: 50;

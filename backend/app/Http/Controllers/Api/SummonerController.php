@@ -103,7 +103,20 @@ class SummonerController extends Controller
                 'hasMore' => count($matches) === $perPage,
             ]);
         } catch (\Exception $e) {
-            return response()->json(['matches' => [], 'stats' => null, 'page' => $page, 'hasMore' => false]);
+            // Riot erişilemedi (429/5xx) — boş liste yerine DB'deki hazır özetlerle devam.
+            try {
+                $matches = $this->match->getCachedMatchesPaginated($puuid, $perPage, $start);
+                $stats = $matches ? $this->match->calculateRecentStats($matches, $puuid) : null;
+                return response()->json([
+                    'matches'   => $matches,
+                    'stats'     => $stats,
+                    'page'      => $page,
+                    'hasMore'   => count($matches) === $perPage,
+                    'fromCache' => true,
+                ]);
+            } catch (\Exception $e2) {
+                return response()->json(['matches' => [], 'stats' => null, 'page' => $page, 'hasMore' => false]);
+            }
         }
     }
 
@@ -266,6 +279,15 @@ class SummonerController extends Controller
             }
         } catch (\Exception $e) {
             if ($e->getCode() === 429) $rateLimited = true;
+            // Riot maç listesi vermedi — profil sağ tarafı boş kalmasın:
+            // DB'deki hazır özetlerden son maçları göster (bayat olabilir).
+            try {
+                $recentMatches = $this->match->getCachedMatchesPaginated($puuid, 10, 0);
+                if (!empty($recentMatches)) {
+                    $recentStats = $this->match->calculateRecentStats($recentMatches, $puuid);
+                    $bannerChampion = $recentStats['mostPlayedChampion']['id'] ?? null;
+                }
+            } catch (\Exception $e2) {}
         }
 
         // LP snapshot — mevcut LP'yi en son ranked maçla eşleştirip kaydet
@@ -453,9 +475,16 @@ class SummonerController extends Controller
             $query->where('tag_line', 'LIKE', "{$tag}%");
         }
 
+        // Riot, puuid'leri API uygulaması (key) bazında şifreler — key/app değişince
+        // aynı oyuncuya YENİ puuid'li ikinci satır açılır. Aynı isim#tag'in yalnız
+        // en güncel satırı gösterilir (bkz. players:dedupe komutu — kalıcı temizlik).
         $players = $query
-            ->limit(5)
+            ->orderByDesc('updated_at')
+            ->limit(15)
             ->get()
+            ->unique(fn($p) => mb_strtolower($p->game_name . '#' . $p->tag_line))
+            ->take(5)
+            ->values()
             ->map(fn($p) => [
                 'puuid'       => $p->puuid,
                 'gameName'    => $p->game_name,

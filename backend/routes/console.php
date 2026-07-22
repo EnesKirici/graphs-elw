@@ -8,6 +8,33 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Riot puuid'leri API uygulaması (key) bazında şifreler: key/app değişince aynı
+// oyuncuya YENİ puuid'li ikinci cached_players satırı açılır (2026-07-21 key
+// geçişinde 6259 mükerrer oluştu). Aynı isim#tag'in yalnız en güncel satırını
+// bırakır. Key/app her değiştiğinde bir kez çalıştırılmalı.
+Artisan::command('players:dedupe', function () {
+    // Mükerrer grupları ÖNCE belleğe al (silme sırasında chunk offset'i kaymasın).
+    $groups = \App\Models\CachedPlayer::query()
+        ->selectRaw('game_name, tag_line')
+        ->groupBy('game_name', 'tag_line')
+        ->havingRaw('COUNT(*) > 1')
+        ->get();
+
+    $deleted = 0;
+    foreach ($groups as $g) {
+        // En güncel satır kalır; aynı isim#tag'in eski puuid'li kopyaları silinir.
+        $keep = \App\Models\CachedPlayer::where('game_name', $g->game_name)
+            ->where('tag_line', $g->tag_line)
+            ->orderByDesc('updated_at')
+            ->value('puuid');
+        $deleted += \App\Models\CachedPlayer::where('game_name', $g->game_name)
+            ->where('tag_line', $g->tag_line)
+            ->where('puuid', '!=', $keep)
+            ->delete();
+    }
+    $this->info("Mükerrer grup: {$groups->count()} — silinen bayat kopya: {$deleted}");
+})->purpose('cached_players: aynı isim#tag için eski puuid kopyalarını temizle');
+
 // Worker zamanlaması (sunucuda cron: * * * * * php artisan schedule:run)
 // Takip edilen hesapların LP'sini sık çek → maç-başına LP doğru olsun.
 Schedule::command('lp:capture')->everyTenMinutes()->withoutOverlapping();

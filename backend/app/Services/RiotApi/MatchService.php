@@ -361,6 +361,25 @@ class MatchService
         return $this->getRecentMatches($puuid, $count, $start);
     }
 
+    /**
+     * Riot'a HİÇ gitmeden DB'deki hazır özetlerden maç listesi.
+     * Rate-limit fallback'i: Riot maç ID listesi vermediğinde profil sağ tarafı
+     * boş kalmasın — elimizdeki son maçlar (bayat olabilir) gösterilir.
+     * Yalnız güncel algoritma sürümü döner (hydrateSummary format garantisi).
+     */
+    public function getCachedMatchesPaginated(string $puuid, int $count = 10, int $start = 0): array
+    {
+        $rows = MatchSummary::where('puuid', $puuid)
+            ->where('algorithm_version', self::ALGO_VERSION)
+            ->orderByDesc('game_creation')
+            ->skip($start)->take($count)
+            ->get();
+        if ($rows->isEmpty()) return [];
+
+        $ctx = $this->summaryContext();
+        return $rows->map(fn ($r) => $this->hydrateSummary($r->summary_json, $ctx))->all();
+    }
+
     public function getRecentMatches(string $puuid, int $count = 20, int $start = 0, bool $skipPreload = false): array
     {
         $matchIds = $this->matchData->getMatchIds($puuid, $count, $start);
