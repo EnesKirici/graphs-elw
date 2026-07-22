@@ -30,6 +30,8 @@ const STAT_META = [
   ["Mana", "text-blue-400", Droplet],
   ["Hareket Hızı", "text-gray-100", "/staticons/ms.png"],
   ["Tenas", "text-gray-200", "/staticons/tenacity.png"],
+  ["Sıvışma", "text-gray-200", "/staticons/tenacity.png"],
+  ["Meşakkat", "text-gray-200", "/staticons/tenacity.png"],
   ["Yaşam Çalma", "text-rose-400", Droplets],
   ["Vampirizm", "text-rose-400", Droplets],
   ["İyileştirme", "text-emerald-300", HeartPulse],

@@ -38,13 +38,6 @@ function rankShort(tier, div, lp) {
   if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier)) return lp != null ? `${lp} LP` : name;
   return `${name} ${div || ""}`.trim();
 }
-function kdaColor(k) {
-  if (k === "Perfect" || k >= 4) return "text-sky-300";
-  if (k >= 2.5) return "text-blue-400";
-  if (k >= 1.5) return "text-gray-300";
-  return "text-red-400";
-}
-
 /* Skor — ring'li mini dial (kart başlığındaki büyük dial'ın küçüğü).
    Glow SVG filter'la DEĞİL yuvarlak konteynerde box-shadow ile — drop-shadow
    filter bölgesi kare bloom yapıyordu (eski bilinen sorun). */
@@ -185,13 +178,14 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
           </div>
         </div>
 
-        {/* KDA */}
+        {/* KDA — oran satırı kaldırıldı (gereksizdi); multikill rozeti varsa altta */}
         <div className="w-[78px] text-center flex-shrink-0">
           <p className="text-[15px] font-semibold text-gray-100 leading-tight">{kdaEl}</p>
-          <p className={`text-[12px] font-semibold leading-tight ${kdaColor(p.kda)}`}>
-            {p.kda === "Perfect" ? "Perfect" : `${p.kda.toFixed(1)}`}
-            {mk && <span className="ml-1 text-[9px] font-bold text-amber-400">{{ TRIPLE: "Triple Kill", QUADRA: "Quadra Kill", PENTA: "Penta Kill" }[mk]}</span>}
-          </p>
+          {mk && (
+            <p className="text-[9px] font-bold text-amber-400 leading-tight mt-0.5">
+              {{ TRIPLE: "Triple Kill", QUADRA: "Quadra Kill", PENTA: "Penta Kill" }[mk]}
+            </p>
+          )}
         </div>
 
         {/* CS / KP — destek rolünde CS yerine vizyon */}
