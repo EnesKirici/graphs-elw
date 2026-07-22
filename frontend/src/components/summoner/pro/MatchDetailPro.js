@@ -45,10 +45,55 @@ function kdaColor(k) {
   return "text-red-400";
 }
 
+/* Skor — ring'li mini dial (kart başlığındaki büyük dial'ın küçüğü) */
+function ScoreRing({ score, glow }) {
+  const c = scoreColor(score);
+  const r = 14.5;
+  const circ = 2 * Math.PI * r;
+  const frac = score != null ? Math.max(0.05, Math.min(score / 10, 1)) : 0;
+  return (
+    <div className="relative w-9 h-9 flex-shrink-0">
+      <svg viewBox="0 0 36 36" className="w-9 h-9 -rotate-90">
+        <circle cx="18" cy="18" r={r} fill="none" strokeWidth="2.5" className="stroke-edge/60" />
+        {score != null && (
+          <circle
+            cx="18" cy="18" r={r} fill="none" strokeWidth="2.5" strokeLinecap="round"
+            stroke={c} strokeDasharray={`${frac * circ} ${circ}`}
+            style={glow ? { filter: `drop-shadow(0 0 3px ${c})` } : undefined}
+          />
+        )}
+      </svg>
+      <span
+        className="absolute inset-0 flex items-center justify-center text-[11px] font-extrabold tabular-nums"
+        style={{ color: c, textShadow: glow ? `0 0 8px ${c}` : undefined }}
+      >
+        {score != null ? score.toFixed(1) : "—"}
+      </span>
+    </div>
+  );
+}
+
+/* Eşyalar — 2 satır: 3 eşya + totem üstte, 3 eşya altta (dpm tarzı kompakt blok) */
+function ItemGrid({ items, size = 20 }) {
+  const it = items || [];
+  return (
+    <div className="grid grid-cols-4 gap-[2px] flex-shrink-0">
+      <ItemTooltip item={it[0]} size={size} />
+      <ItemTooltip item={it[1]} size={size} />
+      <ItemTooltip item={it[2]} size={size} />
+      <ItemTooltip item={it[6]} size={size} />
+      <ItemTooltip item={it[3]} size={size} />
+      <ItemTooltip item={it[4]} size={size} />
+      <ItemTooltip item={it[5]} size={size} />
+    </div>
+  );
+}
+
 function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
   const rank = formatRank(p.tier, p.rankDivision, p.leaguePoints);
   const sc = p.elwScore;
   const dmgPct = maxDmg > 0 ? ((p.damage || 0) / maxDmg) * 100 : 0;
+  const isTopDmg = maxDmg > 0 && (p.damage || 0) >= maxDmg;
   const mk = p.pentaKills > 0 ? "PENTA" : p.quadraKills > 0 ? "QUADRA" : p.tripleKills > 0 ? "TRIPLE" : null;
   const scGlow = isMvp || isAce || (sc != null && sc >= 9);
   const rowHL = isMvp ? "shadow-[inset_3px_0_0_0_#fbbf24aa]" : isAce ? "shadow-[inset_3px_0_0_0_#22d3eeaa]" : "";
@@ -87,10 +132,8 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
             <span className="text-gray-600"> · </span>{csEl}
           </p>
         </div>
-        {/* eşyalar 4+3 grid (kompakt, yatay yer yarıya iner) */}
-        <div className="grid grid-cols-4 gap-[2px] flex-shrink-0">
-          {(p.items || []).slice(0, 7).map((item, i) => <ItemTooltip key={i} item={item} size={18} />)}
-        </div>
+        {/* eşyalar 3+totem / 3 grid (kompakt, yatay yer yarıya iner) */}
+        <ItemGrid items={p.items} size={18} />
         <span className="w-8 text-right text-[15px] font-extrabold flex-shrink-0 tabular-nums"
           style={{ color: scoreColor(sc), textShadow: scGlow ? `0 0 9px ${scoreColor(sc)}` : undefined }}>
           {sc != null ? sc.toFixed(1) : "—"}
@@ -153,26 +196,24 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
           <p>{p.killParticipation}% KP</p>
         </div>
 
-        {/* Items */}
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          {(p.items || []).slice(0, 7).map((item, i) => <ItemTooltip key={i} item={item} size={26} />)}
-        </div>
+        {/* Items — 3 + totem / 3 kompakt blok */}
+        <ItemGrid items={p.items} />
 
-        {/* Hasar barı */}
-        <div className="flex-1 min-w-[40px] hidden lg:block">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-red-400/80 font-mono w-10 text-right">{fmtDmg(p.damage)}</span>
-            <div className="flex-1 h-2 bg-edge rounded-full overflow-hidden">
-              <div className="h-full bg-red-500/60 rounded-full" style={{ width: `${dmgPct}%` }} />
-            </div>
+        {/* Hasar — değer + bar (en çok vuran parlar) */}
+        <div className="flex-1 min-w-[56px] max-w-[110px] ml-auto">
+          <p className={`text-[11px] font-mono text-right leading-none mb-1 ${isTopDmg ? "text-red-300 font-bold" : "text-red-400/80"}`}>
+            {fmtDmg(p.damage)}
+          </p>
+          <div className="h-1.5 bg-edge rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${isTopDmg ? "bg-red-400" : "bg-red-500/50"}`}
+              style={{ width: `${dmgPct}%`, boxShadow: isTopDmg ? "0 0 6px #f87171" : undefined }}
+            />
           </div>
         </div>
 
-        {/* ELW */}
-        <span className="w-12 pr-0.5 text-right text-[16px] font-extrabold flex-shrink-0 tabular-nums"
-          style={{ color: scoreColor(sc), textShadow: scGlow ? `0 0 9px ${scoreColor(sc)}` : undefined }}>
-          {sc != null ? sc.toFixed(1) : "—"}
-        </span>
+        {/* ELW — ring'li skor */}
+        <ScoreRing score={sc} glow={scGlow} />
       </div>
     </>
   );
