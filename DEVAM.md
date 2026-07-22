@@ -16,6 +16,12 @@ altın "Admin Modu" şeridine taşındı; header ferahladı, normal kullanıcı 
 en günceli gösterir; `players:dedupe` komutu eklendi ve çalıştırıldı (6261 kopya silindi).
 **⚠️ Production key'e geçince `players:dedupe` TEKRAR çalıştırılmalı** (puuid'ler yine değişir).
 404×2 konusu kapandı: `/$` ve `/&` bot URL'siydi, aksiyon gerekmez.
+**Devam 2 (`bb9b500`):** (a) **getChampionPositions DB fallback** — Meraki'de olmayan yeni
+şampiyonlar (Locke/Zaahen) kendi champion_stats verimizden rol alır (min 20 maç, pay ≥%15,
+UTILITY→SUPPORT); Meraki çağrısı artık try/catch'li. (b) Slider: "Yeni Şampiyon" rozetinde #1 yok;
+ban ≥%20 ise sayı kırmızı cam-parlaması süpürmeli (hs-ban-hot). (c) **TESTLER ONARILDI: 32/32 yeşil**
+— MEDIUMBLOB migration'ı sqlite'ta atlanır (8 feature testi migration'da patlıyordu);
+AutocompleteTest (3 regresyon testi) eklendi. Test çalıştırma: `php artisan test` (Herd php84).
 **Devam düzeltmeleri (`04df10f`+`693bcfa`):** (a) 429'da profil kaydı artık mevcut rank/rol/mastery'yi
 EZMİYOR (tier=null yazımı "Unranked" bırakıyordu); (b) eski maç verilerindeki ESKİ puuid'ler dedupe
 sonrası çıplak satırı yeniden doğuruyordu → `cacheParticipant` isim#tag zaten kayıtlıysa satır açmaz;
