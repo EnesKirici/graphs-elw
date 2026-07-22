@@ -82,11 +82,12 @@ const TABS = [
   { key: "analysis", label: "Analiz" },
 ];
 
+// Q/W/E/R tek solid stil — rengarenk kutu kullanılmıyor (pro tarafla tutarlı)
 const SKILL_COLORS = {
-  Q: "bg-blue-500 text-white",
-  W: "bg-teal-500 text-white",
-  E: "bg-emerald-500 text-white",
-  R: "bg-amber-500 text-white",
+  Q: "bg-[var(--dpm-accent,#60a5fa)] text-white",
+  W: "bg-[var(--dpm-accent,#60a5fa)] text-white",
+  E: "bg-[var(--dpm-accent,#60a5fa)] text-white",
+  R: "bg-[var(--dpm-accent,#60a5fa)] text-white",
 };
 
 /* ===== RANK BADGE ===== */

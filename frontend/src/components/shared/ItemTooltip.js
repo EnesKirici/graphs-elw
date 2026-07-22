@@ -43,16 +43,16 @@ function statMeta(label) {
 
 function StatIcon({ icon, cls }) {
   if (typeof icon === "string") {
-    return <img src={icon} alt="" width={14} height={14} className="flex-shrink-0" />;
+    return <img src={icon} alt="" width={18} height={18} className="flex-shrink-0" />;
   }
   const Icon = icon;
-  return <Icon size={12} className={`${cls} flex-shrink-0`} />;
+  return <Icon size={16} className={`${cls} flex-shrink-0`} />;
 }
 
-// "+45 Saldırı Gücü" → ["+45", "Saldırı Gücü"]; "+%12 ..." varyasyonlarını da yakalar
+// "+45 Saldırı Gücü" → ["45", "Saldırı Gücü"] ("+"ı at, gereksiz); "%12" varyasyonları korunur
 function splitStat(line) {
   const m = line.match(/^(\+?\s*%?[\d.,]+\s*%?)\s*(.*)$/);
-  return m ? [m[1].replace(/\s+/g, ""), m[2]] : [null, line];
+  return m ? [m[1].replace(/\s+/g, "").replace(/^\+/, ""), m[2]] : [null, line];
 }
 
 // [[tip:metin]] vurgu işaretleyicileri → renkli/kalın span'lar
@@ -103,28 +103,28 @@ export default function ItemTooltip({ item, size = 30, imgClass = "" }) {
       />
       {anchor && (
         <Tooltip anchorEl={anchor}>
-          <div className="tip-dark bg-[#0e131b] border border-edge rounded-xl shadow-2xl shadow-black/90 w-64 overflow-hidden">
+          <div className="tip-dark bg-[#0e131b] border border-edge rounded-xl shadow-2xl shadow-black/90 w-72 overflow-hidden">
             {/* Başlık: ikon + isim + altın */}
-            <div className="flex items-center gap-2.5 p-3">
-              <img src={item.image} alt="" width={38} height={38} className="rounded-lg border border-edge/60 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-3.5">
+              <img src={item.image} alt="" width={44} height={44} className="rounded-lg border border-edge/60 flex-shrink-0" />
               <div className="min-w-0">
-                <p className="text-[13px] font-bold text-white leading-tight truncate">{item.name}</p>
+                <p className="text-[14px] font-bold text-white leading-tight truncate">{item.name}</p>
                 {item.gold > 0 && (
-                  <p className="text-[12px] font-semibold text-amber-400 leading-tight mt-0.5">
+                  <p className="text-[13px] font-semibold text-amber-400 leading-tight mt-1">
                     {item.gold.toLocaleString("tr-TR")}g
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Statlar — renkli mini ikon + kendi renginde kalın değer */}
+            {/* Statlar — resmi LoL glifi + kendi renginde kalın değer */}
             {stats.length > 0 && (
-              <div className="px-3 pb-3 space-y-1">
+              <div className="px-3.5 pb-3.5 space-y-1.5">
                 {stats.map((s, j) => {
                   const [val, label] = splitStat(s);
                   const [cls, icon] = statMeta(label);
                   return (
-                    <p key={j} className="text-[11px] leading-snug flex items-center gap-1.5">
+                    <p key={j} className="text-[13px] leading-snug flex items-center gap-2">
                       <StatIcon icon={icon} cls={cls} />
                       {val && <span className={`font-bold ${cls}`}>{val}</span>}
                       <span className="text-gray-200">{label}</span>
@@ -136,12 +136,12 @@ export default function ItemTooltip({ item, size = 30, imgClass = "" }) {
 
             {/* Pasifler — açıklamada vurgulu kelimeler */}
             {passives.length > 0 && (
-              <div className="border-t border-edge/60 bg-soft/20 px-3 py-2.5 space-y-2">
+              <div className="border-t border-edge/60 bg-soft/20 px-3.5 py-3 space-y-2.5">
                 {passives.map((p, j) => (
                   <div key={j}>
-                    <p className="text-[11px] font-semibold text-amber-300">{p.name}</p>
+                    <p className="text-[13px] font-semibold text-amber-300">{p.name}</p>
                     {p.desc && (
-                      <p className="text-[10px] text-gray-400 leading-relaxed mt-0.5">
+                      <p className="text-[12px] text-gray-300 leading-relaxed mt-1">
                         <DescText text={p.desc} />
                       </p>
                     )}

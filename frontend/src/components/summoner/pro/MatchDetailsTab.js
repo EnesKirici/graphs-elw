@@ -18,13 +18,9 @@ import { DD_ASSETS } from "@/lib/ddragon";
 
 const ROLES_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
 
-// Yetenek harf renkleri (görseldeki palet): Q mavi, W turuncu, E mor, R kırmızı.
-const SKILL_STYLE = {
-  Q: { box: "bg-blue-500", text: "text-blue-300" },
-  W: { box: "bg-orange-500", text: "text-orange-300" },
-  E: { box: "bg-purple-500", text: "text-purple-300" },
-  R: { box: "bg-red-500", text: "text-red-300" },
-};
+// Q/W/E/R tek solid stil — rengarenk kutu yok, tema accent'i + nötr rozet.
+const SKILL_BOX = "bg-[var(--dpm-accent,#60a5fa)] text-white";
+const SKILL_BADGE = "bg-base border border-edge text-gray-200";
 
 function fmtGold(g) { return g >= 1000 ? (g / 1000).toFixed(1) + "k" : Math.round(g); }
 function fmtDmg(d) { return d >= 1000 ? (d / 1000).toFixed(1) + "k" : Math.round(d); }
@@ -174,15 +170,14 @@ function SkillOrder({ skillOrder, abilityIcons }) {
     <div className="overflow-x-auto pb-1">
       <div className="space-y-1.5 w-fit mx-auto">
         {["Q", "W", "E", "R"].map((key) => {
-          const st = SKILL_STYLE[key];
           const icon = abilityIcons?.[key.toLowerCase()];
           return (
             <div key={key} className="flex items-center gap-2">
               <div className="relative flex-shrink-0 w-7 h-7">
                 {icon
                   ? <img src={icon} alt={key} width={28} height={28} className="rounded-md border border-edge/60" />
-                  : <span className={`w-7 h-7 rounded-md flex items-center justify-center text-[13px] font-bold bg-soft ${st.text}`}>{key}</span>}
-                <span className={`absolute -bottom-1 -right-1 text-[8px] font-bold px-0.5 rounded ${st.box} text-white`}>{key}</span>
+                  : <span className="w-7 h-7 rounded-md flex items-center justify-center text-[13px] font-bold bg-soft text-gray-300">{key}</span>}
+                <span className={`absolute -bottom-1 -right-1 text-[8px] font-bold px-0.5 rounded ${SKILL_BADGE}`}>{key}</span>
               </div>
               <div className="flex gap-[3px]">
                 {Array.from({ length: cols }).map((_, i) => {
@@ -191,7 +186,7 @@ function SkillOrder({ skillOrder, abilityIcons }) {
                   return (
                     <div
                       key={i}
-                      className={`w-6 h-6 rounded flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${here ? `${st.box} text-white` : "bg-edge/50"}`}
+                      className={`w-6 h-6 rounded flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${here ? SKILL_BOX : "bg-edge/50"}`}
                     >
                       {here ? i + 1 : ""}
                     </div>
@@ -206,38 +201,38 @@ function SkillOrder({ skillOrder, abilityIcons }) {
   );
 }
 
-/* ===== Spell Casted (Q/W/E/R + D/F kaç kez) — ikon köşesinde harf rozeti,
-   sayı altta; ortalı sarmal düzen (sıkışınca sumslar alt satıra iner) ===== */
+/* ===== Spell Casted (Q/W/E/R + D/F kaç kez) — 6 sabit hücreli grid,
+   ikon köşesinde nötr harf rozeti, sayı altta. Mobilde 3'lü iki satır. ===== */
 function SpellCasts({ p, abilityIcons }) {
   const sc = p.spellCasts;    // { q, w, e, r }
   const su = p.summonerCasts; // { d, f }
-  const Cell = ({ img, label, badge, fb, count }) => (
-    <div className="flex flex-col items-center w-14">
-      <div className="relative mb-2">
+  const Cell = ({ img, label, badge, count }) => (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative">
         {img
-          ? <img src={img} alt={label} title={label} width={38} height={38} className="rounded-md border border-edge/60" />
-          : <span className={`w-[38px] h-[38px] rounded-md flex items-center justify-center text-[14px] font-bold bg-soft ${fb || "text-gray-300"}`}>{label}</span>}
+          ? <img src={img} alt={label} title={label} width={40} height={40} className="rounded-lg border border-edge/60" />
+          : <span className="w-10 h-10 rounded-lg flex items-center justify-center text-[15px] font-bold bg-soft text-gray-300">{label}</span>}
         {badge && (
-          <span className={`absolute -bottom-1 -right-1 text-[9px] font-bold px-1 rounded ${badge} text-white`}>{label}</span>
+          <span className={`absolute -bottom-1.5 -right-1.5 text-[9px] font-bold px-1 py-px rounded ${SKILL_BADGE}`}>{label}</span>
         )}
       </div>
-      <span className="text-[17px] font-bold text-gray-100 tabular-nums leading-none">{count != null ? count : "—"}</span>
+      <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">{count != null ? count : "—"}</span>
     </div>
   );
-  const cells = (withCounts) => (
-    <>
-      {["Q", "W", "E", "R"].map((k) => (
-        <Cell key={k} img={abilityIcons?.[k.toLowerCase()]} label={k} badge={SKILL_STYLE[k].box} fb={SKILL_STYLE[k].text}
-          count={withCounts ? (sc?.[k.toLowerCase()] ?? 0) : null} />
+  const grid = (withCounts) => (
+    <div className="grid grid-cols-3 sm:grid-cols-6 gap-x-3 gap-y-5 justify-items-center content-center h-full py-1">
+      {["q", "w", "e", "r"].map((k) => (
+        <Cell key={k} img={abilityIcons?.[k]} label={k.toUpperCase()} badge
+          count={withCounts ? (sc?.[k] ?? 0) : null} />
       ))}
       <Cell img={p.spells?.[0]?.image} label="D" count={withCounts ? (su?.d ?? 0) : null} />
       <Cell img={p.spells?.[1]?.image} label="F" count={withCounts ? (su?.f ?? 0) : null} />
-    </>
+    </div>
   );
   if (!sc) {
     return (
       <div className="space-y-3">
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-4 py-1 opacity-40 pointer-events-none">{cells(false)}</div>
+        <div className="opacity-40 pointer-events-none">{grid(false)}</div>
         <div className="flex items-start gap-2 border-t border-edge/40 pt-3">
           <Info size={13} className="text-gray-600 mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-500 leading-relaxed">
@@ -248,7 +243,7 @@ function SpellCasts({ p, abilityIcons }) {
       </div>
     );
   }
-  return <div className="flex flex-wrap justify-center content-center gap-x-4 gap-y-4 py-1 h-full">{cells(true)}</div>;
+  return grid(true);
 }
 
 /* ===== Pings ===== */
@@ -280,11 +275,11 @@ function Pings({ pings }) {
     );
   }
   return (
-    <div className="flex flex-wrap justify-center content-center gap-x-5 gap-y-4 py-1 h-full">
+    <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-2 gap-y-5 justify-items-center content-center h-full py-1">
       {entries.map(([k, v]) => (
         <div key={k} className="flex flex-col items-center text-center w-16">
-          <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt={PING_LABELS[k] || k} title={PING_LABELS[k] || k} width={32} height={32} className="mb-1.5" />
-          <span className="text-[17px] font-bold text-gray-100 tabular-nums leading-none">{v}</span>
+          <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt={PING_LABELS[k] || k} title={PING_LABELS[k] || k} width={30} height={30} className="mb-2" />
+          <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">{v}</span>
           <span className="text-[10px] text-gray-500 mt-1 leading-tight">{PING_LABELS[k] || k}</span>
         </div>
       ))}
