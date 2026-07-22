@@ -22,6 +22,8 @@ class SettingsController extends Controller
             'performance_labels' => AdminSetting::getValue('performance_labels'),
             'badge_config'       => AdminSetting::getValue('badge_config'),
             'profile_design'     => AdminSetting::getValue('profile_design', 'classic'),
+            // SEO title/description ezmeleri — frontend generateMetadata bunları okur
+            'seo'                => AdminSetting::getValue('seo_overrides', []),
         ]);
     }
 
@@ -64,6 +66,7 @@ class SettingsController extends Controller
             'performance_labels', 'badge_config', 'elw_score', 'profile_design',
             'meta_insufficient_mode', 'labels_config',
             'worker_enabled', 'worker_tiers', 'worker_collect_since',
+            'seo_overrides',
         ];
 
         if (!in_array($key, $allowed)) {
@@ -79,6 +82,9 @@ class SettingsController extends Controller
             $request->validate(['value' => 'required|boolean']);
         } elseif ($key === 'worker_collect_since') {
             $request->validate(['value' => 'required|date']);
+        } elseif ($key === 'seo_overrides') {
+            // Tüm alanlar silinerek varsayılana dönülebilsin diye boş obje de geçerli
+            $request->validate(['value' => 'present|array']);
         } elseif ($key === 'worker_tiers') {
             $available = config('elwgraphs.worker.tiers_available', []);
             $request->validate(['value' => 'present|array']);

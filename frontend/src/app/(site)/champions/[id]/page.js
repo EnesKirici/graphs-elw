@@ -9,6 +9,7 @@
 
 import { Suspense } from "react";
 import { fetchApi } from "@/lib/api";
+import { getSeoOverrides, applySeoTemplate } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import ChampionRadar from "@/components/champion/ChampionRadar";
@@ -18,7 +19,18 @@ import ChampionBuild from "@/components/champion/ChampionBuild";
 import ChampionTabs from "@/components/champion/ChampionTabs";
 import DuoPartners from "@/components/champion/DuoPartners";
 
+// SEO metinlerinde kullanılan rol adları (short: title için, long: özet paragrafı için)
+const POS_SEO = {
+  TOP:     { short: "Top",     long: "Üst Koridor" },
+  JUNGLE:  { short: "Jungle",  long: "Orman" },
+  MIDDLE:  { short: "Mid",     long: "Orta Koridor" },
+  BOTTOM:  { short: "Bot",     long: "Alt Koridor" },
+  SUPPORT: { short: "Support", long: "Destek" },
+};
+
 // Dinamik metadata — şampiyon verisinden zengin SEO (aynı fetch component'te de var → Next dedupe eder)
+// Patch + ana rol + kazanma oranı title/description'a girer: arama sonucunda
+// güncellik sinyali verir ("Ambessa Build — Top, Patch 26.14").
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const data = await fetchApi(`/champions/${id}`).catch(() => null);
@@ -27,12 +39,32 @@ export async function generateMetadata({ params }) {
     return { title: id, description: `${id} — League of Legends şampiyon bilgileri.` };
   }
   const name = champ.name;
-  const title = `${name} Build, Rünler ve İstatistikler`;
-  const description = `${name} (${champ.title}) için güncel build, rün önerileri, yetenek sırası, eşya dizilimi, tier sıralaması ve maç istatistikleri. En iyi ${name} rehberi.`;
+  const mainPos = data?.build?.positions?.[0];
+  const patch = data?.build?.patches?.[0];
+  const posShort = mainPos ? (POS_SEO[mainPos.position]?.short || mainPos.position) : null;
+  const suffix = [posShort, patch ? `Patch ${patch}` : null].filter(Boolean).join(", ");
+
+  let title = `${name} Build, Rünler ve İstatistikler${suffix ? ` — ${suffix}` : ""}`;
+  let description = mainPos
+    ? `${name} (${champ.title}) ${patch ? `Patch ${patch} ` : ""}${posShort} rehberi: %${mainPos.winRate} kazanma oranlı build, rün dizilimi, eşya sırası, sihirdar büyüleri ve güncel maç istatistikleri.`
+    : `${name} (${champ.title}) için güncel build, rün önerileri, yetenek sırası, eşya dizilimi, tier sıralaması ve maç istatistikleri. En iyi ${name} rehberi.`;
+
+  // Admin paneli (Ayarlar → SEO) şablon ezmeleri — deploy'suz metin iterasyonu
+  const seo = await getSeoOverrides();
+  const vars = {
+    name,
+    title: champ.title,
+    position: posShort || "",
+    patch: patch || "",
+    winrate: mainPos ? `%${mainPos.winRate}` : "",
+  };
+  title = applySeoTemplate(seo.champion_detail?.title, vars) || title;
+  description = applySeoTemplate(seo.champion_detail?.description, vars) || description;
+
   return {
     title,
     description,
-    keywords: [name, `${name} build`, `${name} rünler`, champ.title, ...(champ.tags || []), "lol", "lol champions", "league of legends"],
+    keywords: [name, `${name} build`, `${name} rünler`, `${name} rün dizilimi`, champ.title, ...(champ.tags || []), "lol", "lol champions", "league of legends"],
     alternates: { canonical: `/champions/${id}` },
     openGraph: {
       title: `${name} — ${champ.title}`,
@@ -42,6 +74,25 @@ export async function generateMetadata({ params }) {
       images: champ.splash ? [{ url: champ.splash, alt: name }] : undefined,
     },
   };
+}
+
+// Gerçek build verisinden indekslenebilir özet metni (SSR). Google'ın
+// "ince içerik" saymaması için her şampiyonda benzersiz + veriyle güncellenen
+// paragraf. Veri yoksa null → hiç render edilmez.
+function buildSeoSummary(champ, build) {
+  const positions = build?.positions;
+  if (!positions?.length) return null;
+  const main = positions[0];
+  const patch = build.patches?.[0];
+  const mainName = POS_SEO[main.position]?.long || main.position;
+  let text = `${champ.name}, ${patch ? `${patch} yamasında` : "güncel metada"} en çok ${mainName} rolünde oynanıyor (rol payı %${main.share}) ve bu rolde kazanma oranı %${main.winRate}.`;
+  const second = positions[1];
+  if (second && second.share >= 15) {
+    const secondName = POS_SEO[second.position]?.long || second.position;
+    text += ` İkincil rolü ${secondName} (rol payı %${second.share}, kazanma oranı %${second.winRate}).`;
+  }
+  text += ` Aşağıdaki rün, eşya ve sihirdar büyüsü önerileri gerçek maç verilerinden derlenir ve her yamada güncellenir.`;
+  return text;
 }
 
 // Tag renk mapping
@@ -72,9 +123,22 @@ export default async function ChampionDetail({ params }) {
   if (!data?.champion) notFound();
   const champ = data.champion;
   const runesData = runesResp?.runes || [];
+  const seoSummary = buildSeoSummary(champ, data.build);
+
+  // Arama sonucunda "ElwGraphs › Şampiyonlar › Ambessa" kırıntısı için schema.org
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: "https://elwgraphs.elw.com.tr/" },
+      { "@type": "ListItem", position: 2, name: "Şampiyonlar", item: "https://elwgraphs.elw.com.tr/champions" },
+      { "@type": "ListItem", position: 3, name: champ.name, item: `https://elwgraphs.elw.com.tr/champions/${id}` },
+    ],
+  };
 
   return (
     <div className="dpm-scope min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       {/* ===== HERO BANNER ===== */}
       <div className="relative h-56 md:h-72 overflow-hidden">
         <img
@@ -169,6 +233,9 @@ export default async function ChampionDetail({ params }) {
             label: "Build & İstatistik",
             content: (
               <div className="max-w-7xl mx-auto px-6 py-6">
+                {seoSummary && (
+                  <p className="text-xs text-gray-500 leading-relaxed mb-5 max-w-3xl">{seoSummary}</p>
+                )}
                 <ChampionBuild champion={champ} version={data.version} runesData={runesData} build={data.build} />
               </div>
             ),

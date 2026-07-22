@@ -1,19 +1,24 @@
 import { fetchApi, getPublicSettings } from "@/lib/api";
+import { getSeoOverrides, mergeSeo } from "@/lib/seo";
 import ChampionGrid from "@/components/champion/ChampionGrid";
 
-export const metadata = {
-  title: "Tüm LoL Şampiyonları — Build, Rün ve İstatistik",
-  description:
-    "League of Legends'ın tüm şampiyonları tek listede: yetenekler, build önerileri, rünler, tier sıralaması ve istatistikler. Aradığın LoL karakterini bul ve incele.",
-  keywords: ["lol şampiyonlar", "lol champions", "champions lol", "lol karakterleri", "şampiyon listesi", "lol graph", "league of legends şampiyonlar"],
-  alternates: { canonical: "/champions" },
-  openGraph: {
+// Admin → Ayarlar → SEO'dan title/description deploy'suz ezilebilir.
+export async function generateMetadata() {
+  const seo = await getSeoOverrides();
+  return mergeSeo({
     title: "Tüm LoL Şampiyonları — Build, Rün ve İstatistik",
-    description: "Tüm League of Legends şampiyonları: yetenekler, build'ler, rünler ve tier sıralaması.",
-    url: "https://elwgraphs.elw.com.tr/champions",
-    type: "website",
-  },
-};
+    description:
+      "League of Legends'ın tüm şampiyonları tek listede: yetenekler, build önerileri, rünler, tier sıralaması ve istatistikler. Aradığın LoL karakterini bul ve incele.",
+    keywords: ["lol şampiyonlar", "lol champions", "champions lol", "lol karakterleri", "şampiyon listesi", "lol graph", "league of legends şampiyonlar"],
+    alternates: { canonical: "/champions" },
+    openGraph: {
+      title: "Tüm LoL Şampiyonları — Build, Rün ve İstatistik",
+      description: "Tüm League of Legends şampiyonları: yetenekler, build'ler, rünler ve tier sıralaması.",
+      url: "https://elwgraphs.elw.com.tr/champions",
+      type: "website",
+    },
+  }, seo.champions);
+}
 
 export default async function ChampionsPage() {
   let data = null;

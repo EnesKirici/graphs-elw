@@ -1,19 +1,24 @@
 import { fetchApi } from "@/lib/api";
+import { getSeoOverrides, mergeSeo } from "@/lib/seo";
 import TierList from "@/components/champion/TierList";
 
-export const metadata = {
-  title: "LoL Tier List — Güncel Meta Şampiyon Sıralaması",
-  description:
-    "Güncel patch League of Legends meta tier list: şampiyonların kazanma, seçilme ve banlanma oranları, koridor dağılımı ve S/A/B tier sıralaması. En güçlü şampiyonlar tek listede.",
-  keywords: ["lol tier list", "lol meta", "şampiyon tier", "en iyi şampiyonlar", "lol graph", "meta şampiyonlar", "op şampiyonlar"],
-  alternates: { canonical: "/tier-list" },
-  openGraph: {
+// Admin → Ayarlar → SEO'dan title/description deploy'suz ezilebilir.
+export async function generateMetadata() {
+  const seo = await getSeoOverrides();
+  return mergeSeo({
     title: "LoL Tier List — Güncel Meta Şampiyon Sıralaması",
-    description: "Güncel patch meta: kazanma/seçilme/banlanma oranları ve tier sıralaması.",
-    url: "https://elwgraphs.elw.com.tr/tier-list",
-    type: "website",
-  },
-};
+    description:
+      "Güncel patch League of Legends meta tier list: şampiyonların kazanma, seçilme ve banlanma oranları, koridor dağılımı ve S/A/B tier sıralaması. En güçlü şampiyonlar tek listede.",
+    keywords: ["lol tier list", "lol meta", "şampiyon tier", "en iyi şampiyonlar", "lol graph", "meta şampiyonlar", "op şampiyonlar"],
+    alternates: { canonical: "/tier-list" },
+    openGraph: {
+      title: "LoL Tier List — Güncel Meta Şampiyon Sıralaması",
+      description: "Güncel patch meta: kazanma/seçilme/banlanma oranları ve tier sıralaması.",
+      url: "https://elwgraphs.elw.com.tr/tier-list",
+      type: "website",
+    },
+  }, seo["tier-list"]);
+}
 
 export default async function TierListPage() {
   let data = null;

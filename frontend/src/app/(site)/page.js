@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { fetchApi } from "@/lib/api";
+import { getSeoOverrides, mergeSeo } from "@/lib/seo";
 import HeroCarousel from "@/components/dashboard/HeroCarousel";
 import BigSearch from "@/components/dashboard/BigSearch";
 import MetaRibbon from "@/components/dashboard/MetaRibbon";
@@ -10,21 +11,25 @@ import RateLimitBanner from "@/components/summoner/RateLimitBanner";
 
 // Ana sayfa SEO metadata — kök template'i geçersiz kılan tam başlık + açıklama.
 // NOT: "geliştirme aşaması / beta" gibi ibareler META'ya GİRMEZ (yalnız görünür duyuru kartında).
-export const metadata = {
-  title: {
-    absolute: "ElwGraphs — LoL Oyuncu İstatistikleri, Maç Analizi ve Meta",
-  },
-  description:
-    "League of Legends oyuncu profilleri, detaylı maç analizi, ELW Score performans puanlaması, canlı maç ön-analizi ve güncel şampiyon meta/tier listesi. Riot ID ile oyuncu ara, performansını incele.",
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: "ElwGraphs — LoL Oyuncu İstatistikleri, Maç Analizi ve Meta",
+// Admin → Ayarlar → SEO'dan title/description deploy'suz ezilebilir.
+export async function generateMetadata() {
+  const seo = await getSeoOverrides();
+  return mergeSeo({
+    title: {
+      absolute: "ElwGraphs — LoL Oyuncu İstatistikleri, Maç Analizi ve Meta",
+    },
     description:
-      "Oyuncu profilleri, maç analizi, ELW Score, canlı maç ön-analizi ve şampiyon meta/tier verileri tek yerde.",
-    url: "https://elwgraphs.elw.com.tr",
-    type: "website",
-  },
-};
+      "League of Legends oyuncu profilleri, detaylı maç analizi, ELW Score performans puanlaması, canlı maç ön-analizi ve güncel şampiyon meta/tier listesi. Riot ID ile oyuncu ara, performansını incele.",
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: "ElwGraphs — LoL Oyuncu İstatistikleri, Maç Analizi ve Meta",
+      description:
+        "Oyuncu profilleri, maç analizi, ELW Score, canlı maç ön-analizi ve şampiyon meta/tier verileri tek yerde.",
+      url: "https://elwgraphs.elw.com.tr",
+      type: "website",
+    },
+  }, seo.home);
+}
 
 /* ---- Öne çıkan oyuncular: ayrı (challenger) uç, Suspense ile stream ---- */
 async function PlayersSection() {
