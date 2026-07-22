@@ -29,9 +29,9 @@ const STAT_META = [
   ["Mana Yenilenmesi", "text-blue-300", Droplet],
   ["Mana", "text-blue-400", Droplet],
   ["Hareket Hızı", "text-gray-100", "/staticons/ms.png"],
-  ["Tenas", "text-gray-200", "/staticons/tenacity.png"],
-  ["Sıvışma", "text-gray-200", "/staticons/tenacity.png"],
-  ["Meşakkat", "text-gray-200", "/staticons/tenacity.png"],
+  ["Tenas", "text-violet-300", "/staticons/tenacity.png"],
+  ["Sıvışma", "text-violet-300", "/staticons/tenacity.png"],
+  ["Meşakkat", "text-violet-300", "/staticons/tenacity.png"],
   ["Yaşam Çalma", "text-rose-400", Droplets],
   ["Vampirizm", "text-rose-400", Droplets],
   ["İyileştirme", "text-emerald-300", HeartPulse],
@@ -126,7 +126,7 @@ export default function ItemTooltip({ item, size = 30, imgClass = "" }) {
                   const [val, label] = splitStat(s);
                   const [cls, icon] = statMeta(label);
                   return (
-                    <p key={j} className="text-[13px] leading-snug flex items-center gap-2">
+                    <p key={j} className="text-[13px] leading-snug flex items-center gap-1">
                       <StatIcon icon={icon} cls={cls} />
                       {val && <span className={`font-bold ${cls}`}>{val}</span>}
                       <span className="text-gray-200">{label}</span>
