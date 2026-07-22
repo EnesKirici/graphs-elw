@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Swords, Eye, BarChart3, Package, Zap, MessageSquare, Sparkles, Info } from "lucide-react";
 import ItemTooltip from "@/components/shared/ItemTooltip";
+import Tooltip from "@/components/shared/Tooltip";
 import { DD_ASSETS } from "@/lib/ddragon";
 
 /*
@@ -219,7 +220,7 @@ function SpellCasts({ p, abilityIcons }) {
         )}
       </div>
       <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">{count != null ? count : "—"}</span>
-      <span className="text-[10px] leading-tight mt-1 invisible">·</span>
+      <span className="text-[10px] text-gray-500 leading-tight mt-1">kez</span>
     </div>
   );
   // TEK SATIR: Q W E R | ayraç | D F — Pingler'le aynı hücre genişliği ve boşluklar
@@ -268,7 +269,10 @@ const PING_ICONS = {
   baitPings: "bait", basicPings: "generic",
 };
 function Pings({ pings }) {
+  const [moreAnchor, setMoreAnchor] = useState(null);
   const entries = pings ? Object.entries(pings).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]) : [];
+  const shown = entries.slice(0, 5);
+  const hidden = entries.slice(5);
   if (!entries.length) {
     return (
       <div className="flex items-start gap-2 py-2">
@@ -280,8 +284,8 @@ function Pings({ pings }) {
     );
   }
   return (
-    <div className="h-full py-1 flex flex-wrap content-center items-center justify-center gap-1 gap-y-5">
-      {entries.map(([k, v]) => (
+    <div className="h-full py-1 flex items-center justify-center gap-1">
+      {shown.map(([k, v]) => (
         <div key={k} className="flex flex-col items-center text-center w-14">
           <div className="h-10 flex items-center justify-center mb-2">
             <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt={PING_LABELS[k] || k} title={PING_LABELS[k] || k} width={30} height={30} />
@@ -290,6 +294,36 @@ function Pings({ pings }) {
           <span className="text-[10px] text-gray-500 leading-tight mt-1 truncate w-full">{PING_LABELS[k] || k}</span>
         </div>
       ))}
+      {hidden.length > 0 && (
+        <div
+          className="flex flex-col items-center text-center w-14 cursor-help"
+          onMouseEnter={(e) => setMoreAnchor(e.currentTarget)}
+          onMouseLeave={() => setMoreAnchor(null)}
+        >
+          <div className="h-10 flex items-center justify-center mb-2">
+            <span className="w-9 h-9 rounded-full bg-soft border border-edge flex items-center justify-center text-[13px] font-bold text-gray-300">
+              +{hidden.length}
+            </span>
+          </div>
+          <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">
+            {hidden.reduce((s, [, v]) => s + v, 0)}
+          </span>
+          <span className="text-[10px] text-gray-500 leading-tight mt-1">Diğer</span>
+          {moreAnchor && (
+            <Tooltip anchorEl={moreAnchor}>
+              <div className="tip-dark bg-[#0e131b] border border-edge rounded-xl p-3 shadow-2xl shadow-black/90 space-y-2 min-w-[150px]">
+                {hidden.map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-2">
+                    <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt="" width={18} height={18} className="flex-shrink-0" />
+                    <span className="text-[11px] text-gray-300 flex-1 whitespace-nowrap">{PING_LABELS[k] || k}</span>
+                    <span className="text-[12px] font-bold text-gray-100 tabular-nums">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </Tooltip>
+          )}
+        </div>
+      )}
     </div>
   );
 }
