@@ -48,24 +48,24 @@ function kdaColor(k) {
 /* Skor — ring'li mini dial (kart başlığındaki büyük dial'ın küçüğü) */
 function ScoreRing({ score, glow }) {
   const c = scoreColor(score);
-  const r = 14.5;
+  const r = 19.5;
   const circ = 2 * Math.PI * r;
   const frac = score != null ? Math.max(0.05, Math.min(score / 10, 1)) : 0;
   return (
-    <div className="relative w-9 h-9 flex-shrink-0">
-      <svg viewBox="0 0 36 36" className="w-9 h-9 -rotate-90">
-        <circle cx="18" cy="18" r={r} fill="none" strokeWidth="2.5" className="stroke-edge/60" />
+    <div className="relative w-11 h-11 flex-shrink-0">
+      <svg viewBox="0 0 44 44" className="w-11 h-11 -rotate-90">
+        <circle cx="22" cy="22" r={r} fill="none" strokeWidth="3" className="stroke-edge/60" />
         {score != null && (
           <circle
-            cx="18" cy="18" r={r} fill="none" strokeWidth="2.5" strokeLinecap="round"
+            cx="22" cy="22" r={r} fill="none" strokeWidth="3" strokeLinecap="round"
             stroke={c} strokeDasharray={`${frac * circ} ${circ}`}
-            style={glow ? { filter: `drop-shadow(0 0 3px ${c})` } : undefined}
+            style={glow ? { filter: `drop-shadow(0 0 4px ${c})` } : undefined}
           />
         )}
       </svg>
       <span
-        className="absolute inset-0 flex items-center justify-center text-[11px] font-extrabold tabular-nums"
-        style={{ color: c, textShadow: glow ? `0 0 8px ${c}` : undefined }}
+        className="absolute inset-0 flex items-center justify-center text-[14px] font-black tracking-tight tabular-nums"
+        style={{ color: c, textShadow: glow ? `0 0 9px ${c}` : undefined }}
       >
         {score != null ? score.toFixed(1) : "—"}
       </span>
@@ -199,8 +199,8 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
         {/* Items — 3 + totem / 3 kompakt blok */}
         <ItemGrid items={p.items} />
 
-        {/* Hasar — değer + bar (en çok vuran parlar) */}
-        <div className="flex-1 min-w-[56px] max-w-[110px] ml-auto">
+        {/* Hasar — değer + bar (en çok vuran parlar); ring'den nefes payıyla ayrık */}
+        <div className="flex-1 min-w-[56px] max-w-[104px] ml-auto mr-3">
           <p className={`text-[11px] font-mono text-right leading-none mb-1 ${isTopDmg ? "text-red-300 font-bold" : "text-red-400/80"}`}>
             {fmtDmg(p.damage)}
           </p>
