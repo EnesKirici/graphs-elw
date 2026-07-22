@@ -2,6 +2,9 @@
 
 > Bu dosya **güncel durum + bekleyen işler**. Tamamlanan işlerin kaydı → `YAPILANLAR.md`.
 > Kalıcı proje bilgisi → memory dosyaları (`project_*`, `reference_*`, `feedback_*`).
+> **Doküman düzeni (2026-07-22):** bekleyen plan dosyaları → `docs/plans/`
+> (CHAMPION_BUILD, PROFILE_RANKINGS, CHAMPION_RANKING_METHODOLOGY, WORKER, LIVE_GAME, MERAKI),
+> bitmiş/bayat dökümler → `docs/arsiv/`. Kökte yalnız DEVAM + YAPILANLAR kalır.
 
 ## 🟢 Son durum (2026-07-22) — SEO turu (commit `25a50cd`, CANLI)
 (1) **Sitemap'e 171 şampiyon sayfası eklendi** (API'den dinamik, günlük revalidate; canlıda 180 URL
