@@ -45,27 +45,31 @@ function kdaColor(k) {
   return "text-red-400";
 }
 
-/* Skor — ring'li mini dial (kart başlığındaki büyük dial'ın küçüğü) */
+/* Skor — ring'li mini dial (kart başlığındaki büyük dial'ın küçüğü).
+   Glow SVG filter'la DEĞİL yuvarlak konteynerde box-shadow ile — drop-shadow
+   filter bölgesi kare bloom yapıyordu (eski bilinen sorun). */
 function ScoreRing({ score, glow }) {
   const c = scoreColor(score);
-  const r = 19.5;
+  const r = 21;
   const circ = 2 * Math.PI * r;
   const frac = score != null ? Math.max(0.05, Math.min(score / 10, 1)) : 0;
   return (
-    <div className="relative w-11 h-11 flex-shrink-0">
-      <svg viewBox="0 0 44 44" className="w-11 h-11 -rotate-90">
-        <circle cx="22" cy="22" r={r} fill="none" strokeWidth="3" className="stroke-edge/60" />
+    <div
+      className="relative w-12 h-12 flex-shrink-0 rounded-full"
+      style={glow ? { boxShadow: `0 0 12px ${c}55` } : undefined}
+    >
+      <svg viewBox="0 0 48 48" className="w-12 h-12 -rotate-90">
+        <circle cx="24" cy="24" r={r} fill="none" strokeWidth="3" className="stroke-edge/60" />
         {score != null && (
           <circle
-            cx="22" cy="22" r={r} fill="none" strokeWidth="3" strokeLinecap="round"
+            cx="24" cy="24" r={r} fill="none" strokeWidth="3" strokeLinecap="round"
             stroke={c} strokeDasharray={`${frac * circ} ${circ}`}
-            style={glow ? { filter: `drop-shadow(0 0 4px ${c})` } : undefined}
           />
         )}
       </svg>
       <span
-        className="absolute inset-0 flex items-center justify-center text-[14px] font-black tracking-tight tabular-nums"
-        style={{ color: c, textShadow: glow ? `0 0 9px ${c}` : undefined }}
+        className="absolute inset-0 flex items-center justify-center text-[16px] font-black tracking-tight tabular-nums"
+        style={{ color: c }}
       >
         {score != null ? score.toFixed(1) : "—"}
       </span>
@@ -199,15 +203,15 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
         {/* Items — 3 + totem / 3 kompakt blok */}
         <ItemGrid items={p.items} />
 
-        {/* Hasar — değer + bar (en çok vuran parlar); ring'den nefes payıyla ayrık */}
+        {/* Hasar — değer + pastel geçişli bar (en çok vuran biraz daha canlı) */}
         <div className="flex-1 min-w-[56px] max-w-[104px] ml-auto mr-3">
-          <p className={`text-[11px] font-mono text-right leading-none mb-1 ${isTopDmg ? "text-red-300 font-bold" : "text-red-400/80"}`}>
+          <p className={`text-[11px] font-mono text-right leading-none mb-1 ${isTopDmg ? "text-rose-200 font-bold" : "text-rose-300/70"}`}>
             {fmtDmg(p.damage)}
           </p>
           <div className="h-1.5 bg-edge rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full ${isTopDmg ? "bg-red-400" : "bg-red-500/50"}`}
-              style={{ width: `${dmgPct}%`, boxShadow: isTopDmg ? "0 0 6px #f87171" : undefined }}
+              className={`h-full rounded-full bg-gradient-to-r ${isTopDmg ? "from-rose-400 to-orange-300" : "from-rose-500/35 to-rose-400/65"}`}
+              style={{ width: `${dmgPct}%`, boxShadow: isTopDmg ? "0 0 8px rgba(251,113,133,0.45)" : undefined }}
             />
           </div>
         </div>
