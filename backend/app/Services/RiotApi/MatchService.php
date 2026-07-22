@@ -715,23 +715,7 @@ class MatchService
                 try {
                     $detail = $this->matchData->getMatchDetail($matchId);
                     foreach ($detail['info']['participants'] ?? [] as $p) {
-                        $pid = $p['puuid'] ?? null;
-                        if (!$pid || isset($seen[$pid])) continue;
-                        $seen[$pid] = true;
-
-                        $name = $p['riotIdGameName'] ?? $p['summonerName'] ?? null;
-                        $tag = $p['riotIdTagline'] ?? null;
-                        if (!$name || !$tag) continue;
-
-                        CachedPlayer::firstOrCreate(
-                            ['puuid' => $pid],
-                            [
-                                'game_name'       => $name,
-                                'tag_line'        => $tag,
-                                'profile_icon_id' => $p['profileIcon'] ?? null,
-                                'summoner_level'  => $p['summonerLevel'] ?? null,
-                            ]
-                        );
+                        $this->cacheParticipant($p, $seen);
                     }
                 } catch (\Exception $e) {
                     continue;
@@ -750,26 +734,38 @@ class MatchService
             $seen = [];
             foreach ($details as $detail) {
                 foreach ($detail['info']['participants'] ?? [] as $p) {
-                    $pid = $p['puuid'] ?? null;
-                    if (!$pid || isset($seen[$pid])) continue;
-                    $seen[$pid] = true;
-
-                    $name = $p['riotIdGameName'] ?? $p['summonerName'] ?? null;
-                    $tag = $p['riotIdTagline'] ?? null;
-                    if (!$name || !$tag) continue;
-
-                    CachedPlayer::firstOrCreate(
-                        ['puuid' => $pid],
-                        [
-                            'game_name'       => $name,
-                            'tag_line'        => $tag,
-                            'profile_icon_id' => $p['profileIcon'] ?? null,
-                            'summoner_level'  => $p['summonerLevel'] ?? null,
-                        ]
-                    );
+                    $this->cacheParticipant($p, $seen);
                 }
             }
         } catch (\Exception $e) {}
+    }
+
+    /**
+     * Tek maç katılımcısını cached_players'a ekle — yalnız YENİ oyuncu, asla ezmez.
+     * Riot puuid'leri key/app bazında şifreler: eski maç verilerindeki ESKİ puuid'ler
+     * dedupe sonrası çıplak (rank'sız) satırı yeniden doğuruyordu. Aynı isim#tag
+     * başka puuid'le zaten kayıtlıysa ikinci satır AÇILMAZ (2026-07-22).
+     */
+    private function cacheParticipant(array $p, array &$seen): void
+    {
+        $pid = $p['puuid'] ?? null;
+        if (!$pid || isset($seen[$pid])) return;
+        $seen[$pid] = true;
+
+        $name = $p['riotIdGameName'] ?? $p['summonerName'] ?? null;
+        $tag = $p['riotIdTagline'] ?? null;
+        if (!$name || !$tag) return;
+
+        if (CachedPlayer::where('puuid', $pid)->exists()) return;
+        if (CachedPlayer::where('game_name', $name)->where('tag_line', $tag)->exists()) return;
+
+        CachedPlayer::create([
+            'puuid'           => $pid,
+            'game_name'       => $name,
+            'tag_line'        => $tag,
+            'profile_icon_id' => $p['profileIcon'] ?? null,
+            'summoner_level'  => $p['summonerLevel'] ?? null,
+        ]);
     }
 
     /**

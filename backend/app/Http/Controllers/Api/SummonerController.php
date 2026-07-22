@@ -491,15 +491,21 @@ class SummonerController extends Controller
         // Sıralama: profili gerçekten açılmış (ranklı/rollü) oyuncular önce, sonra
         // en yakın eşleşme (kısa isim) — worker'ın maçlardan tanıdığı çıplak
         // kayıtlar (tier=null, rol yok) listenin sonuna düşer.
+        $bare = fn($p) => $p->tier === null && empty($p->top_roles);
         $players = $query
             ->orderByDesc('updated_at')
             ->limit(30)
             ->get()
+            // Önce DOLU satır (rank/rol) öne — unique() aynı isim#tag'te en iyi satırı tutsun
+            // (çıplak satırlar eski maç verilerindeki eski puuid'lerden yeniden doğabiliyor).
+            ->sort(function ($a, $b) use ($bare) {
+                if ($bare($a) !== $bare($b)) return $bare($a) <=> $bare($b);
+                return $b->updated_at <=> $a->updated_at;
+            })
             ->unique(fn($p) => mb_strtolower($p->game_name . '#' . $p->tag_line))
-            ->sort(function ($a, $b) {
-                $bareA = $a->tier === null && empty($a->top_roles);
-                $bareB = $b->tier === null && empty($b->top_roles);
-                if ($bareA !== $bareB) return $bareA <=> $bareB;
+            // Gösterim sırası: ranklı/rollü önce, sonra en yakın eşleşme (kısa isim)
+            ->sort(function ($a, $b) use ($bare) {
+                if ($bare($a) !== $bare($b)) return $bare($a) <=> $bare($b);
                 return mb_strlen($a->game_name) <=> mb_strlen($b->game_name);
             })
             ->take(5)

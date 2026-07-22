@@ -22,10 +22,10 @@ Artisan::command('players:dedupe', function () {
 
     $deleted = 0;
     foreach ($groups as $g) {
-        // En güncel satır kalır; aynı isim#tag'in eski puuid'li kopyaları silinir.
+        // En DOLU satır kalır (rank'lı > çıplak), eşitse en güncel; kopyalar silinir.
         $keep = \App\Models\CachedPlayer::where('game_name', $g->game_name)
             ->where('tag_line', $g->tag_line)
-            ->orderByDesc('updated_at')
+            ->orderByRaw('(tier IS NULL) asc, updated_at desc')
             ->value('puuid');
         $deleted += \App\Models\CachedPlayer::where('game_name', $g->game_name)
             ->where('tag_line', $g->tag_line)
