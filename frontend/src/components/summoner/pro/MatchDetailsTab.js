@@ -220,14 +220,16 @@ function SpellCasts({ p, abilityIcons }) {
       <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">{count != null ? count : "—"}</span>
     </div>
   );
-  // Pingler'le aynı iskelet: kart genişliğine eşit yayılan 3 kolon, dikey ortalı
+  // Üst satır 4 yetenek (Q W E R), alt satır ortalanmış 2 sum (D F) — Pingler de 4 kolon
   const grid = (withCounts) => (
-    <div className="h-full py-1 grid grid-cols-3 gap-y-6 content-center justify-items-center">
+    <div className="h-full py-1 grid grid-cols-4 gap-y-6 content-center justify-items-center">
       {["q", "w", "e", "r"].map((k) => (
         <Cell key={k} img={abilityIcons?.[k]} label={k.toUpperCase()} badge
           count={withCounts ? (sc?.[k] ?? 0) : null} />
       ))}
-      <Cell img={p.spells?.[0]?.image} label="D" count={withCounts ? (su?.d ?? 0) : null} />
+      <div className="col-start-2 justify-self-center">
+        <Cell img={p.spells?.[0]?.image} label="D" count={withCounts ? (su?.d ?? 0) : null} />
+      </div>
       <Cell img={p.spells?.[1]?.image} label="F" count={withCounts ? (su?.f ?? 0) : null} />
     </div>
   );
@@ -277,9 +279,9 @@ function Pings({ pings }) {
     );
   }
   return (
-    <div className="h-full py-1 grid grid-cols-3 gap-y-6 content-center justify-items-center">
+    <div className="h-full py-1 grid grid-cols-4 gap-y-6 content-center justify-items-center">
       {entries.map(([k, v]) => (
-        <div key={k} className="flex flex-col items-center text-center w-20">
+        <div key={k} className="flex flex-col items-center text-center w-16">
           <div className="h-10 flex items-center justify-center mb-2">
             <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt={PING_LABELS[k] || k} title={PING_LABELS[k] || k} width={30} height={30} />
           </div>
