@@ -385,6 +385,24 @@ html.is-admin .elw-adminbar { display: flex; }
 .hero-stats { display: flex; gap: 26px; margin-top: 20px; }
 .hero-stat .hs-val { font-family: var(--f-display); font-weight: 800; font-size: 26px; line-height: 1; color: var(--txt); }
 .hero-stat .hs-val.up { color: var(--win); }
+/* Yeni şampiyon slaytında yüksek ban: kırmızı tonlarda, soldan sağa akan
+   cam parlaması (highlight bandı metnin içinden süpürülür). */
+.hero-stat .hs-val.hs-ban-hot {
+  background: linear-gradient(100deg,
+    #ff4d6b 0%, #ff4d6b 38%, #ffd9de 50%, #ff4d6b 62%, #ff4d6b 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  animation: banGlassSweep 2.8s ease-in-out infinite;
+}
+@keyframes banGlassSweep {
+  0%   { background-position: 125% 0; }
+  60%  { background-position: -25% 0; }
+  100% { background-position: -25% 0; } /* süpürme arası kısa nefes */
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-stat .hs-val.hs-ban-hot { animation: none; background-position: 50% 0; }
+}
 .hero-stat .hs-lab { font-size: 10.5px; color: var(--txt-3); font-family: var(--f-mono); letter-spacing: .12em; text-transform: uppercase; margin-top: 5px; }
 .hero-sample { font-size: 11px; color: var(--txt-3); font-family: var(--f-mono); margin-top: 10px; letter-spacing: .02em; }
 .hero-cta { margin-top: 22px; display: flex; gap: 10px; }

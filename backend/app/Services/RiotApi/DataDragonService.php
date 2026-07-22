@@ -257,14 +257,40 @@ class DataDragonService
     public function getChampionPositions(): array
     {
         return Cache::remember('meraki:champion_positions', config('riot.cache_ttl.ddragon'), function () {
-            $data = Http::timeout(15)
-                ->get('https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/champions.json')
-                ->json();
-
             $positions = [];
-            foreach ($data as $key => $champion) {
-                $positions[$key] = $champion['positions'] ?? [];
+            try {
+                $data = Http::timeout(15)
+                    ->get('https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/champions.json')
+                    ->json();
+                foreach ($data ?? [] as $key => $champion) {
+                    $positions[$key] = $champion['positions'] ?? [];
+                }
+            } catch (\Exception $e) {
+                // Meraki erişilemedi — aşağıdaki DB fallback'i elinden geleni doldurur
             }
+
+            // Meraki yeni şampiyonları GEÇ ekliyor (Locke/Zaahen rolsüz kalıyordu):
+            // eksik/boş kalanları KENDİ maç verimizden türet (min 20 maç, rol payı >= %15).
+            // Not: DB Riot dilinde (UTILITY), Meraki/frontend SUPPORT bekler → çevrilir.
+            try {
+                $rows = \App\Models\ChampionStat::where('position', '!=', 'ALL')
+                    ->selectRaw('champion_id, position, SUM(games) g')
+                    ->groupBy('champion_id', 'position')
+                    ->get()
+                    ->groupBy('champion_id');
+
+                foreach ($rows as $champId => $set) {
+                    if (! empty($positions[$champId])) continue; // Meraki verisi varsa dokunma
+                    $total = (int) $set->sum('g');
+                    if ($total < 20) continue; // gürültülü örneklemden rol üretme
+                    $positions[$champId] = $set
+                        ->filter(fn ($r) => $r->g / $total >= 0.15)
+                        ->sortByDesc('g')
+                        ->pluck('position')
+                        ->map(fn ($p) => $p === 'UTILITY' ? 'SUPPORT' : $p)
+                        ->values()->all();
+                }
+            } catch (\Exception $e) {}
 
             return $positions;
         });

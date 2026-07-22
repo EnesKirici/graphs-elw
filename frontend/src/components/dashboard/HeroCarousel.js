@@ -252,7 +252,8 @@ export default function HeroCarousel({ sliderPool = [], version }) {
                 }}
               >
                 <span className="dot-mark" style={{ background: st.color, boxShadow: `0 0 8px ${st.color}` }} />
-                {s.sliderCategory} #{s.sliderRank}
+                {/* "Yeni Şampiyon #1" tuhaf duruyor — yenilikte sıra yok, rozet sade kalır */}
+                {s.sliderCategory === "Yeni Şampiyon" ? s.sliderCategory : `${s.sliderCategory} #${s.sliderRank}`}
               </span>
               <div className="hero-name">{s.name}</div>
               <div className="hero-sub">
@@ -269,7 +270,17 @@ export default function HeroCarousel({ sliderPool = [], version }) {
                   <div className="hs-lab">Pick</div>
                 </div>
                 <div className="hero-stat">
-                  <div className="hs-val" style={st.label === "BAN" ? { color: st.color } : undefined}>{pctTR(s.banRate)}</div>
+                  {/* Yeni şampiyonun dikkat çeken yüksek ban'ı: kırmızı, soldan sağa
+                      cam parlaması süpürmeli sayı (hs-ban-hot) */}
+                  <div
+                    className={
+                      "hs-val" +
+                      (st.label === "YENİ ŞAMPİYON" && (s.banRate ?? 0) >= 20 ? " hs-ban-hot" : "")
+                    }
+                    style={st.label === "BAN" ? { color: st.color } : undefined}
+                  >
+                    {pctTR(s.banRate)}
+                  </div>
                   <div className="hs-lab">Ban</div>
                 </div>
               </div>

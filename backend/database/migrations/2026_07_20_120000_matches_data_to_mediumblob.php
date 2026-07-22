@@ -13,12 +13,20 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // SQLite (test ortamı) MODIFY bilmez ve BLOB/TEXT ayrımı yapmaz — atla.
+        // (Testler sqlite :memory: kullanır; bu ALTER yalnız canlı MySQL için.)
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            return;
+        }
         DB::statement('ALTER TABLE matches MODIFY data MEDIUMBLOB NOT NULL');
         DB::statement('ALTER TABLE match_timelines MODIFY data MEDIUMBLOB NOT NULL');
     }
 
     public function down(): void
     {
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            return;
+        }
         // DİKKAT: gzip'li satırlar varken geri dönme — önce açmak gerekir,
         // yoksa binary veri TEXT kolonda utf8mb4 doğrulamasına takılır.
         DB::statement('ALTER TABLE matches MODIFY data LONGTEXT NOT NULL');
