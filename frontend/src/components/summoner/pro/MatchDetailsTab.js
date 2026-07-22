@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Swords, Eye, BarChart3, Package, Zap, MessageSquare, Sparkles, Info, Shield } from "lucide-react";
+import { Swords, Eye, BarChart3, Package, Zap, MessageSquare, Sparkles, Info } from "lucide-react";
 import ItemTooltip from "@/components/shared/ItemTooltip";
 import { DD_ASSETS } from "@/lib/ddragon";
 
@@ -126,69 +126,6 @@ function PlayerPicker({ blue, red, selectedPuuid, onSelect }) {
       <span className="text-[14px] font-bold text-gray-600 px-1 italic">VS</span>
       <Side players={red} />
     </div>
-  );
-}
-
-/* ===== Plaka Savaşı — takım bağlamı (bireysel değil; takımın toplam plakası + aranan oyuncunun payı) =====
-   Plaka yalnız 3 dış kulede ve ilk 14 dk var; her dış kule 5 plaka → takım başına maks 15. */
-function PlateWar({ blue, red, meP }) {
-  const dist = (players) =>
-    (players || [])
-      .map((p) => ({ puuid: p.puuid, name: p.summonerName, img: p.champion?.image, plates: p.challenges?.turretPlatesTaken ?? 0 }))
-      .filter((p) => p.plates > 0)
-      .sort((a, b) => b.plates - a.plates);
-
-  const b = dist(blue);
-  const r = dist(red);
-  const bt = b.reduce((s, p) => s + p.plates, 0);
-  const rt = r.reduce((s, p) => s + p.plates, 0);
-  if (bt === 0 && rt === 0) return null; // erken biten maç / veri yok
-  const total = Math.max(bt + rt, 1);
-
-  const me = [...b, ...r].find((p) => p.puuid === meP);
-  const myTeamTotal = (blue || []).some((p) => p.puuid === meP) ? bt : rt;
-  const myShare = me && myTeamTotal > 0 ? Math.round((me.plates / myTeamTotal) * 100) : null;
-
-  const Chips = ({ players, align }) => (
-    <div className={`flex flex-wrap gap-1.5 ${align === "right" ? "justify-end" : ""}`}>
-      {players.map((p, i) => (
-        <div
-          key={i}
-          title={`${p.name}: ${p.plates} plaka`}
-          className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 border ${
-            p.puuid === meP
-              ? "border-[var(--dpm-accent,#60a5fa)] bg-[var(--dpm-accent,#60a5fa)]/10"
-              : "border-edge/40 bg-card/60"
-          }`}
-        >
-          <img src={p.img} alt="" width={18} height={18} className="rounded" />
-          <span className="text-[11px] font-bold text-gray-300">{p.plates}</span>
-        </div>
-      ))}
-    </div>
-  );
-
-  return (
-    <Card icon={Shield} title="Plaka Savaşı">
-      <div className="flex items-center justify-between mb-2 text-[12px]">
-        <span className="font-bold text-blue-400">Mavi {bt}</span>
-        {myShare != null && (
-          <span className="text-[11px] text-gray-500">
-            Senin payın: <b className="text-gray-200">%{myShare}</b> <span className="text-gray-600">({me.plates} plaka)</span>
-          </span>
-        )}
-        <span className="font-bold text-red-400">{rt} Kırmızı</span>
-      </div>
-      <div className="h-2.5 rounded-full overflow-hidden flex mb-3">
-        <div className="h-full bg-blue-500" style={{ width: `${(bt / total) * 100}%` }} />
-        <div className="h-full bg-red-500" style={{ width: `${(rt / total) * 100}%` }} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Chips players={b} align="left" />
-        <Chips players={r} align="right" />
-      </div>
-      <p className="text-[10px] text-gray-600 mt-3 text-center">ilk 14 dk · sadece dış kuleler · takım başına maks 15 plaka</p>
-    </Card>
   );
 }
 
@@ -412,9 +349,6 @@ export default function MatchDetailsTab({ t1, t2, searchedPuuid, duration }) {
           </div>
         </Card>
       </div>
-
-      {/* Plaka Savaşı — takım payı bağlamı */}
-      <PlateWar blue={blue} red={red} meP={searchedPuuid} />
 
       {/* Build Order */}
       <Card icon={Package} title="Eşya Sırası (Build Order)" bodyClass="p-5">

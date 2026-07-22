@@ -929,7 +929,8 @@ class MatchService
                     if ($itemId <= 0) continue;
                     $itemData = $allItems[(string) $itemId] ?? null;
                     $itemGold = $itemData['gold']['total'] ?? 0;
-                    if ($itemGold < 300) continue;
+                    // Ucuz eşyaları ele (iksir/ward spam'i) — Kontrol Totemi (2055) istisna, build akışında görünmeli
+                    if ($itemGold < 300 && $itemId !== 2055) continue;
                     $itemTimelines[$puuid][] = [
                         'timestamp' => $timestamp,
                         'itemId'    => $itemId,

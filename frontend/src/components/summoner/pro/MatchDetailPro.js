@@ -305,9 +305,11 @@ export default function MatchDetailPro({ matchId, puuid }) {
 }
 
 /* ===== Rünler sekmesi — her oyuncunun tam rün sayfası satırda açık (hover gerekmez) ===== */
-const SHARD_DOT = ["bg-red-400", "bg-purple-400", "bg-green-400"];
+// Eski cache'lerde statShards düz string; yeni backend {name, icon} objesi gönderiyor.
+const shardName = (s) => (typeof s === "string" ? s : s?.name || "");
+const shardIcon = (s) => (typeof s === "object" && s ? s.icon : null);
 
-function RuneIcon({ rune, size = 21, ring = false, dim = false }) {
+function RuneIcon({ rune, size = 26, ring = false, dim = false }) {
   if (!rune?.icon) {
     return <span style={{ width: size, height: size }} className="rounded-full bg-edge/40 flex-shrink-0" />;
   }
@@ -318,8 +320,26 @@ function RuneIcon({ rune, size = 21, ring = false, dim = false }) {
       title={rune.name}
       width={size}
       height={size}
-      className={`rounded-full flex-shrink-0 ${ring ? "ring-1 ring-amber-400/60 bg-black/40" : ""} ${dim ? "opacity-70" : ""}`}
+      className={`rounded-full flex-shrink-0 ${ring ? "ring-2 ring-amber-400/60 bg-black/40" : ""} ${dim ? "opacity-70" : ""}`}
     />
+  );
+}
+
+// Stat parçası — mini rün: koyu daire içinde DDragon StatMods ikonu, isim tooltip'te
+function ShardIcon({ shard, size = 24 }) {
+  const icon = shardIcon(shard);
+  const name = shardName(shard);
+  if (!icon) {
+    return <span title={name} style={{ width: size, height: size }} className="rounded-full bg-edge/40 flex-shrink-0" />;
+  }
+  return (
+    <span
+      title={name}
+      style={{ width: size, height: size }}
+      className="rounded-full bg-soft ring-1 ring-edge/70 flex items-center justify-center flex-shrink-0"
+    >
+      <img src={icon} alt={name} width={size - 8} height={size - 8} />
+    </span>
   );
 }
 
@@ -331,11 +351,11 @@ function RuneRow({ p, isMe }) {
   const hasRunes = keystone?.icon || r.secondaryPerks?.length;
 
   return (
-    <div className={`flex items-center gap-2 sm:gap-3 px-2.5 sm:px-4 py-2 ${isMe ? "bg-cyan-500/[0.07]" : ""} hover:bg-hover transition-colors`}>
+    <div className={`flex items-center gap-2.5 sm:gap-4 px-2.5 sm:px-4 py-2.5 ${isMe ? "bg-cyan-500/[0.07]" : ""} hover:bg-hover transition-colors`}>
       {/* Şampiyon + isim */}
-      <div className="flex items-center gap-2 w-[118px] sm:w-[150px] min-w-0 flex-shrink-0">
-        <img src={p.champion?.image} alt="" width={30} height={30} className="rounded-md flex-shrink-0" />
-        <span className={`text-[12px] truncate ${p.isBot ? "text-gray-500 italic" : isMe ? "text-cyan-300 font-semibold" : "text-gray-200"}`}>
+      <div className="flex items-center gap-2 w-[120px] sm:w-[160px] min-w-0 flex-shrink-0">
+        <img src={p.champion?.image} alt="" width={34} height={34} className="rounded-md flex-shrink-0" />
+        <span className={`text-[13px] truncate ${p.isBot ? "text-gray-500 italic" : isMe ? "text-cyan-300 font-semibold" : "text-gray-200"}`}>
           {p.summonerName}
         </span>
       </div>
@@ -344,36 +364,26 @@ function RuneRow({ p, isMe }) {
         <span className="text-[11px] text-gray-600">Rün verisi yok</span>
       ) : (
         <>
-          {/* Ana ağaç: ağaç ikonu + keystone (vurgulu) + 3 küçük rün */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <RuneIcon rune={r.primaryTree} size={14} dim />
-            <RuneIcon rune={keystone} size={30} ring />
+          {/* Ana ağaç: ağaç ikonu + keystone (vurgulu) + 3 rün */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <RuneIcon rune={r.primaryTree} size={16} dim />
+            <RuneIcon rune={keystone} size={38} ring />
             {primaryMinors.map((perk, i) => <RuneIcon key={i} rune={perk} />)}
           </div>
 
-          <span className="h-6 border-l border-edge/40 hidden sm:block" />
+          <span className="h-8 border-l border-edge/40 hidden sm:block" />
 
           {/* Yan ağaç: ağaç ikonu + 2 rün */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <RuneIcon rune={r.subTree} size={14} dim />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <RuneIcon rune={r.subTree} size={16} dim />
             {(r.secondaryPerks || []).map((perk, i) => <RuneIcon key={i} rune={perk} />)}
           </div>
 
-          <span className="h-6 border-l border-edge/40 hidden md:block" />
+          <span className="h-8 border-l border-edge/40 hidden sm:block" />
 
-          {/* Stat parçaları — md+ metinli, altında dot'lu kompakt hali */}
-          <div className="hidden md:flex flex-col justify-center gap-[3px] min-w-0">
-            {(r.statShards || []).map((s, i) => (
-              <span key={i} className="flex items-center gap-1.5 text-[9px] leading-none text-gray-400 truncate">
-                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${SHARD_DOT[i]}`} />
-                {s}
-              </span>
-            ))}
-          </div>
-          <div className="flex md:hidden items-center gap-1 flex-shrink-0">
-            {(r.statShards || []).map((s, i) => (
-              <span key={i} title={s} className={`w-1.5 h-1.5 rounded-full ${SHARD_DOT[i]}`} />
-            ))}
+          {/* Stat parçaları — gerçek shard ikonları (mini rün) */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {(r.statShards || []).map((s, i) => <ShardIcon key={i} shard={s} />)}
           </div>
         </>
       )}

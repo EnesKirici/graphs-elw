@@ -81,23 +81,28 @@ class MatchFormatterService
             }
         }
 
-        // Stat shards
-        $statShardNames = [
-            5001 => '+10-180 Can (seviyeye göre)',
-            5002 => '+6 Zırh',
-            5003 => '+8 Büyü Direnci',
-            5005 => '+10% Saldırı Hızı',
-            5007 => '+8 Yetenek İvmesi',
-            5008 => '+9 Uyarlanır Güç',
-            5010 => '+%1-10 CDR (seviyeye göre)',
-            5011 => '+65 Can',
-            5013 => '+10% Tenas',
+        // Stat shards — isim + DDragon StatMods ikonu (frontend mini rün olarak basar)
+        $statShardMeta = [
+            5001 => ['+10-180 Can (seviyeye göre)', 'StatModsHealthScalingIcon.png'],
+            5002 => ['+6 Zırh', 'StatModsArmorIcon.png'],
+            5003 => ['+8 Büyü Direnci', 'StatModsMagicResIcon.MagicResist_Fix.png'],
+            5005 => ['+10% Saldırı Hızı', 'StatModsAttackSpeedIcon.png'],
+            5007 => ['+8 Yetenek İvmesi', 'StatModsCDRScalingIcon.png'],
+            5008 => ['+9 Uyarlanır Güç', 'StatModsAdaptiveForceIcon.png'],
+            5010 => ['+%2 Hareket Hızı', 'StatModsMovementSpeedIcon.png'],
+            5011 => ['+65 Can', 'StatModsHealthPlusIcon.png'],
+            5013 => ['+10% Tenas', 'StatModsTenacityIcon.png'],
         ];
+        $shardIconBase = config('riot.ddragon_assets_url') . '/cdn/img/perk-images/StatMods';
         $statShards = [];
         if (isset($perks['statPerks'])) {
             foreach (['offense', 'flex', 'defense'] as $slot) {
                 $id = $perks['statPerks'][$slot] ?? 0;
-                $statShards[] = $statShardNames[$id] ?? "Shard #{$id}";
+                $meta = $statShardMeta[$id] ?? null;
+                $statShards[] = [
+                    'name' => $meta[0] ?? "Shard #{$id}",
+                    'icon' => $meta ? "{$shardIconBase}/{$meta[1]}" : null,
+                ];
             }
         }
 

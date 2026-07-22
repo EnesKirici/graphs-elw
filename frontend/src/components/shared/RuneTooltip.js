@@ -92,16 +92,25 @@ export default function RuneTooltip({ runes, keystoneSize = 22, subTreeSize = 16
                 </div>
                 {runes.statShards?.length > 0 && (
                   <div className="mt-3 pt-2.5 border-t border-edge/50 space-y-1.5">
-                    {runes.statShards.map((s, i) => (
-                      <p key={i} className="text-[10px] text-gray-400 flex items-center gap-1.5">
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                            i === 0 ? "bg-red-400" : i === 1 ? "bg-purple-400" : "bg-green-400"
-                          }`}
-                        />
-                        {s}
-                      </p>
-                    ))}
+                    {runes.statShards.map((s, i) => {
+                      // Eski cache'te string, yeni backend'de {name, icon}
+                      const name = typeof s === "string" ? s : s?.name || "";
+                      const icon = typeof s === "object" && s ? s.icon : null;
+                      return (
+                        <p key={i} className="text-[10px] text-gray-400 flex items-center gap-1.5">
+                          {icon ? (
+                            <img src={icon} alt="" width={14} height={14} className="flex-shrink-0" />
+                          ) : (
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                                i === 0 ? "bg-red-400" : i === 1 ? "bg-purple-400" : "bg-green-400"
+                              }`}
+                            />
+                          )}
+                          {name}
+                        </p>
+                      );
+                    })}
                   </div>
                 )}
               </div>
