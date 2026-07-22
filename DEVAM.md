@@ -1,9 +1,21 @@
-# DEVAM — Kaldığımız Yer (güncel: 2026-07-21)
+# DEVAM — Kaldığımız Yer (güncel: 2026-07-22)
 
 > Bu dosya **güncel durum + bekleyen işler**. Tamamlanan işlerin kaydı → `YAPILANLAR.md`.
 > Kalıcı proje bilgisi → memory dosyaları (`project_*`, `reference_*`, `feedback_*`).
 
-## 🟢 Son durum (2026-07-21)
+## 🟢 Son durum (2026-07-22) — SEO turu (commit `25a50cd`, CANLI)
+(1) **Sitemap'e 171 şampiyon sayfası eklendi** (API'den dinamik, günlük revalidate; canlıda 180 URL
+doğrulandı). lastModified=now damgası kaldırıldı. (2) **Şampiyon detay metadata zengin**: title'da
+ana rol + patch ("Ambessa Build, Rünler ve İstatistikler — Top, Patch 16.14"), description'da
+kazanma oranı. (3) **BreadcrumbList JSON-LD** + build sekmesine **SSR özet paragrafı** (gerçek
+veriden, "ince içerik" önlemi — 107 "tarandı/dizine eklenmedi" sayfasına karşı). (4) **Admin →
+Ayarlar → SEO sekmesi**: 4 statik sayfa + şampiyon-detay şablonu ({name} {position} {patch}
+{winrate}) title/description deploy'suz ezme (`seo_overrides` ayarı → publicSettings.seo →
+`lib/seo.js` mergeSeo/applySeoTemplate). **Bekleyen:** Search Console'da 404 olan 2 URL'nin
+tespiti (Sayfalar → Bulunamadı 404 satırına tıkla) + sitemap'i yeniden gönder; hazır admin paketi
+(Filament) bilinçli REDDEDİLDİ — mevcut panel genişletiliyor.
+
+## 🟢 Önceki durum (2026-07-21)
 (1) **Riot API key yenilendi** (local+sunucu, test 200). (2) **ROOT SSH açıldı** (key root'a eklendi).
 (3) **Disk %79→%56** (journal 3.8G→112M kalıcı 200M limit, apt clean, vscode-server/npm cache;
 17 GB boş → taşıma baskısı yok). (4) **Docker OpenVZ'de ÇALIŞIYOR** (sağlayıcı açık bırakmış) →
