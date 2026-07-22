@@ -30,6 +30,9 @@ class MatchFormatterService
         // Pasifler çıkar: <passive>İsim</passive> ve sonraki açıklama
         $descPart = preg_replace('/<stats>.*?<\/stats>/s', '', $html);
         $descPart = preg_replace('/<mainText>|<\/mainText>/', '', $descPart);
+        // Riot veri hatası: bazı eşyalarda dinamik değerler "%0" olarak gelir
+        // (örn. Deneysel Hexzırh) — yanlış "%0" göstermektense değeri at.
+        $descPart = preg_replace('/%0(?![\d,.])\s*/u', '', $descPart);
 
         // Önemli kelime/değer etiketleri → [[tip:metin]] işaretleyicisi.
         // Frontend (ItemTooltip) bunları renkli/kalın basar; strip_tags'ten sağ çıkar.
