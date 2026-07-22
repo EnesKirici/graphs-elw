@@ -209,16 +209,24 @@ class MatchDataService
                 $slimFrame['participantFrames'] = $pf;
             }
 
-            // Events — sadece ITEM_PURCHASED ve SKILL_LEVEL_UP
+            // Events — sadece eşya (satın alma/satış/geri alma) ve SKILL_LEVEL_UP
             $events = [];
             foreach ($frame['events'] ?? [] as $event) {
                 $type = $event['type'] ?? '';
-                if ($type === 'ITEM_PURCHASED') {
+                if ($type === 'ITEM_PURCHASED' || $type === 'ITEM_SOLD') {
                     $events[] = [
                         'type'          => $type,
                         'timestamp'     => $event['timestamp'] ?? 0,
                         'participantId' => $event['participantId'] ?? null,
                         'itemId'        => $event['itemId'] ?? 0,
+                    ];
+                } elseif ($type === 'ITEM_UNDO') {
+                    $events[] = [
+                        'type'          => $type,
+                        'timestamp'     => $event['timestamp'] ?? 0,
+                        'participantId' => $event['participantId'] ?? null,
+                        'beforeId'      => $event['beforeId'] ?? 0,
+                        'afterId'       => $event['afterId'] ?? 0,
                     ];
                 } elseif ($type === 'SKILL_LEVEL_UP') {
                     $events[] = [

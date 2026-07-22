@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { LayoutGrid, PieChart, Gem } from "lucide-react";
 import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
+import RuneTip from "@/components/shared/RuneTip";
+import Tooltip from "@/components/shared/Tooltip";
 import { scoreColor } from "./scoreColor";
 import MatchDetailsTab from "./MatchDetailsTab";
 
@@ -309,37 +311,32 @@ export default function MatchDetailPro({ matchId, puuid }) {
 const shardName = (s) => (typeof s === "string" ? s : s?.name || "");
 const shardIcon = (s) => (typeof s === "object" && s ? s.icon : null);
 
-function RuneIcon({ rune, size = 26, ring = false, dim = false }) {
-  if (!rune?.icon) {
-    return <span style={{ width: size, height: size }} className="rounded-full bg-edge/40 flex-shrink-0" />;
-  }
-  return (
-    <img
-      src={rune.icon}
-      alt={rune.name}
-      title={rune.name}
-      width={size}
-      height={size}
-      className={`rounded-full flex-shrink-0 ${ring ? "ring-2 ring-amber-400/60 bg-black/40" : ""} ${dim ? "opacity-70" : ""}`}
-    />
-  );
-}
-
-// Stat parçası — mini rün: koyu daire içinde DDragon StatMods ikonu, isim tooltip'te
+// Stat parçası — mini rün: koyu daire içinde DDragon StatMods ikonu, isim şık tooltip'te
 function ShardIcon({ shard, size = 24 }) {
+  const [anchor, setAnchor] = useState(null);
   const icon = shardIcon(shard);
   const name = shardName(shard);
   if (!icon) {
     return <span title={name} style={{ width: size, height: size }} className="rounded-full bg-edge/40 flex-shrink-0" />;
   }
   return (
-    <span
-      title={name}
-      style={{ width: size, height: size }}
-      className="rounded-full bg-soft ring-1 ring-edge/70 flex items-center justify-center flex-shrink-0"
-    >
-      <img src={icon} alt={name} width={size - 8} height={size - 8} />
-    </span>
+    <>
+      <span
+        style={{ width: size, height: size }}
+        className="rounded-full bg-soft ring-1 ring-edge/70 flex items-center justify-center flex-shrink-0 cursor-help"
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+      >
+        <img src={icon} alt={name} width={size - 8} height={size - 8} />
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="tip-dark bg-[#0e131b] border border-edge rounded-lg px-2.5 py-1.5 shadow-2xl shadow-black/90 whitespace-nowrap">
+            <p className="text-[11px] font-semibold text-gray-100">{name}</p>
+          </div>
+        </Tooltip>
+      )}
+    </>
   );
 }
 
@@ -366,17 +363,17 @@ function RuneRow({ p, isMe }) {
         <>
           {/* Ana ağaç: ağaç ikonu + keystone (vurgulu) + 3 rün */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <RuneIcon rune={r.primaryTree} size={16} dim />
-            <RuneIcon rune={keystone} size={38} ring />
-            {primaryMinors.map((perk, i) => <RuneIcon key={i} rune={perk} />)}
+            <RuneTip rune={r.primaryTree} size={16} dim />
+            <RuneTip rune={keystone} size={38} ring />
+            {primaryMinors.map((perk, i) => <RuneTip key={i} rune={perk} />)}
           </div>
 
           <span className="h-8 border-l border-edge/40 hidden sm:block" />
 
           {/* Yan ağaç: ağaç ikonu + 2 rün */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <RuneIcon rune={r.subTree} size={16} dim />
-            {(r.secondaryPerks || []).map((perk, i) => <RuneIcon key={i} rune={perk} />)}
+            <RuneTip rune={r.subTree} size={16} dim />
+            {(r.secondaryPerks || []).map((perk, i) => <RuneTip key={i} rune={perk} />)}
           </div>
 
           <span className="h-8 border-l border-edge/40 hidden sm:block" />

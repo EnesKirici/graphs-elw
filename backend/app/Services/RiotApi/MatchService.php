@@ -924,20 +924,32 @@ class MatchService
 
                 $timestamp = intval(($event['timestamp'] ?? 0) / 1000);
 
-                if ($event['type'] === 'ITEM_PURCHASED') {
+                if ($event['type'] === 'ITEM_PURCHASED' || $event['type'] === 'ITEM_SOLD') {
                     $itemId = $event['itemId'] ?? 0;
                     if ($itemId <= 0) continue;
                     $itemData = $allItems[(string) $itemId] ?? null;
-                    $itemGold = $itemData['gold']['total'] ?? 0;
-                    // Ucuz eşyaları ele (iksir/ward spam'i) — Kontrol Totemi (2055) istisna, build akışında görünmeli
-                    if ($itemGold < 300 && $itemId !== 2055) continue;
                     $itemTimelines[$puuid][] = [
                         'timestamp' => $timestamp,
                         'itemId'    => $itemId,
+                        'type'      => $event['type'] === 'ITEM_SOLD' ? 'sell' : 'buy',
                         'name'      => $itemData['name'] ?? '',
+                        'desc'      => $this->formatter->parseItemDescription($itemData['description'] ?? ''),
                         'image'     => "{$ddragonBase}/cdn/{$version}/img/item/{$itemId}.png",
-                        'gold'      => $itemGold,
+                        'gold'      => $itemData['gold']['total'] ?? 0,
                     ];
+                }
+
+                // Geri alma (undo): son eşleşen satın alma/satışı listeden düş
+                if ($event['type'] === 'ITEM_UNDO') {
+                    $before = $event['beforeId'] ?? 0; // geri alınan satın alma
+                    $after  = $event['afterId'] ?? 0;  // geri alınan satış
+                    $list = &$itemTimelines[$puuid];
+                    for ($i = count($list) - 1; $i >= 0; $i--) {
+                        $entryType = $list[$i]['type'] ?? 'buy';
+                        if ($before > 0 && $list[$i]['itemId'] === $before && $entryType === 'buy') { array_splice($list, $i, 1); break; }
+                        if ($before === 0 && $after > 0 && $list[$i]['itemId'] === $after && $entryType === 'sell') { array_splice($list, $i, 1); break; }
+                    }
+                    unset($list);
                 }
 
                 if ($event['type'] === 'SKILL_LEVEL_UP') {

@@ -129,23 +129,34 @@ function PlayerPicker({ blue, red, selectedPuuid, onSelect }) {
   );
 }
 
-/* ===== Build Order ===== */
+/* ===== Build Order — satın alma + satış (✕) kronolojisi, recall gruplu ===== */
 function BuildOrder({ itemTimeline }) {
   const groups = useMemo(() => groupItemsByRecall(itemTimeline), [itemTimeline]);
   if (!groups.length) {
     return <p className="text-[12px] text-gray-600 text-center py-3">Eşya sırası verisi yok (eski maç olabilir).</p>;
   }
   return (
-    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-3">
+    <div className="flex flex-wrap items-start gap-x-1 gap-y-3">
       {groups.map((g, gi) => (
-        <div key={gi} className="flex items-center gap-1.5">
-          <div className="flex flex-col items-center gap-2 rounded-lg bg-soft/25 border border-edge/30 px-2.5 py-2">
-            <div className="flex items-center gap-1">
-              {g.items.map((it, i) => <ItemTooltip key={i} item={it} size={34} />)}
+        <div key={gi} className="flex items-start gap-1">
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-[3px] rounded-md bg-soft/30 p-1">
+              {g.items.map((it, i) =>
+                it.type === "sell" ? (
+                  <div key={i} className="relative">
+                    <ItemTooltip item={it} size={26} imgClass="opacity-40 saturate-0" />
+                    <span className="absolute inset-0 flex items-center justify-center text-red-500 font-extrabold text-[14px] pointer-events-none drop-shadow-[0_0_2px_rgba(0,0,0,0.9)]">✕</span>
+                  </div>
+                ) : (
+                  <ItemTooltip key={i} item={it} size={26} />
+                )
+              )}
             </div>
-            <span className="text-[11px] text-gray-400 font-semibold">{gi === 0 ? "Başlangıç" : mmFromSec(g.timestamp)}</span>
+            <span className="text-[10px] text-gray-500 font-medium leading-none">
+              {gi === 0 ? "Başlangıç" : mmFromSec(g.timestamp)}
+            </span>
           </div>
-          {gi < groups.length - 1 && <span className="text-gray-600 text-lg leading-none">›</span>}
+          {gi < groups.length - 1 && <span className="text-gray-600/70 text-[13px] leading-none mt-2">›</span>}
         </div>
       ))}
     </div>
@@ -271,12 +282,12 @@ function Pings({ pings }) {
     );
   }
   return (
-    <div className="grid grid-cols-4 sm:grid-cols-6 gap-y-4 gap-x-2">
+    <div className="flex flex-wrap justify-center content-center gap-x-5 gap-y-4 py-1 h-full">
       {entries.map(([k, v]) => (
-        <div key={k} className="flex flex-col items-center text-center">
-          <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt={PING_LABELS[k] || k} title={PING_LABELS[k] || k} width={26} height={26} className="mb-1" />
-          <span className="text-[18px] font-bold text-gray-100 tabular-nums leading-none">{v}</span>
-          <span className="text-[10px] text-gray-500 mt-1">{PING_LABELS[k] || k}</span>
+        <div key={k} className="flex flex-col items-center text-center w-16">
+          <img src={`/pings/${PING_ICONS[k] || "generic"}.png`} alt={PING_LABELS[k] || k} title={PING_LABELS[k] || k} width={32} height={32} className="mb-1.5" />
+          <span className="text-[17px] font-bold text-gray-100 tabular-nums leading-none">{v}</span>
+          <span className="text-[10px] text-gray-500 mt-1 leading-tight">{PING_LABELS[k] || k}</span>
         </div>
       ))}
     </div>
