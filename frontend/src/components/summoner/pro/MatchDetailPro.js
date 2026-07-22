@@ -186,9 +186,9 @@ function PlayerRow({ p, isMe, maxDmg, isMvp, isAce }) {
         </div>
 
         {/* KDA */}
-        <div className="w-[70px] text-center flex-shrink-0">
-          <p className="text-[13px] text-gray-100 leading-tight">{kdaEl}</p>
-          <p className={`text-[11px] font-semibold leading-tight ${kdaColor(p.kda)}`}>
+        <div className="w-[78px] text-center flex-shrink-0">
+          <p className="text-[15px] font-semibold text-gray-100 leading-tight">{kdaEl}</p>
+          <p className={`text-[12px] font-semibold leading-tight ${kdaColor(p.kda)}`}>
             {p.kda === "Perfect" ? "Perfect" : `${p.kda.toFixed(1)}`}
             {mk && <span className="ml-1 text-[9px] font-bold text-amber-400">{{ TRIPLE: "Triple Kill", QUADRA: "Quadra Kill", PENTA: "Penta Kill" }[mk]}</span>}
           </p>
