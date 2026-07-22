@@ -75,7 +75,7 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
       ) : (
         <>
           {/* Sütun başlıkları — satırlarla birebir aynı grid şablonu (piksel hizası garanti) */}
-          <div className="grid grid-cols-[38px_1fr_78px_72px] items-center gap-2.5 px-4 py-2 text-[10px] text-gray-400 uppercase tracking-wider border-b border-edge/40">
+          <div className="grid grid-cols-[38px_minmax(0,1fr)_minmax(0,1fr)_72px] items-center gap-2.5 px-4 py-2 text-[10px] text-gray-400 uppercase tracking-wider border-b border-edge/40">
             <span />
             <span>Şampiyon</span>
             <span className="text-center">Oyun · KDA</span>
@@ -90,7 +90,7 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
                 <Link
                   key={c.championName + i}
                   href={`/champions/${c.championName.replace(/[^a-zA-Z]/g, "") || c.championName}`}
-                  className="grid grid-cols-[38px_1fr_78px_72px] items-center gap-2.5 px-4 py-2 hover:bg-hover transition-colors"
+                  className="grid grid-cols-[38px_minmax(0,1fr)_minmax(0,1fr)_72px] items-center gap-2.5 px-4 py-2 hover:bg-hover transition-colors"
                 >
                   <img src={c.championImage} alt={c.championName} width={38} height={38} className="rounded-lg" />
                   <div className="min-w-0">
