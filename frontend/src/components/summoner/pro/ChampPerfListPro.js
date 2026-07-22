@@ -19,6 +19,14 @@ function wrColor(wr) {
   return "text-red-400";
 }
 
+// WR barı dolgu rengi — metin renkleriyle aynı skala
+function wrBarColor(wr) {
+  if (wr >= 60) return "bg-cyan-400";
+  if (wr >= 50) return "bg-blue-400";
+  if (wr >= 44) return "bg-purple-400";
+  return "bg-red-400";
+}
+
 const fmt = (n) => n.toLocaleString("tr-TR");
 
 // Gerçek şampiyon sırası (championRank) worker'dan gelene kadar test verisi yerine
@@ -70,9 +78,8 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
           <div className="flex items-center gap-2.5 px-4 py-2 text-[10px] text-gray-400 uppercase tracking-wider border-b border-edge/40">
             <span className="w-[38px]" />
             <span className="flex-1">Şampiyon</span>
-            <span className="w-9 text-center">Oyun</span>
-            <span className="w-[68px] text-center">KDA</span>
-            <span className="w-10 text-right">WR</span>
+            <span className="w-[70px] text-center">Oyun · KDA</span>
+            <span className="w-[72px] text-right">WR</span>
           </div>
 
           <div className="divide-y divide-edge/25">
@@ -104,11 +111,25 @@ export default function ChampPerfListPro({ seasonChampions, region = "TR" }) {
                       </p>
                     )}
                   </div>
-                  <span className="w-9 text-center text-[13px] text-gray-200 font-medium tabular-nums">{c.games}</span>
-                  <span className="w-[68px] text-center text-[11px] text-gray-400 tabular-nums">
-                    {c.avgKda?.kills}/{c.avgKda?.deaths}/{c.avgKda?.assists}
-                  </span>
-                  <span className={`w-10 text-right text-[13px] font-bold font-mono ${wrColor(c.winRate)}`}>{Math.round(c.winRate)}%</span>
+                  {/* Oyun + altında KDA (istif) */}
+                  <div className="w-[70px] text-center flex-shrink-0">
+                    <p className="text-[13px] text-gray-200 font-semibold tabular-nums leading-tight">{c.games}</p>
+                    <p className="text-[10.5px] text-gray-400 tabular-nums leading-tight mt-0.5">
+                      {c.avgKda?.kills}/{c.avgKda?.deaths}/{c.avgKda?.assists}
+                    </p>
+                  </div>
+                  {/* WR — yüzde + dolan bar */}
+                  <div className="w-[72px] flex-shrink-0">
+                    <p className={`text-right text-[12px] font-bold font-mono leading-none mb-1 ${wrColor(c.winRate)}`}>
+                      {Math.round(c.winRate)}%
+                    </p>
+                    <div className="h-1.5 bg-edge rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${wrBarColor(c.winRate)}`}
+                        style={{ width: `${Math.min(Math.max(c.winRate, 0), 100)}%` }}
+                      />
+                    </div>
+                  </div>
                 </Link>
               );
             })}
