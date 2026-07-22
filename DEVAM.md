@@ -6,7 +6,18 @@
 > (CHAMPION_BUILD, PROFILE_RANKINGS, CHAMPION_RANKING_METHODOLOGY, WORKER, LIVE_GAME, MERAKI),
 > bitmiş/bayat dökümler → `docs/arsiv/`. Kökte yalnız DEVAM + YAPILANLAR kalır.
 
-## 🟢 Son durum (2026-07-22) — SEO turu (commit `25a50cd`, CANLI)
+## 🟢 Son durum (2026-07-22 akşam) — 3 düzeltme (commit `87623c7`, CANLI)
+(1) **Rate-limit'te profil boş kalmıyor**: Riot 429 verince maç listesi `match_summaries`'ten
+fallback (`getCachedMatchesPaginated`, `fromCache` bayrağı) — hem profil açılışı hem sayfalama.
+(2) **Admin mini-bar**: rate-limit göstergesi + worker chip + Panel linki topbar'ın ÜSTÜNDE ince
+altın "Admin Modu" şeridine taşındı; header ferahladı, normal kullanıcı görünümü değişmedi.
+(3) **puuid mükerrer sorunu**: Riot puuid'leri key/app bazında şifreler → 2026-07-21 key geçişi
+6259 mükerrer `cached_players` açtı (aynı isim#tag, iki puuid). Autocomplete artık isim#tag'te
+en günceli gösterir; `players:dedupe` komutu eklendi ve çalıştırıldı (6261 kopya silindi).
+**⚠️ Production key'e geçince `players:dedupe` TEKRAR çalıştırılmalı** (puuid'ler yine değişir).
+404×2 konusu kapandı: `/$` ve `/&` bot URL'siydi, aksiyon gerekmez.
+
+## 🟢 Önceki durum (2026-07-22) — SEO turu (commit `25a50cd`, CANLI)
 (1) **Sitemap'e 171 şampiyon sayfası eklendi** (API'den dinamik, günlük revalidate; canlıda 180 URL
 doğrulandı). lastModified=now damgası kaldırıldı. (2) **Şampiyon detay metadata zengin**: title'da
 ana rol + patch ("Ambessa Build, Rünler ve İstatistikler — Top, Patch 16.14"), description'da
