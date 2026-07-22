@@ -31,12 +31,45 @@ class MatchFormatterService
         $descPart = preg_replace('/<stats>.*?<\/stats>/s', '', $html);
         $descPart = preg_replace('/<mainText>|<\/mainText>/', '', $descPart);
 
+        // Önemli kelime/değer etiketleri → [[tip:metin]] işaretleyicisi.
+        // Frontend (ItemTooltip) bunları renkli/kalın basar; strip_tags'ten sağ çıkar.
+        // Anahtarlar küçük harf — regex /i ile eşleşen etiket adı strtolower ile aranır
+        $emphasisTags = [
+            'magicdamage'   => 'ap',   'scaleap'  => 'ap',
+            'physicaldamage'=> 'ad',   'scalead'  => 'ad',
+            'truedamage'    => 'td',
+            'healing'       => 'heal', 'lifesteal'=> 'heal', 'omnivamp' => 'heal',
+            'shield'        => 'shield',
+            'speed'         => 'ms',
+            'attackspeed'   => 'as',
+            'status'        => 'kw',   'keywordmajor' => 'kw', 'attention' => 'kw', 'onhit' => 'kw',
+        ];
+        $tagPattern = implode('|', array_keys($emphasisTags));
+        // İç içe etiketlerde içteki önce eşleşir (.*? en soldaki-en kısa); dıştaki ikinci turda
+        // yakalanır ve callback içteki işaretleyicileri temizler. 3 tur her durumda yeter.
+        for ($pass = 0; $pass < 3; $pass++) {
+            $new = preg_replace_callback(
+                '/<(' . $tagPattern . ')>(.*?)<\/\1>/si',
+                function ($m) use ($emphasisTags) {
+                    $text = preg_replace('/\[\[\w+:(.*?)\]\]/s', '$1', $m[2]); // iç işaretleyicileri düzleştir
+                    $text = trim(strip_tags($text));
+                    return $text === '' ? '' : '[[' . $emphasisTags[strtolower($m[1])] . ':' . $text . ']]';
+                },
+                $descPart
+            );
+            if ($new === $descPart) break;
+            $descPart = $new;
+        }
+
         if (preg_match_all('/<passive>(.*?)<\/passive>/s', $descPart, $passiveNames)) {
             $parts = preg_split('/<passive>.*?<\/passive>/s', $descPart);
             foreach ($passiveNames[1] as $i => $name) {
-                $desc = isset($parts[$i + 1]) ? trim(strip_tags($parts[$i + 1])) : '';
+                // <br> → boşluk (strip_tags bitişik yapıştırmasın: "verir.Canavarlara" vakası)
+                $raw = preg_replace('/<br\s*\/?>/i', ' ', $parts[$i + 1] ?? '');
+                $desc = trim(strip_tags($raw));
                 $desc = preg_replace('/^\s*<br\s*\/?>\s*/', '', $desc);
                 $desc = trim(preg_replace('/\s+/', ' ', $desc));
+                $name = trim(strip_tags(preg_replace('/\[\[\w+:(.*?)\]\]/s', '$1', $name)));
                 if ($name) {
                     $result['passives'][] = ['name' => $name, 'desc' => $desc];
                 }

@@ -41,13 +41,14 @@ function sortByRole(players) {
   return [...players].sort((a, b) => idx(a) - idx(b));
 }
 
-// Recall bazlı item gruplama (ardışık satın almalar tek bloğa)
+// Recall bazlı item gruplama (ardışık satın almalar tek bloğa).
+// 45sn eşiği: 90sn iki ayrı base dönüşünü tek gruba birleştiriyordu (dk23+dk24 vakası).
 function groupItemsByRecall(items) {
   if (!items || !items.length) return [];
   const groups = [];
   let current = { timestamp: items[0].timestamp, items: [items[0]] };
   for (let i = 1; i < items.length; i++) {
-    if (items[i].timestamp - current.items[current.items.length - 1].timestamp < 90) {
+    if (items[i].timestamp - current.items[current.items.length - 1].timestamp < 45) {
       current.items.push(items[i]);
     } else {
       groups.push(current);
@@ -170,63 +171,69 @@ function SkillOrder({ skillOrder, abilityIcons }) {
   }
   const cols = Math.max(skillOrder.length, 18);
   return (
-    <div className="space-y-1.5 overflow-x-auto pb-1">
-      {["Q", "W", "E", "R"].map((key) => {
-        const st = SKILL_STYLE[key];
-        const icon = abilityIcons?.[key.toLowerCase()];
-        return (
-          <div key={key} className="flex items-center gap-2">
-            <div className="relative flex-shrink-0 w-8 h-8">
-              {icon
-                ? <img src={icon} alt={key} width={32} height={32} className="rounded-md border border-edge/60" />
-                : <span className={`w-8 h-8 rounded-md flex items-center justify-center text-[14px] font-bold bg-soft ${st.text}`}>{key}</span>}
-              <span className={`absolute -bottom-1 -right-1 text-[9px] font-bold px-1 rounded ${st.box} text-white`}>{key}</span>
+    <div className="overflow-x-auto pb-1">
+      <div className="space-y-1.5 w-fit mx-auto">
+        {["Q", "W", "E", "R"].map((key) => {
+          const st = SKILL_STYLE[key];
+          const icon = abilityIcons?.[key.toLowerCase()];
+          return (
+            <div key={key} className="flex items-center gap-2">
+              <div className="relative flex-shrink-0 w-7 h-7">
+                {icon
+                  ? <img src={icon} alt={key} width={28} height={28} className="rounded-md border border-edge/60" />
+                  : <span className={`w-7 h-7 rounded-md flex items-center justify-center text-[13px] font-bold bg-soft ${st.text}`}>{key}</span>}
+                <span className={`absolute -bottom-1 -right-1 text-[8px] font-bold px-0.5 rounded ${st.box} text-white`}>{key}</span>
+              </div>
+              <div className="flex gap-[3px]">
+                {Array.from({ length: cols }).map((_, i) => {
+                  const up = skillOrder[i];
+                  const here = up && up.skillKey === key;
+                  return (
+                    <div
+                      key={i}
+                      className={`w-6 h-6 rounded flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${here ? `${st.box} text-white` : "bg-edge/50"}`}
+                    >
+                      {here ? i + 1 : ""}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex gap-1">
-              {Array.from({ length: cols }).map((_, i) => {
-                const up = skillOrder[i];
-                const here = up && up.skillKey === key;
-                return (
-                  <div
-                    key={i}
-                    className={`w-7 h-7 rounded-md flex items-center justify-center text-[12px] font-bold flex-shrink-0 ${here ? `${st.box} text-white` : "bg-edge/50"}`}
-                  >
-                    {here ? i + 1 : ""}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-/* ===== Spell Casted (Q/W/E/R + D/F kaç kez) — Match-V5 spellXCasts ===== */
+/* ===== Spell Casted (Q/W/E/R + D/F kaç kez) — Pingler'le aynı düzen:
+   ortalı sarmal kolonlar (ikon + sayı + etiket); sıkışınca sumslar alt satıra iner ===== */
 function SpellCasts({ p, abilityIcons }) {
   const sc = p.spellCasts;    // { q, w, e, r }
   const su = p.summonerCasts; // { d, f }
-  const Cell = ({ img, fallback, fb, count }) => (
-    <div className="flex flex-col items-center gap-1.5">
+  const Cell = ({ img, label, fb, count }) => (
+    <div className="flex flex-col items-center text-center w-16">
       {img
-        ? <img src={img} alt="" width={36} height={36} className="rounded-md border border-edge/60" />
-        : <span className={`w-9 h-9 rounded-md flex items-center justify-center text-[13px] font-bold bg-soft ${fb || "text-gray-300"}`}>{fallback}</span>}
-      <span className="text-[16px] font-bold text-gray-100 tabular-nums leading-none">{count != null ? count : "—"}</span>
-      <span className="text-[10px] text-gray-500">kez</span>
+        ? <img src={img} alt={label} title={label} width={32} height={32} className="rounded-md border border-edge/60 mb-1.5" />
+        : <span className={`w-8 h-8 rounded-md flex items-center justify-center text-[13px] font-bold bg-soft mb-1.5 ${fb || "text-gray-300"}`}>{label}</span>}
+      <span className="text-[17px] font-bold text-gray-100 tabular-nums leading-none">{count != null ? count : "—"}</span>
+      <span className="text-[10px] text-gray-500 mt-1 leading-tight">{label}</span>
     </div>
+  );
+  const cells = (withCounts) => (
+    <>
+      {["Q", "W", "E", "R"].map((k) => (
+        <Cell key={k} img={abilityIcons?.[k.toLowerCase()]} label={k} fb={SKILL_STYLE[k].text}
+          count={withCounts ? (sc?.[k.toLowerCase()] ?? 0) : null} />
+      ))}
+      <Cell img={p.spells?.[0]?.image} label="D" count={withCounts ? (su?.d ?? 0) : null} />
+      <Cell img={p.spells?.[1]?.image} label="F" count={withCounts ? (su?.f ?? 0) : null} />
+    </>
   );
   if (!sc) {
     return (
       <div className="space-y-3">
-        <div className="flex items-end justify-center gap-3 opacity-40 pointer-events-none">
-          {["Q", "W", "E", "R"].map((k) => (
-            <Cell key={k} img={abilityIcons?.[k.toLowerCase()]} fallback={k} fb={SKILL_STYLE[k].text} count={null} />
-          ))}
-          <span className="self-stretch w-px bg-edge mx-1.5" />
-          <Cell img={p.spells?.[0]?.image} fallback="D" count={null} />
-          <Cell img={p.spells?.[1]?.image} fallback="F" count={null} />
-        </div>
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-4 py-1 opacity-40 pointer-events-none">{cells(false)}</div>
         <div className="flex items-start gap-2 border-t border-edge/40 pt-3">
           <Info size={13} className="text-gray-600 mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-500 leading-relaxed">
@@ -237,20 +244,7 @@ function SpellCasts({ p, abilityIcons }) {
       </div>
     );
   }
-  return (
-    <div className="flex items-end justify-center gap-3 flex-wrap">
-      {[["Q", sc.q], ["W", sc.w], ["E", sc.e], ["R", sc.r]].map(([k, v]) => (
-        <Cell key={k} img={abilityIcons?.[k.toLowerCase()]} fallback={k} fb={SKILL_STYLE[k].text} count={v ?? 0} />
-      ))}
-      {su && (
-        <>
-          <span className="self-stretch w-px bg-edge mx-1.5" />
-          <Cell img={p.spells?.[0]?.image} fallback="D" count={su.d ?? 0} />
-          <Cell img={p.spells?.[1]?.image} fallback="F" count={su.f ?? 0} />
-        </>
-      )}
-    </div>
-  );
+  return <div className="flex flex-wrap justify-center content-center gap-x-5 gap-y-4 py-1 h-full">{cells(true)}</div>;
 }
 
 /* ===== Pings ===== */

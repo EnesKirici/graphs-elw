@@ -1236,7 +1236,8 @@ function StatsRow({ p, maxVals }) {
 function AnalysisPanel({ player, t1 }) {
   const p = player;
   const isBlue = t1?.players?.some(tp => tp.puuid === p.puuid);
-  const itemGroups = useMemo(() => groupItemsByRecall(p.itemTimeline || []), [p.puuid]);
+  // Klasik görünümde satış (✕) gösterimi yok — sell girdileri alım sanılmasın diye ele
+  const itemGroups = useMemo(() => groupItemsByRecall((p.itemTimeline || []).filter((it) => it.type !== "sell")), [p.puuid]);
   const skillOrder = p.skillOrder || [];
 
   const skillGrid = useMemo(() => {

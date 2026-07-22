@@ -1,46 +1,76 @@
 "use client";
 
 import { useState } from "react";
+import {
+  Heart, Droplet, Sword, Sparkles, Shield, ShieldHalf, Wind, Hourglass,
+  Crosshair, Footprints, Droplets, HeartPulse, Zap, CircleDot,
+} from "lucide-react";
 import Tooltip from "./Tooltip";
 
 /*
-  Eşya tooltip'i — dpm.lol tarzı: başlıkta ikon + isim + altın,
-  stat satırları kendi renginde kalın değerle, pasifler ayrı bölümde.
-  item.desc backend'de parseItemDescription ile hazırlanır: { stats: [], passives: [{name, desc}] }.
+  Eşya tooltip'i — dpm.lol tarzı: başlıkta ikon + isim + altın, stat satırları
+  renkli mini ikon + kendi renginde kalın değer, pasifler ayrı bölümde ve
+  açıklamalardaki önemli kelimeler ([[tip:metin]] işaretleyicisi, backend
+  parseItemDescription üretir) vurgulu basılır.
 */
 
-// Stat etiketine göre renk (DDragon tr_TR adları). Sıra önemli: özgül olan önce.
-const STAT_COLORS = [
-  ["Saldırı Gücü", "text-orange-400"],
-  ["Yetenek Gücü", "text-purple-400"],
-  ["Saldırı Hızı", "text-amber-300"],
-  ["Kritik", "text-red-400"],
-  ["Yetenek Hızı", "text-sky-300"],
-  ["Yetenek İvmesi", "text-sky-300"],
-  ["Büyü Direnci", "text-cyan-300"],
-  ["Zırh Delme", "text-orange-300"],
-  ["Zırh", "text-yellow-300"],
-  ["Büyü Nüfuzu", "text-violet-300"],
-  ["Can Yenilenmesi", "text-emerald-300"],
-  ["Can", "text-green-400"],
-  ["Mana Yenilenmesi", "text-blue-300"],
-  ["Mana", "text-blue-400"],
-  ["Hareket Hızı", "text-gray-100"],
-  ["Yaşam Çalma", "text-rose-400"],
-  ["Vampirizm", "text-rose-400"],
-  ["İyileştirme", "text-emerald-300"],
-  ["Kalkan", "text-emerald-300"],
+// Stat etiketi → renk + ikon (DDragon tr_TR adları). Sıra önemli: özgül olan önce.
+const STAT_META = [
+  ["Saldırı Gücü", "text-orange-400", Sword],
+  ["Yetenek Gücü", "text-purple-400", Sparkles],
+  ["Saldırı Hızı", "text-amber-300", Wind],
+  ["Kritik", "text-red-400", Crosshair],
+  ["Yetenek Hızı", "text-sky-300", Hourglass],
+  ["Yetenek İvmesi", "text-sky-300", Hourglass],
+  ["Büyü Direnci", "text-cyan-300", ShieldHalf],
+  ["Zırh Delme", "text-orange-300", Zap],
+  ["Zırh", "text-yellow-300", Shield],
+  ["Büyü Nüfuzu", "text-violet-300", Zap],
+  ["Can Yenilenmesi", "text-emerald-300", HeartPulse],
+  ["Can", "text-green-400", Heart],
+  ["Mana Yenilenmesi", "text-blue-300", Droplet],
+  ["Mana", "text-blue-400", Droplet],
+  ["Hareket Hızı", "text-gray-100", Footprints],
+  ["Yaşam Çalma", "text-rose-400", Droplets],
+  ["Vampirizm", "text-rose-400", Droplets],
+  ["İyileştirme", "text-emerald-300", HeartPulse],
+  ["Kalkan", "text-emerald-300", HeartPulse],
 ];
 
-function statColor(label) {
-  for (const [key, cls] of STAT_COLORS) if (label.includes(key)) return cls;
-  return "text-blue-300";
+function statMeta(label) {
+  for (const [key, cls, Icon] of STAT_META) if (label.includes(key)) return [cls, Icon];
+  return ["text-blue-300", CircleDot];
 }
 
-// "+45 Saldırı Gücü" → ["+45", "Saldırı Gücü"]; "%12 Omnivamp" gibi varyasyonları da yakalar
+// "+45 Saldırı Gücü" → ["+45", "Saldırı Gücü"]; "+%12 ..." varyasyonlarını da yakalar
 function splitStat(line) {
   const m = line.match(/^(\+?\s*%?[\d.,]+\s*%?)\s*(.*)$/);
   return m ? [m[1].replace(/\s+/g, ""), m[2]] : [null, line];
+}
+
+// [[tip:metin]] vurgu işaretleyicileri → renkli/kalın span'lar
+const EM_STYLE = {
+  ap: "text-purple-300 font-semibold",
+  ad: "text-orange-300 font-semibold",
+  td: "text-gray-100 font-semibold",
+  heal: "text-green-300 font-semibold",
+  shield: "text-emerald-300 font-semibold",
+  ms: "text-yellow-200 font-semibold",
+  as: "text-amber-300 font-semibold",
+  kw: "text-gray-100 font-semibold",
+};
+
+function DescText({ text }) {
+  const nodes = [];
+  const re = /\[\[(\w+):([\s\S]*?)\]\]/g;
+  let last = 0, m, i = 0;
+  while ((m = re.exec(text))) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    nodes.push(<span key={i++} className={EM_STYLE[m[1]] || EM_STYLE.kw}>{m[2]}</span>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return <>{nodes}</>;
 }
 
 export default function ItemTooltip({ item, size = 30, imgClass = "" }) {
@@ -80,28 +110,34 @@ export default function ItemTooltip({ item, size = 30, imgClass = "" }) {
               </div>
             </div>
 
-            {/* Statlar — değer kendi renginde kalın */}
+            {/* Statlar — renkli mini ikon + kendi renginde kalın değer */}
             {stats.length > 0 && (
-              <div className="px-3 pb-3 space-y-[3px]">
+              <div className="px-3 pb-3 space-y-1">
                 {stats.map((s, j) => {
                   const [val, label] = splitStat(s);
+                  const [cls, Icon] = statMeta(label);
                   return (
-                    <p key={j} className="text-[11px] leading-snug">
-                      {val && <span className={`font-bold ${statColor(label)}`}>{val} </span>}
-                      <span className="text-gray-300">{label}</span>
+                    <p key={j} className="text-[11px] leading-snug flex items-center gap-1.5">
+                      <Icon size={12} className={`${cls} flex-shrink-0`} />
+                      {val && <span className={`font-bold ${cls}`}>{val}</span>}
+                      <span className="text-gray-200">{label}</span>
                     </p>
                   );
                 })}
               </div>
             )}
 
-            {/* Pasifler */}
+            {/* Pasifler — açıklamada vurgulu kelimeler */}
             {passives.length > 0 && (
               <div className="border-t border-edge/60 bg-soft/20 px-3 py-2.5 space-y-2">
                 {passives.map((p, j) => (
                   <div key={j}>
                     <p className="text-[11px] font-semibold text-amber-300">{p.name}</p>
-                    {p.desc && <p className="text-[10px] text-gray-400 leading-relaxed mt-0.5">{p.desc}</p>}
+                    {p.desc && (
+                      <p className="text-[10px] text-gray-400 leading-relaxed mt-0.5">
+                        <DescText text={p.desc} />
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
