@@ -1,36 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Heart, Droplet, Sword, Sparkles, Shield, ShieldHalf, Wind, Hourglass,
-  Crosshair, Footprints, Droplets, HeartPulse, Zap, CircleDot,
-} from "lucide-react";
+import { Droplet, Droplets, HeartPulse, Zap, CircleDot } from "lucide-react";
 import Tooltip from "./Tooltip";
 
 /*
   Eşya tooltip'i — dpm.lol tarzı: başlıkta ikon + isim + altın, stat satırları
-  renkli mini ikon + kendi renginde kalın değer, pasifler ayrı bölümde ve
-  açıklamalardaki önemli kelimeler ([[tip:metin]] işaretleyicisi, backend
-  parseItemDescription üretir) vurgulu basılır.
+  oyunun GERÇEK stat glifleriyle (public/staticons — CommunityDragon statmods)
+  + kendi renginde kalın değer; pasifler ayrı bölümde, açıklamalardaki önemli
+  kelimeler ([[tip:metin]], backend parseItemDescription üretir) vurgulu basılır.
 */
 
 // Stat etiketi → renk + ikon (DDragon tr_TR adları). Sıra önemli: özgül olan önce.
+// icon: /staticons/*.png (resmi LoL glifi) — olmayan statlarda lucide fallback.
 const STAT_META = [
-  ["Saldırı Gücü", "text-orange-400", Sword],
-  ["Yetenek Gücü", "text-purple-400", Sparkles],
-  ["Saldırı Hızı", "text-amber-300", Wind],
-  ["Kritik", "text-red-400", Crosshair],
-  ["Yetenek Hızı", "text-sky-300", Hourglass],
-  ["Yetenek İvmesi", "text-sky-300", Hourglass],
-  ["Büyü Direnci", "text-cyan-300", ShieldHalf],
+  ["Saldırı Gücü", "text-orange-300", "/staticons/ad.png"],
+  ["Yetenek Gücü", "text-purple-300", "/staticons/ap.png"],
+  ["Saldırı Hızı", "text-amber-200", "/staticons/as.png"],
+  ["Kritik", "text-orange-400", "/staticons/crit.png"],
+  ["Yetenek Hızı", "text-sky-300", "/staticons/haste.png"],
+  ["Yetenek İvmesi", "text-sky-300", "/staticons/haste.png"],
+  ["Büyü Direnci", "text-cyan-300", "/staticons/mr.png"],
   ["Zırh Delme", "text-orange-300", Zap],
-  ["Zırh", "text-yellow-300", Shield],
+  ["Zırh", "text-yellow-200", "/staticons/armor.png"],
   ["Büyü Nüfuzu", "text-violet-300", Zap],
-  ["Can Yenilenmesi", "text-emerald-300", HeartPulse],
-  ["Can", "text-green-400", Heart],
+  ["Can Yenilenmesi", "text-emerald-300", "/staticons/hpregen.png"],
+  ["Can", "text-green-400", "/staticons/hp.png"],
   ["Mana Yenilenmesi", "text-blue-300", Droplet],
   ["Mana", "text-blue-400", Droplet],
-  ["Hareket Hızı", "text-gray-100", Footprints],
+  ["Hareket Hızı", "text-gray-100", "/staticons/ms.png"],
+  ["Tenas", "text-gray-200", "/staticons/tenacity.png"],
   ["Yaşam Çalma", "text-rose-400", Droplets],
   ["Vampirizm", "text-rose-400", Droplets],
   ["İyileştirme", "text-emerald-300", HeartPulse],
@@ -38,8 +37,16 @@ const STAT_META = [
 ];
 
 function statMeta(label) {
-  for (const [key, cls, Icon] of STAT_META) if (label.includes(key)) return [cls, Icon];
+  for (const [key, cls, icon] of STAT_META) if (label.includes(key)) return [cls, icon];
   return ["text-blue-300", CircleDot];
+}
+
+function StatIcon({ icon, cls }) {
+  if (typeof icon === "string") {
+    return <img src={icon} alt="" width={14} height={14} className="flex-shrink-0" />;
+  }
+  const Icon = icon;
+  return <Icon size={12} className={`${cls} flex-shrink-0`} />;
 }
 
 // "+45 Saldırı Gücü" → ["+45", "Saldırı Gücü"]; "+%12 ..." varyasyonlarını da yakalar
@@ -115,10 +122,10 @@ export default function ItemTooltip({ item, size = 30, imgClass = "" }) {
               <div className="px-3 pb-3 space-y-1">
                 {stats.map((s, j) => {
                   const [val, label] = splitStat(s);
-                  const [cls, Icon] = statMeta(label);
+                  const [cls, icon] = statMeta(label);
                   return (
                     <p key={j} className="text-[11px] leading-snug flex items-center gap-1.5">
-                      <Icon size={12} className={`${cls} flex-shrink-0`} />
+                      <StatIcon icon={icon} cls={cls} />
                       {val && <span className={`font-bold ${cls}`}>{val}</span>}
                       <span className="text-gray-200">{label}</span>
                     </p>

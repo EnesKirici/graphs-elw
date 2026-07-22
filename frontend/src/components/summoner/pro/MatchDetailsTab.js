@@ -206,24 +206,28 @@ function SkillOrder({ skillOrder, abilityIcons }) {
   );
 }
 
-/* ===== Spell Casted (Q/W/E/R + D/F kaç kez) — Pingler'le aynı düzen:
-   ortalı sarmal kolonlar (ikon + sayı + etiket); sıkışınca sumslar alt satıra iner ===== */
+/* ===== Spell Casted (Q/W/E/R + D/F kaç kez) — ikon köşesinde harf rozeti,
+   sayı altta; ortalı sarmal düzen (sıkışınca sumslar alt satıra iner) ===== */
 function SpellCasts({ p, abilityIcons }) {
   const sc = p.spellCasts;    // { q, w, e, r }
   const su = p.summonerCasts; // { d, f }
-  const Cell = ({ img, label, fb, count }) => (
-    <div className="flex flex-col items-center text-center w-16">
-      {img
-        ? <img src={img} alt={label} title={label} width={32} height={32} className="rounded-md border border-edge/60 mb-1.5" />
-        : <span className={`w-8 h-8 rounded-md flex items-center justify-center text-[13px] font-bold bg-soft mb-1.5 ${fb || "text-gray-300"}`}>{label}</span>}
+  const Cell = ({ img, label, badge, fb, count }) => (
+    <div className="flex flex-col items-center w-14">
+      <div className="relative mb-2">
+        {img
+          ? <img src={img} alt={label} title={label} width={38} height={38} className="rounded-md border border-edge/60" />
+          : <span className={`w-[38px] h-[38px] rounded-md flex items-center justify-center text-[14px] font-bold bg-soft ${fb || "text-gray-300"}`}>{label}</span>}
+        {badge && (
+          <span className={`absolute -bottom-1 -right-1 text-[9px] font-bold px-1 rounded ${badge} text-white`}>{label}</span>
+        )}
+      </div>
       <span className="text-[17px] font-bold text-gray-100 tabular-nums leading-none">{count != null ? count : "—"}</span>
-      <span className="text-[10px] text-gray-500 mt-1 leading-tight">{label}</span>
     </div>
   );
   const cells = (withCounts) => (
     <>
       {["Q", "W", "E", "R"].map((k) => (
-        <Cell key={k} img={abilityIcons?.[k.toLowerCase()]} label={k} fb={SKILL_STYLE[k].text}
+        <Cell key={k} img={abilityIcons?.[k.toLowerCase()]} label={k} badge={SKILL_STYLE[k].box} fb={SKILL_STYLE[k].text}
           count={withCounts ? (sc?.[k.toLowerCase()] ?? 0) : null} />
       ))}
       <Cell img={p.spells?.[0]?.image} label="D" count={withCounts ? (su?.d ?? 0) : null} />
@@ -233,7 +237,7 @@ function SpellCasts({ p, abilityIcons }) {
   if (!sc) {
     return (
       <div className="space-y-3">
-        <div className="flex flex-wrap justify-center gap-x-5 gap-y-4 py-1 opacity-40 pointer-events-none">{cells(false)}</div>
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-4 py-1 opacity-40 pointer-events-none">{cells(false)}</div>
         <div className="flex items-start gap-2 border-t border-edge/40 pt-3">
           <Info size={13} className="text-gray-600 mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-500 leading-relaxed">
@@ -244,7 +248,7 @@ function SpellCasts({ p, abilityIcons }) {
       </div>
     );
   }
-  return <div className="flex flex-wrap justify-center content-center gap-x-5 gap-y-4 py-1 h-full">{cells(true)}</div>;
+  return <div className="flex flex-wrap justify-center content-center gap-x-4 gap-y-4 py-1 h-full">{cells(true)}</div>;
 }
 
 /* ===== Pings ===== */
@@ -365,12 +369,12 @@ export default function MatchDetailsTab({ t1, t2, searchedPuuid, duration }) {
         <SkillOrder skillOrder={p.skillOrder} abilityIcons={abilityIcons} />
       </Card>
 
-      {/* Spell Casted + Pings yan yana */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card icon={Zap} title="Yetenek Kullanımı (Spell Casted)" bodyClass="p-5">
+      {/* Spell Casted + Pings yan yana — spell tarafı daha geniş (6 hücre sığsın) */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card icon={Zap} title="Yetenek Kullanımı (Spell Casted)" bodyClass="p-5" className="md:col-span-3">
           <SpellCasts p={p} abilityIcons={abilityIcons} />
         </Card>
-        <Card icon={MessageSquare} title="Pingler">
+        <Card icon={MessageSquare} title="Pingler" className="md:col-span-2">
           <Pings pings={p.pings} />
         </Card>
       </div>
