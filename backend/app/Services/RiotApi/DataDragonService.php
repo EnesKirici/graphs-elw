@@ -4,6 +4,7 @@ namespace App\Services\RiotApi;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Data Dragon (DDragon) servisi.
@@ -32,9 +33,79 @@ class DataDragonService
     public function getCurrentVersion(): string
     {
         return Cache::remember('ddragon:version', 3600, function () {
-            $versions = Http::get("{$this->baseUrl}/api/versions.json")->json();
+            $versions = $this->fetchJson('/api/versions.json', 'versions');
             return $versions[0]; // İlk eleman = en güncel versiyon
         });
+    }
+
+    /* ===================== CDN dayanıklılığı =====================
+       DDragon CloudFront üzerinde; sunucu→CDN yolu koptuğunda (2026-07-23'te
+       sağlayıcı AWS rotası düştü) her istek 10 sn timeout alıp 500 veriyordu.
+       Artık: kısa timeout → hata olursa yerel anlık görüntü (storage/app/ddragon)
+       → 5 dk devre kesici ile CDN'e boşuna yeniden gidilmez.
+       Anlık görüntüler `php artisan ddragon:snapshot` ile üretilir. */
+
+    /** Aynı istek içinde aynı dosyayı ikinci kez parse etmemek için. */
+    private array $snapMemo = [];
+
+    private function snapshotPath(string $snap): string
+    {
+        return storage_path('app/ddragon/' . $snap . '.json');
+    }
+
+    private function readSnapshot(string $snap): mixed
+    {
+        if (array_key_exists($snap, $this->snapMemo)) {
+            return $this->snapMemo[$snap];
+        }
+        $file = $this->snapshotPath($snap);
+        $data = is_readable($file) ? json_decode(file_get_contents($file), true) : null;
+        return $this->snapMemo[$snap] = $data;
+    }
+
+    public function writeSnapshot(string $snap, mixed $data): void
+    {
+        $file = $this->snapshotPath($snap);
+        if (! is_dir(dirname($file))) {
+            @mkdir(dirname($file), 0775, true);
+        }
+        @file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE));
+        $this->snapMemo[$snap] = $data;
+    }
+
+    /**
+     * DDragon'dan JSON çek; erişilemezse yerel anlık görüntüye düş.
+     * Her başarılı çekim anlık görüntüyü tazeler (yeni patch kendiliğinden yayılır).
+     */
+    private function fetchJson(string $path, string $snap): mixed
+    {
+        // Devre kesici açıksa CDN'i hiç deneme — elde kopya varsa anında dön.
+        if (Cache::get('ddragon:cdn_down') && ($local = $this->readSnapshot($snap)) !== null) {
+            return $local;
+        }
+
+        try {
+            $res = Http::timeout(5)->connectTimeout(3)->get($this->baseUrl . $path);
+            if ($res->successful() && ($data = $res->json()) !== null) {
+                $this->writeSnapshot($snap, $data);
+                Cache::forget('ddragon:cdn_down');
+                return $data;
+            }
+            Log::warning('ddragon yanıtı geçersiz', ['path' => $path, 'status' => $res->status()]);
+        } catch (\Throwable $e) {
+            // Bağlantı kurulamadı → 5 dk boyunca doğrudan anlık görüntüden servis et.
+            Cache::put('ddragon:cdn_down', true, 300);
+            Log::warning('ddragon erişilemedi, yerel kopyaya düşülüyor', [
+                'path' => $path, 'err' => $e->getMessage(),
+            ]);
+        }
+
+        $local = $this->readSnapshot($snap);
+        if ($local !== null) {
+            return $local;
+        }
+
+        throw new \RuntimeException("DataDragon erişilemedi ve yerel kopya yok: {$path}");
     }
 
     /**
@@ -45,7 +116,7 @@ class DataDragonService
     public function getRecentPatches(int $count): array
     {
         $versions = Cache::remember('ddragon:versions', 3600, function () {
-            return Http::get("{$this->baseUrl}/api/versions.json")->json();
+            return $this->fetchJson('/api/versions.json', 'versions');
         });
 
         $buckets = [];
@@ -72,7 +143,7 @@ class DataDragonService
         $version = $this->getCurrentVersion();
 
         return Cache::remember('ddragon:champions', config('riot.cache_ttl.ddragon'), function () use ($version) {
-            $data = Http::get("{$this->baseUrl}/cdn/{$version}/data/{$this->lang}/champion.json")->json();
+            $data = $this->fetchJson("/cdn/{$version}/data/{$this->lang}/champion.json", 'champion');
             return $data['data'];
         });
     }
@@ -87,8 +158,23 @@ class DataDragonService
         $version = $this->getCurrentVersion();
 
         return Cache::remember("ddragon:champion:{$championName}", config('riot.cache_ttl.ddragon'), function () use ($version, $championName) {
-            $data = Http::get("{$this->baseUrl}/cdn/{$version}/data/{$this->lang}/champion/{$championName}.json")->json();
-            return $data['data'][$championName] ?? null;
+            // Tek şampiyon dosyası için ayrı anlık görüntü tutmayız (171 dosya);
+            // CDN yoksa championFull anlık görüntüsünden okunur.
+            if (! Cache::get('ddragon:cdn_down')) {
+                try {
+                    $res = Http::timeout(5)->connectTimeout(3)
+                        ->get("{$this->baseUrl}/cdn/{$version}/data/{$this->lang}/champion/{$championName}.json");
+                    if ($res->successful()) {
+                        return $res->json("data.{$championName}");
+                    }
+                } catch (\Throwable $e) {
+                    Cache::put('ddragon:cdn_down', true, 300);
+                    Log::warning('ddragon şampiyon detayı alınamadı', ['champ' => $championName, 'err' => $e->getMessage()]);
+                }
+            }
+
+            $full = $this->readSnapshot('championFull');
+            return $full['data'][$championName] ?? null;
         });
     }
 
@@ -100,7 +186,7 @@ class DataDragonService
         $version = $this->getCurrentVersion();
 
         return Cache::remember('ddragon:items', config('riot.cache_ttl.ddragon'), function () use ($version) {
-            $data = Http::get("{$this->baseUrl}/cdn/{$version}/data/{$this->lang}/item.json")->json();
+            $data = $this->fetchJson("/cdn/{$version}/data/{$this->lang}/item.json", 'item');
             return $data['data'];
         });
     }
@@ -113,7 +199,7 @@ class DataDragonService
         $version = $this->getCurrentVersion();
 
         return Cache::remember('ddragon:spells', config('riot.cache_ttl.ddragon'), function () use ($version) {
-            $data = Http::get("{$this->baseUrl}/cdn/{$version}/data/{$this->lang}/summoner.json")->json();
+            $data = $this->fetchJson("/cdn/{$version}/data/{$this->lang}/summoner.json", 'summoner');
             return $data['data'];
         });
     }
@@ -127,7 +213,7 @@ class DataDragonService
         $version = $this->getCurrentVersion();
 
         return Cache::remember('ddragon:runes', config('riot.cache_ttl.ddragon'), function () use ($version) {
-            return Http::get("{$this->baseUrl}/cdn/{$version}/data/{$this->lang}/runesReforged.json")->json();
+            return $this->fetchJson("/cdn/{$version}/data/{$this->lang}/runesReforged.json", 'runesReforged');
         });
     }
 
