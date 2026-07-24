@@ -18,6 +18,9 @@ class TimelineStatsService
     private const STARTER_WINDOW_MS = 90_000;
     private const SKILL_LETTERS = [1 => 'Q', 2 => 'W', 3 => 'E', 4 => 'R'];
 
+    /** Totemler başlangıç kombinasyonuna dahil edilmez (bedava, herkes alır → gürültü). */
+    private const TRINKETS = [3340, 3363, 3364];
+
     /** @var array<int,bool>|null bitmiş eşya id seti (into boş + depth>=2) */
     private ?array $completedSet = null;
 
@@ -133,9 +136,12 @@ class TimelineStatsService
                 }
             }
         }
-        $bought = array_values(array_filter($bought));
-        if (! $bought || count($bought) > 5) {
-            return null; // boş ya da anormal (ARAM benzeri gürültü)
+        $bought = array_values(array_filter(
+            $bought,
+            fn ($id) => $id && ! in_array($id, self::TRINKETS, true)
+        ));
+        if (! $bought || count($bought) > 4) {
+            return null; // boş ya da anormal gürültü
         }
         sort($bought);
 

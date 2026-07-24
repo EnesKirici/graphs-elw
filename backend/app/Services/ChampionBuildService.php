@@ -51,7 +51,7 @@ class ChampionBuildService
     public function getChampionBuild(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        $key = 'champion:build:v3:' . $championId . ':' . implode(',', $patches);
+        $key = 'champion:build:v4:' . $championId . ':' . implode(',', $patches);
 
         return Cache::remember($key, 600, function () use ($championId, $patches) {
             return $this->compute($championId, $patches);
@@ -120,6 +120,7 @@ class ChampionBuildService
             $rows = $buildRows->where('position', $pos);
 
             $cats = [];
+            $samples = [];
             foreach (self::TOP_N as $category => $limit) {
                 $agg = [];
                 foreach ($rows->where('category', $category) as $r) {
@@ -145,8 +146,27 @@ class ChampionBuildService
                     $list[] = $row;
                 }
                 usort($list, fn ($a, $b) => $b['games'] <=> $a['games']);
+
+                // Timeline kategorilerinde payda TÜM maçlar değil, timeline'ı işlenmiş
+                // örneklemdir (backfill sürerken %0.3 gibi anlamsız değerler çıkmasın;
+                // alternatiflerin toplamı ~%100'e oturur — dpm/op.gg mantığı).
+                if (str_starts_with($category, 'item_slot') || in_array($category, ['skill_order', 'starter'], true)) {
+                    $catTotal = array_sum(array_column($list, 'games'));
+                    if ($catTotal > 0) {
+                        foreach ($list as &$row) {
+                            $row['pickRate'] = round($row['games'] / $catTotal * 100, 1);
+                        }
+                        unset($row);
+                    }
+                    $samples[$category] = $catTotal;
+                }
+
                 $cats[$category] = array_slice($list, 0, $limit);
             }
+
+            // Frontend bu örneklem sayısıyla bölümü gösterip göstermeyeceğine karar verir
+            // (düşük örneklemde "toplanıyor" mesajı) — anahtarlar kategori adlarıdır.
+            $cats['_samples'] = $samples;
 
             $byPosition[$pos] = $cats;
         }

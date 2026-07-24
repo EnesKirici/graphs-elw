@@ -16,7 +16,12 @@ const ROLE_ICON = {
 };
 
 const hideOnError = (e) => { e.currentTarget.style.visibility = "hidden"; };
-const wrCls = (wr) => (wr >= 52 ? "text-emerald-400" : wr >= 49 ? "text-gray-200" : "text-red-400");
+// Site paleti: yeşil kullanmıyoruz — iyi WR mavi (profil sayfasıyla aynı dil), kötü kırmızı.
+const wrCls = (wr) => (wr >= 52 ? "text-blue-300" : wr >= 49 ? "text-gray-200" : "text-red-400");
+// "Q>E>W" harfleri → şampiyonun gerçek yetenek görselleri (champion.spells sırası Q,W,E,R)
+const SPELL_IDX = { Q: 0, W: 1, E: 2, R: 3 };
+// Timeline istatistikleri bu örneklemin altındayken gösterilmez (yanıltıcı olur)
+const TL_MIN_SAMPLE = 20;
 
 // Birleşik kart (tek glass kutu) — içine birden çok Section gelir, divide-y ile ayrılır.
 function Panel({ children, className = "" }) {
@@ -85,16 +90,15 @@ export default function ChampionBuild({ champion, version, runesData = [], build
   );
   const activeKeystone = keystoneOptions[safeIdx];
   const items = useMemo(() => groupRealItems(cats.item_full, version), [cats, version]);
-  const skillOrders = cats.skill_order || [];
-  const starters = cats.starter || [];
-  const itemSlots = [1, 2, 3, 4, 5]
-    .map((n) => ({ n, list: cats[`item_slot${n}`] || [] }))
-    .filter((s) => s.list.length > 0);
-  const topSpellPair = cats.spell_pair?.[0];
-  const spellIcons = (topSpellPair?.key || "")
-    .split("-")
-    .map((id) => build?.spellMap?.[id])
-    .filter(Boolean);
+  const samples = cats._samples || {};
+  const skillOrders = ((samples.skill_order || 0) >= TL_MIN_SAMPLE && cats.skill_order) || [];
+  const starters = ((samples.starter || 0) >= TL_MIN_SAMPLE && cats.starter) || [];
+  const itemSlots = (samples.item_slot1 || 0) >= TL_MIN_SAMPLE
+    ? [1, 2, 3, 4, 5]
+        .map((n) => ({ n, list: cats[`item_slot${n}`] || [] }))
+        .filter((s) => s.list.length > 0)
+    : [];
+  const spellPairs = cats.spell_pair || [];
 
   // Hiç oynanma verisi yok → dürüst boş durum (sahte build göstermeyiz).
   if (!positions.length) {
@@ -191,7 +195,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         </Panel>
 
         {/* ORTA — Rünler (tek kart) */}
-        <Panel className="lg:col-span-5">
+        <Panel className="lg:col-span-6">
           <Section title="Rünler" extra={
             activeKeystone && (
               <span className="text-[10px] text-gray-600">
@@ -223,15 +227,15 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                     ))}
                   </div>
                 )}
-                <div className="flex gap-6 justify-center">
+                <div className="flex gap-8 justify-center">
                   <RuneTree tree={runePage.primary} selected={runePage.selected} pctOf={runePage.pctOf} />
-                  <div className="border-l border-edge/40 pl-6 flex flex-col items-center gap-3">
+                  <div className="border-l border-edge/40 pl-8 flex flex-col items-center gap-4">
                     <RuneTree tree={runePage.secondary} selected={runePage.selected} pctOf={runePage.pctOf} skipKeystone />
-                    <div className="flex flex-col items-center gap-2 pt-3 mt-1 border-t border-edge/40">
+                    <div className="flex flex-col items-center gap-2.5 pt-4 mt-1 border-t border-edge/40">
                       {SHARD_ROWS.map((row, ri) => (
-                        <div key={ri} className="flex items-center gap-2">
+                        <div key={ri} className="flex items-center gap-2.5">
                           {row.map((sh, ci) => (
-                            <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={20} title={sh.name} />
+                            <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={24} title={sh.name} />
                           ))}
                         </div>
                       ))}
@@ -244,57 +248,63 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             )}
           </Section>
 
-          <Section title="Yetenek Sırası" extra={
-            skillOrders[0] && (
-              <span className="text-[10px] text-gray-600">
-                {skillOrders[0].pickRate}% pick · <b className={wrCls(skillOrders[0].winRate)}>{skillOrders[0].winRate}% WR</b>
-              </span>
-            )
-          }>
+          <Section title="Yetenek Sırası" extra={<span className="text-[10px] text-gray-600">Pick · WR</span>}>
             {skillOrders.length ? (
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {skillOrders.slice(0, 2).map((o, idx) => (
                   <div key={o.key} className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       {String(o.key).split(">").map((L, i, arr) => (
                         <Fragment key={i}>
-                          <span className={`w-8 h-8 rounded-md flex items-center justify-center text-[13px] font-bold ${
-                            idx === 0 ? "bg-[var(--dpm-accent,#60a5fa)] text-white" : "bg-edge/60 text-gray-300"}`}>
-                            {L}
-                          </span>
-                          {i < arr.length - 1 && <span className="text-gray-600 text-xs">›</span>}
+                          <div className="relative">
+                            <img src={champion.spells?.[SPELL_IDX[L]]?.image} alt={L}
+                              width={idx === 0 ? 40 : 32} height={idx === 0 ? 40 : 32}
+                              className={`rounded-lg border ${idx === 0 ? "border-blue-500/50" : "border-edge"} ${idx === 0 ? "" : "opacity-80"}`}
+                              onError={hideOnError} />
+                            <span className="absolute -bottom-1.5 -right-1.5 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-1 text-blue-300">
+                              {L}
+                            </span>
+                          </div>
+                          {i < arr.length - 1 && <span className="text-gray-600 text-sm">›</span>}
                         </Fragment>
                       ))}
                     </div>
-                    <span className="text-[11px] text-gray-400 ml-auto">{o.pickRate}%</span>
-                    <span className={`text-xs font-bold ${wrCls(o.winRate)}`}>{o.winRate}%</span>
+                    <span className="text-xs text-gray-400 ml-auto">{o.pickRate}%</span>
+                    <span className={`text-sm font-bold ${wrCls(o.winRate)}`}>{o.winRate}%</span>
                   </div>
                 ))}
               </div>
             ) : (
               <ComingSoon>
                 Yetenek sırası istatistikleri toplanıyor — worker maç timeline&apos;larını
-                işledikçe burada gerçek verilerle görünecek.
+                işledikçe burada gerçek verilerle görünecek
+                {(samples.skill_order || 0) > 0 ? ` (şu ana kadar ${samples.skill_order} maç işlendi)` : ""}.
               </ComingSoon>
             )}
           </Section>
         </Panel>
 
         {/* SAĞ — Sihirdar büyüleri + Itemler (tek kart) */}
-        <Panel className="lg:col-span-4">
-          <Section title="Sihirdar Büyüleri" extra={
-            topSpellPair && (
-              <span className="text-[10px] text-gray-600">
-                {topSpellPair.pickRate}% pick · <b className={wrCls(topSpellPair.winRate)}>{topSpellPair.winRate}% WR</b>
-              </span>
-            )
-          }>
-            <div className="flex items-center gap-2">
-              {spellIcons.map((s, i) => (
-                <img key={i} src={s.image} alt={s.name} title={s.name} width={40} height={40}
-                  className="rounded-lg border border-edge" onError={hideOnError} />
-              ))}
-              {!spellIcons.length && <ComingSoon>Büyü verisi henüz yok.</ComingSoon>}
+        <Panel className="lg:col-span-3">
+          <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">Pick · WR</span>}>
+            <div className="space-y-2.5">
+              {spellPairs.map((sp, idx) => {
+                const icons = String(sp.key).split("-").map((id) => build?.spellMap?.[id]).filter(Boolean);
+                if (!icons.length) return null;
+                return (
+                  <div key={sp.key} className="flex items-center gap-2">
+                    {icons.map((s, i) => (
+                      <img key={i} src={s.image} alt={s.name} title={s.name}
+                        width={idx === 0 ? 38 : 30} height={idx === 0 ? 38 : 30}
+                        className={`rounded-lg border ${idx === 0 ? "border-edge" : "border-edge opacity-80"}`}
+                        onError={hideOnError} />
+                    ))}
+                    <span className="text-xs text-gray-400 ml-auto">{sp.pickRate}%</span>
+                    <span className={`text-sm font-bold ${wrCls(sp.winRate)}`}>{sp.winRate}%</span>
+                  </div>
+                );
+              })}
+              {!spellPairs.length && <ComingSoon>Büyü verisi henüz yok.</ComingSoon>}
             </div>
           </Section>
 
@@ -303,17 +313,29 @@ export default function ChampionBuild({ champion, version, runesData = [], build
               {starters.length > 0 && (
                 <div>
                   <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Başlangıç</span>
-                  <div className="space-y-1.5">
-                    {starters.slice(0, 2).map((s) => (
-                      <div key={s.key} className="flex items-center gap-1.5">
-                        {String(s.key).split("-").map((id, i) => (
-                          <img key={i} src={itemIcon(version, id)} alt="" width={26} height={26}
-                            className="rounded-md border border-edge" onError={hideOnError} />
-                        ))}
-                        <span className="text-[10px] text-gray-500 ml-1">{s.pickRate}%</span>
-                        <span className={`text-[10px] font-bold ml-auto ${wrCls(s.winRate)}`}>{s.winRate}%</span>
-                      </div>
-                    ))}
+                  <div className="space-y-2">
+                    {starters.slice(0, 2).map((s) => {
+                      // Aynı eşyadan birden çok alınmışsa (2× iksir gibi) tek ikon + ×N
+                      const counts = {};
+                      String(s.key).split("-").forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
+                      return (
+                        <div key={s.key} className="flex items-center gap-2">
+                          {Object.entries(counts).map(([id, n]) => (
+                            <div key={id} className="relative">
+                              <img src={itemIcon(version, id)} alt="" width={32} height={32}
+                                className="rounded-md border border-edge" onError={hideOnError} />
+                              {n > 1 && (
+                                <span className="absolute -bottom-1 -right-1 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-0.5 text-gray-300">
+                                  ×{n}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                          <span className="text-xs text-gray-400 ml-auto">{s.pickRate}%</span>
+                          <span className={`text-xs font-bold ${wrCls(s.winRate)}`}>{s.winRate}%</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -328,18 +350,18 @@ export default function ChampionBuild({ champion, version, runesData = [], build
               )}
               {itemSlots.length > 0 ? (
                 /* Satın alma SIRASINA göre slot alternatifleri (timeline verisi) */
-                <div className="space-y-3 pt-3 border-t border-edge/40">
+                <div className="space-y-3.5 pt-3 border-t border-edge/40">
                   {itemSlots.map(({ n, list }) => (
-                    <div key={n} className="flex items-start gap-2">
-                      <span className="text-[10px] text-gray-500 font-semibold w-10 shrink-0 mt-2.5">{n}. Item</span>
-                      <div className="flex items-start gap-1.5 flex-wrap">
+                    <div key={n} className="flex items-start gap-2.5">
+                      <span className="text-[10px] text-gray-500 font-semibold w-10 shrink-0 mt-3">{n}. Item</span>
+                      <div className="flex items-start gap-2 flex-wrap">
                         {list.slice(0, 4).map((it) => (
-                          <div key={it.key} className="flex flex-col items-center w-[42px]">
-                            <img src={itemIcon(version, it.key)} alt="" width={32} height={32}
+                          <div key={it.key} className="flex flex-col items-center w-[46px]">
+                            <img src={itemIcon(version, it.key)} alt="" width={38} height={38}
                               className="rounded-md border border-edge" onError={hideOnError}
                               title={`${it.games} maç`} />
-                            <span className={`text-[9px] font-bold mt-0.5 leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</span>
-                            <span className="text-[8px] text-gray-500 leading-tight">{it.pickRate}%</span>
+                            <span className={`text-[10px] font-bold mt-1 leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</span>
+                            <span className="text-[9px] text-gray-500 leading-tight mt-0.5">{it.pickRate}%</span>
                           </div>
                         ))}
                       </div>
@@ -371,7 +393,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
   );
 }
 
-function ItemRow({ items, size = 32 }) {
+function ItemRow({ items, size = 36 }) {
   return (
     <div className="flex items-start gap-1.5 flex-wrap">
       {items.map((it, i) => (
@@ -393,17 +415,17 @@ function RuneTree({ tree, selected, pctOf, skipKeystone }) {
   const slots = skipKeystone ? tree.slots.slice(1) : tree.slots;
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="flex items-center gap-1.5 mb-1">
-        <img src={runeIcon(tree.icon)} alt="" width={20} height={20} onError={hideOnError} />
-        <span className="text-xs font-semibold text-gray-300">{TREE_TR[tree.key] || tree.key}</span>
+      <div className="flex items-center gap-2 mb-1.5">
+        <img src={runeIcon(tree.icon)} alt="" width={22} height={22} onError={hideOnError} />
+        <span className="text-sm font-semibold text-gray-300">{TREE_TR[tree.key] || tree.key}</span>
       </div>
       {slots.map((slot, i) => {
         const isKeystoneRow = !skipKeystone && i === 0;
         return (
-          <div key={i} className="flex items-start justify-center gap-2">
+          <div key={i} className="flex items-start justify-center gap-2.5">
             {slot.runes.map((r) => (
               <RuneDot key={r.id} src={runeIcon(r.icon)} on={selected.has(r.id)}
-                size={isKeystoneRow ? 36 : 28} title={r.name}
+                size={isKeystoneRow ? 44 : 33} title={r.name}
                 pct={pctOf ? pctOf[r.id] : undefined} withLabel={!!pctOf} />
             ))}
           </div>
@@ -431,7 +453,7 @@ function RuneDot({ src, on, size = 28, title, pct, withLabel = false }) {
   return (
     <div className="flex flex-col items-center" style={{ width: size + 6 }}>
       {img}
-      <span className={`text-[8px] mt-0.5 leading-none ${on ? "text-blue-300 font-semibold" : "text-gray-600"}`}>
+      <span className={`text-[10px] mt-0.5 leading-none ${on ? "text-blue-300 font-semibold" : "text-gray-600"}`}>
         {pct != null ? `${pct}%` : " "}
       </span>
     </div>
