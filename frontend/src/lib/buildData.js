@@ -7,13 +7,14 @@
   (rün başına toplam) olduğundan sayfa "en popüler tekil seçimlerin" birleşimidir.
 */
 
-import { DD_ASSETS } from "@/lib/ddragon";
+import { DD_ASSETS, DD_CDN } from "@/lib/ddragon";
 
 const DD = `${DD_ASSETS}/cdn`;
 
 export const itemIcon = (v, id) => `${DD}/${v}/img/item/${id}.png`;
 export const champIcon = (v, id) => `${DD}/${v}/img/champion/${id}.png`;
-export const profileIcon = (v, id) => `${DD}/${v}/img/profileicon/${id}.png`;
+// Profil ikonları /dd aynasında BİLEREK yok (binlerce dosya) → doğrudan ddragon.
+export const profileIcon = (v, id) => `${DD_CDN}/cdn/${v}/img/profileicon/${id}.png`;
 export const runeIcon = (iconPath) => `${DD}/img/${iconPath}`;            // icon zaten "perk-images/..." içerir
 export const shardIcon = (name) => `${DD}/img/perk-images/StatMods/${name}.png`;
 
