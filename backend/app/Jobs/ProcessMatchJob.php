@@ -71,6 +71,7 @@ class ProcessMatchJob implements ShouldQueue
                 ->update([
                     'patch'         => $this->patchOf($detail),
                     'rune_k_done'   => true,
+                    'matchup_done'  => true,
                     'timeline_done' => $timelineDone,
                 ]);
 

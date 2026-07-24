@@ -2,7 +2,8 @@
 
 import { Fragment, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { pickRealRunePage, groupRealItems, itemIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
+import Link from "next/link";
+import { pickRealRunePage, groupRealItems, champIcon, itemIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", SUPPORT: "Support" };
 // "Koridor Payı" yerine role özgü, okunur etiket (TR ekleri yüzünden hazır map).
@@ -99,6 +100,8 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         .filter((s) => s.list.length > 0)
     : [];
   const spellPairs = cats.spell_pair || [];
+  const matchups = cats.matchups || { good: [], bad: [], opponents: 0 };
+  const hasMatchups = matchups.good.length + matchups.bad.length >= 4;
 
   // Hiç oynanma verisi yok → dürüst boş durum (sahte build göstermeyiz).
   if (!positions.length) {
@@ -389,7 +392,58 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           </Section>
         </Panel>
       </div>
+
+      {/* ALT — Rakip Matchup'lar (tam genişlik) */}
+      <Panel>
+        <Section title="Rakip Matchup'lar" extra={
+          <span className="text-[10px] text-gray-600">rakibe karşı WR − genel WR · rakip başına min 10 maç</span>
+        }>
+          {hasMatchups ? (
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="flex-1">
+                <p className="text-[11px] font-semibold text-blue-300 uppercase tracking-wider mb-2.5">İyi Karşı</p>
+                <div className="flex gap-2.5 flex-wrap">
+                  {matchups.good.map((m) => (
+                    <MatchupCard key={m.id} m={m} version={version} good />
+                  ))}
+                </div>
+              </div>
+              <div className="hidden md:block w-px bg-edge/40" />
+              <div className="flex-1">
+                <p className="text-[11px] font-semibold text-red-400 uppercase tracking-wider mb-2.5 md:text-right">Zayıf Karşı</p>
+                <div className="flex gap-2.5 flex-wrap md:justify-end">
+                  {matchups.bad.map((m) => (
+                    <MatchupCard key={m.id} m={m} version={version} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <ComingSoon>
+              Matchup istatistikleri için rakip başına en az 10 maç gerekir — worker maç
+              topladıkça bu bölüm kendiliğinden dolacak.
+            </ComingSoon>
+          )}
+        </Section>
+      </Panel>
     </div>
+  );
+}
+
+/* Tek rakip kartı — şampiyon sayfasına link verir; sapma iyi=mavi, kötü=kırmızı. */
+function MatchupCard({ m, version, good = false }) {
+  return (
+    <Link href={`/champions/${m.id}`}
+      className="flex flex-col items-center w-[72px] p-2 rounded-xl bg-edge/25 hover:bg-hover border border-transparent hover:border-edge transition-colors"
+      title={`${m.name} — ${m.games} maç · %${m.winRate} WR`}>
+      <img src={champIcon(version, m.id)} alt={m.name} width={44} height={44}
+        className="rounded-lg border border-edge" onError={hideOnError} />
+      <span className="text-[10px] text-gray-300 truncate w-full text-center mt-1.5">{m.name}</span>
+      <span className={`text-xs font-bold mt-0.5 ${good ? "text-blue-300" : "text-red-400"}`}>
+        {m.delta > 0 ? "+" : ""}{m.delta}%
+      </span>
+      <span className="text-[9px] text-gray-600 mt-0.5">{m.games} maç</span>
+    </Link>
   );
 }
 

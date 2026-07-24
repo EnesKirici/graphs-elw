@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ChampionBuild;
+use App\Models\ChampionMatchup;
 use App\Models\ChampionStat;
 use App\Models\ChampionTopPlayer;
 use App\Models\StatPatch;
@@ -86,6 +87,48 @@ class BuildAggregationService
     }
 
     /**
+     * Maçtaki karşı koridor eşleşmeleri: her pozisyon için iki takımın oyuncusu
+     * eşlenir, iki yönlü satır üretilir. Pozisyonu boş/çift olan maçlar atlanır.
+     *
+     * @return array<array{0:string,1:string,2:string,3:string,4:bool}>
+     *         [patch, championId, position, opponentId, win]
+     */
+    public function matchupRows(array $matchData): array
+    {
+        [$ok, $patch] = $this->validateMatch($matchData['info'] ?? null);
+        if (! $ok) {
+            return [];
+        }
+        $keyToId = $this->keyMap();
+
+        // teamId × position → [champId, win]
+        $byPos = [];
+        foreach ($matchData['info']['participants'] as $p) {
+            $pos = $p['teamPosition'] ?? '';
+            $champId = $keyToId[(int) ($p['championId'] ?? 0)] ?? ($p['championName'] ?? null);
+            if (! $pos || ! $champId) {
+                continue;
+            }
+            $byPos[$pos][(int) $p['teamId']] = [$champId, ! empty($p['win'])];
+        }
+
+        $rows = [];
+        foreach ($byPos as $pos => $teams) {
+            if (count($teams) !== 2) {
+                continue; // pozisyon verisi bozuk (çift jungle vb.) — güvenme
+            }
+            [$a, $b] = array_values($teams);
+            if ($a[0] === $b[0]) {
+                continue; // aynı şampiyon (teorik) — anlamsız
+            }
+            $rows[] = [$patch, $a[0], $pos, $b[0], $a[1]];
+            $rows[] = [$patch, $b[0], $pos, $a[0], $b[1]];
+        }
+
+        return $rows;
+    }
+
+    /**
      * Eski bir maçın keystone-koşullu rün satırlarını DÖNDÜRÜR (bump etmez) —
      * builds:backfill-runes bunları bellekte toplayıp tek toplu upsert ile yazar
      * (maç başına ~240 tekil sorgu yerine chunk başına birkaç sorgu).
@@ -157,6 +200,18 @@ class BuildAggregationService
 
             // 3) champion_top_players — oyuncu × şampiyon
             $this->bumpTopPlayer($region, $champId, $p, $win);
+        }
+
+        // 4) champion_matchups — karşı koridor eşleşmeleri (A-vs-B + B-vs-A)
+        foreach ($this->matchupRows($matchData) as [$mPatch, $champ, $pos, $opp, $win]) {
+            $row = ChampionMatchup::firstOrCreate(
+                ['patch' => $mPatch, 'champion_id' => $champ, 'position' => $pos, 'opponent_id' => $opp],
+                ['games' => 0, 'wins' => 0],
+            );
+            $row->increment('games');
+            if ($win) {
+                $row->increment('wins');
+            }
         }
 
         // Banlar → champion_stats.bans (ALL). Maç içinde TEKİLLEŞTİR: iki takım aynı

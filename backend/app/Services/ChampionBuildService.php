@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CachedPlayer;
 use App\Models\ChampionBuild;
+use App\Models\ChampionMatchup;
 use App\Models\ChampionStat;
 use App\Models\ChampionTopPlayer;
 use App\Models\StatPatch;
@@ -51,7 +52,7 @@ class ChampionBuildService
     public function getChampionBuild(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        $key = 'champion:build:v4:' . $championId . ':' . implode(',', $patches);
+        $key = 'champion:build:v5:' . $championId . ':' . implode(',', $patches);
 
         return Cache::remember($key, 600, function () use ($championId, $patches) {
             return $this->compute($championId, $patches);
@@ -168,6 +169,10 @@ class ChampionBuildService
             // (düşük örneklemde "toplanıyor" mesajı) — anahtarlar kategori adlarıdır.
             $cats['_samples'] = $samples;
 
+            // Rakip matchup'lar: iyi karşı (en yüksek sapma) / zayıf karşı (en düşük).
+            // Sapma = o rakibe karşı WR − şampiyonun bu roldeki genel WR'si.
+            $cats['matchups'] = $this->matchupsFor($championId, $patches, $pos, (float) $p['winRate']);
+
             $byPosition[$pos] = $cats;
         }
 
@@ -179,6 +184,61 @@ class ChampionBuildService
             'byPosition' => $byPosition,
             'spellMap'   => $this->spellMapForPairs($byPosition),
             'topPlayers' => $this->topPlayers($championId),
+        ];
+    }
+
+    /** Rakip başına en az bu kadar maç yoksa matchup listeye girmez (gürültü). */
+    private const MATCHUP_MIN_GAMES = 10;
+
+    /**
+     * Pozisyon için matchup listeleri: good (en yüksek sapma) / bad (en düşük).
+     * @return array{good: array, bad: array, opponents: int}
+     */
+    private function matchupsFor(string $championId, array $patches, string $pos, float $posWinRate): array
+    {
+        $rows = ChampionMatchup::where('champion_id', $championId)
+            ->whereIn('patch', $patches)
+            ->where('position', $pos)
+            ->get();
+
+        // Rakip adları (DDragon) — id görüntü için, name etiket için.
+        $names = [];
+        try {
+            foreach ($this->ddragon->getChampions() as $c) {
+                $names[$c['id']] = $c['name'] ?? $c['id'];
+            }
+        } catch (\Throwable) {
+        }
+
+        $mu = [];
+        foreach ($rows->groupBy('opponent_id') as $opp => $rws) {
+            $g = (int) $rws->sum('games');
+            if ($g < self::MATCHUP_MIN_GAMES) {
+                continue;
+            }
+            $w = (int) $rws->sum('wins');
+            $wr = round($w / $g * 100, 1);
+            $mu[] = [
+                'id'      => $opp,
+                'name'    => $names[$opp] ?? $opp,
+                'games'   => $g,
+                'winRate' => $wr,
+                'delta'   => round($wr - $posWinRate, 1),
+            ];
+        }
+        usort($mu, fn ($a, $b) => $b['delta'] <=> $a['delta']);
+
+        $good = array_slice($mu, 0, 5);
+        $goodIds = array_column($good, 'id');
+        $bad = array_values(array_filter(
+            array_reverse($mu),
+            fn ($m) => ! in_array($m['id'], $goodIds, true)
+        ));
+
+        return [
+            'good'      => $good,
+            'bad'       => array_slice($bad, 0, 5),
+            'opponents' => count($mu),
         ];
     }
 
