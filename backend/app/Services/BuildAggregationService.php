@@ -86,16 +86,21 @@ class BuildAggregationService
     }
 
     /**
-     * Eski (yeni kod öncesi işlenmiş) bir maç için YALNIZ keystone-koşullu rün
-     * sayaçlarını işler — builds:backfill-runes komutu kullanır.
+     * Eski bir maçın keystone-koşullu rün satırlarını DÖNDÜRÜR (bump etmez) —
+     * builds:backfill-runes bunları bellekte toplayıp tek toplu upsert ile yazar
+     * (maç başına ~240 tekil sorgu yerine chunk başına birkaç sorgu).
+     *
+     * @return array<array{0:string,1:string,2:string,3:string,4:string,5:bool}>
+     *         [patch, championId, position, category, itemKey, win]
      */
-    public function backfillRuneConditionals(array $matchData): bool
+    public function runeConditionalRows(array $matchData): array
     {
         [$ok, $patch] = $this->validateMatch($matchData['info'] ?? null);
         if (! $ok) {
-            return false;
+            return [];
         }
         $keyToId = $this->keyMap();
+        $rows = [];
 
         foreach ($matchData['info']['participants'] as $p) {
             $champId = $keyToId[(int) ($p['championId'] ?? 0)] ?? ($p['championName'] ?? null);
@@ -105,11 +110,11 @@ class BuildAggregationService
             $pos = $p['teamPosition'] ?: 'ALL';
             $win = ! empty($p['win']);
             foreach ($this->runeConditionalKeys($p) as [$category, $itemKey]) {
-                $this->bumpBuild($patch, $champId, $pos, $category, $itemKey, $win);
+                $rows[] = [$patch, $champId, $pos, $category, $itemKey, $win];
             }
         }
 
-        return true;
+        return $rows;
     }
 
     /**
