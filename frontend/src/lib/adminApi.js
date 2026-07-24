@@ -16,6 +16,17 @@ export function isAuthenticated() {
   return !!getToken();
 }
 
+// Giriş yapan adminin {username, role} bilgisi — yetki kontrolü sunucuda,
+// bu yalnız arayüzü şekillendirir (ör. Adminler sekmesi görünsün mü).
+export function getAdminUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    return JSON.parse(localStorage.getItem("admin_user"));
+  } catch {
+    return null;
+  }
+}
+
 export async function logout() {
   const token = getToken();
   if (token) {
@@ -27,6 +38,7 @@ export async function logout() {
     } catch {}
   }
   localStorage.removeItem("admin_token");
+  localStorage.removeItem("admin_user");
   fireAuthChange();
   window.location.href = "/admin/login";
 }
@@ -51,6 +63,7 @@ export async function adminLogin(username, password) {
   }
 
   localStorage.setItem("admin_token", data.token);
+  localStorage.setItem("admin_user", JSON.stringify({ username: data.username, role: data.role }));
   fireAuthChange();
   return data;
 }

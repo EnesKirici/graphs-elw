@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { logout } from "@/lib/adminApi";
+import { logout, getAdminUser } from "@/lib/adminApi";
 
 const NAV_SECTIONS = [
   {
@@ -29,8 +30,24 @@ const NAV_SECTIONS = [
   },
 ];
 
+// Yalnız süper adminin sidebar'ında görünür (yetki kontrolü sunucuda)
+const SUPER_ITEM = {
+  href: "/admin/admins",
+  label: "Adminler",
+  icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
+};
+
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const [me, setMe] = useState(null);
+
+  useEffect(() => { setMe(getAdminUser()); }, []);
+
+  const sections = NAV_SECTIONS.map((s) =>
+    s.title === "Genel" && me?.role === "super_admin"
+      ? { ...s, items: [...s.items, SUPER_ITEM] }
+      : s
+  );
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-60 tip-dark bg-[#0a0e14] border-r border-edge flex flex-col z-40">
@@ -45,7 +62,7 @@ export default function AdminSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-3 overflow-y-auto">
-        {NAV_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.title} className="mb-4">
             <p className="px-3 mb-2 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">{section.title}</p>
             <div className="space-y-0.5">
@@ -75,6 +92,15 @@ export default function AdminSidebar() {
 
       {/* Alt */}
       <div className="px-3 py-3 border-t border-edge/50 space-y-1">
+        {me && (
+          <div className="px-3 pb-1 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+            <span className="text-[11px] text-gray-400 truncate">{me.username}</span>
+            {me.role === "super_admin" && (
+              <span className="text-[9px] font-semibold text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 uppercase tracking-wider shrink-0">Süper</span>
+            )}
+          </div>
+        )}
         <Link
           href="/"
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-gray-500 hover:text-gray-300 hover:bg-hover transition-colors"

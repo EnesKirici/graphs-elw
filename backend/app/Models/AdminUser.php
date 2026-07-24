@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['username', 'password'])]
+#[Fillable(['username', 'password', 'role'])]
 #[Hidden(['password'])]
 class AdminUser extends Authenticatable
 {

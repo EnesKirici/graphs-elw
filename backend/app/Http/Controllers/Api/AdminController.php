@@ -70,6 +70,7 @@ class AdminController extends Controller
         return response()->json([
             'token' => $token->plainTextToken,
             'username' => $user->username,
+            'role' => $user->role,
         ]);
     }
 

@@ -109,6 +109,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/bans', [AdminController::class, 'banIp']);
         Route::delete('/bans/{id}', [AdminController::class, 'unbanIp']);
         Route::delete('/ban-alerts', [AdminController::class, 'clearAlerts']);
+
+        // Admin hesap yönetimi (yalnız süper admin)
+        Route::middleware('admin.super')->group(function () {
+            Route::get('/admins', [\App\Http\Controllers\Api\AdminUserController::class, 'index']);
+            Route::post('/admins', [\App\Http\Controllers\Api\AdminUserController::class, 'store']);
+            Route::delete('/admins/{id}', [\App\Http\Controllers\Api\AdminUserController::class, 'destroy']);
+            Route::put('/admins/{id}/password', [\App\Http\Controllers\Api\AdminUserController::class, 'resetPassword']);
+        });
     });
 
 });
