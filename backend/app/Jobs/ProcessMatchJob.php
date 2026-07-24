@@ -53,9 +53,26 @@ class ProcessMatchJob implements ShouldQueue
             $detail = $matchData->getMatchDetail($this->matchId);
             $agg->processMatch($detail, $this->region);
 
-            // patch'i claim sonrası güncelle (claim anında maç detayı yoktu)
+            // Timeline'a bağlı sayaçlar (skill_order/starter/item_slotN) — ekstra 1 API
+            // isteği. Başarısız olursa maç işlenmiş sayılır, timelines:backfill tamamlar.
+            $timelineDone = false;
+            try {
+                $timeline = app(\App\Services\RiotApi\RiotApiService::class)
+                    ->regionRequest("/lol/match/v5/matches/{$this->matchId}/timeline");
+                $agg->processTimeline($detail, $timeline);
+                $timelineDone = true;
+            } catch (\Throwable) {
+                // 429/ağ hatası → backfill halleder
+            }
+
+            // patch'i claim sonrası güncelle (claim anında maç detayı yoktu).
+            // rune_k_done: yeni processMatch koşullu rün sayaçlarını da işledi.
             ProcessedMatch::where('match_id', $this->matchId)
-                ->update(['patch' => $this->patchOf($detail)]);
+                ->update([
+                    'patch'         => $this->patchOf($detail),
+                    'rune_k_done'   => true,
+                    'timeline_done' => $timelineDone,
+                ]);
 
             // Kaynak lig damgası → ileride elo-filtreli istatistik (yalnız boşsa yaz;
             // aynı maç farklı liglerden bulunursa İLK damga kalır).

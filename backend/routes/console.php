@@ -50,6 +50,9 @@ $workerOn = fn () => app(\App\Services\WorkerControlService::class)->isEnabled()
 Schedule::command('ladder:crawl')->dailyAt('04:15')->when($workerOn)->withoutOverlapping();
 // Havuzdan bütçeli maç toplama (tur başına ~40 maç; user-yield ile kullanıcıya yol verir).
 Schedule::command('matches:collect')->everyTenMinutes()->when($workerOn)->withoutOverlapping();
+// Eski maçların timeline istatistikleri (skill_order/starter/item_slot) — bütçeli backfill;
+// stok bitince turlar "bekleyen yok" ile anında biter (maliyetsiz).
+Schedule::command('timelines:backfill')->everyTenMinutes()->when($workerOn)->withoutOverlapping();
 // Kuyruktaki ProcessMatchJob'ları işle; kuyruk boşsa anında çıkar (worker kapansa da kuyruğu boşaltır).
 Schedule::command('queue:work --stop-when-empty --max-time=480 --tries=3')
     ->everyTenMinutes()->withoutOverlapping();

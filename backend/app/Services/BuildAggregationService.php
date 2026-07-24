@@ -30,7 +30,87 @@ class BuildAggregationService
 
     public function __construct(
         private DataDragonService $ddragon,
+        private TimelineStatsService $timelineStats,
     ) {}
+
+    /**
+     * Maçın geçerli (ranked, remake değil) olup olmadığını ve patch'ini döndürür.
+     * @return array{0:bool,1:string} [geçerli mi, patch]
+     */
+    private function validateMatch(?array $info): array
+    {
+        if (! $info || empty($info['participants'])) {
+            return [false, ''];
+        }
+        if (! in_array((int) ($info['queueId'] ?? 0), self::RANKED_QUEUES, true)) {
+            return [false, ''];
+        }
+        if ((int) ($info['gameDuration'] ?? 0) < 300) {
+            return [false, ''];
+        }
+        $patch = $this->patchBucket($info['gameVersion'] ?? '') ?? $this->ddragon->getCurrentVersion();
+
+        return [true, $this->shortPatch($patch)];
+    }
+
+    /**
+     * Timeline'a bağlı sayaçlar: skill_order / starter / item_slot1-5.
+     * Maç sayaçlarından BAĞIMSIZ çalışır (timeline sonradan da işlenebilir).
+     */
+    public function processTimeline(array $matchData, array $timeline): bool
+    {
+        [$ok, $patch] = $this->validateMatch($matchData['info'] ?? null);
+        if (! $ok) {
+            return false;
+        }
+        $keysByPid = $this->timelineStats->extractAll($timeline);
+        if (! $keysByPid) {
+            return false;
+        }
+        $keyToId = $this->keyMap();
+
+        foreach ($matchData['info']['participants'] as $i => $p) {
+            $pid = (int) ($p['participantId'] ?? ($i + 1));
+            $champId = $keyToId[(int) ($p['championId'] ?? 0)] ?? ($p['championName'] ?? null);
+            if (! $champId || empty($keysByPid[$pid])) {
+                continue;
+            }
+            $pos = $p['teamPosition'] ?: 'ALL';
+            $win = ! empty($p['win']);
+            foreach ($keysByPid[$pid] as [$category, $itemKey]) {
+                $this->bumpBuild($patch, $champId, $pos, $category, $itemKey, $win);
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Eski (yeni kod öncesi işlenmiş) bir maç için YALNIZ keystone-koşullu rün
+     * sayaçlarını işler — builds:backfill-runes komutu kullanır.
+     */
+    public function backfillRuneConditionals(array $matchData): bool
+    {
+        [$ok, $patch] = $this->validateMatch($matchData['info'] ?? null);
+        if (! $ok) {
+            return false;
+        }
+        $keyToId = $this->keyMap();
+
+        foreach ($matchData['info']['participants'] as $p) {
+            $champId = $keyToId[(int) ($p['championId'] ?? 0)] ?? ($p['championName'] ?? null);
+            if (! $champId) {
+                continue;
+            }
+            $pos = $p['teamPosition'] ?: 'ALL';
+            $win = ! empty($p['win']);
+            foreach ($this->runeConditionalKeys($p) as [$category, $itemKey]) {
+                $this->bumpBuild($patch, $champId, $pos, $category, $itemKey, $win);
+            }
+        }
+
+        return true;
+    }
 
     /**
      * Bir maçın tam Riot objesini (data) işler.
@@ -38,19 +118,11 @@ class BuildAggregationService
      */
     public function processMatch(array $matchData, string $region = 'tr1'): bool
     {
-        $info = $matchData['info'] ?? null;
-        if (! $info || empty($info['participants'])) {
+        [$ok, $patch] = $this->validateMatch($matchData['info'] ?? null);
+        if (! $ok) {
             return false;
         }
-        if (! in_array((int) ($info['queueId'] ?? 0), self::RANKED_QUEUES, true)) {
-            return false;
-        }
-        if ((int) ($info['gameDuration'] ?? 0) < 300) {
-            return false; // remake
-        }
-
-        $patch = $this->patchBucket($info['gameVersion'] ?? '') ?? $this->ddragon->getCurrentVersion();
-        $patch = $this->shortPatch($patch);
+        $info = $matchData['info'];
         $keyToId = $this->keyMap();
 
         // Patch toplam maç sayacı (pick/ban rate paydası)
@@ -113,11 +185,10 @@ class BuildAggregationService
         if ($keystone) {
             $out[] = ['keystone', (string) $keystone];
         }
-        // Minor rünler (ana ağaç 2-4)
-        foreach (array_slice($perks['styles'][0]['selections'] ?? [], 1) as $sel) {
-            if (! empty($sel['perk'])) {
-                $out[] = ['rune_minor', (string) $sel['perk']];
-            }
+        // Minor rünler — ana ağaç (2-4) + YAN ağaç (2 seçim). Yan ağaç sayılmazsa
+        // build sayfasındaki ikincil ağaç başka sayfaların rünlerinden türer (yanlış).
+        foreach ($this->minorPerks($perks) as $perk) {
+            $out[] = ['rune_minor', (string) $perk];
         }
         // Stat shard'lar
         foreach (['offense', 'flex', 'defense'] as $slot) {
@@ -125,6 +196,9 @@ class BuildAggregationService
                 $out[] = ['shard', (string) $perks['statPerks'][$slot]];
             }
         }
+        // Keystone-KOŞULLU sayaçlar: rün sayfası bir bütündür — yan ağaç ve shard
+        // istatistikleri ancak "o keystone ile oynanan maçlar" içinde anlamlıdır.
+        $out = array_merge($out, $this->runeConditionalKeys($p));
         // Sihirdar büyüsü çifti (sıralı)
         $s1 = (int) ($p['summoner1Id'] ?? 0);
         $s2 = (int) ($p['summoner2Id'] ?? 0);
@@ -139,7 +213,48 @@ class BuildAggregationService
                 $out[] = ['item_full', (string) $item];
             }
         }
-        // TODO: starter item + skill-max sırası → match timeline gerekiyor.
+        return $out;
+    }
+
+    /** Ana ağaç minörleri (2-4) + yan ağaç seçimleri (2) — perk id listesi. */
+    private function minorPerks(array $perks): array
+    {
+        $out = [];
+        foreach (array_slice($perks['styles'][0]['selections'] ?? [], 1) as $sel) {
+            if (! empty($sel['perk'])) {
+                $out[] = $sel['perk'];
+            }
+        }
+        foreach ($perks['styles'][1]['selections'] ?? [] as $sel) {
+            if (! empty($sel['perk'])) {
+                $out[] = $sel['perk'];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Keystone-koşullu anahtarlar: [['rune_minor_k', 'KEYSTONE:PERK'], ['shard_k', 'KEYSTONE:SHARD']].
+     * builds:backfill-runes komutu da eski maçlar için yalnız bunları işler.
+     */
+    public function runeConditionalKeys(array $p): array
+    {
+        $perks = $p['perks'] ?? [];
+        $keystone = $perks['styles'][0]['selections'][0]['perk'] ?? null;
+        if (! $keystone) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($this->minorPerks($perks) as $perk) {
+            $out[] = ['rune_minor_k', "{$keystone}:{$perk}"];
+        }
+        foreach (['offense', 'flex', 'defense'] as $slot) {
+            if (! empty($perks['statPerks'][$slot])) {
+                $out[] = ['shard_k', "{$keystone}:{$perks['statPerks'][$slot]}"];
+            }
+        }
 
         return $out;
     }

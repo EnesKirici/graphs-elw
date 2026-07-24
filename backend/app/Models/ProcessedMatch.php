@@ -16,7 +16,7 @@ class ProcessedMatch extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'match_id', 'patch', 'processed_at',
+        'match_id', 'patch', 'processed_at', 'rune_k_done', 'timeline_done',
     ];
 
     protected $casts = [

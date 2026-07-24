@@ -27,11 +27,20 @@ class ChampionBuildService
 
     /** Kategori başına döndürülecek satır sayısı. */
     private const TOP_N = [
-        'keystone'   => 3,  // ana sayfa + 2./3. seçenek
-        'rune_minor' => 30, // ağaçtaki TÜM oynanmış rünler %'siyle gösterilir
-        'shard'      => 9,
-        'spell_pair' => 2,
-        'item_full'  => 15,
+        'keystone'     => 3,   // ana sayfa + 2./3. seçenek
+        'rune_minor'   => 30,  // ağaçtaki TÜM oynanmış rünler %'siyle gösterilir (fallback)
+        'rune_minor_k' => 120, // keystone-koşullu minörler ("KEYSTONE:PERK") — asıl kaynak
+        'shard'        => 9,   // fallback
+        'shard_k'      => 36,  // keystone-koşullu shard'lar
+        'spell_pair'   => 2,
+        'item_full'    => 15,
+        'skill_order'  => 3,   // "Q>E>W" max önceliği
+        'starter'      => 4,   // başlangıç kombinasyonları ("1055-2003")
+        'item_slot1'   => 8,   // satın alma sırasına göre N. bitmiş eşya alternatifleri
+        'item_slot2'   => 8,
+        'item_slot3'   => 8,
+        'item_slot4'   => 8,
+        'item_slot5'   => 8,
     ];
 
     public function __construct(
@@ -42,7 +51,7 @@ class ChampionBuildService
     public function getChampionBuild(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        $key = 'champion:build:v2:' . $championId . ':' . implode(',', $patches);
+        $key = 'champion:build:v3:' . $championId . ':' . implode(',', $patches);
 
         return Cache::remember($key, 600, function () use ($championId, $patches) {
             return $this->compute($championId, $patches);

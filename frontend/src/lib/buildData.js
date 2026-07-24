@@ -67,18 +67,39 @@ export function runeIconById(runesData, id) {
   Ana ağaç = seçilen keystone'un ağacı; her satırda en çok oynanan rün işaretli.
   İkincil ağaç = ana ağaç dışındaki minör rünlerden en güçlü ağaç; farklı satırlardan 2 rün.
   pctOf: rün id → pick % (ağaçta TÜM oynanmış rünlerin altında gösterilir).
+
+  cond.minorsK / cond.shardsK: keystone-KOŞULLU sayaçlar ("8010:8014" formatı) —
+  rün sayfası bir bütün olduğundan yan ağaç/shard istatistikleri yalnız o keystone'un
+  maçlarından okunur; yüzdeler keystone'un maç sayısına oranlanır. Koşullu veri henüz
+  birikmemişse (backfill sürüyor) eski marginal sayaçlara düşülür.
   Dönüş: { primary, secondary, selected:Set<runeId>, shardSel:[i,i,i], pctOf } | null
 */
-export function pickRealRunePage(runesData, keystones = [], minors = [], shards = [], pageIdx = 0) {
+export function pickRealRunePage(runesData, keystones = [], minors = [], shards = [], pageIdx = 0, cond = {}) {
   if (!Array.isArray(runesData) || runesData.length === 0 || !keystones.length) return null;
 
+  const active = keystones[pageIdx] || keystones[0];
+  const keystone = Number(active.key);
+  const kGames = active.games || 0;
+
+  const condRows = (list) => (list || [])
+    .filter((r) => String(r.key).startsWith(`${keystone}:`))
+    .map((r) => ({
+      key: String(r.key).split(":")[1],
+      games: r.games,
+      winRate: r.winRate,
+      pickRate: kGames ? Math.round((r.games / kGames) * 1000) / 10 : 0,
+    }));
+
+  const minorsK = condRows(cond.minorsK);
+  const shardsK = condRows(cond.shardsK);
+  const useMinors = minorsK.length ? minorsK : minors;
+  const useShards = shardsK.length ? shardsK : shards;
+
   const gamesOf = {}, pctOf = {};
-  [...keystones, ...minors].forEach((r) => {
+  [...keystones, ...useMinors].forEach((r) => {
     gamesOf[Number(r.key)] = r.games;
     pctOf[Number(r.key)] = r.pickRate;
   });
-
-  const keystone = Number((keystones[pageIdx] || keystones[0]).key);
   const primary = runesData.find((t) =>
     t.slots?.[0]?.runes?.some((r) => r.id === keystone)
   );
@@ -112,7 +133,7 @@ export function pickRealRunePage(runesData, keystones = [], minors = [], shards 
 
   // Shard satır seçimleri: her satırda sayacı en yüksek seçenek
   const shardGames = {};
-  shards.forEach((s) => { shardGames[Number(s.key)] = s.games; });
+  useShards.forEach((s) => { shardGames[Number(s.key)] = s.games; });
   const shardSel = SHARD_ROWS.map((row) => {
     let best = 0, idx = 0;
     row.forEach((opt, i) => {
