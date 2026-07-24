@@ -13,12 +13,14 @@ const DD = `${DD_ASSETS}/cdn`;
 
 export const itemIcon = (v, id) => `${DD}/${v}/img/item/${id}.png`;
 export const champIcon = (v, id) => `${DD}/${v}/img/champion/${id}.png`;
+export const profileIcon = (v, id) => `${DD}/${v}/img/profileicon/${id}.png`;
 export const runeIcon = (iconPath) => `${DD}/img/${iconPath}`;            // icon zaten "perk-images/..." içerir
 export const shardIcon = (name) => `${DD}/img/perk-images/StatMods/${name}.png`;
 
+// Resmî tr_TR adları (DDragon runesReforged): İsabet/Hâkimiyet/Büyücülük/Azim/İlham
 export const TREE_TR = {
-  Precision: "Hassasiyet", Domination: "Hükmetme", Sorcery: "Büyücülük",
-  Resolve: "Kararlılık", Inspiration: "İlham",
+  Precision: "İsabet", Domination: "Hâkimiyet", Sorcery: "Büyücülük",
+  Resolve: "Azim", Inspiration: "İlham",
 };
 
 // Stat shard satırları (3 satır × 3 seçenek) — runesReforged'da yok, sabit.
@@ -27,17 +29,17 @@ export const SHARD_ROWS = [
   [
     { id: 5008, icon: "StatModsAdaptiveForceIcon", name: "Uyarlanır Güç" },
     { id: 5005, icon: "StatModsAttackSpeedIcon", name: "Saldırı Hızı" },
-    { id: 5007, icon: "StatModsCDRScalingIcon", name: "Yetenek Çabukluğu" },
+    { id: 5007, icon: "StatModsCDRScalingIcon", name: "Yetenek İvmesi" },
   ],
   [
     { id: 5008, icon: "StatModsAdaptiveForceIcon", name: "Uyarlanır Güç" },
     { id: 5010, icon: "StatModsMovementSpeedIcon", name: "Hareket Hızı" },
-    { id: 5001, icon: "StatModsHealthScalingIcon", name: "Can (ölçekli)" },
+    { id: 5001, icon: "StatModsHealthScalingIcon", name: "Can (seviyeye göre)" },
   ],
   [
     { id: 5011, icon: "StatModsHealthPlusIcon", name: "Can" },
-    { id: 5013, icon: "StatModsTenacityIcon", name: "Dayanıklılık" },
-    { id: 5001, icon: "StatModsHealthScalingIcon", name: "Can (ölçekli)" },
+    { id: 5013, icon: "StatModsTenacityIcon", name: "Meşakkat" },
+    { id: 5001, icon: "StatModsHealthScalingIcon", name: "Can (seviyeye göre)" },
   ],
 ];
 
@@ -134,9 +136,12 @@ export function groupRealItems(items = [], version) {
     games: it.games,
     winRate: it.winRate,
     pickRate: it.pickRate,
+    completed: it.completed,
   }));
   const boots = rows.filter((r) => BOOT_IDS.has(r.id));
-  const rest = rows.filter((r) => !BOOT_IDS.has(r.id));
+  // Bileşen/iksir gibi bitmemiş eşyalar build önerisine girmez (backend 'completed'
+  // işaretler; işaret yoksa — eski önbellek — eleme yapılmaz ki sayfa boş kalmasın).
+  const rest = rows.filter((r) => !BOOT_IDS.has(r.id) && r.completed !== false);
 
   return {
     boots: boots.slice(0, 1),

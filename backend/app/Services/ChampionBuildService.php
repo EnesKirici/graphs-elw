@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\CachedPlayer;
 use App\Models\ChampionBuild;
 use App\Models\ChampionStat;
 use App\Models\ChampionTopPlayer;
+use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
 use Illuminate\Support\Facades\Cache;
 
@@ -40,7 +42,7 @@ class ChampionBuildService
     public function getChampionBuild(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        $key = 'champion:build:v1:' . $championId . ':' . implode(',', $patches);
+        $key = 'champion:build:v2:' . $championId . ':' . implode(',', $patches);
 
         return Cache::remember($key, 600, function () use ($championId, $patches) {
             return $this->compute($championId, $patches);
@@ -78,6 +80,27 @@ class ChampionBuildService
             $shown = [$positions[0]];
         }
 
+        // Genel bakış: pick/ban oranları (payda = patch penceresindeki toplam maç).
+        // Bir şampiyon bir maçta en fazla 1 kez seçilebilir → pick = games / totalMatches.
+        $totalMatches = (int) StatPatch::whereIn('patch', $patches)->sum('total_games');
+        $allWins = (int) $statRows->where('position', 'ALL')->sum('wins');
+        $allBans = (int) $statRows->where('position', 'ALL')->sum('bans');
+        $overview = [
+            'games'    => $totalGames,
+            'winRate'  => $totalGames > 0 ? round($allWins / $totalGames * 100, 1) : 0.0,
+            'pickRate' => $totalMatches > 0 ? round($totalGames / $totalMatches * 100, 1) : 0.0,
+            'banRate'  => $totalMatches > 0 ? round($allBans / $totalMatches * 100, 1) : 0.0,
+        ];
+
+        // Bitmiş eşya kontrolü (Duruma Göre'de bileşen/iksir görünmesin diye):
+        // bileşeni olan ('into' dolu) ya da tek parça (depth<2) itemler bitmiş sayılmaz.
+        $itemMap = [];
+        try {
+            $itemMap = $this->ddragon->getItems();
+        } catch (\Throwable) {
+            // DDragon erişilemezse işaretsiz bırak — frontend hepsini bitmiş varsayar.
+        }
+
         // Build sayaçları: patch penceresi birleşik, pozisyon × kategori × anahtar.
         $buildRows = ChampionBuild::where('champion_id', $championId)
             ->whereIn('patch', $patches)->get();
@@ -97,13 +120,20 @@ class ChampionBuildService
                 }
                 $list = [];
                 foreach ($agg as $k => $v) {
-                    $list[] = [
+                    $row = [
                         'key'     => (string) $k,
                         'games'   => $v['games'],
                         'wins'    => $v['wins'],
                         'winRate' => $v['games'] > 0 ? round($v['wins'] / $v['games'] * 100, 1) : 0.0,
                         'pickRate' => $p['games'] > 0 ? round($v['games'] / $p['games'] * 100, 1) : 0.0,
                     ];
+                    if ($category === 'item_full' && $itemMap) {
+                        $it = $itemMap[(string) $k] ?? null;
+                        $row['completed'] = $it !== null
+                            && empty($it['into'])
+                            && (int) ($it['depth'] ?? 1) >= 2;
+                    }
+                    $list[] = $row;
                 }
                 usort($list, fn ($a, $b) => $b['games'] <=> $a['games']);
                 $cats[$category] = array_slice($list, 0, $limit);
@@ -115,6 +145,7 @@ class ChampionBuildService
         return [
             'patches'    => $patches,
             'totalGames' => $totalGames,
+            'overview'   => $overview,
             'positions'  => $shown,
             'byPosition' => $byPosition,
             'spellMap'   => $this->spellMapForPairs($byPosition),
@@ -150,18 +181,28 @@ class ChampionBuildService
     /** Bu şampiyonu en çok oynayan gerçek oyuncular (isim bilinenler). */
     private function topPlayers(string $championId, int $limit = 4): array
     {
-        return ChampionTopPlayer::where('champion_id', $championId)
+        $rows = ChampionTopPlayer::where('champion_id', $championId)
             ->whereNotNull('game_name')
             ->where('games', '>=', 5)
             ->orderByDesc('games')
             ->limit($limit)
-            ->get()
+            ->get();
+
+        // Oyuncunun gerçek profil ikonu cached_players'tan (puuid ile) gelir.
+        $icons = CachedPlayer::whereIn('puuid', $rows->pluck('puuid'))
+            ->pluck('profile_icon_id', 'puuid');
+
+        return $rows
             ->map(fn ($r) => [
-                'name'    => $r->game_name,
-                'tag'     => $r->tag_line,
-                'games'   => (int) $r->games,
-                'wins'    => (int) $r->wins,
-                'winRate' => $r->games > 0 ? round($r->wins / $r->games * 100, 1) : 0.0,
+                'name'          => $r->game_name,
+                'tag'           => $r->tag_line,
+                'games'         => (int) $r->games,
+                'wins'          => (int) $r->wins,
+                'winRate'       => $r->games > 0 ? round($r->wins / $r->games * 100, 1) : 0.0,
+                'profileIconId' => $icons[$r->puuid] ?? null,
+                'tier'          => $r->tier,
+                'rank'          => $r->rank,
+                'lp'            => $r->lp !== null ? (int) $r->lp : null,
             ])
             ->values()
             ->all();

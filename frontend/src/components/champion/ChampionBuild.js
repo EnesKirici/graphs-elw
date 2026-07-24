@@ -3,9 +3,24 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { pickRealRunePage, groupRealItems, itemIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
+import { pickRealRunePage, groupRealItems, itemIcon, profileIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", SUPPORT: "Support" };
+// "Koridor Payı" yerine role özgü, okunur etiket (TR ekleri yüzünden hazır map).
+const ROLE_SHARE_LABEL = {
+  TOP: "Üst Koridorda Oynanma", JUNGLE: "Ormanda Oynanma", MIDDLE: "Orta Koridorda Oynanma",
+  BOTTOM: "Alt Koridorda Oynanma", UTILITY: "Destekte Oynanma", SUPPORT: "Destekte Oynanma",
+};
+const TIER_TR = {
+  CHALLENGER: "Challenger", GRANDMASTER: "Grandmaster", MASTER: "Master",
+  DIAMOND: "Diamond", EMERALD: "Emerald", PLATINUM: "Platinum",
+  GOLD: "Gold", SILVER: "Silver", BRONZE: "Bronze", IRON: "Iron",
+};
+const rankShort = (tier, rank) => {
+  if (!tier) return null;
+  const t = TIER_TR[tier] || tier;
+  return ["CHALLENGER", "GRANDMASTER", "MASTER"].includes(tier) ? t : `${t} ${rank || ""}`.trim();
+};
 const ROLE_ICON = {
   TOP: "/roles/top.svg", JUNGLE: "/roles/jungle.svg", MIDDLE: "/roles/mid.svg",
   BOTTOM: "/roles/bot.svg", UTILITY: "/roles/support.svg", SUPPORT: "/roles/support.svg",
@@ -138,9 +153,25 @@ export default function ChampionBuild({ champion, version, runesData = [], build
               </div>
               <div className="rounded-lg bg-edge/40 py-2.5">
                 <p className="text-lg font-bold text-gray-200">{posInfo?.share}%</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">Koridor Payı</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{ROLE_SHARE_LABEL[role] || "Rolde Oynanma"}</p>
               </div>
             </div>
+            {build.overview && (
+              <div className="grid grid-cols-3 gap-2 text-center mt-2">
+                <div className="rounded-lg bg-edge/25 py-2">
+                  <p className="text-[13px] font-bold text-gray-200">{build.overview.pickRate}%</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">Pick</p>
+                </div>
+                <div className="rounded-lg bg-edge/25 py-2">
+                  <p className="text-[13px] font-bold text-gray-200">{build.overview.banRate}%</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">Ban</p>
+                </div>
+                <div className="rounded-lg bg-edge/25 py-2">
+                  <p className="text-[13px] font-bold text-gray-200">{posInfo?.games}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">Maç</p>
+                </div>
+              </div>
+            )}
           </Section>
 
           <Section title="En Popüler Itemler" extra={<span className="text-[10px] text-gray-600">Pick · WR</span>}>
@@ -163,10 +194,13 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 <Link key={`${p.name}-${i}`} href={`/summoner/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag || "TR1")}`}
                   className="flex items-center gap-2.5 group">
                   <span className="text-[11px] text-gray-600 w-3">{i + 1}</span>
-                  <img src={champion.image} alt="" width={28} height={28} className="rounded-md border border-edge" onError={hideOnError} />
+                  <img src={p.profileIconId ? profileIcon(version, p.profileIconId) : champion.image}
+                    alt="" width={28} height={28} className="rounded-full border border-edge" onError={hideOnError} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-200 truncate group-hover:text-blue-300 transition-colors">{p.name}</p>
-                    <p className="text-[10px] text-gray-500">{p.games} maç</p>
+                    <p className="text-[10px] text-gray-500 truncate">
+                      {p.games} maç{rankShort(p.tier, p.rank) ? ` · ${rankShort(p.tier, p.rank)}` : ""}
+                    </p>
                   </div>
                   <span className={`text-xs font-bold ${wrCls(p.winRate)}`}>{p.winRate}%</span>
                 </Link>
