@@ -88,7 +88,10 @@ function RateLimitIndicator() {
   const pct = longLimit > 0 ? Math.round((longUsed / longLimit) * 100) : 0;
   const isHot = pct > 70;
   const isCooldown = data.cooldownUntil > 0;
-  const noKey = !data.appLimit && data.requests > 0;
+  // Backend'in Riot'tan gördüğü gerçek 401/403 sinyali. Eskiden "appLimit yok
+  // ama istek var" diye tahmin ediliyordu; rate limit kaydı sayaçtan önce
+  // dolduğu için sapasağlam key'de bile "GEÇERSİZ" yazıyordu.
+  const noKey = !!data.keyInvalid;
   const color = noKey || isCooldown || isHot ? "var(--loss)" : pct > 40 ? "var(--gold)" : "var(--win)";
 
   return (

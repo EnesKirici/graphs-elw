@@ -7,6 +7,12 @@ use Illuminate\Support\Facades\Cache;
 
 class RiotApiService
 {
+    /** İstek sayacı ve rate limit kaydının ömrü — ikisi birlikte yaşamalı. */
+    private const STATS_TTL = 600;
+
+    /** Anahtarın Riot tarafından reddedildiğini işaretleyen bayrak. */
+    private const KEY_INVALID_KEY = 'riot:key_invalid';
+
     public function platformRequest(string $endpoint, array $query = []): mixed
     {
         return $this->request(config('riot.platform_url') . $endpoint, $query);
@@ -43,7 +49,9 @@ class RiotApiService
 
         self::track('request');
 
-        // Riot'un döndürdüğü rate limit header'larını kaydet
+        // Riot'un döndürdüğü rate limit header'larını kaydet.
+        // TTL, istek sayacıyla (track(), 600sn) AYNI olmalı: kısa tutulursa
+        // sayaç hâlâ doluyken bu kayıt uçar ve panel sağlam key'i "geçersiz" sanır.
         $appLimit = $response->header('X-App-Rate-Limit');
         $appCount = $response->header('X-App-Rate-Limit-Count');
         if ($appLimit && $appCount) {
@@ -51,8 +59,10 @@ class RiotApiService
                 'limit' => $appLimit,
                 'count' => $appCount,
                 'time'  => time(),
-            ], 300);
+            ], self::STATS_TTL);
         }
+
+        self::recordKeyStatus($response);
 
         if ($response->status() === 429) {
             $retryAfter = (int) ($response->header('Retry-After') ?: 5);
@@ -65,12 +75,32 @@ class RiotApiService
             throw new \Exception("Veri bulunamadı.", 404);
         }
 
-        if ($response->status() === 403) {
-            throw new \Exception("API key geçersiz veya süresi dolmuş.", 403);
+        // Dev key'in süresi dolunca Riot 401 "Unknown apikey" döner; 403 değil.
+        // İkisi de aynı anlama geliyor, ikisini de burada karşıla.
+        if ($response->status() === 401 || $response->status() === 403) {
+            throw new \Exception("API key geçersiz veya süresi dolmuş.", $response->status());
         }
 
         $response->throw();
         return $response->json();
+    }
+
+    /**
+     * Anahtar geçerliliğini yanıttan öğren — TAHMİN ETME.
+     * 401/403 → bayrağı koy, ilk başarılı yanıtta kaldır. Bayrak, key
+     * yenilenmezse silinmesin diye sayaçlardan uzun (1 saat) yaşar.
+     */
+    private static function recordKeyStatus($response): void
+    {
+        if (! $response) {
+            return;
+        }
+
+        if (in_array($response->status(), [401, 403], true)) {
+            Cache::put(self::KEY_INVALID_KEY, true, 3600);
+        } elseif ($response->successful()) {
+            Cache::forget(self::KEY_INVALID_KEY);
+        }
     }
 
     /**
@@ -79,6 +109,9 @@ class RiotApiService
      */
     public static function handlePoolRateLimit($response): bool
     {
+        // Pool yolu da anahtarı görüyor — bayrağı burada da güncel tut.
+        self::recordKeyStatus($response);
+
         if ($response && $response->status() === 429) {
             $retryAfter = (int) ($response->header('Retry-After') ?: 5);
             Cache::put('riot:rate_limit_cooldown', time() + $retryAfter, $retryAfter);
@@ -95,7 +128,7 @@ class RiotApiService
     {
         $key = "riot:stats:{$type}";
         $current = Cache::get($key, 0);
-        Cache::put($key, $current + 1, 600); // 10dk boyunca tut
+        Cache::put($key, $current + 1, self::STATS_TTL);
     }
 
     /**
@@ -114,6 +147,7 @@ class RiotApiService
             'appCount'     => $rateInfo['count'] ?? null,
             'cooldownUntil'=> $cooldown ? max(0, $cooldown - time()) : 0,
             'lastUpdate'   => $rateInfo['time'] ?? null,
+            'keyInvalid'   => (bool) Cache::get(self::KEY_INVALID_KEY, false),
         ];
     }
 }
