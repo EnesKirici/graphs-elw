@@ -30,11 +30,18 @@ class BuildSeasonProfileJob implements ShouldQueue
     public int $tries = 1;
     public int $timeout = 280;
 
+    /** Önceki turda kurulmuş özet sayısı — stall (ilerleme yok) tespiti için.
+     *  Sınıf düzeyinde default: kuyrukta bekleyen ESKİ payload deserialize edilse
+     *  bile ilklendirilmiş kalır (typed-property init hatasını önler). */
+    public int $prevHave = -1;
+
     public function __construct(
         public string $puuid,
         public int $round = 1,
-        public int $prevHave = -1,
-    ) {}
+        int $prevHave = -1,
+    ) {
+        $this->prevHave = $prevHave;
+    }
 
     public function handle(MatchService $match): void
     {
