@@ -56,6 +56,14 @@ class BuildSeasonProfileJob implements ShouldQueue
 
     public function handle(MatchService $match, WorkerControlService $worker): void
     {
+        // Worker (admin toggle) KAPALIYSA arka plan build yapma — kullanıcı "her şeyi
+        // durdur" demiş demektir; kuyruğa düşmüş eski işler de burada durup çıkar.
+        if (! $worker->isEnabled()) {
+            Cache::forget("season:building:{$this->puuid}");
+
+            return;
+        }
+
         // Bu zincir yaşadıkça "building" bayrağını taze tut (uzun yield'lerde 15dk
         // TTL'i dolup profil yanlışlıkla "ready + partial" görünmesin).
         Cache::put("season:building:{$this->puuid}", true, 900);

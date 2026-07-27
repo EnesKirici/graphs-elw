@@ -265,6 +265,7 @@ class SummonerController extends Controller
         // Sezon özetleri ilk kez kurulacaksa (soğuk profil) 45 sn beklememek için
         // ağır çekimi worker'a atarız; sayfa son 10 maçla anında açılır, sezon
         // panelleri iş bitince kendiliğinden dolar (frontend season-status poll eder).
+        $workerOn    = app(\App\Services\WorkerControlService::class)->isEnabled();
         $building    = (bool) Cache::get("season:building:{$puuid}");
         $seasonReady = ! $building && $this->match->hasSeasonSummaries($puuid);
 
@@ -275,12 +276,14 @@ class SummonerController extends Controller
             } catch (\Exception $e) {
                 if ($e->getCode() === 429) $rateLimited = true;
             }
-        } elseif (! $building) {
-            // Soğuk ve henüz kuyrukta değil → arka plana at, sayfayı bekletme.
+        } elseif ($workerOn && ! $building) {
+            // Soğuk + worker AÇIK → arka plana at. Worker KAPALIYKEN hiç build başlatma
+            // (kullanıcı "durdur" dedi; profil son-10 fallback'iyle açılır, şerit çıkmaz).
             Cache::put("season:building:{$puuid}", true, 900);
             \App\Jobs\BuildSeasonProfileJob::dispatch($puuid);
         }
-        $seasonPending      = ! $seasonReady;
+        // Şerit yalnız gerçekten build gelecekse (worker açık + hazır değil) gösterilir.
+        $seasonPending      = $workerOn && ! $seasonReady;
         $totalSeasonMatches = $this->match->seasonSummaryCount($puuid);
 
         $recentMatches = [];
