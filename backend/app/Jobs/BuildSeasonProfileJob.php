@@ -33,6 +33,7 @@ class BuildSeasonProfileJob implements ShouldQueue
     public function __construct(
         public string $puuid,
         public int $round = 1,
+        public int $prevHave = -1,
     ) {}
 
     public function handle(MatchService $match): void
@@ -47,11 +48,16 @@ class BuildSeasonProfileJob implements ShouldQueue
         [$have, $total] = $match->seasonProgress($this->puuid);
         Cache::put("season:progress:{$this->puuid}", compact('have', 'total'), 1800);
 
-        // Hâlâ eksik + makul tur sayısında → cooldown kadar bekleyip devam et.
-        if ($total > 0 && $have < $total && $this->round < 60) {
-            $cooldown = Cache::get('riot:rate_limit_cooldown');
-            $delay    = $cooldown ? max(2, (int) $cooldown - time() + 2) : 3;
-            self::dispatch($this->puuid, $this->round + 1)->delay($delay);
+        // Devam kararı: hâlâ eksik VAR + tur limiti aşılmadı + (bu turda İLERLEME oldu
+        // VEYA şu an rate-limit'liyiz). İlerleme yok + rate-limit de yoksa, kalan maçlar
+        // kurulamıyor demektir (remake/geçersiz) → partial kabul edip bitir; sonsuz döngü yok.
+        $cooldown    = Cache::get('riot:rate_limit_cooldown');
+        $rateLimited = $cooldown && time() < (int) $cooldown;
+        $progressed  = $have > $this->prevHave;
+
+        if ($total > 0 && $have < $total && $this->round < 60 && ($progressed || $rateLimited)) {
+            $delay = $rateLimited ? max(2, (int) $cooldown - time() + 2) : 3;
+            self::dispatch($this->puuid, $this->round + 1, $have)->delay($delay);
 
             return;
         }
