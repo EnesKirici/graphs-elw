@@ -701,6 +701,56 @@ class MatchService
     }
 
     // ────────────────────────────────────────────
+    //  Async sezon build — durum sorguları (0 Riot isteği, DB)
+    // ────────────────────────────────────────────
+
+    /** Bu profilin en az bir sezon özeti (bu algo sürümünde) kurulmuş mu? */
+    public function hasSeasonSummaries(string $puuid): bool
+    {
+        return MatchSummary::where('puuid', $puuid)
+            ->where('algorithm_version', self::ALGO_VERSION)
+            ->whereNotNull('stat_json')
+            ->exists();
+    }
+
+    /** Kurulmuş sezon özeti sayısı. */
+    public function seasonSummaryCount(string $puuid): int
+    {
+        return MatchSummary::where('puuid', $puuid)
+            ->where('algorithm_version', self::ALGO_VERSION)
+            ->whereNotNull('stat_json')
+            ->count();
+    }
+
+    /**
+     * Async build ilerlemesi: [kurulmuş özet, toplam sezon maçı].
+     * Sezon ID'leri cache'li (10 dk) → tekrar çağrılar ucuz.
+     */
+    public function seasonProgress(string $puuid): array
+    {
+        $ids = [];
+        foreach ([420, 440, 400, 430, 490] as $queueId) {
+            try {
+                $ids = array_merge($ids, $this->matchData->getSeasonMatchIds($puuid, $queueId));
+            } catch (\Exception $e) {
+            }
+        }
+        $ids = array_values(array_unique($ids));
+        $total = count($ids);
+        if ($total === 0) {
+            return [0, 0];
+        }
+
+        $have = MatchSummary::where('puuid', $puuid)
+            ->whereIn('match_id', $ids)
+            ->where('algorithm_version', self::ALGO_VERSION)
+            ->whereNotNull('stat_json')
+            ->count();
+
+        return [$have, $total];
+    }
+
+    // ────────────────────────────────────────────
     //  Private helpers
     // ────────────────────────────────────────────
 

@@ -62,6 +62,25 @@ class SummonerController extends Controller
         }
     }
 
+    /**
+     * Async season build durumu — 0 Riot isteği (yalnız cache + DB).
+     * Frontend soğuk profilde bunu poll eder; ready olunca sayfayı tazeler.
+     * GET /api/v1/summoner/{puuid}/season-status
+     */
+    public function seasonStatus(string $puuid): JsonResponse
+    {
+        $building = (bool) Cache::get("season:building:{$puuid}");
+        $progress = Cache::get("season:progress:{$puuid}");
+        $ready    = ! $building && $this->match->hasSeasonSummaries($puuid);
+
+        return response()->json([
+            'ready'    => $ready,
+            'building' => $building,
+            'have'     => $progress['have'] ?? ($ready ? $this->match->seasonSummaryCount($puuid) : 0),
+            'total'    => $progress['total'] ?? 0,
+        ]);
+    }
+
     public function show(string $puuid): JsonResponse
     {
         try {
@@ -242,14 +261,27 @@ class SummonerController extends Controller
         //  SAKLANMAZ). İstatistik servisleri bu özetlerden okur → tek geçiş, hızlı.
         //  Maç DETAYI yalnız tıklanınca matches tablosuna yazılır.
         // ────────────────────────────────────────────
-        $seasonOnlyIds = [];
-        try {
-            $seasonOnlyIds = $this->match->ensureSeasonSummaries($puuid);
-        } catch (\Exception $e) {
-            if ($e->getCode() === 429) $rateLimited = true;
+        // ── SOĞUK PROFİL: ASYNC BUILD ─────────────────────────────────
+        // Sezon özetleri ilk kez kurulacaksa (soğuk profil) 45 sn beklememek için
+        // ağır çekimi worker'a atarız; sayfa son 10 maçla anında açılır, sezon
+        // panelleri iş bitince kendiliğinden dolar (frontend season-status poll eder).
+        $building    = (bool) Cache::get("season:building:{$puuid}");
+        $seasonReady = ! $building && $this->match->hasSeasonSummaries($puuid);
+
+        if ($seasonReady) {
+            // Sıcak: yalnız yeni maçları tamamla (çoğunlukla 0 iş, hızlı).
+            try {
+                $this->match->ensureSeasonSummaries($puuid);
+            } catch (\Exception $e) {
+                if ($e->getCode() === 429) $rateLimited = true;
+            }
+        } elseif (! $building) {
+            // Soğuk ve henüz kuyrukta değil → arka plana at, sayfayı bekletme.
+            Cache::put("season:building:{$puuid}", true, 900);
+            \App\Jobs\BuildSeasonProfileJob::dispatch($puuid);
         }
-        // Sezon tüm maç sayısı (5 queue × 100 = 500'e kadar).
-        $totalSeasonMatches = count(array_unique($seasonOnlyIds));
+        $seasonPending      = ! $seasonReady;
+        $totalSeasonMatches = $this->match->seasonSummaryCount($puuid);
 
         $recentMatches = [];
         $recentStats = null;
@@ -395,8 +427,10 @@ class SummonerController extends Controller
 
         // Tahmini MMR — son 20 maçtaki rakip ranklarının ortalaması (cache'li, sınırlı).
         // Rate-limit'i kötüleştirmemek için yalnız henüz limitlenmediysek dene.
+        // Soğuk profilde ATLA — ~15 rakip-rank çağrısı dev key bütçesini yer;
+        // sezon arka planda kurulunca (seasonReady) hesaplanır.
         $avgGameRank = null;
-        if (!$rateLimited) {
+        if (!$rateLimited && $seasonReady) {
             try {
                 $avgGameRank = $this->match->getAvgGameRank($puuid);
             } catch (\Exception $e) {
@@ -462,6 +496,8 @@ class SummonerController extends Controller
             'personalityBadges'  => $personalityBadges,
             'rateLimited'        => $rateLimited,
             'retryAfter'         => $retryAfter,
+            'seasonPending'      => $seasonPending,
+            'seasonProgress'     => Cache::get("season:progress:{$puuid}"),
         ]);
     }
 
