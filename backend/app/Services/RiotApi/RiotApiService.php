@@ -48,20 +48,7 @@ class RiotApiService
             ->get($url, $query);
 
         self::track('request');
-
-        // Riot'un döndürdüğü rate limit header'larını kaydet.
-        // TTL, istek sayacıyla (track(), 600sn) AYNI olmalı: kısa tutulursa
-        // sayaç hâlâ doluyken bu kayıt uçar ve panel sağlam key'i "geçersiz" sanır.
-        $appLimit = $response->header('X-App-Rate-Limit');
-        $appCount = $response->header('X-App-Rate-Limit-Count');
-        if ($appLimit && $appCount) {
-            Cache::put('riot:rate_info', [
-                'limit' => $appLimit,
-                'count' => $appCount,
-                'time'  => time(),
-            ], self::STATS_TTL);
-        }
-
+        self::recordRateInfo($response);
         self::recordKeyStatus($response);
 
         if ($response->status() === 429) {
@@ -104,6 +91,47 @@ class RiotApiService
     }
 
     /**
+     * Riot'un app rate-limit header'larını cache'e yaz (admin bar + bütçe koruması).
+     * TTL, istek sayacıyla (track(), 600sn) AYNI: kısa tutulursa sayaç doluyken kayıt
+     * uçar ve panel sağlam key'i "geçersiz" sanar. request() + pool yolu ikisi de çağırır.
+     */
+    private static function recordRateInfo($response): void
+    {
+        if (! $response) {
+            return;
+        }
+        $appLimit = $response->header('X-App-Rate-Limit');
+        $appCount = $response->header('X-App-Rate-Limit-Count');
+        if ($appLimit && $appCount) {
+            Cache::put('riot:rate_info', [
+                'limit' => $appLimit,
+                'count' => $appCount,
+                'time'  => time(),
+            ], self::STATS_TTL);
+        }
+    }
+
+    /**
+     * Dev key'in 2 dk penceresinde ŞU ANA KADAR kullanılmış istek sayısı
+     * (admin bar'daki "30/100"in solu). Bilinmiyorsa 0. Arka plan işleri bununla
+     * canlıya pay bırakır (BUDGET_RESERVE eşiği).
+     */
+    public static function appUsed(): int
+    {
+        $info = Cache::get('riot:rate_info');
+        if (! $info || empty($info['count'])) {
+            return 0;
+        }
+        // 2 dk penceresi: kayıt 120sn+ eskiyse o istekler zamanaşımına uğradı → 0
+        // (yoksa build, pencere temizlendiği hâlde bayat yüksek sayıya takılıp bekler).
+        if (isset($info['time']) && (time() - (int) $info['time']) > 120) {
+            return 0;
+        }
+        // "30:120,3:1" → 30 (ilk pencere = 2 dk)
+        return (int) explode(':', explode(',', (string) $info['count'])[0])[0];
+    }
+
+    /**
      * Pool response'larından 429 algıla ve cooldown cache'i ayarla.
      * preloadMatchDetails gibi pool kullanan metodlar bu fonksiyonu çağırmalı.
      */
@@ -111,6 +139,9 @@ class RiotApiService
     {
         // Pool yolu da anahtarı görüyor — bayrağı burada da güncel tut.
         self::recordKeyStatus($response);
+        // Pooled istekler de bütçe sayacını güncellemeli; yoksa build sırasında
+        // admin bar / bütçe koruması pooled kullanımı GÖRMEZ ve barı "boş" sanar.
+        self::recordRateInfo($response);
 
         if ($response && $response->status() === 429) {
             $retryAfter = (int) ($response->header('Retry-After') ?: 5);

@@ -4,6 +4,8 @@ namespace App\Jobs;
 
 use App\Services\RiotApi\MatchService;
 use App\Services\RiotApi\MatchStatisticsService;
+use App\Services\RiotApi\RiotApiService;
+use App\Services\WorkerControlService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -30,6 +32,14 @@ class BuildSeasonProfileJob implements ShouldQueue
     public int $tries = 1;
     public int $timeout = 280;
 
+    /** Tur başına en fazla çekilecek eksik maç — canlıya pay bırakmak için öbek.
+     *  RESERVE(55)+CHUNK(20)=75 → canlıya hep ~25 boşluk kalır (bir profil ~15 çağrı). */
+    private const CHUNK = 20;
+    /** Dev key 2dk penceresinde bu kadar kullanılmışsa build o turda bekler. */
+    private const BUDGET_RESERVE = 55;
+    /** Sonsuz döngü koruması — yield turları da sayar. */
+    private const MAX_ROUNDS = 400;
+
     /** Önceki turda kurulmuş özet sayısı — stall (ilerleme yok) tespiti için.
      *  Sınıf düzeyinde default: kuyrukta bekleyen ESKİ payload deserialize edilse
      *  bile ilklendirilmiş kalır (typed-property init hatasını önler). */
@@ -43,11 +53,26 @@ class BuildSeasonProfileJob implements ShouldQueue
         $this->prevHave = $prevHave;
     }
 
-    public function handle(MatchService $match): void
+    public function handle(MatchService $match, WorkerControlService $worker): void
     {
-        // Bir tur özet kur (rate-limit'te kısmi kalır, fırlatmaz).
+        // Bu zincir yaşadıkça "building" bayrağını taze tut (uzun yield'lerde 15dk
+        // TTL'i dolup profil yanlışlıkla "ready + partial" görünmesin).
+        Cache::put("season:building:{$this->puuid}", true, 900);
+
+        // ── BÜTÇE / KULLANICI KORUMASI ────────────────────────────────
+        // Site kullanıcısı aktifse (son ~8sn Riot isteği), cooldown varsa, ya da dev key
+        // 2dk bütçesi eşiği (55) aştıysa → BU TURDA KURMA; kısa süre sonra tekrar dene.
+        // Aynı state (round+1, prevHave KORUNUR) → yield stall SAYILMAZ, canlıya pay kalır.
+        if ($this->round < self::MAX_ROUNDS
+            && ($worker->shouldYield() || RiotApiService::appUsed() >= self::BUDGET_RESERVE)) {
+            self::dispatch($this->puuid, $this->round + 1, $this->prevHave)->delay(10);
+
+            return;
+        }
+
+        // Sınırlı bir öbek kur (rate-limit'te getMatchDetailsTransient içeride kısmi kalır).
         try {
-            $match->ensureSeasonSummaries($this->puuid);
+            $match->ensureSeasonSummaries($this->puuid, self::CHUNK);
         } catch (\Throwable $e) {
             // beklenmedik hata → bir sonraki turda tekrar denenir
         }
@@ -62,7 +87,7 @@ class BuildSeasonProfileJob implements ShouldQueue
         $rateLimited = $cooldown && time() < (int) $cooldown;
         $progressed  = $have > $this->prevHave;
 
-        if ($total > 0 && $have < $total && $this->round < 60 && ($progressed || $rateLimited)) {
+        if ($total > 0 && $have < $total && $this->round < self::MAX_ROUNDS && ($progressed || $rateLimited)) {
             $delay = $rateLimited ? max(2, (int) $cooldown - time() + 2) : 3;
             self::dispatch($this->puuid, $this->round + 1, $have)->delay($delay);
 

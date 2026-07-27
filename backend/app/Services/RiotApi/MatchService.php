@@ -433,7 +433,7 @@ class MatchService
      * Profil açılışında BİR KEZ çağrılır; 8 season-stat metodu da aynı havuzdan okur
      * → full maç saklanmaz, maç 8 kez taranmaz. (Eski toplu preload'un yerini alır.)
      */
-    public function ensureSeasonSummaries(string $puuid): array
+    public function ensureSeasonSummaries(string $puuid, ?int $maxMissing = null): array
     {
         $matchIds = [];
         foreach ([420, 440, 400, 430, 490] as $queueId) {
@@ -453,6 +453,12 @@ class MatchService
             ->all();
         $missing = array_values(array_diff($matchIds, $have));
         if (empty($missing)) return $matchIds;
+
+        // Arka plan build'i canlıya pay bırakmak için öbek öbek çeker (maxMissing);
+        // profil açılışındaki senkron çağrı null verir → tümünü (eski davranış).
+        if ($maxMissing !== null && count($missing) > $maxMissing) {
+            $missing = array_slice($missing, 0, $maxMissing);
+        }
 
         $details = $this->matchData->getMatchDetailsTransient($missing);
         if (empty($details)) return $matchIds;
