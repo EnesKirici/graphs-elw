@@ -11,6 +11,7 @@ import ChallengesCard from "@/components/summoner/ChallengesCard";
 import DuoPartnersCard from "@/components/summoner/DuoPartnersCard";
 import ProfileHeader from "@/components/summoner/ProfileHeader";
 import CoupleFX from "@/components/summoner/CoupleFX";
+import SeasonBuilding from "@/components/summoner/SeasonBuilding";
 import { getCoupleProfile } from "@/lib/coupleProfiles";
 
 export async function generateMetadata({ params }) {
@@ -105,6 +106,10 @@ export default async function SummonerPage({ params }) {
 
       {/* ===== CONTENT ===== */}
       <div className="max-w-[1180px] mx-auto px-6 py-6">
+        {/* Soğuk profil: sezon arka planda kurulurken ilerleme şeridi + otomatik yenileme */}
+        {data.seasonPending && (
+          <SeasonBuilding puuid={profile.puuid} initial={data.seasonProgress} />
+        )}
         {design === "pro" ? (
           <SummonerContentPro
             data={data}

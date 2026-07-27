@@ -32,11 +32,12 @@ class BuildSeasonProfileJob implements ShouldQueue
     public int $tries = 1;
     public int $timeout = 280;
 
-    /** Tur başına en fazla çekilecek eksik maç — canlıya pay bırakmak için öbek.
-     *  RESERVE(55)+CHUNK(20)=75 → canlıya hep ~25 boşluk kalır (bir profil ~15 çağrı). */
+    /** Tur başına en fazla çekilecek eksik maç. */
     private const CHUNK = 20;
-    /** Dev key 2dk penceresinde bu kadar kullanılmışsa build o turda bekler. */
-    private const BUDGET_RESERVE = 55;
+    /** Dev key 2dk penceresinde bu kadar kullanılmışsa build o turda bekler. Yüksek
+     *  tutuldu: boşta bütçe çürümesin (eşzamanlı ziyaretçi nadir); asıl canlı-koruma
+     *  shouldYield — kullanıcı gezinince build zaten anında durur. ~20 pay bir profile yeter. */
+    private const BUDGET_RESERVE = 80;
     /** Sonsuz döngü koruması — yield turları da sayar. */
     private const MAX_ROUNDS = 400;
 
