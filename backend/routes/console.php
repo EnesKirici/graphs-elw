@@ -53,6 +53,8 @@ Schedule::command('matches:collect')->everyTenMinutes()->when($workerOn)->withou
 // Eski maçların timeline istatistikleri (skill_order/starter/item_slot) — bütçeli backfill;
 // stok bitince turlar "bekleyen yok" ile anında biter (maliyetsiz).
 Schedule::command('timelines:backfill')->everyTenMinutes()->when($workerOn)->withoutOverlapping();
-// Kuyruktaki ProcessMatchJob'ları işle; kuyruk boşsa anında çıkar (worker kapansa da kuyruğu boşaltır).
+// Kuyruğu işle (ProcessMatchJob + BuildSeasonProfileJob); boşsa anında çıkar.
+// everyMinute + withoutOverlapping = neredeyse sürekli işçi: soğuk profil build'i
+// ~1 dk içinde başlar/ilerler (10 dk yerine). worker_enabled'dan BAĞIMSIZ.
 Schedule::command('queue:work --stop-when-empty --max-time=480 --tries=3')
-    ->everyTenMinutes()->withoutOverlapping();
+    ->everyMinute()->withoutOverlapping();

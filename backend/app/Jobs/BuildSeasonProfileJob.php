@@ -89,7 +89,9 @@ class BuildSeasonProfileJob implements ShouldQueue
         $progressed  = $have > $this->prevHave;
 
         if ($total > 0 && $have < $total && $this->round < self::MAX_ROUNDS && ($progressed || $rateLimited)) {
-            $delay = $rateLimited ? max(2, (int) $cooldown - time() + 2) : 3;
+            // Verimli tur → delay 0: aynı queue:work drain'inde zincirle (--stop-when-empty
+            // gecikmeli işi beklemez). Rate-limit → cooldown kadar bekle (bir sonraki drain alır).
+            $delay = $rateLimited ? max(2, (int) $cooldown - time() + 2) : 0;
             self::dispatch($this->puuid, $this->round + 1, $have)->delay($delay);
 
             return;
