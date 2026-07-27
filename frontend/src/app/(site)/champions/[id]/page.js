@@ -69,7 +69,7 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: `${name} — ${champ.title}`,
       description,
-      url: `https://elwgraphs.elw.com.tr/champions/${id}`,
+      url: `https://elwgraphs.com/champions/${id}`,
       type: "article",
       images: champ.splash ? [{ url: champ.splash, alt: name }] : undefined,
     },
@@ -130,9 +130,9 @@ export default async function ChampionDetail({ params }) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: "https://elwgraphs.elw.com.tr/" },
-      { "@type": "ListItem", position: 2, name: "Şampiyonlar", item: "https://elwgraphs.elw.com.tr/champions" },
-      { "@type": "ListItem", position: 3, name: champ.name, item: `https://elwgraphs.elw.com.tr/champions/${id}` },
+      { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: "https://elwgraphs.com/" },
+      { "@type": "ListItem", position: 2, name: "Şampiyonlar", item: "https://elwgraphs.com/champions" },
+      { "@type": "ListItem", position: 3, name: champ.name, item: `https://elwgraphs.com/champions/${id}` },
     ],
   };
 

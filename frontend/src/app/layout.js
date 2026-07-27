@@ -30,7 +30,7 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata = {
   // Tüm göreli OG/canonical URL'leri buna göre mutlaklaşır.
-  metadataBase: new URL("https://elwgraphs.elw.com.tr"),
+  metadataBase: new URL("https://elwgraphs.com"),
   title: {
     default: "ElwGraphs — League of Legends İstatistik ve Analiz",
     template: "%s | ElwGraphs",
@@ -48,7 +48,7 @@ export const metadata = {
     title: "ElwGraphs — League of Legends İstatistik ve Analiz",
     description: "Oyuncu profilleri, maç analizleri, ELW Score performans puanlama sistemi.",
     siteName: "ElwGraphs",
-    url: "https://elwgraphs.elw.com.tr",
+    url: "https://elwgraphs.com",
     locale: "tr_TR",
     type: "website",
   },
@@ -86,8 +86,8 @@ const JSON_LD = {
   "@graph": [
     {
       "@type": "WebSite",
-      "@id": "https://elwgraphs.elw.com.tr/#website",
-      url: "https://elwgraphs.elw.com.tr",
+      "@id": "https://elwgraphs.com/#website",
+      url: "https://elwgraphs.com",
       name: "ElwGraphs",
       description:
         "League of Legends oyuncu profilleri, maç analizi, ELW Score performans puanlaması, canlı maç ön-analizi ve şampiyon meta/tier verileri.",
@@ -95,10 +95,10 @@ const JSON_LD = {
     },
     {
       "@type": "Organization",
-      "@id": "https://elwgraphs.elw.com.tr/#org",
+      "@id": "https://elwgraphs.com/#org",
       name: "ElwGraphs",
-      url: "https://elwgraphs.elw.com.tr",
-      logo: "https://elwgraphs.elw.com.tr/apple-touch-icon.png",
+      url: "https://elwgraphs.com",
+      logo: "https://elwgraphs.com/apple-touch-icon.png",
     },
   ],
 };

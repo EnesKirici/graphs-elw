@@ -14,7 +14,7 @@ export async function generateMetadata() {
     openGraph: {
       title: "LoL Tier List — Güncel Meta Şampiyon Sıralaması",
       description: "Güncel patch meta: kazanma/seçilme/banlanma oranları ve tier sıralaması.",
-      url: "https://elwgraphs.elw.com.tr/tier-list",
+      url: "https://elwgraphs.com/tier-list",
       type: "website",
     },
   }, seo["tier-list"]);

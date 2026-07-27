@@ -4,7 +4,7 @@
 // kullanıcı-üretimi/sonsuz olduğu için dahil edilmez.
 // Not: lastModified bilerek yok — her isteğe "şimdi" damgalamak Google'a
 // "her şey her gün değişti" sinyali verir ve sitemap güvenilirliğini düşürür.
-const BASE = "https://elwgraphs.elw.com.tr";
+const BASE = "https://elwgraphs.com";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export default async function sitemap() {

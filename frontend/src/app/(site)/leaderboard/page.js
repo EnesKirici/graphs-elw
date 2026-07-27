@@ -15,7 +15,7 @@ export async function generateMetadata() {
     openGraph: {
       title: "LoL Sıralama — TR Challenger & Grandmaster",
       description: "TR1 Challenger, Grandmaster ve Master oyuncularının canlı sıralaması — LP, WR ve şampiyon havuzu.",
-      url: "https://elwgraphs.elw.com.tr/leaderboard",
+      url: "https://elwgraphs.com/leaderboard",
       type: "website",
     },
   }, seo.leaderboard);

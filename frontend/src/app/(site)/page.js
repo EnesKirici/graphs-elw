@@ -25,7 +25,7 @@ export async function generateMetadata() {
       title: "ElwGraphs — LoL Oyuncu İstatistikleri, Maç Analizi ve Meta",
       description:
         "Oyuncu profilleri, maç analizi, ELW Score, canlı maç ön-analizi ve şampiyon meta/tier verileri tek yerde.",
-      url: "https://elwgraphs.elw.com.tr",
+      url: "https://elwgraphs.com",
       type: "website",
     },
   }, seo.home);

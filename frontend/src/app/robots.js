@@ -1,5 +1,5 @@
 // /robots.txt — admin paneli indekslenmesin; sitemap'i işaret et.
-const BASE = "https://elwgraphs.elw.com.tr";
+const BASE = "https://elwgraphs.com";
 
 export default function robots() {
   return {

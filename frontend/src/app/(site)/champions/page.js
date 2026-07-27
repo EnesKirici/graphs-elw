@@ -14,7 +14,7 @@ export async function generateMetadata() {
     openGraph: {
       title: "Tüm LoL Şampiyonları — Build, Rün ve İstatistik",
       description: "Tüm League of Legends şampiyonları: yetenekler, build'ler, rünler ve tier sıralaması.",
-      url: "https://elwgraphs.elw.com.tr/champions",
+      url: "https://elwgraphs.com/champions",
       type: "website",
     },
   }, seo.champions);

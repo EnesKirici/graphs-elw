@@ -19,7 +19,12 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    // Birden çok origin virgülle verilebilir → alan adı geçişinde eski + yeni
+    // (ör. "https://elwgraphs.com,https://elwgraphs.elw.com.tr") birlikte kabul edilir.
+    'allowed_origins' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('FRONTEND_URL', 'http://localhost:3000'))
+    ))),
 
     'allowed_origins_patterns' => [],
 
