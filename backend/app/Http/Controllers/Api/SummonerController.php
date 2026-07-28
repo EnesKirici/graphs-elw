@@ -270,20 +270,28 @@ class SummonerController extends Controller
         $seasonReady = ! $building && $this->match->hasSeasonSummaries($puuid);
 
         if ($seasonReady) {
-            // Sıcak: yalnız yeni maçları tamamla (çoğunlukla 0 iş, hızlı).
+            // Üst-tazeleme: en fazla ~15 eksik/yeni maçı SENKRON ekle. Kısmen kurulmuş
+            // profili tekrar açınca eksik yüzlerce maçı senkron çekip 25 sn boğulmayı
+            // (ve tek profille key'i 100/100 yapmayı) önler — gerisi arka planda tamamlanır.
             try {
-                $this->match->ensureSeasonSummaries($puuid);
+                $this->match->ensureSeasonSummaries($puuid, 15);
             } catch (\Exception $e) {
                 if ($e->getCode() === 429) $rateLimited = true;
             }
-        } elseif ($workerOn && ! $building) {
-            // Soğuk + worker AÇIK → arka plana at. Worker KAPALIYKEN hiç build başlatma
-            // (kullanıcı "durdur" dedi; profil son-10 fallback'iyle açılır, şerit çıkmaz).
-            Cache::put("season:building:{$puuid}", true, 900);
-            \App\Jobs\BuildSeasonProfileJob::dispatch($puuid);
         }
-        // Şerit yalnız gerçekten build gelecekse (worker açık + hazır değil) gösterilir.
-        $seasonPending      = $workerOn && ! $seasonReady;
+
+        // Worker AÇIKKEN eksik (soğuk ya da kısmi) sezon varsa arka plan build başlat.
+        // Worker KAPALIYKEN hiç dispatch yok (kullanıcı "durdur" dedi; profil eldekiyle açılır).
+        if ($workerOn && ! $building) {
+            [$have, $total] = $this->match->seasonProgress($puuid);
+            if ($total > 0 && $have < $total) {
+                Cache::put("season:building:{$puuid}", true, 900);
+                \App\Jobs\BuildSeasonProfileJob::dispatch($puuid);
+                $building = true;
+            }
+        }
+        // Şerit yalnız build kuyrukta/çalışıyorsa gösterilir.
+        $seasonPending      = $workerOn && $building;
         $totalSeasonMatches = $this->match->seasonSummaryCount($puuid);
 
         $recentMatches = [];

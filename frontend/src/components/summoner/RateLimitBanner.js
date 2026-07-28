@@ -28,8 +28,8 @@ export default function RateLimitBanner() {
             </>
           ) : (
             <>
-              <p className="text-sm text-[var(--tag-amber-text)]">Bazı veriler şu anda yüklenemedi.</p>
-              <p className="text-xs text-[var(--tag-amber-text)] opacity-70 mt-0.5">Mevcut veriler gösteriliyor. Kısa süre sonra sayfayı yenileyerek eksik verileri getirebilirsiniz.</p>
+              <p className="text-sm text-[var(--tag-amber-text)]">Bu site şu anda geliştirme aşamasındadır.</p>
+              <p className="text-xs text-[var(--tag-amber-text)] opacity-70 mt-0.5">Yoğunluğa takıldıysanız bazı veriler eksik gelebilir — mevcut veriler gösteriliyor, kısa süre sonra sayfayı yenileyin.</p>
             </>
           )}
         </div>

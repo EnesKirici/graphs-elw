@@ -52,9 +52,9 @@ export default async function SummonerPage({ params }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h1 className="text-xl font-bold text-white mb-2">Şu An Yoğunluk Var</h1>
-        <p className="text-gray-400 mb-1">Çok fazla istek aldığımız için profil şu anda getirilemiyor.</p>
-        <p className="text-gray-500 text-sm">Birkaç dakika içinde tekrar deneyebilirsiniz.</p>
+        <h1 className="text-xl font-bold text-white mb-2">Site Geliştirme Aşamasında</h1>
+        <p className="text-gray-400 mb-1">Yoğunluğa takıldığımız için profil şu anda getirilemedi.</p>
+        <p className="text-gray-500 text-sm">Birkaç dakika içinde sayfayı yenileyip tekrar deneyin.</p>
         <Link href="/" className="inline-block mt-6 text-sm text-blue-400 hover:underline">← Ana Sayfa</Link>
       </div>
     );
