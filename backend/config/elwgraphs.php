@@ -118,19 +118,24 @@ return [
     |--------------------------------------------------------------------------
     | Meta istatistikleri GÜNCEL patch'e göre hesaplanır. gameVersion'ı olan maçlar
     | doğrudan ondan; gameVersion'ı OLMAYAN eski maçlar (bir dönem kayıtta trim'lendi)
-    | aşağıdaki patch başlangıç tarihlerinden patch'e atanır (PatchService). Böylece
-    | 6 aylık veri tek patch'e yığılmaz, gerçek patch'e oturur.
+    | patch başlangıç tarihinden patch'e atanır (PatchService). Böylece 6 aylık veri
+    | tek patch'e yığılmaz, gerçek patch'e oturur. Aynı tarih prune eşiğidir.
     |
-    | Yeni patch çıkınca en ÜSTE 1 satır ekle (~2 haftada bir; resmi yama notu günü).
+    | ELLE BAKIM GEREKMEZ: başlangıç tarihi artık VERİDEN gözlemleniyor —
+    | stats:rebuild her turda patch başına en eski maçı `stat_patches.first_game_at`e
+    | yazar, PatchService onu aşağıdaki listenin ÜSTÜNE koyar. Yani bölge (TR) yamayı
+    | ne zaman alırsa başlangıç oraya oturur; ddragon sürümünün oyun yamasından ÖNCE
+    | düşmesi (16.15.1 assets 28 Tem, oyun 29 Tem) artık tarihi kaydırmaz.
+    |
+    | Aşağıdaki liste yalnızca TOHUM/YEDEK: henüz hiç maç toplanmamış patch'ler ve
+    | gözlemlenen veriden önceki tarihsel patch'ler için. Yeni yamada satır eklemek
+    | zorunlu değil — istersen ekleyebilirsin, ilk maç gelince veri onu ezer.
     | NOT: DataDragon major 16 = 2026 (14=2024,15=2025,16=2026). LoL'ün resmi yama
     | notları yıl-bazlı "26.x" der ama minor aynıdır: 16.13 = 26.13.
     */
     'meta' => [
         'patch_starts' => [
-            // TR bakımı 29 Tem 05:00 +03'te başladı (~4 sa) → maçlar bu tarihten itibaren 16.15.
-            // DİKKAT: ddragon sürümü oyun yamasından ÖNCE düşüyor (16.15.1 assets 28 Tem'de
-            // yayındaydı, oyun 29 Tem'de) → tarihi ddragon'a değil TR yama gününe göre yaz.
-            '16.15' => '2026-07-29',
+            '16.15' => '2026-07-29', // TR bakımı 29 Tem 05:00 +03 (~4 sa)
             '16.14' => '2026-07-14',
             '16.13' => '2026-06-23',
             '16.12' => '2026-06-09',

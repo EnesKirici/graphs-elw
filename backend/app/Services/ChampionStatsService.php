@@ -8,6 +8,7 @@ use App\Models\MatchRecord;
 use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
 use App\Support\Statistics;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -42,12 +43,13 @@ class ChampionStatsService
     {
         $keyToId = $this->championKeyMap();
 
-        $acc = [];        // "patch|champId|pos" => ['key','games','wins','bans']
-        $patchGames = []; // patch => int
+        $acc = [];            // "patch|champId|pos" => ['key','games','wins','bans']
+        $patchGames = [];     // patch => int
+        $patchFirstGame = []; // patch => en eski gameCreation (ms epoch)
 
         MatchRecord::whereIn('queue_id', self::RANKED_QUEUES)
             ->select(['match_id', 'data'])
-            ->chunk(200, function ($rows) use (&$acc, &$patchGames, $keyToId) {
+            ->chunk(200, function ($rows) use (&$acc, &$patchGames, &$patchFirstGame, $keyToId) {
                 foreach ($rows as $row) {
                     $info = $row->data['info'] ?? null;
                     if (!$info || empty($info['participants'])) {
@@ -61,6 +63,15 @@ class ChampionStatsService
                         continue;
                     }
                     $patchGames[$patch] = ($patchGames[$patch] ?? 0) + 1;
+
+                    // Patch'in GERÇEK başlangıcı: o patch'te gördüğümüz en eski maç.
+                    // Yalnızca gameVersion'ı OLAN maçlardan sayarız — tarihten atanmış
+                    // eski kayıtlar sınırı kendi kendine kaydırmasın (patchForDate zaten
+                    // bu sınırı kullanıyor; döngüsel olurdu).
+                    $created = (int) ($info['gameCreation'] ?? 0);
+                    if ($created > 0 && ! empty($info['gameVersion'])) {
+                        $patchFirstGame[$patch] = min($patchFirstGame[$patch] ?? PHP_INT_MAX, $created);
+                    }
 
                     foreach ($info['participants'] as $p) {
                         // championId (numeric) → kanonik DDragon id. Hem casing
@@ -100,7 +111,7 @@ class ChampionStatsService
                 }
             });
 
-        $this->persist($acc, $patchGames);
+        $this->persist($acc, $patchGames, $patchFirstGame);
 
         return [
             'patches'  => $patchGames,
@@ -303,9 +314,9 @@ class ChampionStatsService
         }
     }
 
-    private function persist(array $acc, array $patchGames): void
+    private function persist(array $acc, array $patchGames, array $patchFirstGame = []): void
     {
-        DB::transaction(function () use ($acc, $patchGames) {
+        DB::transaction(function () use ($acc, $patchGames, $patchFirstGame) {
             ChampionStat::query()->delete();
             StatPatch::query()->delete();
             $now = now();
@@ -330,7 +341,14 @@ class ChampionStatsService
             }
 
             foreach ($patchGames as $patch => $tg) {
-                StatPatch::create(['patch' => $patch, 'total_games' => $tg]);
+                StatPatch::create([
+                    'patch'         => $patch,
+                    'total_games'   => $tg,
+                    // PatchService bunu config'teki elle yazılmış tarihin ÜSTÜNE koyar.
+                    'first_game_at' => isset($patchFirstGame[$patch])
+                        ? Carbon::createFromTimestampMs($patchFirstGame[$patch])
+                        : null,
+                ]);
             }
         });
     }

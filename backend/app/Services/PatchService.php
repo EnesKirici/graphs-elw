@@ -2,22 +2,32 @@
 
 namespace App\Services;
 
+use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 /**
  * Patch (yama) mantığının TEK kaynağı: güncel patch, bir maçın hangi patch'e ait
  * olduğu (gameVersion → yoksa tarih) ve tutulacak/prune penceresi.
  *
  * Neden ayrı servis: gameVersion bir dönem maç kaydında trim'lendiği için eski
- * maçlarda YOK. O maçları gameCreation tarihinden patch'e atarız (config
- * elwgraphs.meta.patch_starts). Böylece meta istatistikleri 6 aylık veriyi tek
- * patch'e yığmak yerine gerçek patch'e oturur. Patch mantığı eskiden
- * ChampionStatsService + BuildAggregationService'te ayrı ayrı duruyordu → burada
- * toplanır.
+ * maçlarda YOK. O maçları gameCreation tarihinden patch'e atarız. Böylece meta
+ * istatistikleri 6 aylık veriyi tek patch'e yığmak yerine gerçek patch'e oturur.
+ * Patch mantığı eskiden ChampionStatsService + BuildAggregationService'te ayrı ayrı
+ * duruyordu → burada toplanır.
+ *
+ * Patch başlangıç tarihleri ÖNCE veriden gelir (stat_patches.first_game_at —
+ * stats:rebuild her turda patch başına en eski maçı yazar), yoksa config
+ * elwgraphs.meta.patch_starts'a düşer. Yani yeni yamada elle satır eklemek
+ * GEREKMEZ; bölge yamayı ne zaman alırsa başlangıç oraya oturur.
  */
 class PatchService
 {
+    /** startsDesc() tek istek içinde birden çok kez çağrılıyor (rebuild döngüsü) — DB'ye bir kez git. */
+    private ?array $startsMemo = null;
+
     public function __construct(private DataDragonService $ddragon) {}
 
     /** DataDragon'a göre güncel patch bucket ("16.13.1" → "16.13"). */
@@ -42,7 +52,7 @@ class PatchService
         return $this->patchForDate((int) ($info['gameCreation'] ?? 0));
     }
 
-    /** ms epoch → o tarihte yürürlükteki en yeni patch (config patch_starts). Yoksa null. */
+    /** ms epoch → o tarihte yürürlükteki en yeni patch (bkz. startsDesc). Yoksa null. */
     public function patchForDate(int $tsMs): ?string
     {
         if ($tsMs <= 0) {
@@ -61,8 +71,8 @@ class PatchService
     /**
      * Tutulacak patch'ler (config keep_patches kadar), en yeniden eskiye.
      * Kaynak: DataDragon versions.json → Riot yeni patch atınca pencere OTOMATİK kayar
-     * (config'e dokunmadan). config patch_starts yalnız eski/tarihsel maçları patch'e
-     * atamak ve prune eşiği (keepSince) içindir.
+     * (config'e dokunmadan). Patch BAŞLANGIÇ tarihleri ayrı konu (startsDesc): eski/
+     * tarihsel maçları patch'e atamak ve prune eşiği (keepSince) içindir.
      */
     public function keptPatches(): array
     {
@@ -71,26 +81,81 @@ class PatchService
         return $this->ddragon->getRecentPatches($keep);
     }
 
-    /** Prune eşiği: tutulacak en eski patch'in başlangıç günü (00:00). Yoksa null → prune yapma. */
+    /**
+     * Prune eşiği: tutulacak en eski patch'in başlangıç günü (00:00). Yoksa null → prune yapma.
+     *
+     * startsDesc() üzerinden okur (gözlemlenen veri + config yedeği). Eskiden config'i
+     * DOĞRUDAN okuyordu: yeni yamada satır eklenmeyince null dönüp matches:prune'u
+     * sessizce devre dışı bırakıyordu — 16.15'te tam bu oldu.
+     */
     public function keepSince(): ?Carbon
     {
         $kept = $this->keptPatches();
         $oldest = end($kept);
-        $starts = config('elwgraphs.meta.patch_starts', []);
 
-        return isset($starts[$oldest]) ? Carbon::parse($starts[$oldest])->startOfDay() : null;
+        return $this->startsDesc()[$oldest] ?? null;
     }
 
-    /** config patch_starts → [patch => Carbon], başlangıç tarihine göre AZALAN (yeni önce). */
+    /**
+     * Patch başlangıçları (gözlemlenen veri + config yedeği), yeniden eskiye.
+     * Dışarıya açık çünkü admin retention paneli AYNI pencereleri kullanmak zorunda —
+     * kendi başına config'i parse etmesi iki kaynağın ayrışmasına yol açıyordu.
+     *
+     * @return array<string, Carbon>
+     */
+    public function starts(): array
+    {
+        return $this->startsDesc();
+    }
+
+    /**
+     * Patch başlangıçları → [patch => Carbon], başlangıç tarihine göre AZALAN (yeni önce).
+     *
+     * Kaynak sırası: config patch_starts (tohum/yedek) → ÜSTÜNE stat_patches.first_game_at
+     * (gözlemlenen gerçek başlangıç). Gözlemlenen değer günün başına yuvarlanır: config
+     * semantiği "yama günü" ve ilk toplanan maç yamanın ortasında olabilir; ham saat
+     * kullanmak o günün erken maçlarını önceki patch'e atardı.
+     */
     private function startsDesc(): array
     {
+        if ($this->startsMemo !== null) {
+            return $this->startsMemo;
+        }
+
         $out = [];
         foreach (config('elwgraphs.meta.patch_starts', []) as $patch => $date) {
             $out[$patch] = Carbon::parse($date)->startOfDay();
         }
+
+        foreach ($this->observedStarts() as $patch => $at) {
+            $out[$patch] = $at;
+        }
+
         uasort($out, fn ($a, $b) => $b <=> $a); // tarih azalan → en yeni patch başta
 
-        return $out;
+        return $this->startsMemo = $out;
+    }
+
+    /**
+     * stats:rebuild'in yazdığı gözlemlenen başlangıçlar → [patch => Carbon].
+     *
+     * Migration henüz koşmamışsa (deploy sırası) veya DB erişilemiyorsa sessizce
+     * boş döner → config'e düşülür. Patch mantığı yüzünden istek patlamasın.
+     */
+    private function observedStarts(): array
+    {
+        try {
+            if (! Schema::hasColumn('stat_patches', 'first_game_at')) {
+                return [];
+            }
+
+            return StatPatch::whereNotNull('first_game_at')
+                ->pluck('first_game_at', 'patch')
+                ->map(fn ($at) => Carbon::parse($at)->startOfDay())
+                ->all();
+        } catch (Throwable) {
+            return [];
+        }
     }
 
     /** "16.13.1" / "16.13.634.5678" → "16.13"; geçersizse null. */

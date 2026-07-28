@@ -13,9 +13,10 @@ class StatPatch extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
-    protected $fillable = ['patch', 'total_games'];
+    protected $fillable = ['patch', 'total_games', 'first_game_at'];
 
     protected $casts = [
-        'total_games' => 'integer',
+        'total_games'   => 'integer',
+        'first_game_at' => 'datetime',
     ];
 }

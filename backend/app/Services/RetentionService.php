@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\MatchRecord;
 use App\Models\MatchTimeline;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -108,16 +107,15 @@ class RetentionService
     }
 
     /**
-     * Patch başına maç sayısı (config patch_starts tarih pencereleri, indexli game_creation).
+     * Patch başına maç sayısı (patch başlangıç pencereleri, indexli game_creation).
      * kept = maçları prune eşiğinin üstünde (silinmeyecek) mi. Şeffaflık için tablo.
+     *
+     * Pencereler PatchService'ten gelir (gözlemlenen first_game_at + config yedeği) —
+     * eskiden burada config ayrıca parse ediliyordu ve prune eşiğiyle ayrışabiliyordu.
      */
     private function perPatchBreakdown(?int $cutoffMs): array
     {
-        $parsed = [];
-        foreach (config('elwgraphs.meta.patch_starts', []) as $patch => $date) {
-            $parsed[$patch] = Carbon::parse($date)->startOfDay();
-        }
-        uasort($parsed, fn ($a, $b) => $b <=> $a); // en yeni patch başta
+        $parsed = $this->patch->starts(); // zaten yeniden eskiye sıralı
         $patchesDesc = array_keys($parsed);
 
         $out = [];
