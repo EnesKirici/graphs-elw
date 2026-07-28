@@ -28,11 +28,11 @@ export default async function sitemap() {
     const res = await fetch(`${API_BASE}/champions`, { next: { revalidate: 86400 } });
     if (res.ok) {
       const data = await res.json();
-      champions = (data.champions || []).map((c) => ({
-        url: `${BASE}/champions/${c.id}`,
-        changeFrequency: "weekly",
-        priority: 0.7,
-      }));
+      // Her şampiyon: detay sayfası + counter sayfası ("x counter"/"x ct" araması).
+      champions = (data.champions || []).flatMap((c) => [
+        { url: `${BASE}/champions/${c.id}`, changeFrequency: "weekly", priority: 0.7 },
+        { url: `${BASE}/champions/${c.id}/counter`, changeFrequency: "weekly", priority: 0.6 },
+      ]);
     }
   } catch {
     // API erişilemedi — sitemap şampiyonsuz döner, bir sonraki revalidate'te tamamlanır

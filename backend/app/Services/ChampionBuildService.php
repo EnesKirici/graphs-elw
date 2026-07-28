@@ -47,15 +47,78 @@ class ChampionBuildService
     public function __construct(
         private PatchService $patch,
         private DataDragonService $ddragon,
+        private MetaService $meta,
     ) {}
 
     public function getChampionBuild(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        $key = 'champion:build:v5:' . $championId . ':' . implode(',', $patches);
+        $key = 'champion:build:v6:' . $championId . ':' . implode(',', $patches);
 
         return Cache::remember($key, 600, function () use ($championId, $patches) {
             return $this->compute($championId, $patches);
+        });
+    }
+
+    /**
+     * SEO counter sayfası verisi (/champions/{id}/counter): oynanan her koridor için
+     * TAM matchup listesi — counters (şampiyonu yenenler, bizim WR en düşük) ve
+     * strongInto (şampiyonun ezdiği, bizim WR en yüksek). Build sayfasındaki 5+5
+     * özetten farkı: tüm rakipleri (rakip başına min maç) verir → zengin SEO içeriği.
+     */
+    public function getChampionCounters(string $championId): array
+    {
+        $patches = $this->patch->keptPatches();
+        $key = 'champion:counters:v2:' . $championId . ':' . implode(',', $patches);
+
+        return Cache::remember($key, 600, function () use ($championId, $patches) {
+            $statRows = ChampionStat::where('champion_id', $championId)
+                ->whereIn('patch', $patches)->where('position', '!=', 'ALL')->get();
+            $totalGames = (int) ChampionStat::where('champion_id', $championId)
+                ->whereIn('patch', $patches)->where('position', 'ALL')->sum('games');
+
+            // Oynanan koridorlar (build ile aynı eşik) — WR delta'nın temeli.
+            $positions = [];
+            foreach ($statRows->groupBy('position') as $pos => $rows) {
+                $g = (int) $rows->sum('games');
+                $w = (int) $rows->sum('wins');
+                $positions[] = [
+                    'position' => $pos,
+                    'games'    => $g,
+                    'winRate'  => $g > 0 ? round($w / $g * 100, 1) : 0.0,
+                    'share'    => $totalGames > 0 ? round($g / $totalGames * 100, 1) : 0.0,
+                ];
+            }
+            usort($positions, fn ($a, $b) => $b['games'] <=> $a['games']);
+            $shown = array_values(array_filter($positions, fn ($p) =>
+                $p['games'] >= self::POS_MIN_GAMES && $p['share'] >= self::POS_MIN_SHARE * 100
+            ));
+            if (! $shown && $positions) {
+                $shown = [$positions[0]];
+            }
+
+            $byPosition = [];
+            foreach ($shown as $p) {
+                $mu = $this->aggregateMatchups($championId, $patches, $p['position'], (float) $p['winRate']); // delta DESC
+                // İşarete göre AYIR (bir eşleşme tek sütunda): counter = bizim WR düşük (delta<0),
+                // strongInto = bizim WR yüksek (delta>0). Nötr (delta=0) hiçbirine girmez.
+                $strong = array_values(array_filter($mu, fn ($m) => $m['delta'] > 0));                // delta DESC
+                $weak = array_values(array_filter(array_reverse($mu), fn ($m) => $m['delta'] < 0));   // delta ASC
+                $byPosition[$p['position']] = [
+                    'winRate'    => $p['winRate'],
+                    'games'      => $p['games'],
+                    'opponents'  => count($mu),
+                    'counters'   => $weak,   // şampiyonu yenenler (en zorlu önce)
+                    'strongInto' => $strong, // şampiyonun ezdiği (en ezici önce)
+                ];
+            }
+
+            return [
+                'patches'         => $patches,
+                'positions'       => $shown,
+                'primaryPosition' => $shown[0]['position'] ?? null,
+                'byPosition'      => $byPosition,
+            ];
         });
     }
 
@@ -65,18 +128,33 @@ class ChampionBuildService
         $statRows = ChampionStat::where('champion_id', $championId)
             ->whereIn('patch', $patches)->get();
 
-        $totalGames = (int) $statRows->where('position', 'ALL')->sum('games');
+        // Genel toplamlar (payda = patch penceresindeki toplam maç). Bir şampiyon bir
+        // maçta en fazla 1 kez seçilebilir → pick = games / totalMatches; ban rol-bağımsız.
+        $totalGames   = (int) $statRows->where('position', 'ALL')->sum('games');
+        $totalMatches = (int) StatPatch::whereIn('patch', $patches)->sum('total_games');
+        $allWins      = (int) $statRows->where('position', 'ALL')->sum('wins');
+        $allBans      = (int) $statRows->where('position', 'ALL')->sum('bans');
+        $banRate      = $totalMatches > 0 ? round($allBans / $totalMatches * 100, 1) : 0.0;
+
+        // Üst özet barı: rol-içi sıra + derece (tier-list ile aynı skorlama).
+        $rankings = $this->meta->roleRankings();
 
         $positions = [];
         foreach ($statRows->where('position', '!=', 'ALL')->groupBy('position') as $pos => $rows) {
             $g = (int) $rows->sum('games');
             $w = (int) $rows->sum('wins');
+            $rk = $rankings[$pos][$championId] ?? null;
             $positions[] = [
                 'position' => $pos,
                 'games'    => $g,
                 'wins'     => $w,
                 'winRate'  => $g > 0 ? round($w / $g * 100, 1) : 0.0,
                 'share'    => $totalGames > 0 ? round($g / $totalGames * 100, 1) : 0.0,
+                'pickRate' => $totalMatches > 0 ? round($g / $totalMatches * 100, 1) : 0.0,
+                'banRate'  => $banRate, // şampiyon düzeyinde, tüm koridorlarda aynı
+                'rank'     => $rk['rank'] ?? null,
+                'total'    => $rk['total'] ?? null,
+                'grade'    => $rk['grade'] ?? null,
             ];
         }
         usort($positions, fn ($a, $b) => $b['games'] <=> $a['games']);
@@ -90,16 +168,11 @@ class ChampionBuildService
             $shown = [$positions[0]];
         }
 
-        // Genel bakış: pick/ban oranları (payda = patch penceresindeki toplam maç).
-        // Bir şampiyon bir maçta en fazla 1 kez seçilebilir → pick = games / totalMatches.
-        $totalMatches = (int) StatPatch::whereIn('patch', $patches)->sum('total_games');
-        $allWins = (int) $statRows->where('position', 'ALL')->sum('wins');
-        $allBans = (int) $statRows->where('position', 'ALL')->sum('bans');
         $overview = [
             'games'    => $totalGames,
             'winRate'  => $totalGames > 0 ? round($allWins / $totalGames * 100, 1) : 0.0,
             'pickRate' => $totalMatches > 0 ? round($totalGames / $totalMatches * 100, 1) : 0.0,
-            'banRate'  => $totalMatches > 0 ? round($allBans / $totalMatches * 100, 1) : 0.0,
+            'banRate'  => $banRate,
         ];
 
         // Bitmiş eşya kontrolü (Duruma Göre'de bileşen/iksir görünmesin diye):
@@ -192,9 +265,34 @@ class ChampionBuildService
 
     /**
      * Pozisyon için matchup listeleri: good (en yüksek sapma) / bad (en düşük).
+     * Build sayfası özeti (5+5); tam liste için getChampionCounters kullanır.
      * @return array{good: array, bad: array, opponents: int}
      */
     private function matchupsFor(string $championId, array $patches, string $pos, float $posWinRate): array
+    {
+        $mu = $this->aggregateMatchups($championId, $patches, $pos, $posWinRate); // delta DESC
+
+        $good = array_slice($mu, 0, 5);
+        $goodIds = array_column($good, 'id');
+        $bad = array_values(array_filter(
+            array_reverse($mu),
+            fn ($m) => ! in_array($m['id'], $goodIds, true)
+        ));
+
+        return [
+            'good'      => $good,
+            'bad'       => array_slice($bad, 0, 5),
+            'opponents' => count($mu),
+        ];
+    }
+
+    /**
+     * Bir koridordaki TÜM rakip eşleşmelerini (rakip başına min maç) toplar ve
+     * sapmaya göre AZALAN sıralar (en yüksek delta önce). delta = o rakibe karşı
+     * WR − şampiyonun bu roldeki genel WR'si. matchupsFor + getChampionCounters ortak.
+     * @return array<int, array{id:string,name:string,games:int,winRate:float,delta:float}>
+     */
+    private function aggregateMatchups(string $championId, array $patches, string $pos, float $posWinRate): array
     {
         $rows = ChampionMatchup::where('champion_id', $championId)
             ->whereIn('patch', $patches)
@@ -228,18 +326,7 @@ class ChampionBuildService
         }
         usort($mu, fn ($a, $b) => $b['delta'] <=> $a['delta']);
 
-        $good = array_slice($mu, 0, 5);
-        $goodIds = array_column($good, 'id');
-        $bad = array_values(array_filter(
-            array_reverse($mu),
-            fn ($m) => ! in_array($m['id'], $goodIds, true)
-        ));
-
-        return [
-            'good'      => $good,
-            'bad'       => array_slice($bad, 0, 5),
-            'opponents' => count($mu),
-        ];
+        return $mu;
     }
 
     /** Yanıttaki spell_pair'lerde geçen büyü id'leri için ad + görsel URL map'i. */

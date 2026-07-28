@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { CHAMP_TABBAR_WRAP, CHAMP_TABBAR_INNER, CHAMP_TAB, CHAMP_TAB_ACTIVE, CHAMP_TAB_INACTIVE } from "@/components/champion/championTabStyles";
 
 /*
   Şampiyon sayfası sekme yapısı.
@@ -9,8 +11,12 @@ import { useSearchParams } from "next/navigation";
   İçerikler mount kalır (hidden ile gizlenir) → sekme değişince state korunur.
   Aktif sekme ?tab= ile URL'de tutulur → refresh/paylaşımda aynı sekme açılır.
   (history.replaceState: router.replace gibi RSC yeniden yüklemesi tetiklemez.)
+
+  extraTabs = [{ key, label, href }]: içeriği bu sayfada olmayan, AYRI route'a
+  giden sekmeler (ör. Counter → /champions/[id]/counter). Gerçek <Link> = kendi
+  URL'i + SSR'ı olan crawlable sayfa (SEO). Bu sayfada hep pasif görünür.
 */
-export default function ChampionTabs({ tabs }) {
+export default function ChampionTabs({ tabs, extraTabs = [] }) {
   const params = useSearchParams();
   const fromUrl = params.get("tab");
   const [active, setActive] = useState(
@@ -30,20 +36,22 @@ export default function ChampionTabs({ tabs }) {
 
   return (
     <div>
-      <div className="oncanvas-bar border-b border-edge/40">
-        <div className="max-w-7xl mx-auto px-6 flex items-center gap-6">
+      {/* Alt-çizgi tab yapısı (site diliyle tutarlı) — splash üstünde */}
+      <div className={CHAMP_TABBAR_WRAP}>
+        <div className={CHAMP_TABBAR_INNER}>
           {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => select(t.key)}
-              className={`py-3 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${
-                active === t.key
-                  ? "border-blue-500 text-white"
-                  : "border-transparent text-gray-400 hover:text-gray-200"
-              }`}
+              className={`${CHAMP_TAB} ${active === t.key ? CHAMP_TAB_ACTIVE : CHAMP_TAB_INACTIVE}`}
             >
               {t.label}
             </button>
+          ))}
+          {extraTabs.map((t) => (
+            <Link key={t.key} href={t.href} className={`${CHAMP_TAB} ${CHAMP_TAB_INACTIVE}`}>
+              {t.label}
+            </Link>
           ))}
         </div>
       </div>

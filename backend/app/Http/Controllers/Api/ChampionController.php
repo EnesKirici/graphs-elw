@@ -104,6 +104,38 @@ class ChampionController extends Controller
     }
 
     /**
+     * Şampiyon counter verisi (SEO counter sayfası: "X counter" / "X CT").
+     * Oynanan her koridor için TAM matchup listesi + şampiyon temel bilgisi.
+     * GET /api/v1/champions/{id}/counters
+     */
+    public function counters(string $id): JsonResponse
+    {
+        $champion = $this->ddragon->getChampionDetail($id);
+
+        if ($champion === null) {
+            return response()->json(['error' => 'champion_not_found'], 404);
+        }
+
+        $version = $this->ddragon->getCurrentVersion();
+        $positionMap = $this->ddragon->getChampionPositions();
+
+        return response()->json([
+            'version'  => $version,
+            'champion' => [
+                'id'        => $champion['id'],
+                'key'       => $champion['key'],
+                'name'      => $champion['name'],
+                'title'     => $champion['title'],
+                'tags'      => $champion['tags'],
+                'positions' => $positionMap[$champion['id']] ?? [],
+                'image'     => $this->ddragon->championIconUrl($champion['id']),
+                'splash'    => $this->ddragon->splashArtUrl($champion['id']),
+            ],
+            'counters' => $this->build->getChampionCounters($id),
+        ]);
+    }
+
+    /**
      * Rün ağaçları (runesReforged) — build sayfasında tam ağaç gösterimi için.
      * GET /api/v1/runes
      */

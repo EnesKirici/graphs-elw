@@ -2,11 +2,9 @@
 
 import { Fragment, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { pickRealRunePage, groupRealItems, champIcon, itemIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
+import { pickRealRunePage, groupRealItems, itemIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", SUPPORT: "Support" };
-// "Koridor Payı" yerine role özgü, okunur etiket (TR ekleri yüzünden hazır map).
 const ROLE_SHARE_LABEL = {
   TOP: "Üst Koridorda Oynanma", JUNGLE: "Ormanda Oynanma", MIDDLE: "Orta Koridorda Oynanma",
   BOTTOM: "Alt Koridorda Oynanma", UTILITY: "Destekte Oynanma", SUPPORT: "Destekte Oynanma",
@@ -17,14 +15,18 @@ const ROLE_ICON = {
 };
 
 const hideOnError = (e) => { e.currentTarget.style.visibility = "hidden"; };
-// Site paleti: yeşil kullanmıyoruz — iyi WR mavi (profil sayfasıyla aynı dil), kötü kırmızı.
 const wrCls = (wr) => (wr >= 52 ? "text-blue-300" : wr >= 49 ? "text-gray-200" : "text-red-400");
-// "Q>E>W" harfleri → şampiyonun gerçek yetenek görselleri (champion.spells sırası Q,W,E,R)
+const gradeCls = (g) =>
+  g === "S+" ? "text-cyan-300"
+  : g === "S" ? "text-blue-300"
+  : g === "A" ? "text-sky-400"
+  : g === "B" ? "text-gray-200"
+  : g === "C" ? "text-amber-400"
+  : g === "D" ? "text-red-400"
+  : "text-gray-500";
 const SPELL_IDX = { Q: 0, W: 1, E: 2, R: 3 };
-// Timeline istatistikleri bu örneklemin altındayken gösterilmez (yanıltıcı olur)
 const TL_MIN_SAMPLE = 20;
 
-// Birleşik kart (tek glass kutu) — içine birden çok Section gelir, divide-y ile ayrılır.
 function Panel({ children, className = "" }) {
   return (
     <div className={`glass rounded-xl overflow-hidden divide-y divide-edge/40 ${className}`}>
@@ -33,7 +35,6 @@ function Panel({ children, className = "" }) {
   );
 }
 
-// Kart içi bölüm (alt başlık + içerik).
 function Section({ title, extra, children }) {
   return (
     <div className="p-4">
@@ -51,12 +52,9 @@ function ComingSoon({ children }) {
 }
 
 /*
-  Gerçek veriyle build sayfası. build = backend /champions/{id} yanıtındaki `build`:
-  { patches, totalGames, positions:[{position,games,winRate,share}], byPosition:{POS:{
-    keystone,rune_minor,shard,spell_pair,item_full: [{key,games,wins,winRate,pickRate}]}},
-    spellMap:{id:{name,image}}, topPlayers:[{name,tag,games,winRate}] }
-  Yalnız gerçekten oynanan koridorlar sekme olur (backend eşiği) — ör. Locke'ta
-  Support görünmez. Veri yoksa dürüst boş durum gösterilir; sahte veri YOK.
+  Gerçek veriyle build içeriği (Genel tabı) — TEK sayfada rün + eşya + büyü + yetenek.
+  build = backend /champions/{id} yanıtındaki `build`. Yalnız gerçekten oynanan
+  koridorlar rol seçiminde çıkar. Veri yoksa dürüst boş durum; sahte veri YOK.
 */
 export default function ChampionBuild({ champion, version, runesData = [], build }) {
   const positions = build?.positions || [];
@@ -65,7 +63,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
   const [role, setRole] = useState(
     positions.some((p) => p.position === urlRole) ? urlRole : positions[0]?.position
   );
-  const [pageIdx, setPageIdx] = useState(0); // seçili rün sayfası (0 = en popüler keystone)
+  const [pageIdx, setPageIdx] = useState(0);
 
   const selectRole = (p) => {
     setRole(p);
@@ -79,7 +77,6 @@ export default function ChampionBuild({ champion, version, runesData = [], build
   const posInfo = positions.find((p) => p.position === role);
   const cats = build?.byPosition?.[role] || {};
 
-  // Rün sayfası seçenekleri (1. / 2. / 3.) — yalnız ağaçta karşılığı olan keystone'lar.
   const keystoneOptions = (cats.keystone || []).filter((k) => runeIconById(runesData, Number(k.key)));
   const safeIdx = Math.min(pageIdx, Math.max(keystoneOptions.length - 1, 0));
   const runePage = useMemo(
@@ -100,10 +97,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         .filter((s) => s.list.length > 0)
     : [];
   const spellPairs = cats.spell_pair || [];
-  const matchups = cats.matchups || { good: [], bad: [], opponents: 0 };
-  const hasMatchups = matchups.good.length + matchups.bad.length >= 4;
 
-  // Hiç oynanma verisi yok → dürüst boş durum (sahte build göstermeyiz).
   if (!positions.length) {
     return (
       <div className="glass rounded-xl p-8 text-center">
@@ -120,34 +114,33 @@ export default function ChampionBuild({ champion, version, runesData = [], build
 
   return (
     <div className="space-y-4">
-      {/* Filtre çubuğu — yalnız GERÇEKTEN oynanan koridorlar */}
-      <div className="glass rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          {positions.map((p) => (
-            <button key={p.position} onClick={() => selectRole(p.position)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"}`}>
-              <img src={ROLE_ICON[p.position]} alt={ROLE_LABELS[p.position]} width={16} height={16} className={role === p.position ? "" : "opacity-70"} />
-              {ROLE_LABELS[p.position] || p.position}
-              <span className="text-[10px] text-gray-500">{p.share}%</span>
-            </button>
-          ))}
-        </div>
-        <div className="ml-auto flex items-center gap-2 text-[11px]">
-          {lowSample && (
-            <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              Düşük örneklem
-            </span>
-          )}
-          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Emerald +</span>
-          <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">
-            Patch {(build.patches || []).join(" + ")}
-          </span>
+      {/* Üst özet kartı: derece + statlar (eşit bölünmüş) + rol/patch — TEK kart */}
+      <div className="glass rounded-xl overflow-hidden">
+        <StatStrip pos={posInfo} roleLabel={ROLE_LABELS[role] || role} />
+        <div className="border-t border-edge/40 px-4 py-2.5 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            {positions.map((p) => (
+              <button key={p.position} onClick={() => selectRole(p.position)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"}`}>
+                <img src={ROLE_ICON[p.position]} alt={ROLE_LABELS[p.position]} width={16} height={16} className={role === p.position ? "" : "opacity-70"} />
+                {ROLE_LABELS[p.position] || p.position}
+                <span className="text-[10px] text-gray-500">{p.share}%</span>
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-2 text-[11px]">
+            {lowSample && (
+              <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">Düşük örneklem</span>
+            )}
+            <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Emerald +</span>
+            <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Patch {(build.patches || []).join(" + ")}</span>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* SOL — Koridor özeti + popüler itemler + top players (tek kart) */}
+        {/* SOL — Koridor özeti + popüler itemler */}
         <Panel className="lg:col-span-3">
           <Section title={`${ROLE_LABELS[role] || role} Performansı`}>
             <div className="grid grid-cols-2 gap-2 text-center">
@@ -160,30 +153,12 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 <p className="text-[10px] text-gray-500 mt-0.5">{ROLE_SHARE_LABEL[role] || "Rolde Oynanma"}</p>
               </div>
             </div>
-            {build.overview && (
-              <div className="grid grid-cols-3 gap-2 text-center mt-2">
-                <div className="rounded-lg bg-edge/25 py-2">
-                  <p className="text-[13px] font-bold text-gray-200">{build.overview.pickRate}%</p>
-                  <p className="text-[9px] text-gray-500 mt-0.5">Pick</p>
-                </div>
-                <div className="rounded-lg bg-edge/25 py-2">
-                  <p className="text-[13px] font-bold text-gray-200">{build.overview.banRate}%</p>
-                  <p className="text-[9px] text-gray-500 mt-0.5">Ban</p>
-                </div>
-                <div className="rounded-lg bg-edge/25 py-2">
-                  <p className="text-[13px] font-bold text-gray-200">{posInfo?.games}</p>
-                  <p className="text-[9px] text-gray-500 mt-0.5">Maç</p>
-                </div>
-              </div>
-            )}
           </Section>
-
           <Section title="En Popüler Itemler" extra={<span className="text-[10px] text-gray-600">Pick · WR</span>}>
             <div className="space-y-2">
               {(cats.item_full || []).slice(0, 5).map((it) => (
                 <div key={it.key} className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-hover">
-                  <img src={itemIcon(version, it.key)}
-                    alt="" width={28} height={28} className="rounded-md border border-edge" onError={hideOnError} />
+                  <img src={itemIcon(version, it.key)} alt="" width={28} height={28} className="rounded-md border border-edge" onError={hideOnError} />
                   <span className="text-[11px] text-gray-400 flex-1">{it.pickRate}%</span>
                   <span className={`text-xs font-bold ${wrCls(it.winRate)}`}>{it.winRate}%</span>
                 </div>
@@ -191,13 +166,9 @@ export default function ChampionBuild({ champion, version, runesData = [], build
               {!(cats.item_full || []).length && <ComingSoon>Bu koridor için item verisi henüz yok.</ComingSoon>}
             </div>
           </Section>
-
-          {/* "En İyi Oyuncular" ŞİMDİLİK gizli — WR yerine gerçek sıralama sistemi
-              (championRank, PROFILE_RANKINGS_PLAN) bağlanınca geri gelecek.
-              Backend topPlayers alanı (profileIconId/tier/rank dahil) hazır bekliyor. */}
         </Panel>
 
-        {/* ORTA — Rünler (tek kart) */}
+        {/* ORTA — Rünler + Yetenek Sırası */}
         <Panel className="lg:col-span-6">
           <Section title="Rünler" extra={
             activeKeystone && (
@@ -208,20 +179,13 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           }>
             {runePage ? (
               <>
-                {/* Rün sayfası seçenekleri: 1. en popüler + 2./3. alternatif keystone'lar */}
                 {keystoneOptions.length > 1 && (
                   <div className="flex items-center justify-center gap-2 mb-4">
                     {keystoneOptions.map((k, i) => (
-                      <button
-                        key={k.key}
-                        onClick={() => setPageIdx(i)}
+                      <button key={k.key} onClick={() => setPageIdx(i)}
                         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] transition-colors cursor-pointer ${
-                          i === safeIdx
-                            ? "border-blue-500/60 bg-blue-500/10 text-blue-200"
-                            : "border-edge/60 text-gray-400 hover:text-gray-200 hover:bg-hover"
-                        }`}
-                        title={`${i + 1}. seçenek`}
-                      >
+                          i === safeIdx ? "border-blue-500/60 bg-blue-500/10 text-blue-200" : "border-edge/60 text-gray-400 hover:text-gray-200 hover:bg-hover"}`}
+                        title={`${i + 1}. seçenek`}>
                         <span className="text-gray-500">{i + 1}.</span>
                         <img src={runeIconById(runesData, Number(k.key))} alt="" width={22} height={22} className="rounded-full" onError={hideOnError} />
                         <span>{k.pickRate}%</span>
@@ -255,52 +219,31 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             {skillOrders.length ? (
               <div className="space-y-3">
                 {skillOrders.slice(0, 2).map((o, idx) => (
-                  <div key={o.key} className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      {String(o.key).split(">").map((L, i, arr) => (
-                        <Fragment key={i}>
-                          <div className="relative">
-                            <img src={champion.spells?.[SPELL_IDX[L]]?.image} alt={L}
-                              width={idx === 0 ? 40 : 32} height={idx === 0 ? 40 : 32}
-                              className={`rounded-lg border ${idx === 0 ? "border-blue-500/50" : "border-edge"} ${idx === 0 ? "" : "opacity-80"}`}
-                              onError={hideOnError} />
-                            <span className="absolute -bottom-1.5 -right-1.5 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-1 text-blue-300">
-                              {L}
-                            </span>
-                          </div>
-                          {i < arr.length - 1 && <span className="text-gray-600 text-sm">›</span>}
-                        </Fragment>
-                      ))}
-                    </div>
-                    <span className="text-xs text-gray-400 ml-auto">{o.pickRate}%</span>
-                    <span className={`text-sm font-bold ${wrCls(o.winRate)}`}>{o.winRate}%</span>
-                  </div>
+                  <SkillOrderRow key={o.key} o={o} champion={champion} big={idx === 0} />
                 ))}
               </div>
             ) : (
               <ComingSoon>
-                Yetenek sırası istatistikleri toplanıyor — worker maç timeline&apos;larını
-                işledikçe burada gerçek verilerle görünecek
+                Yetenek sırası istatistikleri toplanıyor — worker maç timeline&apos;larını işledikçe burada gerçek verilerle görünecek
                 {(samples.skill_order || 0) > 0 ? ` (şu ana kadar ${samples.skill_order} maç işlendi)` : ""}.
               </ComingSoon>
             )}
           </Section>
         </Panel>
 
-        {/* SAĞ — Sihirdar büyüleri + Itemler (tek kart) */}
+        {/* SAĞ — Sihirdar büyüleri + Itemler */}
         <Panel className="lg:col-span-3">
           <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">Pick · WR</span>}>
             <div className="space-y-2.5">
               {spellPairs.map((sp, idx) => {
-                const icons = String(sp.key).split("-").map((id) => build?.spellMap?.[id]).filter(Boolean);
+                const icons = String(sp.key).split("-").map((sid) => build?.spellMap?.[sid]).filter(Boolean);
                 if (!icons.length) return null;
                 return (
                   <div key={sp.key} className="flex items-center gap-2">
                     {icons.map((s, i) => (
                       <img key={i} src={s.image} alt={s.name} title={s.name}
                         width={idx === 0 ? 38 : 30} height={idx === 0 ? 38 : 30}
-                        className={`rounded-lg border ${idx === 0 ? "border-edge" : "border-edge opacity-80"}`}
-                        onError={hideOnError} />
+                        className="rounded-lg border border-edge" onError={hideOnError} />
                     ))}
                     <span className="text-xs text-gray-400 ml-auto">{sp.pickRate}%</span>
                     <span className={`text-sm font-bold ${wrCls(sp.winRate)}`}>{sp.winRate}%</span>
@@ -317,28 +260,9 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 <div>
                   <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Başlangıç</span>
                   <div className="space-y-2">
-                    {starters.slice(0, 2).map((s) => {
-                      // Aynı eşyadan birden çok alınmışsa (2× iksir gibi) tek ikon + ×N
-                      const counts = {};
-                      String(s.key).split("-").forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
-                      return (
-                        <div key={s.key} className="flex items-center gap-2">
-                          {Object.entries(counts).map(([id, n]) => (
-                            <div key={id} className="relative">
-                              <img src={itemIcon(version, id)} alt="" width={32} height={32}
-                                className="rounded-md border border-edge" onError={hideOnError} />
-                              {n > 1 && (
-                                <span className="absolute -bottom-1 -right-1 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-0.5 text-gray-300">
-                                  ×{n}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                          <span className="text-xs text-gray-400 ml-auto">{s.pickRate}%</span>
-                          <span className={`text-xs font-bold ${wrCls(s.winRate)}`}>{s.winRate}%</span>
-                        </div>
-                      );
-                    })}
+                    {starters.slice(0, 2).map((s) => (
+                      <StarterRow key={s.key} s={s} version={version} />
+                    ))}
                   </div>
                 </div>
               )}
@@ -352,7 +276,6 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 </div>
               )}
               {itemSlots.length > 0 ? (
-                /* Satın alma SIRASINA göre slot alternatifleri (timeline verisi) */
                 <div className="space-y-3.5 pt-3 border-t border-edge/40">
                   {itemSlots.map(({ n, list }) => (
                     <div key={n} className="flex items-start gap-2.5">
@@ -361,8 +284,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                         {list.slice(0, 4).map((it) => (
                           <div key={it.key} className="flex flex-col items-center w-[46px]">
                             <img src={itemIcon(version, it.key)} alt="" width={38} height={38}
-                              className="rounded-md border border-edge" onError={hideOnError}
-                              title={`${it.games} maç`} />
+                              className="rounded-md border border-edge" onError={hideOnError} title={`${it.games} maç`} />
                             <span className={`text-[10px] font-bold mt-1 leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</span>
                             <span className="text-[9px] text-gray-500 leading-tight mt-0.5">{it.pickRate}%</span>
                           </div>
@@ -392,58 +314,76 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           </Section>
         </Panel>
       </div>
-
-      {/* ALT — Rakip Matchup'lar (tam genişlik) */}
-      <Panel>
-        <Section title="Rakip Matchup'lar" extra={
-          <span className="text-[10px] text-gray-600">rakibe karşı WR − genel WR · rakip başına min 10 maç</span>
-        }>
-          {hasMatchups ? (
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex-1">
-                <p className="text-[11px] font-semibold text-blue-300 uppercase tracking-wider mb-2.5">İyi Karşı</p>
-                <div className="flex gap-2.5 flex-wrap">
-                  {matchups.good.map((m) => (
-                    <MatchupCard key={m.id} m={m} version={version} good />
-                  ))}
-                </div>
-              </div>
-              <div className="hidden md:block w-px bg-edge/40" />
-              <div className="flex-1">
-                <p className="text-[11px] font-semibold text-red-400 uppercase tracking-wider mb-2.5 md:text-right">Zayıf Karşı</p>
-                <div className="flex gap-2.5 flex-wrap md:justify-end">
-                  {matchups.bad.map((m) => (
-                    <MatchupCard key={m.id} m={m} version={version} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <ComingSoon>
-              Matchup istatistikleri için rakip başına en az 10 maç gerekir — worker maç
-              topladıkça bu bölüm kendiliğinden dolacak.
-            </ComingSoon>
-          )}
-        </Section>
-      </Panel>
     </div>
   );
 }
 
-/* Tek rakip kartı — şampiyon sayfasına link verir; sapma iyi=mavi, kötü=kırmızı. */
-function MatchupCard({ m, version, good = false }) {
+/* Üst özet barındaki tek istatistik hücresi — EŞİT genişlik (flex-1) + ayraç. */
+function StripStat({ value, label, valueCls = "text-gray-100" }) {
   return (
-    <Link href={`/champions/${m.id}`}
-      className="flex flex-col items-center w-[72px] p-2 rounded-xl bg-edge/25 hover:bg-hover border border-transparent hover:border-edge transition-colors"
-      title={`${m.name} — ${m.games} maç · %${m.winRate} WR`}>
-      <img src={champIcon(version, m.id)} alt={m.name} width={44} height={44}
-        className="rounded-lg border border-edge" onError={hideOnError} />
-      <span className="text-[10px] text-gray-300 truncate w-full text-center mt-1.5">{m.name}</span>
-      <span className={`text-xs font-bold mt-0.5 ${good ? "text-blue-300" : "text-red-400"}`}>
-        {m.delta > 0 ? "+" : ""}{m.delta}%
-      </span>
-      <span className="text-[9px] text-gray-600 mt-0.5">{m.games} maç</span>
-    </Link>
+    <div className="flex-1 flex flex-col items-center justify-center border-l border-edge/40 px-2 min-w-0">
+      <span className={`text-lg md:text-xl font-bold leading-none ${valueCls}`}>{value}</span>
+      <span className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">{label}</span>
+    </div>
+  );
+}
+
+function StatStrip({ pos, roleLabel }) {
+  if (!pos) return null;
+  const g = pos.grade;
+  return (
+    <div className="px-4 md:px-6 py-3.5 flex items-stretch">
+      <div className="flex items-center gap-3 pr-4 md:pr-6 shrink-0">
+        <span className={`text-4xl md:text-5xl font-extrabold leading-none ${gradeCls(g)}`}>{g || "—"}</span>
+        <span className="text-[10px] text-gray-500 uppercase tracking-wider">derece</span>
+      </div>
+      <StripStat value={pos.rank ? `${pos.rank}/${pos.total}` : "—"} label={`${roleLabel} sırası`} />
+      <StripStat value={`${pos.winRate}%`} label="kazanma oranı" valueCls={wrCls(pos.winRate)} />
+      <StripStat value={pos.pickRate != null ? `${pos.pickRate}%` : "—"} label="seçim oranı" />
+      <StripStat value={pos.banRate != null ? `${pos.banRate}%` : "—"} label="yasaklanma oranı" />
+      <StripStat value={(pos.games ?? 0).toLocaleString("tr-TR")} label="oyunlar" />
+    </div>
+  );
+}
+
+/* Yetenek sırası satırı (Q>W>E gerçek yetenek görselleriyle). */
+function SkillOrderRow({ o, champion, big }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        {String(o.key).split(">").map((L, i, arr) => (
+          <Fragment key={i}>
+            <div className="relative">
+              <img src={champion.spells?.[SPELL_IDX[L]]?.image} alt={L}
+                width={big ? 40 : 32} height={big ? 40 : 32}
+                className={`rounded-lg border ${big ? "border-blue-500/50" : "border-edge opacity-80"}`} onError={hideOnError} />
+              <span className="absolute -bottom-1.5 -right-1.5 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-1 text-blue-300">{L}</span>
+            </div>
+            {i < arr.length - 1 && <span className="text-gray-600 text-sm">›</span>}
+          </Fragment>
+        ))}
+      </div>
+      <span className="text-xs text-gray-400 ml-auto">{o.pickRate}%</span>
+      <span className={`text-sm font-bold ${wrCls(o.winRate)}`}>{o.winRate}%</span>
+    </div>
+  );
+}
+
+/* Başlangıç eşya satırı (aynı eşyadan çok alınmışsa ×N). */
+function StarterRow({ s, version }) {
+  const counts = {};
+  String(s.key).split("-").forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
+  return (
+    <div className="flex items-center gap-2">
+      {Object.entries(counts).map(([id, n]) => (
+        <div key={id} className="relative">
+          <img src={itemIcon(version, id)} alt="" width={32} height={32} className="rounded-md border border-edge" onError={hideOnError} />
+          {n > 1 && <span className="absolute -bottom-1 -right-1 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-0.5 text-gray-300">×{n}</span>}
+        </div>
+      ))}
+      <span className="text-xs text-gray-400 ml-auto">{s.pickRate}%</span>
+      <span className={`text-xs font-bold ${wrCls(s.winRate)}`}>{s.winRate}%</span>
+    </div>
   );
 }
 
@@ -452,8 +392,7 @@ function ItemRow({ items, size = 36 }) {
     <div className="flex items-start gap-1.5 flex-wrap">
       {items.map((it, i) => (
         <div key={i} className="flex flex-col items-center" style={{ width: size + 6 }}>
-          <img src={it.icon} alt="" width={size} height={size}
-            className="rounded-md border border-edge" onError={hideOnError}
+          <img src={it.icon} alt="" width={size} height={size} className="rounded-md border border-edge" onError={hideOnError}
             title={`${it.pickRate}% pick · ${it.winRate}% WR`} />
           <span className="text-[9px] text-gray-500 mt-0.5 leading-none">{it.pickRate}%</span>
         </div>
@@ -462,8 +401,6 @@ function ItemRow({ items, size = 36 }) {
   );
 }
 
-/* Tam rün ağacı — tüm rünler gösterilir, gerçek maçlarda en çok seçilenler vurgulu.
-   pctOf verilirse oynanmış her rünün altında pick %'si yazar (dpm.lol tarzı). */
 function RuneTree({ tree, selected, pctOf, skipKeystone }) {
   if (!tree) return null;
   const slots = skipKeystone ? tree.slots.slice(1) : tree.slots;
@@ -489,26 +426,19 @@ function RuneTree({ tree, selected, pctOf, skipKeystone }) {
   );
 }
 
-/* withLabel: ikon altında % satırı ayrılır (veri yoksa boş tutulur ki satır hizası bozulmasın). */
 function RuneDot({ src, on, size = 28, title, pct, withLabel = false }) {
   const img = (
-    <img
-      src={src}
-      alt={title || ""}
-      title={pct != null ? `${title} · ${pct}%` : title || ""}
-      width={size}
-      height={size}
-      onError={hideOnError}
+    <img src={src} alt={title || ""} title={pct != null ? `${title} · ${pct}%` : title || ""}
+      width={size} height={size} onError={hideOnError}
       className={`rounded-full transition ${on ? "" : "grayscale opacity-25"}`}
-      style={on ? { boxShadow: "0 0 0 2px rgba(96,165,250,.85)" } : undefined}
-    />
+      style={on ? { boxShadow: "0 0 0 2px rgba(96,165,250,.85)" } : undefined} />
   );
   if (!withLabel) return img;
   return (
     <div className="flex flex-col items-center" style={{ width: size + 6 }}>
       {img}
       <span className={`text-[10px] mt-0.5 leading-none ${on ? "text-blue-300 font-semibold" : "text-gray-600"}`}>
-        {pct != null ? `${pct}%` : " "}
+        {pct != null ? `${pct}%` : " "}
       </span>
     </div>
   );

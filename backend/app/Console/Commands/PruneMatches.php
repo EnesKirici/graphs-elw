@@ -2,9 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\MatchRecord;
-use App\Models\MatchTimeline;
-use App\Services\PatchService;
+use App\Services\RetentionService;
 use Illuminate\Console\Command;
 
 /**
@@ -22,27 +20,22 @@ class PruneMatches extends Command
 
     protected $description = 'Tutulan patch penceresinden (güncel+önceki) eski maçları siler';
 
-    public function handle(PatchService $patch): int
+    public function handle(RetentionService $retention): int
     {
-        $cutoff = $patch->keepSince();
-        if (! $cutoff) {
+        $report = $retention->report();
+        if ($report['cutoff'] === null) {
             $this->error('Prune eşiği yok (config elwgraphs.meta.patch_starts boş?) — güvenlik için iptal.');
             return self::FAILURE;
         }
-        $cutoffMs = $cutoff->getTimestampMs();
-        $kept = $patch->keptPatches();
 
-        $old = MatchRecord::where('game_creation', '<', $cutoffMs);
-        $oldCount = $old->count();
-        $total = MatchRecord::count();
+        $this->info('Tutulan patch\'ler : ' . implode(', ', $report['keptPatches']));
+        $this->info('Eşik (bundan eski silinir): ' . $report['cutoff']);
+        $this->line("  Toplam maç        : {$report['totalMatches']}");
+        $this->line("  Silinecek (eski)  : {$report['prunableMatches']}");
+        $this->line("  Kalacak           : {$report['keptMatches']}");
+        $this->line("  Tahmini kazanç    : ~{$report['estFreedMb']} MB");
 
-        $this->info('Tutulan patch\'ler : ' . implode(', ', $kept));
-        $this->info('Eşik (bundan eski silinir): ' . $cutoff->toDateString());
-        $this->line("  Toplam maç        : {$total}");
-        $this->line("  Silinecek (eski)  : {$oldCount}");
-        $this->line('  Kalacak           : ' . ($total - $oldCount));
-
-        if ($oldCount === 0) {
+        if ($report['prunableMatches'] === 0) {
             $this->info('Silinecek eski maç yok.');
             return self::SUCCESS;
         }
@@ -52,15 +45,8 @@ class PruneMatches extends Command
             return self::SUCCESS;
         }
 
-        // İlişkili timeline'ları da temizle (aynı match_id'ler — alt sorgu, farklı tablo).
-        $timelinesDeleted = MatchTimeline::whereIn(
-            'match_id',
-            MatchRecord::where('game_creation', '<', $cutoffMs)->select('match_id')
-        )->delete();
-
-        $deleted = MatchRecord::where('game_creation', '<', $cutoffMs)->delete();
-
-        $this->info("Silindi: {$deleted} maç + {$timelinesDeleted} timeline. Kalan maç: " . MatchRecord::count());
+        $r = $retention->prune();
+        $this->info("Silindi: {$r['deletedMatches']} maç + {$r['deletedTimelines']} timeline. Kalan maç: {$r['remaining']}");
         $this->warn('İpucu: sayaçları tazelemek için `php artisan stats:rebuild` çalıştır.');
 
         return self::SUCCESS;

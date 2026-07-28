@@ -11,10 +11,12 @@ const DDRAGON = `${DD_ASSETS}/cdn`;
 function pct(v) {
   return v == null ? "-" : `${String(v).replace(".", ",")}%`;
 }
+// Site paleti (ChampionBuild.wrCls ile aynı): mavi (iyi) / gri (nötr) / kırmızı (kötü).
+// Yeşil ve sarı KULLANMIYORUZ.
 function wrColor(wr) {
-  if (wr >= 53) return "text-emerald-400";
-  if (wr >= 50) return "text-blue-400";
-  if (wr >= 47) return "text-yellow-400";
+  if (wr == null) return "text-gray-400";
+  if (wr >= 52) return "text-blue-300";
+  if (wr >= 49) return "text-gray-200";
   return "text-red-400";
 }
 

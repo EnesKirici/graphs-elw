@@ -361,6 +361,66 @@ class MetaService
     }
 
     /**
+     * Rol-içi sayısal sıralama + derece: her koridor için şampiyonları kompozit
+     * tier skoruna göre sıralar → şampiyon sayfası üst özet barındaki "21/34"
+     * ve derece harfi (S+/S/A/B/C/D) bundan gelir.
+     *
+     * Tier-list ile AYNI skorlamayı (compositeTierScore/tierFromScore) kullanır →
+     * çelişmez: sıra 1 = en yüksek skor = en iyi tier, sıra sonu = D. Rol eşiği de
+     * tier-list ile aynı (min 10 maç) — az oynanan rolde gürültülü sıra çıkmasın.
+     *
+     * Dönüş: [ 'BOTTOM' => [ 'Kaisa' => ['rank'=>21,'total'=>34,'grade'=>'C'], ... ],
+     *          ..., 'ALL' => [...tüm rollerin toplamı üzerinden genel sıra...] ]
+     */
+    public function roleRankings(): array
+    {
+        return Cache::remember('meta:role_rankings_v1', config('riot.cache_ttl.meta_stats'), function () {
+            $data = $this->stats->getPositionStats($this->patch->keptPatches());
+            $total = (int) $data['total'];
+            $byChamp = $data['champions'];
+
+            $minGames = 10; // tier-list rol eşiğiyle aynı
+            $positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY', 'ALL'];
+
+            // Koridor başına [şampiyon => kompozit skor] topla.
+            $scored = [];
+            foreach ($byChamp as $id => $st) {
+                $bans = $st['ALL']['bans'] ?? 0;
+                $ban = $total > 0 ? $bans / $total * 100 : 0.0; // ban rol-bağımsız (şampiyon banlanır)
+                foreach ($positions as $pos) {
+                    $ps = $st[$pos] ?? null;
+                    if (! $ps || ($ps['games'] ?? 0) < $minGames) {
+                        continue;
+                    }
+                    $g = (int) $ps['games'];
+                    $w = (int) $ps['wins'];
+                    $adj = Statistics::shrunkWinRate($w, $g);
+                    $pick = $total > 0 ? $g / $total * 100 : 0.0;
+                    $scored[$pos][$id] = $this->compositeTierScore($adj, $pick, $ban, $g);
+                }
+            }
+
+            // Skora göre sırala (DESC) → rank (1-tabanlı) + total + tier harfi.
+            $out = [];
+            foreach ($scored as $pos => $map) {
+                arsort($map); // skor DESC, şampiyon anahtarları korunur
+                $n = count($map);
+                $rank = 0;
+                foreach ($map as $id => $score) {
+                    $rank++;
+                    $out[$pos][$id] = [
+                        'rank'  => $rank,
+                        'total' => $n,
+                        'grade' => $this->tierFromScore($score),
+                    ];
+                }
+            }
+
+            return $out;
+        });
+    }
+
+    /**
      * Site geneli canlı sayaçlar (dashboard meta şeridi).
      * Ucuz DB count'ları — büyük DDragon cache'inden ayrı, kısa süre cache'lenir
      * ki sayılar güncel kalsın ama her istekte COUNT atılmasın.

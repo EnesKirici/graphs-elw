@@ -76,6 +76,7 @@ Route::prefix('v1')->group(function () {
     // Şampiyon endpoint'leri
     Route::get('/runes', [ChampionController::class, 'runes']);
     Route::get('/champions', [ChampionController::class, 'index']);
+    Route::get('/champions/{id}/counters', [ChampionController::class, 'counters']);
     Route::get('/champions/{id}', [ChampionController::class, 'show']);
 
     // Analytics — public (site ziyaretçileri event gönderir)
@@ -104,6 +105,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/worker', [\App\Http\Controllers\Api\WorkerController::class, 'status']);
         Route::post('/worker/crawl', [\App\Http\Controllers\Api\WorkerController::class, 'crawl']);
         Route::post('/worker/collect', [\App\Http\Controllers\Api\WorkerController::class, 'collect']);
+
+        // Maç verisi saklama (retention) — patch dağılımı raporu + elle prune (otomatik silme yok)
+        Route::get('/retention', [\App\Http\Controllers\Api\RetentionController::class, 'status']);
+        Route::post('/retention/prune', [\App\Http\Controllers\Api\RetentionController::class, 'prune']);
 
         // Ban yönetimi
         Route::get('/bans', [AdminController::class, 'bans']);
