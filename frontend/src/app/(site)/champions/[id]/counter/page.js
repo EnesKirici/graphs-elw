@@ -22,7 +22,7 @@ const POS_SEO = {
   TOP:     { short: "Top",     long: "Üst Koridor" },
   JUNGLE:  { short: "Jungle",  long: "Orman" },
   MIDDLE:  { short: "Mid",     long: "Orta Koridor" },
-  BOTTOM:  { short: "Bot",     long: "Alt Koridor" },
+  BOTTOM:  { short: "ADC",     long: "Alt Koridor" },
   UTILITY: { short: "Support", long: "Destek" },
   SUPPORT: { short: "Support", long: "Destek" },
 };
