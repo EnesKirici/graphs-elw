@@ -8,6 +8,7 @@ use App\Models\ChampionStat;
 use App\Models\ChampionTopPlayer;
 use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Tek bir maçı işleyip AGGREGATE sayaçları artırır (INCREMENTAL).
@@ -83,15 +84,85 @@ class BuildAggregationService
             }
         }
 
+        // @15 koridor avantajı (gold/cs/xp farkı) → champion_matchups. Timeline zaten
+        // elimizde; ek Riot isteği YOK. Frame SAKLANMAZ, sadece 15. dk anı çıkarılır.
+        $this->processLane15($matchData, $timeline, $patch);
+
         return true;
+    }
+
+    /**
+     * Timeline'ın ~15. dakika frame'inden her koridor için gold/cs/xp farkını (şampiyon
+     * vs karşı koridordaki rakip) çıkarıp champion_matchups'a EKLER (agregat toplam + n15).
+     * Frame saklanmaz. 15. dk'ya ulaşmamış maçlar atlanır.
+     */
+    private function processLane15(array $matchData, array $timeline, string $patch): void
+    {
+        $frames = $timeline['info']['frames'] ?? [];
+        if (count($frames) < 16) {
+            return; // maç 15. dk'dan önce bitmiş → @15 anlamlı değil
+        }
+        $f15 = $frames[15]['participantFrames'] ?? [];
+        if (! $f15) {
+            return;
+        }
+        $keyToId = $this->keyMap();
+
+        // pozisyon × takım → [champId, gold, cs, xp]
+        $byPos = [];
+        foreach ($matchData['info']['participants'] as $p) {
+            $pid = (string) ($p['participantId'] ?? 0);
+            $pos = $p['teamPosition'] ?? '';
+            $champId = $keyToId[(int) ($p['championId'] ?? 0)] ?? ($p['championName'] ?? null);
+            if (! $pos || ! $champId || empty($f15[$pid])) {
+                continue;
+            }
+            $pf = $f15[$pid];
+            $gold = (int) ($pf['totalGold'] ?? 0);
+            $cs = (int) ($pf['minionsKilled'] ?? 0) + (int) ($pf['jungleMinionsKilled'] ?? 0);
+            $xp = (int) ($pf['xp'] ?? 0);
+            $byPos[$pos][(int) ($p['teamId'] ?? 0)] = [$champId, $gold, $cs, $xp];
+        }
+
+        foreach ($byPos as $pos => $teams) {
+            if (count($teams) !== 2) {
+                continue;
+            }
+            [$a, $b] = array_values($teams);
+            if ($a[0] === $b[0]) {
+                continue;
+            }
+            $this->bumpLane15($patch, $a[0], $pos, $b[0], $a[1] - $b[1], $a[2] - $b[2], $a[3] - $b[3]);
+            $this->bumpLane15($patch, $b[0], $pos, $a[0], $b[1] - $a[1], $b[2] - $a[2], $b[3] - $a[3]);
+        }
+    }
+
+    /** @15 farkını (işaretli) tek matchup satırına ekler. */
+    private function bumpLane15(string $patch, string $champ, string $pos, string $opp, int $gd, int $csd, int $xpd): void
+    {
+        ChampionMatchup::firstOrCreate(
+            ['patch' => $patch, 'champion_id' => $champ, 'position' => $pos, 'opponent_id' => $opp],
+            ['games' => 0, 'wins' => 0],
+        );
+        ChampionMatchup::where([
+            'patch' => $patch, 'champion_id' => $champ, 'position' => $pos, 'opponent_id' => $opp,
+        ])->update([
+            'n15'       => DB::raw('n15 + 1'),
+            'sum_gd15'  => DB::raw('sum_gd15 + (' . (int) $gd . ')'),
+            'sum_csd15' => DB::raw('sum_csd15 + (' . (int) $csd . ')'),
+            'sum_xpd15' => DB::raw('sum_xpd15 + (' . (int) $xpd . ')'),
+        ]);
     }
 
     /**
      * Maçtaki karşı koridor eşleşmeleri: her pozisyon için iki takımın oyuncusu
      * eşlenir, iki yönlü satır üretilir. Pozisyonu boş/çift olan maçlar atlanır.
      *
-     * @return array<array{0:string,1:string,2:string,3:string,4:bool}>
-     *         [patch, championId, position, opponentId, win]
+     * Her satır o şampiyonun O MAÇTAKİ stat'ıyla gelir (KDA/KP/hasar) → head-to-head
+     * detay agregasyonu için. Eski çağıranlar ilk 5 elemanı destructure eder (geri uyumlu).
+     *
+     * @return array<array{0:string,1:string,2:string,3:string,4:bool,5:int,6:int,7:int,8:int,9:int}>
+     *         [patch, championId, position, opponentId, win, kills, deaths, assists, kp%, dmg]
      */
     public function matchupRows(array $matchData): array
     {
@@ -100,16 +171,31 @@ class BuildAggregationService
             return [];
         }
         $keyToId = $this->keyMap();
+        $participants = $matchData['info']['participants'] ?? [];
 
-        // teamId × position → [champId, win]
+        // Takım toplam öldürme (KP paydası)
+        $teamKills = [];
+        foreach ($participants as $p) {
+            $tid = (int) ($p['teamId'] ?? 0);
+            $teamKills[$tid] = ($teamKills[$tid] ?? 0) + (int) ($p['kills'] ?? 0);
+        }
+
+        // pozisyon × takım → [champId, win, kills, deaths, assists, kp, dmg]
         $byPos = [];
-        foreach ($matchData['info']['participants'] as $p) {
+        foreach ($participants as $p) {
             $pos = $p['teamPosition'] ?? '';
             $champId = $keyToId[(int) ($p['championId'] ?? 0)] ?? ($p['championName'] ?? null);
             if (! $pos || ! $champId) {
                 continue;
             }
-            $byPos[$pos][(int) $p['teamId']] = [$champId, ! empty($p['win'])];
+            $tid = (int) ($p['teamId'] ?? 0);
+            $k = (int) ($p['kills'] ?? 0);
+            $d = (int) ($p['deaths'] ?? 0);
+            $a = (int) ($p['assists'] ?? 0);
+            $tk = $teamKills[$tid] ?? 0;
+            $kp = $tk > 0 ? (int) round(($k + $a) / $tk * 100) : 0;
+            $dmg = (int) ($p['totalDamageDealtToChampions'] ?? 0);
+            $byPos[$pos][$tid] = [$champId, ! empty($p['win']), $k, $d, $a, $kp, $dmg];
         }
 
         $rows = [];
@@ -121,8 +207,8 @@ class BuildAggregationService
             if ($a[0] === $b[0]) {
                 continue; // aynı şampiyon (teorik) — anlamsız
             }
-            $rows[] = [$patch, $a[0], $pos, $b[0], $a[1]];
-            $rows[] = [$patch, $b[0], $pos, $a[0], $b[1]];
+            $rows[] = [$patch, $a[0], $pos, $b[0], $a[1], $a[2], $a[3], $a[4], $a[5], $a[6]];
+            $rows[] = [$patch, $b[0], $pos, $a[0], $b[1], $b[2], $b[3], $b[4], $b[5], $b[6]];
         }
 
         return $rows;
@@ -202,16 +288,25 @@ class BuildAggregationService
             $this->bumpTopPlayer($region, $champId, $p, $win);
         }
 
-        // 4) champion_matchups — karşı koridor eşleşmeleri (A-vs-B + B-vs-A)
-        foreach ($this->matchupRows($matchData) as [$mPatch, $champ, $pos, $opp, $win]) {
-            $row = ChampionMatchup::firstOrCreate(
+        // 4) champion_matchups — karşı koridor eşleşmeleri (A-vs-B + B-vs-A) + KDA/hasar
+        foreach ($this->matchupRows($matchData) as [$mPatch, $champ, $pos, $opp, $win, $k, $d, $as, $kp, $dmg]) {
+            ChampionMatchup::firstOrCreate(
                 ['patch' => $mPatch, 'champion_id' => $champ, 'position' => $pos, 'opponent_id' => $opp],
                 ['games' => 0, 'wins' => 0],
             );
-            $row->increment('games');
-            if ($win) {
-                $row->increment('wins');
-            }
+            // Tek update: games/wins (WR paydası) + KDA/hasar (n_stats ayrı payda).
+            ChampionMatchup::where([
+                'patch' => $mPatch, 'champion_id' => $champ, 'position' => $pos, 'opponent_id' => $opp,
+            ])->update([
+                'games'       => DB::raw('games + 1'),
+                'wins'        => DB::raw('wins + ' . ($win ? 1 : 0)),
+                'n_stats'     => DB::raw('n_stats + 1'),
+                'sum_kills'   => DB::raw('sum_kills + ' . (int) $k),
+                'sum_deaths'  => DB::raw('sum_deaths + ' . (int) $d),
+                'sum_assists' => DB::raw('sum_assists + ' . (int) $as),
+                'sum_kp'      => DB::raw('sum_kp + ' . (int) $kp),
+                'sum_dmg'     => DB::raw('sum_dmg + ' . (int) $dmg),
+            ]);
         }
 
         // Banlar → champion_stats.bans (ALL). Maç içinde TEKİLLEŞTİR: iki takım aynı

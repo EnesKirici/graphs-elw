@@ -147,6 +147,18 @@ function MatchupRow({ m, rank, champName, champImage, version }) {
           </div>
           <span className="text-xs font-medium tabular-nums text-gray-500 w-9 text-right shrink-0">{oppWr}%</span>
         </div>
+
+        {/* Head-to-head detay: bu eşleşmedeki KDA / KP / hasar (+ @15 koridor avantajı) */}
+        {m.stats && (
+          <div className="mt-1.5 flex items-center gap-x-3 gap-y-0.5 flex-wrap text-[10px] text-gray-500">
+            <span>KDA <b className="text-gray-300 tabular-nums">{m.stats.kda.k}/{m.stats.kda.d}/{m.stats.kda.a}</b></span>
+            <span>KP <b className="text-gray-300 tabular-nums">%{m.stats.kp}</b></span>
+            <span><b className="text-gray-300 tabular-nums">{(m.stats.dmg / 1000).toFixed(1)}k</b> hasar</span>
+            {m.lane15 && (
+              <span>15dk <b className={`tabular-nums ${m.lane15.gd15 >= 0 ? "text-blue-300" : "text-red-400"}`}>{m.lane15.gd15 >= 0 ? "+" : ""}{m.lane15.gd15}</b> <span className="text-gray-600">gold</span></span>
+            )}
+          </div>
+        )}
       </div>
     </Link>
   );

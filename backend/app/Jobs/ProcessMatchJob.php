@@ -69,10 +69,11 @@ class ProcessMatchJob implements ShouldQueue
             // rune_k_done: yeni processMatch koşullu rün sayaçlarını da işledi.
             ProcessedMatch::where('match_id', $this->matchId)
                 ->update([
-                    'patch'         => $this->patchOf($detail),
-                    'rune_k_done'   => true,
-                    'matchup_done'  => true,
-                    'timeline_done' => $timelineDone,
+                    'patch'              => $this->patchOf($detail),
+                    'rune_k_done'        => true,
+                    'matchup_done'       => true,
+                    'matchup_stats_done' => true, // processMatch step 4 KDA/hasarı da işledi
+                    'timeline_done'      => $timelineDone,
                 ]);
 
             // Kaynak lig damgası → ileride elo-filtreli istatistik (yalnız boşsa yaz;

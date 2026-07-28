@@ -69,7 +69,7 @@ class ChampionBuildService
     public function getChampionCounters(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        $key = 'champion:counters:v2:' . $championId . ':' . implode(',', $patches);
+        $key = 'champion:counters:v3:' . $championId . ':' . implode(',', $patches);
 
         return Cache::remember($key, 600, function () use ($championId, $patches) {
             $statRows = ChampionStat::where('champion_id', $championId)
@@ -262,6 +262,9 @@ class ChampionBuildService
 
     /** Rakip başına en az bu kadar maç yoksa matchup listeye girmez (gürültü). */
     private const MATCHUP_MIN_GAMES = 10;
+    /** Matchup sıralaması güven sabiti: sapmayı games/(games+K) ile ağırlıklar
+     *  (az maçlı büyük sapmayı nötre çeker → istatistiksel olarak doğru sıra). */
+    private const MATCHUP_CONF_K = 40;
 
     /**
      * Pozisyon için matchup listeleri: good (en yüksek sapma) / bad (en düşük).
@@ -316,15 +319,48 @@ class ChampionBuildService
             }
             $w = (int) $rws->sum('wins');
             $wr = round($w / $g * 100, 1);
+
+            // Head-to-head detay: KDA/hasar/KP (payda n_stats, WR'nin games'inden ayrı —
+            // prune'lu maçlarda ham detay yok). @15 koridor farkı (payda n15) — Faz B doldurur.
+            $n = (int) $rws->sum('n_stats');
+            $stats = $n > 0 ? [
+                'n'   => $n,
+                'kda' => [
+                    'k' => round($rws->sum('sum_kills') / $n, 1),
+                    'd' => round($rws->sum('sum_deaths') / $n, 1),
+                    'a' => round($rws->sum('sum_assists') / $n, 1),
+                ],
+                'kp'  => (int) round($rws->sum('sum_kp') / $n),
+                'dmg' => (int) round($rws->sum('sum_dmg') / $n),
+            ] : null;
+
+            $n15 = (int) $rws->sum('n15');
+            $lane15 = $n15 > 0 ? [
+                'n'     => $n15,
+                'gd15'  => (int) round($rws->sum('sum_gd15') / $n15),
+                'csd15' => round($rws->sum('sum_csd15') / $n15, 1),
+                'xpd15' => (int) round($rws->sum('sum_xpd15') / $n15),
+            ] : null;
+
             $mu[] = [
                 'id'      => $opp,
                 'name'    => $names[$opp] ?? $opp,
                 'games'   => $g,
                 'winRate' => $wr,
                 'delta'   => round($wr - $posWinRate, 1),
+                'stats'   => $stats,   // {n, kda:{k,d,a}, kp, dmg} | null
+                'lane15'  => $lane15,  // {n, gd15, csd15, xpd15} | null (Faz B)
+                // Güven-ağırlıklı sapma — YALNIZ sıralama için (görüntülenen delta gerçek kalır).
+                '_conf'   => ($wr - $posWinRate) * $g / ($g + self::MATCHUP_CONF_K),
             ];
         }
-        usort($mu, fn ($a, $b) => $b['delta'] <=> $a['delta']);
+        // Ham sapma yerine güven-ağırlıklı sapmaya göre sırala: az maçlı büyük sapma
+        // (gürültü) çok maçlı gerçek avantajın üstüne çıkmaz.
+        usort($mu, fn ($a, $b) => $b['_conf'] <=> $a['_conf']);
+        foreach ($mu as &$m) {
+            unset($m['_conf']);
+        }
+        unset($m);
 
         return $mu;
     }
