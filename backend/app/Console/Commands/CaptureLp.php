@@ -88,11 +88,14 @@ class CaptureLp extends Command
                 $tp->last_match_id = $newest['solo'] ?? $newest['flex'] ?? $tp->last_match_id;
                 $tp->save();
 
-                // 7. Prewarm: sezon maç ÖZETLERİNİ de kur (DB-first; eksikleri rate-limit
-                //    bütçesiyle çeker) → bu hesabın profili kimse bakmadan hazır, anında açılır.
-                try {
-                    $matchService->ensureSeasonSummaries($puuid);
-                } catch (\Exception $e) {}
+                // 7. Prewarm: sezon özetlerini ARKA PLAN build'e bırak (bütçe korumalı +
+                //    kullanıcıya yield'li) → inline SINIRSIZ çekim key'i tek turda patlatmasın.
+                //    (Eskiden burada ensureSeasonSummaries sınırsız çağrılıyordu → 6 oyuncu
+                //    her 10dk'da key'i 100/100 yapıyordu; bkz. worker OFF iken bile.)
+                if (! Cache::get("season:building:{$puuid}")) {
+                    Cache::put("season:building:{$puuid}", true, 900);
+                    \App\Jobs\BuildSeasonProfileJob::dispatch($puuid);
+                }
 
                 $rankStr = $solo ? "{$solo['tier']} {$solo['rank']} {$solo['lp']}LP" : 'Unranked';
                 $this->line("  {$label}: {$rankStr}  (+{$written} snapshot)");
