@@ -127,6 +127,10 @@ return [
     */
     'meta' => [
         'patch_starts' => [
+            // TR bakımı 29 Tem 05:00 +03'te başladı (~4 sa) → maçlar bu tarihten itibaren 16.15.
+            // DİKKAT: ddragon sürümü oyun yamasından ÖNCE düşüyor (16.15.1 assets 28 Tem'de
+            // yayındaydı, oyun 29 Tem'de) → tarihi ddragon'a değil TR yama gününe göre yaz.
+            '16.15' => '2026-07-29',
             '16.14' => '2026-07-14',
             '16.13' => '2026-06-23',
             '16.12' => '2026-06-09',
@@ -198,6 +202,16 @@ return [
     'api_throttle' => [
         'per_second'  => 10,
         'per_minute'  => 180,
-        'trusted_ips' => ['127.0.0.1', '::1', '178.251.238.161'],
+        // DİKKAT: SSR isteği Cloudflare'e çıkıp origin'e geri döner ve nginx'te
+        // gerçek-IP restorasyonu açık olduğu için istemci, sunucunun KENDİ dış IP'si
+        // olarak görünür — 127.0.0.1 eşleşmesi yetmez, IPv6'yı da yazmak şart.
+        // 28 Tem 2026: bu liste ölü Plesk IP'sinde kalmıştı → SSR bir günde 1334 kez
+        // 429 yedi (en çok /summoner/search, /live/search) ve arama sayfaları
+        // sebepsiz "yüklenemedi" verdi. Sunucu/IP değişiminde deploy beklememek için
+        // env'den ekleme yapılabilir: TRUSTED_API_IPS=1.2.3.4,2a02::1
+        'trusted_ips' => array_values(array_filter(array_map('trim', array_merge(
+            ['127.0.0.1', '::1', '169.58.64.20', '2a02:c207:2346:712::1'],
+            explode(',', (string) env('TRUSTED_API_IPS', ''))
+        )))),
     ],
 ];
