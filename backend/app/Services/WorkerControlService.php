@@ -28,6 +28,17 @@ class WorkerControlService
         return (bool) AdminSetting::getValue('worker_enabled', false);
     }
 
+    /**
+     * Apex (Challenger/GM/Master) oyuncularını tarama SIRASINDA öne al. Açıkken worker
+     * en aktif oyunculara öncelik verir → yeni patch maçları çok daha hızlı toplanır,
+     * boşa "sorma" azalır. Kapalıyken tüm ligler adil (last_scanned_at) sırayla taranır.
+     * Default AÇIK (yeni patch tazeliği için); panelden değiştirilir.
+     */
+    public function apexPriority(): bool
+    {
+        return (bool) AdminSetting::getValue('worker_apex_priority', true);
+    }
+
     /** Taranacak ligler (admin seçimi ∩ config'te tanımlı olanlar). */
     public function tiers(): array
     {
@@ -73,6 +84,7 @@ class WorkerControlService
 
         return [
             'enabled'       => $this->isEnabled(),
+            'apexPriority'  => $this->apexPriority(),
             'tiers'         => $this->tiers(),
             'tiersAvailable' => config('elwgraphs.worker.tiers_available', []),
             'collectSince'  => AdminSetting::getValue('worker_collect_since', '2026-07-16'),

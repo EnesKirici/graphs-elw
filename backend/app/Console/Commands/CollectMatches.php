@@ -46,7 +46,14 @@ class CollectMatches extends Command
             return self::SUCCESS;
         }
 
-        $players = CrawlPlayer::whereIn('tier', $tiers)
+        $query = CrawlPlayer::whereIn('tier', $tiers);
+        if ($control->apexPriority()) {
+            // Apex (Challenger/GM/Master = priority 'high') ÖNCE → en aktif oyuncular,
+            // boşa "sorma" azalır, taze patch hızlı yakalanır. Panelden kapatılabilir
+            // (kapalıyken tüm ligler adil last_scanned_at sırasıyla taranır).
+            $query->orderByRaw("(priority = 'high') DESC");
+        }
+        $players = $query
             ->orderByRaw('last_scanned_at IS NULL DESC, last_scanned_at ASC')
             ->limit((int) $this->option('players'))
             ->get();

@@ -65,7 +65,7 @@ class SettingsController extends Controller
         $allowed = [
             'performance_labels', 'badge_config', 'elw_score', 'profile_design',
             'meta_insufficient_mode', 'labels_config',
-            'worker_enabled', 'worker_tiers', 'worker_collect_since',
+            'worker_enabled', 'worker_tiers', 'worker_collect_since', 'worker_apex_priority',
             'seo_overrides',
         ];
 
@@ -78,7 +78,7 @@ class SettingsController extends Controller
             $request->validate(['value' => 'required|string|in:classic,pro']);
         } elseif ($key === 'meta_insufficient_mode') {
             $request->validate(['value' => 'required|string|in:label,sim']);
-        } elseif ($key === 'worker_enabled') {
+        } elseif ($key === 'worker_enabled' || $key === 'worker_apex_priority') {
             $request->validate(['value' => 'required|boolean']);
         } elseif ($key === 'worker_collect_since') {
             $request->validate(['value' => 'required|date']);

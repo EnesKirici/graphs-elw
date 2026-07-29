@@ -41,6 +41,7 @@ export default function WorkerPage() {
 
   // Form state (status'tan beslenir, kullanıcı değiştirir, Kaydet ile yazılır)
   const [enabled, setEnabled] = useState(false);
+  const [apexPriority, setApexPriority] = useState(true);
   const [tiers, setTiers] = useState([]);
   const [since, setSince] = useState("2026-07-16");
   const dirtyRef = useRef(false);
@@ -53,6 +54,7 @@ export default function WorkerPage() {
       // otomatik yenileme kullanıcının seçimini ezmesin.
       if (syncForm || !dirtyRef.current) {
         setEnabled(!!s.enabled);
+        setApexPriority(s.apexPriority ?? true);
         setTiers(s.tiers || []);
         setSince(s.collectSince || "2026-07-16");
       }
@@ -79,6 +81,7 @@ export default function WorkerPage() {
     setMsg("");
     try {
       await putAdmin("/settings/worker_enabled", { value: enabled });
+      await putAdmin("/settings/worker_apex_priority", { value: apexPriority });
       await putAdmin("/settings/worker_tiers", { value: tiers });
       await putAdmin("/settings/worker_collect_since", { value: since });
       dirtyRef.current = false;
@@ -219,6 +222,32 @@ export default function WorkerPage() {
               className="bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def] [color-scheme:dark]"
             />
           </div>
+        </div>
+
+        {/* Apex öncelikli tarama */}
+        <div className="flex items-center justify-between gap-4 pt-4 mt-4 border-t border-edge/50">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-100">Apex öncelikli tarama</p>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed max-w-2xl">
+              Açıkken worker önce en üst ligleri (Challenger/GM/Master) tarar — en aktif oyuncular
+              olduğundan yeni patch maçları çok daha hızlı toplanır, boşa istek azalır. Alt eloları
+              (Zümrüt/Elmas) da tam kapsamak istersen kapat → tüm ligler adil sırayla taranır.
+            </p>
+          </div>
+          <button
+            onClick={() => { dirtyRef.current = true; setApexPriority((v) => !v); }}
+            role="switch"
+            aria-checked={apexPriority}
+            className={`relative w-14 h-8 rounded-full border transition-colors cursor-pointer shrink-0 ${apexPriority ? "" : "border-edge"}`}
+            style={apexPriority
+              ? { background: TONES.gold.bg, borderColor: TONES.gold.bd }
+              : { background: "rgba(255,255,255,0.05)" }}
+          >
+            <span
+              className={`absolute top-1 w-6 h-6 rounded-full shadow transition-all ${apexPriority ? "left-7" : "left-1"}`}
+              style={{ background: apexPriority ? TONES.gold.bar : "#868fa2" }}
+            />
+          </button>
         </div>
       </Card>
 
