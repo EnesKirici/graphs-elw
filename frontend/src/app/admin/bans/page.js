@@ -2,6 +2,22 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { fetchAdmin, postAdmin, deleteAdmin } from "@/lib/adminApi";
+import { Card, Button, ConfirmButton, DataTable, InfoNote } from "@/components/admin/ui";
+import { TONES } from "@/components/admin/ui/tones";
+
+const ICON_PLUS = "M12 4v16m8-8H4";
+const ICON_BAN = "M18.364 5.636a9 9 0 11-12.728 12.728 9 9 0 0112.728-12.728zM5.636 5.636l12.728 12.728";
+const ICON_CHECK = "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z";
+
+const FILTERS = [
+  { key: "active", label: "Aktif Banlar" },
+  { key: "expired", label: "Suresi Dolan" },
+  { key: "all", label: "Tumu" },
+];
+
+function isBanActive(ban) {
+  return !ban.unbanned_at && (ban.is_permanent || new Date(ban.expires_at) > Date.now());
+}
 
 export default function BansPage() {
   const [bans, setBans] = useState(null);
@@ -13,6 +29,9 @@ export default function BansPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ip_address: "", reason: "", minutes: 60, permanent: false });
   const [formLoading, setFormLoading] = useState(false);
+
+  // Ban kaldirma isleminde hangi satirin beklemede oldugunu izler (buton busy state'i icin)
+  const [unbanningId, setUnbanningId] = useState(null);
 
   const loadBans = useCallback(() => {
     setLoading(true);
@@ -43,6 +62,7 @@ export default function BansPage() {
   }
 
   async function handleUnban(id) {
+    setUnbanningId(id);
     try {
       await deleteAdmin(`/bans/${id}`);
       setMsg("Ban kaldirildi!");
@@ -50,6 +70,8 @@ export default function BansPage() {
       loadBans();
     } catch {
       setMsg("Hata olustu!");
+    } finally {
+      setUnbanningId(null);
     }
   }
 
@@ -70,164 +92,142 @@ export default function BansPage() {
     return hours > 0 ? `${hours}sa ${mins}dk` : `${mins}dk`;
   }
 
+  const rows = (bans?.data || []).map((b) => ({ ...b, _active: isBanActive(b) }));
+
+  const columns = [
+    {
+      key: "ip", label: "IP Adresi",
+      render: (b) => <span className={`text-sm text-gray-200 font-mono ${!b._active ? "opacity-50" : ""}`}>{b.ip_address}</span>,
+    },
+    {
+      key: "reason", label: "Sebep",
+      render: (b) => <span className={`text-xs text-gray-400 ${!b._active ? "opacity-50" : ""}`}>{b.reason}</span>,
+    },
+    {
+      key: "attempts", label: "Deneme",
+      render: (b) => (
+        <span className="text-xs font-mono tabular-nums" style={{ color: b.failed_attempts >= 10 ? TONES.rose.fg : undefined }}>
+          {b.failed_attempts}
+        </span>
+      ),
+    },
+    {
+      key: "banned_at", label: "Banlanma",
+      render: (b) => <span className="text-xs text-gray-500">{formatDate(b.banned_at)}</span>,
+    },
+    {
+      key: "remaining", label: "Kalan Sure",
+      render: (b) => !b._active
+        ? <span className="text-xs text-gray-600">Bitti</span>
+        : <span className="text-xs font-medium" style={{ color: b.is_permanent ? TONES.rose.fg : TONES.gold.fg }}>
+            {timeRemaining(b.expires_at, b.is_permanent)}
+          </span>,
+    },
+    {
+      key: "action", label: "Islem", align: "right", width: "160px",
+      render: (b) => !b._active ? null : (
+        <ConfirmButton
+          label="Ban Kaldir"
+          question={`"${b.ip_address}" icin ban kaldirilsin mi?`}
+          confirmLabel="Evet, kaldir"
+          busyLabel="Kaldiriliyor..."
+          onConfirm={() => handleUnban(b.id)}
+          busy={unbanningId === b.id}
+        />
+      ),
+    },
+  ];
+
+  const emptyState = filter === "active" ? (
+    <div className="flex flex-col items-center gap-2 py-4">
+      <span className="w-10 h-10 rounded-xl grid place-items-center" style={{ background: TONES.mint.bg }}>
+        <svg className="w-5 h-5" style={{ color: TONES.mint.fg }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={ICON_CHECK} />
+        </svg>
+      </span>
+      <p className="text-sm text-gray-400">Aktif ban yok — temiz!</p>
+    </div>
+  ) : "Kayit bulunamadi.";
+
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">IP Engelleme</h1>
-          <p className="text-sm text-gray-500 mt-1">Brute force ve bot denemelerini yonet</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {msg && <span className={`text-xs ${msg.includes("Hata") ? "text-red-400" : "text-emerald-400"}`}>{msg}</span>}
-          <button onClick={() => setShowForm(!showForm)}
-            className="bg-red-600 hover:bg-red-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors cursor-pointer flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            Manuel Ban
-          </button>
-        </div>
+      <div className="mb-4 flex items-center justify-end gap-3">
+        {msg && <span className="text-xs" style={{ color: msg.includes("Hata") ? TONES.rose.fg : TONES.mint.fg }}>{msg}</span>}
+        <Button variant="primary" icon={ICON_PLUS} onClick={() => setShowForm((v) => !v)}>Manuel Ban</Button>
       </div>
 
-      {/* Bilgi */}
-      <div className="glass rounded-2xl p-5 mb-6 border border-red-500/10">
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
-          <div className="text-xs text-gray-400 space-y-1">
-            <p><strong className="text-gray-300">Otomatik ban:</strong> 10 basarisiz login denemesi → 1 saat ban. 20+ deneme → 24 saat ban.</p>
-            <p><strong className="text-gray-300">Manuel ban:</strong> Supheli IP adreslerini asagidaki formla engelleyebilirsin.</p>
-            <p><strong className="text-gray-300">Engellenen IP:</strong> Admin login dahil tum admin endpoint&apos;lerine erisimi engellenir, 403 hatasi alir.</p>
-          </div>
-        </div>
-      </div>
+      <InfoNote tone="danger" title="Nasil calisir" className="mb-4">
+        <b className="text-gray-300">Otomatik ban:</b> 10 basarisiz login denemesi → 1 saat ban. 20+ deneme → 24 saat ban.<br />
+        <b className="text-gray-300">Manuel ban:</b> Supheli IP adreslerini asagidaki formla engelleyebilirsin.<br />
+        <b className="text-gray-300">Engellenen IP:</b> Admin login dahil tum admin endpoint&apos;lerine erisimi engellenir, 403 hatasi alir.
+      </InfoNote>
 
-      {/* Manuel ban formu */}
       {showForm && (
-        <div className="glass rounded-2xl p-6 mb-6 border border-red-500/20">
-          <h3 className="text-sm font-semibold text-gray-200 mb-4">Yeni IP Engelle</h3>
+        <Card title="Yeni IP Engelle" icon={ICON_PLUS} className="mb-4">
           <form onSubmit={handleBan} className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div>
               <label className="text-[10px] text-gray-500 block mb-1">IP Adresi</label>
               <input value={form.ip_address} onChange={(e) => setForm((f) => ({ ...f, ip_address: e.target.value }))}
                 placeholder="192.168.1.1" required
-                className="w-full bg-card border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-red-500/50" />
+                className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def]" />
             </div>
             <div>
               <label className="text-[10px] text-gray-500 block mb-1">Sebep</label>
               <input value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
                 placeholder="Brute force, Bot, Spam..." required
-                className="w-full bg-card border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-red-500/50" />
+                className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def]" />
             </div>
             <div>
               <label className="text-[10px] text-gray-500 block mb-1">Sure (dakika)</label>
               <div className="flex items-center gap-2">
                 <input type="number" value={form.minutes} onChange={(e) => setForm((f) => ({ ...f, minutes: Number(e.target.value) }))}
                   disabled={form.permanent} min={1}
-                  className="flex-1 bg-card border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 disabled:opacity-30 focus:outline-none focus:border-red-500/50" />
+                  className="flex-1 bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 disabled:opacity-30 focus:outline-none focus:border-[#5b8def]" />
                 <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
                   <input type="checkbox" checked={form.permanent} onChange={(e) => setForm((f) => ({ ...f, permanent: e.target.checked }))}
                     className="rounded border-gray-600" />
-                  <span className="text-[11px] text-red-400">Kalici</span>
+                  <span className="text-[11px]" style={{ color: TONES.rose.fg }}>Kalici</span>
                 </label>
               </div>
             </div>
             <div className="flex items-end">
-              <button type="submit" disabled={formLoading}
-                className="w-full bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 text-white text-sm font-medium py-2 rounded-xl transition-colors cursor-pointer">
+              <Button type="submit" variant="primary" disabled={formLoading} className="w-full">
                 {formLoading ? "Engelleniyor..." : "Engelle"}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
-      {/* Filtre */}
       <div className="flex items-center gap-2 mb-4">
-        {[
-          { key: "active", label: "Aktif Banlar" },
-          { key: "expired", label: "Suresi Dolan" },
-          { key: "all", label: "Tumu" },
-        ].map((f) => (
-          <button key={f.key} onClick={() => setFilter(f.key)}
-            className={`text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-              filter === f.key
-                ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                : "bg-soft text-gray-400 border border-edge hover:text-gray-200"
-            }`}>
-            {f.label}
-          </button>
-        ))}
+        {FILTERS.map((f) => {
+          const active = filter === f.key;
+          return (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${active ? "" : "bg-soft text-gray-400 border-edge hover:text-gray-200"}`}
+              style={active ? { color: TONES.rose.fg, background: TONES.rose.bg, borderColor: TONES.rose.bd } : undefined}>
+              {f.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Tablo */}
-      <div className="glass rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-edge/50 text-[10px] text-gray-600 uppercase tracking-wider">
-          <div className="col-span-2">IP Adresi</div>
-          <div className="col-span-3">Sebep</div>
-          <div className="col-span-1">Deneme</div>
-          <div className="col-span-2">Banlanma</div>
-          <div className="col-span-2">Kalan Sure</div>
-          <div className="col-span-2 text-right">Islem</div>
-        </div>
-
+      <Card title="Engellenen IP'ler" subtitle="IP, sebep, deneme sayisi ve kalan sureye gore listelenir." icon={ICON_BAN} flush>
         {loading ? (
           <div className="p-10 text-center">
-            <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          </div>
-        ) : !bans?.data?.length ? (
-          <div className="p-10 text-center">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <p className="text-sm text-gray-400">{filter === "active" ? "Aktif ban yok — temiz!" : "Kayit bulunamadi."}</p>
+            <div className="w-5 h-5 border-2 rounded-full animate-spin mx-auto" style={{ borderColor: TONES.rose.bar, borderTopColor: "transparent" }} />
           </div>
         ) : (
-          bans.data.map((ban) => {
-            const isActive = !ban.unbanned_at && (ban.is_permanent || new Date(ban.expires_at) > Date.now());
-            return (
-              <div key={ban.id} className={`grid grid-cols-12 gap-3 px-5 py-3 border-b border-edge/20 hover:bg-hover transition-colors ${!isActive ? "opacity-50" : ""}`}>
-                <div className="col-span-2">
-                  <span className="text-sm text-gray-200 font-mono">{ban.ip_address}</span>
-                </div>
-                <div className="col-span-3">
-                  <span className="text-xs text-gray-400">{ban.reason}</span>
-                </div>
-                <div className="col-span-1">
-                  <span className={`text-xs font-mono ${ban.failed_attempts >= 10 ? "text-red-400" : "text-gray-500"}`}>
-                    {ban.failed_attempts}
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-xs text-gray-500">{formatDate(ban.banned_at)}</span>
-                </div>
-                <div className="col-span-2">
-                  {isActive ? (
-                    <span className={`text-xs font-medium ${ban.is_permanent ? "text-red-400" : "text-yellow-400"}`}>
-                      {timeRemaining(ban.expires_at, ban.is_permanent)}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-600">Bitti</span>
-                  )}
-                </div>
-                <div className="col-span-2 text-right">
-                  {isActive && (
-                    <button onClick={() => handleUnban(ban.id)}
-                      className="text-xs text-gray-500 hover:text-emerald-400 bg-soft hover:bg-emerald-500/10 px-3 py-1 rounded-lg transition-colors cursor-pointer">
-                      Ban Kaldir
-                    </button>
-                  )}
-                </div>
+          <>
+            <DataTable columns={columns} rows={rows} rowKey={(b) => b.id} empty={emptyState} />
+            {bans?.last_page > 1 && (
+              <div className="px-5 py-3 border-t border-edge/50 text-xs text-gray-600 text-center">
+                Toplam {bans.total} kayit
               </div>
-            );
-          })
+            )}
+          </>
         )}
-
-        {bans?.last_page > 1 && (
-          <div className="px-5 py-3 border-t border-edge/50 text-xs text-gray-600 text-center">
-            Toplam {bans.total} kayit
-          </div>
-        )}
-      </div>
+      </Card>
     </>
   );
 }

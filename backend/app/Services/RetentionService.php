@@ -133,6 +133,9 @@ class RetentionService
                 'patch'   => $patch,
                 'matches' => $q->count(),
                 'kept'    => $cutoffMs === null ? true : $startMs >= $cutoffMs,
+                // Tarih penceresi (şeffaflık — admin retention tablosunun "Tarih Aralığı" kolonu).
+                'start'   => $parsed[$patch]->toDateString(),
+                'end'     => $i > 0 ? $parsed[$patchesDesc[$i - 1]]->toDateString() : null,
             ];
         }
 
@@ -141,7 +144,7 @@ class RetentionService
             $oldestMs = end($parsed)->getTimestampMs();
             $older = MatchRecord::where('game_creation', '<', $oldestMs)->count();
             if ($older > 0) {
-                $out[] = ['patch' => 'daha eski', 'matches' => $older, 'kept' => false];
+                $out[] = ['patch' => 'daha eski', 'matches' => $older, 'kept' => false, 'start' => null, 'end' => end($parsed)->toDateString()];
             }
         }
 

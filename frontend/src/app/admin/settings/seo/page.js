@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { fetchAdmin, putAdmin } from "@/lib/adminApi";
+import { Card, Badge, Button, InfoNote } from "@/components/admin/ui";
+import { TONES } from "@/components/admin/ui/tones";
 
 /*
   SEO Ayarları — sayfa title/description ezmeleri.
@@ -111,77 +113,54 @@ export default function SeoSettingsPage() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">SEO — Başlık ve Açıklamalar</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Google sonuçlarında görünen title/description metinleri. Boş alan = koddaki varsayılan (soluk yazı).
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {msg === "ok" && <span className="text-xs text-emerald-400">Kaydedildi!</span>}
-          {msg === "error" && <span className="text-xs text-red-400">Hata!</span>}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors cursor-pointer"
-          >
+      {/* Bilgi + kaydet aksiyonu */}
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+        <InfoNote tone="info" title="İpucu" className="flex-1 min-w-[280px]">
+          Title <strong className="text-gray-300">50-60 karakter</strong>, description{" "}
+          <strong className="text-gray-300">140-160 karakter</strong> arasında en iyi görünür. Şampiyon detay
+          şablonunda yer tutucular kullanılır:{" "}
+          <code className="text-gray-300 bg-black/25 px-1 py-0.5 rounded">{"{name}"}</code>{" "}
+          <code className="text-gray-300 bg-black/25 px-1 py-0.5 rounded">{"{position}"}</code>{" "}
+          <code className="text-gray-300 bg-black/25 px-1 py-0.5 rounded">{"{patch}"}</code>{" "}
+          <code className="text-gray-300 bg-black/25 px-1 py-0.5 rounded">{"{winrate}"}</code>{" "}
+          <code className="text-gray-300 bg-black/25 px-1 py-0.5 rounded">{"{title}"}</code> (şampiyonun unvanı).
+          Değişiklik deploy gerektirmez; sunucu önbelleği nedeniyle 1-2 dakika içinde yayına yansır. Sonuçları
+          Google Search Console → Performans&apos;tan takip edebilirsin.
+        </InfoNote>
+
+        <div className="flex items-center gap-3 shrink-0 pt-1">
+          {msg === "ok" && <Badge tone="mint" dot>Kaydedildi</Badge>}
+          {msg === "error" && <Badge tone="rose" dot>Hata</Badge>}
+          <Button variant="primary" onClick={handleSave} disabled={saving}>
             {saving ? "Kaydediliyor..." : "Kaydet"}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="glass rounded-2xl p-5 mb-6 border border-blue-500/10">
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div className="text-xs text-gray-400 space-y-1">
-            <p>
-              İpucu: title <strong className="text-gray-300">50-60 karakter</strong>, description{" "}
-              <strong className="text-gray-300">140-160 karakter</strong> arasında en iyi görünür.
-              Şampiyon detay şablonunda yer tutucular kullanılır:{" "}
-              <code className="text-blue-300">{"{name}"}</code> <code className="text-blue-300">{"{position}"}</code>{" "}
-              <code className="text-blue-300">{"{patch}"}</code> <code className="text-blue-300">{"{winrate}"}</code>{" "}
-              <code className="text-blue-300">{"{title}"}</code> (şampiyonun unvanı).
-            </p>
-            <p className="text-gray-500">
-              Değişiklik deploy gerektirmez; sunucu önbelleği nedeniyle 1-2 dakika içinde yayına yansır.
-              Sonuçları Google Search Console → Performans'tan takip edebilirsin.
-            </p>
-          </div>
-        </div>
-      </div>
-
+      {/* Sayfa başına title/description override'ları */}
       <div className="space-y-4">
         {PAGES.map((page) => {
           const v = values[page.key] || {};
           const titleLen = (v.title || "").length;
           const descLen = (v.description || "").length;
+          const active = !!(v.title || v.description);
           return (
-            <div key={page.key} className="glass rounded-2xl p-5 border border-edge">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <h3 className="text-sm font-semibold text-gray-100">{page.label}</h3>
-                  <span className="text-[10px] text-gray-600 font-mono">{page.path}</span>
-                </div>
-                {(v.title || v.description) && (
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                    özel metin aktif
-                  </span>
-                )}
-              </div>
-
+            <Card
+              key={page.key}
+              title={page.label}
+              subtitle={page.path}
+              actions={active ? <Badge tone="azure" dot>özel metin aktif</Badge> : null}
+            >
               <div className="space-y-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[11px] text-gray-500 uppercase tracking-wider">Title</label>
                     {titleLen > 0 && (
-                      <span className={`text-[10px] ${titleLen > 65 ? "text-amber-400" : "text-gray-600"}`}>
-                        {titleLen} karakter
-                      </span>
+                      titleLen > 65 ? (
+                        <span className="text-[10px]" style={{ color: TONES.gold.fg }}>{titleLen} karakter</span>
+                      ) : (
+                        <span className="text-[10px] text-gray-600">{titleLen} karakter</span>
+                      )
                     )}
                   </div>
                   <input
@@ -189,16 +168,18 @@ export default function SeoSettingsPage() {
                     value={v.title || ""}
                     onChange={(e) => setField(page.key, "title", e.target.value)}
                     placeholder={page.defaults.title}
-                    className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+                    className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-[#5b8def]"
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[11px] text-gray-500 uppercase tracking-wider">Description</label>
                     {descLen > 0 && (
-                      <span className={`text-[10px] ${descLen > 170 ? "text-amber-400" : "text-gray-600"}`}>
-                        {descLen} karakter
-                      </span>
+                      descLen > 170 ? (
+                        <span className="text-[10px]" style={{ color: TONES.gold.fg }}>{descLen} karakter</span>
+                      ) : (
+                        <span className="text-[10px] text-gray-600">{descLen} karakter</span>
+                      )
                     )}
                   </div>
                   <textarea
@@ -206,11 +187,11 @@ export default function SeoSettingsPage() {
                     value={v.description || ""}
                     onChange={(e) => setField(page.key, "description", e.target.value)}
                     placeholder={page.defaults.description}
-                    className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 resize-y"
+                    className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-[#5b8def] resize-y"
                   />
                 </div>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

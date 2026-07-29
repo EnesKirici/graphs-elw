@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { fetchAdmin, putAdmin } from "@/lib/adminApi";
+import { Card, Badge, Button, InfoNote } from "@/components/admin/ui";
+import { TONES } from "@/components/admin/ui/tones";
 
 const DEFAULT_CONFIG = {
   labels: [
@@ -25,6 +27,19 @@ const SCORE_COLORS = [
   { key: "red", label: "Kirmizi", css: "bg-red-500", textCss: "text-red-400", desc: "Dusuk performans (otomatik)" },
 ];
 
+// Card ikonları (heroicons outline `d` — kit stiliyle uyumlu)
+const ICON_TAG = "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 8V4a1 1 0 011-1z";
+const ICON_SWATCH = "M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01";
+const ICON_SPARKLE = "M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z";
+const ICON_EYE = "M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z";
+const ICON_SAVE = "M5 13l4 4L19 7";
+
+// Ortak input stili (sayısal/merkezli). Neon yok; focus = azure barı (#5b8def).
+const numInput = "bg-soft border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-200 text-center focus:outline-none focus:border-[#5b8def]";
+const textInput = "bg-soft border border-edge rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def]";
+
+// Canlı önizleme — SİTEDE görünen gerçek skor çipini birebir yansıtır (glow/rainbow
+// efektleri gerçek site CSS'iyle; renkler kullanıcının ayarladığı ürün renkleridir).
 function ScorePreview({ score, config }) {
   const label = config.labels.find((l) => score >= l.min) || config.labels[config.labels.length - 1];
   const ct = config.colorThresholds;
@@ -109,71 +124,63 @@ export default function ElwScoreSettingsPage() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">ELW Skor Ayarlari</h1>
-          <p className="text-sm text-gray-500 mt-1">Skor etiketleri, renkler, glow ve rainbow efektleri</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {msg === "ok" && <span className="text-xs text-emerald-400">Kaydedildi!</span>}
-          {msg === "error" && <span className="text-xs text-red-400">Hata!</span>}
-          <button onClick={handleSave} disabled={saving}
-            className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors cursor-pointer">
-            {saving ? "Kaydediliyor..." : "Kaydet"}
-          </button>
-        </div>
+      {/* Global kaydet + durum */}
+      <div className="mb-5 flex items-center justify-end gap-3">
+        {msg === "ok" && <Badge tone="mint" dot>Kaydedildi</Badge>}
+        {msg === "error" && <Badge tone="rose" dot>Hata</Badge>}
+        <Button variant="primary" size="md" icon={ICON_SAVE} onClick={handleSave} disabled={saving}>
+          {saving ? "Kaydediliyor..." : "Kaydet"}
+        </Button>
       </div>
 
-      {/* Bilgi */}
-      <div className="glass rounded-2xl p-5 mb-6 border border-blue-500/10">
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
-          <div className="text-xs text-gray-400 space-y-1">
-            <p><strong className="text-gray-300">ELW Skor</strong>, her oyuncunun mac icindeki performansini 0-10 arasi puanlayan ozel bir metriktir. Takimdaki diger oyuncularla karsilastirmali Z-score normalizasyonu kullanir.</p>
-            <p><strong className="text-emerald-400">Glow efekti:</strong> Yuksek skor alan oyuncularin kartinda parlama animasyonu gosterilir.</p>
-            <p><strong className="text-amber-400">Rainbow (Gokkusagi):</strong> Hem yuksek skor hem de macin 1. si olan oyuncuya ozel gokkusagi renk animasyonu uygulanir — MVP odulu.</p>
-          </div>
-        </div>
-      </div>
+      {/* ELW Skor açıklaması. Glow = yeşil parlama; Rainbow = MVP gökkuşağı. */}
+      <InfoNote tone="info" title="ELW Skor" className="mb-4">
+        Her oyuncunun maç içindeki performansını 0-10 arası puanlayan özel bir metriktir. Takımdaki diğer
+        oyuncularla karşılaştırmalı Z-score normalizasyonu kullanır. Aşağıdaki etiketler, renk eşikleri ve
+        glow/rainbow efektleri skor çipinin sitede nasıl görüneceğini belirler; sağdaki önizleme değişiklikleri
+        anında yansıtır.
+      </InfoNote>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sol: Etiketler + Renkler */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Sol: Etiketler + Renkler + Efektler */}
+        <div className="lg:col-span-2 space-y-4">
           {/* Skor etiketleri */}
-          <div className="glass rounded-2xl p-6">
-            <h3 className="text-sm font-semibold text-gray-200 mb-1">Skor Etiketleri</h3>
-            <p className="text-[11px] text-gray-600 mb-4">Skor bu degerin ustundeyse ilgili etiket gosterilir (yukaridan asagiya kontrol edilir)</p>
+          <Card
+            title="Skor Etiketleri"
+            subtitle="Skor bu değerin üstündeyse ilgili etiket gösterilir (yukarıdan aşağıya kontrol edilir)."
+            icon={ICON_TAG}
+          >
             <div className="space-y-2.5">
               {config.labels.map((l, idx) => (
-                <div key={idx} className="flex items-center gap-3 bg-soft rounded-xl p-3 border border-edge/30">
+                <div key={idx} className="flex items-center gap-3 bg-soft/60 rounded-xl p-3 border border-edge/40">
                   <div className="flex items-center gap-1.5 shrink-0 w-20">
-                    <span className="text-[10px] text-gray-600">{">="}</span>
+                    <span className="text-[10px] text-gray-500">{">="}</span>
                     <input type="number" step="0.5" value={l.min}
                       onChange={(e) => updateLabel(idx, "min", Number(e.target.value))}
-                      className="w-14 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                      className={`w-14 ${numInput}`} />
                   </div>
                   <input value={l.label} onChange={(e) => updateLabel(idx, "label", e.target.value)}
-                    className="flex-1 bg-card border border-edge rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500/50" />
+                    className={`flex-1 ${textInput}`} />
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Renk esikleri */}
-          <div className="glass rounded-2xl p-6">
-            <h3 className="text-sm font-semibold text-gray-200 mb-1">Renk Esikleri</h3>
-            <p className="text-[11px] text-gray-600 mb-4">Skor kartinin ve barinin renk sinirlarini belirler</p>
+          <Card
+            title="Renk Eşikleri"
+            subtitle="Skor kartının ve barının renk sınırlarını belirler. Renk göstergeleri sitede görünen gerçek renklerdir."
+            icon={ICON_SWATCH}
+          >
             <div className="space-y-3">
               {SCORE_COLORS.map((c) => {
                 const value = config.colorThresholds[c.key];
                 if (c.key === "red") {
                   return (
-                    <div key={c.key} className="flex items-center gap-3 opacity-50">
+                    <div key={c.key} className="flex items-center gap-3 opacity-60">
                       <div className={`w-4 h-4 rounded-full ${c.css} shrink-0`} />
-                      <span className="text-sm text-gray-500 w-16">{c.label}</span>
-                      <span className="text-xs text-gray-600">{"<"} {config.colorThresholds.yellow} (otomatik — sari esiginin altindaki her sey)</span>
+                      <span className="text-sm text-gray-400 w-16">{c.label}</span>
+                      <span className="text-xs text-gray-500">{"<"} {config.colorThresholds.yellow} (otomatik — sarı eşiğinin altındaki her şey)</span>
                     </div>
                   );
                 }
@@ -181,75 +188,80 @@ export default function ElwScoreSettingsPage() {
                   <div key={c.key} className="flex items-center gap-3">
                     <div className={`w-4 h-4 rounded-full ${c.css} shrink-0`} />
                     <span className="text-sm text-gray-300 w-16">{c.label}</span>
-                    <span className="text-[10px] text-gray-600">{">="}</span>
+                    <span className="text-[10px] text-gray-500">{">="}</span>
                     <input type="number" step="0.5" value={value}
                       onChange={(e) => updateColor(c.key, Number(e.target.value))}
-                      className="w-16 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
-                    <span className="text-[10px] text-gray-600">{c.desc}</span>
+                      className={`w-16 ${numInput}`} />
+                    <span className="text-[10px] text-gray-500">{c.desc}</span>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </Card>
 
           {/* Glow + Rainbow */}
-          <div className="glass rounded-2xl p-6">
-            <h3 className="text-sm font-semibold text-gray-200 mb-4">Efekt Ayarlari</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card
+            title="Efekt Ayarları"
+            subtitle="Glow: yüksek skor alan oyuncunun kartında parlama animasyonu. Gökkuşağı (MVP): hem yüksek skor hem maçın 1.si olan oyuncuya özel gökkuşağı renk animasyonu — MVP ödülü."
+            icon={ICON_SPARKLE}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Glow */}
-              <div className="bg-soft rounded-xl p-4 border border-emerald-500/10">
+              <div className="rounded-xl p-4 border" style={{ borderColor: TONES.mint.bd, background: TONES.mint.bg }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500 perf-glow perf-glow-emerald" />
-                  <h4 className="text-sm font-medium text-emerald-400">Glow Efekti</h4>
+                  {/* gerçek site glow efekti önizlemesi */}
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 perf-glow perf-glow-emerald" />
+                  <h4 className="text-sm font-medium" style={{ color: TONES.mint.fg }}>Glow Efekti</h4>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Esik Skoru</span>
+                    <span className="text-xs text-gray-400">Eşik Skoru</span>
                     <input type="number" step="0.5" value={config.glowThreshold}
                       onChange={(e) => update("glowThreshold", Number(e.target.value))}
-                      className="w-16 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                      className={`w-16 ${numInput}`} />
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-400">Shimmer Metin</span>
                     <button onClick={() => update("shimmerEnabled", !config.shimmerEnabled)}
-                      className={`w-10 h-5.5 rounded-full relative transition-colors cursor-pointer ${config.shimmerEnabled ? "bg-emerald-500" : "bg-gray-700"}`}>
-                      <div className={`w-4 h-4 bg-white rounded-full absolute top-[3px] transition-transform ${config.shimmerEnabled ? "left-[22px]" : "left-[3px]"}`} />
+                      className="w-10 h-5.5 rounded-full relative transition-colors cursor-pointer"
+                      style={{ background: config.shimmerEnabled ? TONES.mint.bar : "rgba(255,255,255,0.12)" }}>
+                      <span className={`w-4 h-4 bg-white rounded-full absolute top-[3px] transition-transform ${config.shimmerEnabled ? "left-[22px]" : "left-[3px]"}`} />
                     </button>
                   </div>
-                  <p className="text-[10px] text-gray-600">Bu esik ve uzerindeki skorlar parlama animasyonu alir</p>
+                  <p className="text-[10px] text-gray-500">Bu eşik ve üzerindeki skorlar parlama animasyonu alır.</p>
                 </div>
               </div>
 
               {/* Rainbow */}
-              <div className="bg-soft rounded-xl p-4 border border-amber-500/10">
+              <div className="rounded-xl p-4 border" style={{ borderColor: TONES.gold.bd, background: TONES.gold.bg }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-3 h-3 rounded-full elw-rainbow-bar" />
-                  <h4 className="text-sm font-medium text-amber-400">Gokkusagi (MVP)</h4>
+                  {/* gerçek site rainbow efekti önizlemesi */}
+                  <span className="w-3 h-3 rounded-full elw-rainbow-bar" />
+                  <h4 className="text-sm font-medium" style={{ color: TONES.gold.fg }}>Gökkuşağı (MVP)</h4>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Esik Skoru</span>
+                    <span className="text-xs text-gray-400">Eşik Skoru</span>
                     <input type="number" step="0.5" value={config.rainbowThreshold}
                       onChange={(e) => update("rainbowThreshold", Number(e.target.value))}
-                      className="w-16 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                      className={`w-16 ${numInput}`} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Gerekli Siralama</span>
+                    <span className="text-xs text-gray-400">Gerekli Sıralama</span>
                     <input type="number" value={config.rainbowRankRequired}
                       onChange={(e) => update("rainbowRankRequired", Number(e.target.value))}
-                      className="w-16 bg-card border border-edge rounded-lg px-2 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                      className={`w-16 ${numInput}`} />
                   </div>
-                  <p className="text-[10px] text-gray-600">Skor esigi + macta {config.rainbowRankRequired}. sirada olan oyuncuya ozel gokkusagi efekti uygulanir</p>
+                  <p className="text-[10px] text-gray-500">Skor eşiği + maçta {config.rainbowRankRequired}. sırada olan oyuncuya özel gökkuşağı efekti uygulanır.</p>
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Sag: Canli onizleme */}
-        <div className="space-y-6">
-          <div className="glass rounded-2xl p-6 sticky top-6">
-            <h3 className="text-sm font-semibold text-gray-200 mb-4">Canli Onizleme</h3>
+        <div className="space-y-4">
+          <Card title="Canlı Önizleme" icon={ICON_EYE} className="sticky top-6">
             <div className="space-y-2.5">
               <ScorePreview score={9.2} config={config} />
               <ScorePreview score={8.5} config={config} />
@@ -258,8 +270,8 @@ export default function ElwScoreSettingsPage() {
               <ScorePreview score={4.0} config={config} />
               <ScorePreview score={2.5} config={config} />
             </div>
-            <p className="text-[10px] text-gray-600 mt-3 text-center">Ayarlari degistirdikce bu onizleme guncellenir</p>
-          </div>
+            <p className="text-[10px] text-gray-500 mt-3 text-center">Ayarları değiştirdikçe bu önizleme güncellenir.</p>
+          </Card>
         </div>
       </div>
     </>

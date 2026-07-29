@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { fetchAdmin, putAdmin } from "@/lib/adminApi";
+import { Card, Button, InfoNote } from "@/components/admin/ui";
+// Palet — dosyada zaten `TONES` (iyi/kotu/bilgi/notr veri listesi) var, cakismasin diye alias.
+import { TONES as UI_TONES } from "@/components/admin/ui/tones";
+
+// Kart başlıkları için ikon (nav'daki canlı maç ikonuyla aynı).
+const ICON_LIVE = "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z";
 
 // Bağlam sekmeleri (catalog'da live dolu; profile/match ileride).
 const CONTEXTS = [
@@ -180,44 +186,34 @@ export default function LiveLabelsSettingsPage() {
   const ctxKeys = catalog?.[activeCtx] ? Object.keys(catalog[activeCtx]) : [];
   const ctxMeta = CONTEXTS.find((c) => c.id === activeCtx);
 
+  const saveAction = (
+    <div className="flex items-center gap-3">
+      {msg === "ok" && <span className="text-xs" style={{ color: UI_TONES.mint.fg }}>Kaydedildi!</span>}
+      {msg === "error" && <span className="text-xs" style={{ color: UI_TONES.rose.fg }}>Hata oluştu!</span>}
+      <Button variant="primary" size="md" onClick={handleSave} disabled={saving}>
+        {saving ? "Kaydediliyor..." : "Kaydet"}
+      </Button>
+    </div>
+  );
+
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">Canlı Maç Etiketleri</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Bağlamsal oynayış etiketleri (OTP, Main&apos;i Karşıda, Zayıf Farmcı…) — aç/kapa, ad, renk ve eşikleri buradan yönet
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {msg === "ok" && <span className="text-xs text-emerald-400">Kaydedildi!</span>}
-          {msg === "error" && <span className="text-xs text-red-400">Hata oluştu!</span>}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors cursor-pointer"
-          >
-            {saving ? "Kaydediliyor..." : "Kaydet"}
-          </button>
-        </div>
-      </div>
-
       {/* Bilgi kutusu */}
-      <div className="glass rounded-2xl p-5 mb-6 border border-blue-500/10">
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
-          <div className="text-xs text-gray-400 space-y-1.5">
-            <p><strong className="text-gray-300">Nasıl çalışır?</strong> Her etiketin bir koşulu (kodda) ve bir eşiği vardır. Oyuncunun verisi eşiği geçerse etiket kart üzerinde gösterilir. <strong className="text-gray-300">{"{champ}"}</strong> şablonu otomatik olarak gerçek şampiyon adıyla değişir.</p>
-            <p><strong className="text-gray-300">Eşikler (gelişmiş):</strong> Her satırı genişleterek (ok) sayısal eşikleri ayarlayabilirsin. Renk için 4 hazır ton ya da özel renk seçilebilir.</p>
-            <p className="text-gray-500">Not: Yalnız varsayılandan değiştirdiğin değerler kaydedilir; gerisi koddaki katalog varsayılanını kullanır.</p>
-          </div>
-        </div>
-      </div>
+      <InfoNote tone="info" title="Nasıl çalışır?" className="mb-5">
+        <span className="block">
+          Her etiketin bir koşulu (kodda) ve bir eşiği vardır. Oyuncunun verisi eşiği geçerse etiket kart üzerinde gösterilir.{" "}
+          <strong className="text-gray-300">{"{champ}"}</strong> şablonu otomatik olarak gerçek şampiyon adıyla değişir.
+        </span>
+        <span className="block mt-1.5">
+          <strong className="text-gray-300">Eşikler (gelişmiş):</strong> Her satırı genişleterek (ok) sayısal eşikleri ayarlayabilirsin. Renk için 4 hazır ton ya da özel renk seçilebilir.
+        </span>
+        <span className="block mt-1.5 text-gray-500">
+          Not: Yalnız varsayılandan değiştirdiğin değerler kaydedilir; gerisi koddaki katalog varsayılanını kullanır.
+        </span>
+      </InfoNote>
 
       {/* Bağlam sekmeleri */}
-      <div className="flex items-center gap-2 mb-5">
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
         {CONTEXTS.map((c) => {
           const count = catalog?.[c.id] ? Object.keys(catalog[c.id]).length : 0;
           const active = activeCtx === c.id;
@@ -227,10 +223,9 @@ export default function LiveLabelsSettingsPage() {
               key={c.id}
               onClick={() => { setActiveCtx(c.id); setExpandedKey(null); }}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer border ${
-                active
-                  ? "bg-blue-500/15 text-blue-400 border-blue-500/40"
-                  : "text-gray-400 border-edge hover:text-gray-200 hover:border-edge/80"
+                active ? "" : "text-gray-400 border-edge hover:text-gray-200 hover:border-edge/80"
               }`}
+              style={active ? { color: UI_TONES.azure.fg, background: UI_TONES.azure.bg, borderColor: UI_TONES.azure.bd } : undefined}
             >
               {c.label}
               <span className={`ml-2 text-[10px] ${empty ? "text-gray-600" : "text-gray-500"}`}>
@@ -241,144 +236,152 @@ export default function LiveLabelsSettingsPage() {
         })}
       </div>
 
-      {ctxKeys.length === 0 ? (
-        <div className="glass rounded-2xl p-10 text-center">
-          <p className="text-sm text-gray-500">{ctxMeta?.label} etiketleri henüz tanımlı değil — yakında eklenecek.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {ctxKeys.map((key) => {
-            const def = catalog[activeCtx][key];
-            const w = working[activeCtx]?.[key];
-            if (!w) return null;
-            const isExpanded = expandedKey === key;
-            const thKeys = Object.keys(def.thresholds || {});
+      <Card
+        title={`${ctxMeta?.label} Etiketleri`}
+        subtitle={ctxMeta?.desc}
+        icon={ICON_LIVE}
+        actions={saveAction}
+      >
+        {ctxKeys.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-10">
+            {ctxMeta?.label} etiketleri henüz tanımlı değil — yakında eklenecek.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {ctxKeys.map((key) => {
+              const def = catalog[activeCtx][key];
+              const w = working[activeCtx]?.[key];
+              if (!w) return null;
+              const isExpanded = expandedKey === key;
+              const thKeys = Object.keys(def.thresholds || {});
 
-            return (
-              <div key={key} className={`glass rounded-2xl overflow-hidden transition-all ${w.enabled ? "" : "opacity-50"}`}>
-                {/* Ana satır — basit ayarlar */}
-                <div className="flex items-center gap-3 px-5 py-4">
-                  {/* Aç/kapa */}
-                  <button
-                    onClick={() => updateLabel(activeCtx, key, { enabled: !w.enabled })}
-                    title={w.enabled ? "Açık" : "Kapalı"}
-                    className={`w-10 h-5.5 rounded-full relative transition-colors cursor-pointer shrink-0 ${w.enabled ? "bg-emerald-500" : "bg-gray-700"}`}
-                  >
-                    <div className={`w-4 h-4 bg-white rounded-full absolute top-[3px] transition-transform ${w.enabled ? "left-[22px]" : "left-[3px]"}`} />
-                  </button>
+              return (
+                <div key={key} className={`rounded-xl border border-edge bg-card/60 overflow-hidden transition-all ${w.enabled ? "" : "opacity-50"}`}>
+                  {/* Ana satır — basit ayarlar */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    {/* Aç/kapa */}
+                    <button
+                      onClick={() => updateLabel(activeCtx, key, { enabled: !w.enabled })}
+                      title={w.enabled ? "Açık" : "Kapalı"}
+                      className="w-10 h-5.5 rounded-full relative transition-colors cursor-pointer shrink-0"
+                      style={{ background: w.enabled ? UI_TONES.mint.bar : "rgba(255,255,255,0.12)" }}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full absolute top-[3px] transition-transform ${w.enabled ? "left-[22px]" : "left-[3px]"}`} />
+                    </button>
 
-                  {/* Önizleme */}
-                  <div className="w-40 shrink-0">
-                    <LabelChip name={w.name} color={w.color} />
+                    {/* Önizleme */}
+                    <div className="w-40 shrink-0">
+                      <LabelChip name={w.name} color={w.color} />
+                    </div>
+
+                    {/* Ad input */}
+                    <input
+                      value={w.name}
+                      onChange={(e) => updateLabel(activeCtx, key, { name: e.target.value })}
+                      className="flex-1 min-w-0 bg-soft border border-edge rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def]"
+                    />
+
+                    {/* Ton renk seçici (renk değerleri backend DATA'sı, aynen korunur) */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {TONES.map((t) => {
+                        const c = tones[t.id] || "#94a3b8";
+                        const selected = !w.customColor && w.tone === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() => pickTone(activeCtx, key, t.id)}
+                            title={t.label}
+                            className={`w-5 h-5 rounded-full cursor-pointer transition-all ${selected ? "ring-2 ring-white/70 ring-offset-1 ring-offset-card scale-110" : "opacity-40 hover:opacity-70"}`}
+                            style={{ background: c }}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {/* Eşik sayısı */}
+                    <span className="text-[10px] text-gray-600 w-12 text-right shrink-0">
+                      {thKeys.length ? `${thKeys.length} eşik` : "eşiksiz"}
+                    </span>
+
+                    {/* Genişlet */}
+                    <button
+                      onClick={() => setExpandedKey(isExpanded ? null : key)}
+                      className="text-gray-500 hover:text-gray-300 cursor-pointer p-1 transition-colors shrink-0"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
                   </div>
 
-                  {/* Ad input */}
-                  <input
-                    value={w.name}
-                    onChange={(e) => updateLabel(activeCtx, key, { name: e.target.value })}
-                    className="flex-1 min-w-0 bg-soft border border-edge rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500/50"
-                  />
+                  {/* Genişletilmiş — gelişmiş ayarlar */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-0 space-y-4 border-t border-edge/40">
+                      {/* Açıklama */}
+                      <p className="text-[11px] text-gray-500 pt-4">{def.desc}</p>
 
-                  {/* Ton renk seçici */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {TONES.map((t) => {
-                      const c = tones[t.id] || "#94a3b8";
-                      const selected = !w.customColor && w.tone === t.id;
-                      return (
-                        <button
-                          key={t.id}
-                          onClick={() => pickTone(activeCtx, key, t.id)}
-                          title={t.label}
-                          className={`w-5 h-5 rounded-full cursor-pointer transition-all ${selected ? "ring-2 ring-white/70 ring-offset-1 ring-offset-card scale-110" : "opacity-40 hover:opacity-70"}`}
-                          style={{ background: c }}
+                      {/* Özel renk */}
+                      <div className="flex items-center gap-3">
+                        <label className="text-[11px] text-gray-500">Özel renk</label>
+                        <input
+                          type="color"
+                          value={w.color}
+                          onChange={(e) => updateLabel(activeCtx, key, { color: e.target.value, customColor: true })}
+                          className="w-8 h-8 rounded-lg bg-transparent border border-edge cursor-pointer p-0.5"
                         />
-                      );
-                    })}
-                  </div>
-
-                  {/* Eşik sayısı */}
-                  <span className="text-[10px] text-gray-600 w-12 text-right shrink-0">
-                    {thKeys.length ? `${thKeys.length} eşik` : "eşiksiz"}
-                  </span>
-
-                  {/* Genişlet */}
-                  <button
-                    onClick={() => setExpandedKey(isExpanded ? null : key)}
-                    className="text-gray-500 hover:text-gray-300 cursor-pointer p-1 transition-colors shrink-0"
-                  >
-                    <svg className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Genişletilmiş — gelişmiş ayarlar */}
-                {isExpanded && (
-                  <div className="px-5 pb-5 pt-0 space-y-4 border-t border-edge/30">
-                    {/* Açıklama */}
-                    <p className="text-[11px] text-gray-500 pt-4">{def.desc}</p>
-
-                    {/* Özel renk */}
-                    <div className="flex items-center gap-3">
-                      <label className="text-[11px] text-gray-500">Özel renk</label>
-                      <input
-                        type="color"
-                        value={w.color}
-                        onChange={(e) => updateLabel(activeCtx, key, { color: e.target.value, customColor: true })}
-                        className="w-8 h-8 rounded-lg bg-transparent border border-edge cursor-pointer p-0.5"
-                      />
-                      <span className="text-[11px] text-gray-600 font-mono">{w.color}</span>
-                      {w.customColor && (
-                        <button
-                          onClick={() => pickTone(activeCtx, key, w.tone)}
-                          className="text-[11px] text-gray-500 hover:text-blue-400 cursor-pointer"
-                        >
-                          tona dön
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Eşikler */}
-                    {thKeys.length > 0 && (
-                      <div>
-                        <label className="text-[11px] text-gray-500 block mb-3">Eşikler (gelişmiş)</label>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                          {thKeys.map((tk) => {
-                            const meta = TH_META[tk] || { label: tk, help: "" };
-                            return (
-                              <div key={tk} className="bg-soft rounded-xl p-3 border border-edge/50">
-                                <label className="text-[10px] text-gray-500 block mb-1.5">{meta.label}</label>
-                                <input
-                                  type="number"
-                                  step="any"
-                                  value={w.thresholds?.[tk] ?? ""}
-                                  onChange={(e) => updateThreshold(activeCtx, key, tk, e.target.value === "" ? "" : Number(e.target.value))}
-                                  className="w-full bg-card border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50"
-                                />
-                                <p className="text-[9px] text-gray-600 mt-1">{meta.help}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <span className="text-[11px] text-gray-600 font-mono">{w.color}</span>
+                        {w.customColor && (
+                          <button
+                            onClick={() => pickTone(activeCtx, key, w.tone)}
+                            className="text-[11px] text-gray-500 hover:text-[#8ab4f8] cursor-pointer transition-colors"
+                          >
+                            tona dön
+                          </button>
+                        )}
                       </div>
-                    )}
 
-                    {/* Varsayılana dön */}
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => resetLabel(activeCtx, key)}
-                        className="text-[11px] text-gray-500 hover:text-red-400 cursor-pointer transition-colors"
-                      >
-                        Bu etiketi varsayılana döndür
-                      </button>
+                      {/* Eşikler */}
+                      {thKeys.length > 0 && (
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-3">Eşikler (gelişmiş)</label>
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            {thKeys.map((tk) => {
+                              const meta = TH_META[tk] || { label: tk, help: "" };
+                              return (
+                                <div key={tk} className="bg-soft rounded-lg p-3 border border-edge/60">
+                                  <label className="text-[10px] text-gray-500 block mb-1.5">{meta.label}</label>
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    value={w.thresholds?.[tk] ?? ""}
+                                    onChange={(e) => updateThreshold(activeCtx, key, tk, e.target.value === "" ? "" : Number(e.target.value))}
+                                    className="w-full bg-card border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-[#5b8def]"
+                                  />
+                                  <p className="text-[9px] text-gray-600 mt-1">{meta.help}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Varsayılana dön */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => resetLabel(activeCtx, key)}
+                          className="text-[11px] text-gray-500 hover:text-[#ef8ba0] cursor-pointer transition-colors"
+                        >
+                          Bu etiketi varsayılana döndür
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
     </>
   );
 }

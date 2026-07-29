@@ -3,6 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 import { fetchAdmin, deleteAdmin } from "@/lib/adminApi";
 import Link from "next/link";
+import { Badge, Button } from "@/components/admin/ui";
+import { TONES } from "@/components/admin/ui/tones";
+
+// Şiddet seviyesi → tone eşlemesi (yüksek=rose, orta=gold, düşük=azure).
+const SEV_CONFIG = {
+  critical: { label: "KRITIK", tone: "rose", icon: "M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+  scan:     { label: "TARAMA", tone: "gold", icon: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" },
+  flood:    { label: "FLOOD", tone: "gold", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
+  bot:      { label: "BOT", tone: "azure", icon: "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" },
+};
 
 export default function BanAlerts() {
   const [alerts, setAlerts] = useState([]);
@@ -46,42 +56,40 @@ export default function BanAlerts() {
 
   if (alerts.length === 0 && activeBans === 0) return null;
 
+  const hasAlerts = alerts.length > 0;
+  const borderTone = hasAlerts ? TONES.rose : TONES.gold;
+
   return (
-    <div className={`mb-6 glass rounded-2xl border transition-all duration-500 ${
-      alerts.length > 0
-        ? `border-red-500/30 ${flash ? "shadow-lg shadow-red-500/20" : ""}`
-        : "border-yellow-500/20"
-    }`}>
+    <div
+      className="mb-6 rounded-2xl border bg-card/80 backdrop-blur-sm transition-all duration-500"
+      style={{
+        borderColor: borderTone.bd,
+        boxShadow: hasAlerts && flash ? `0 8px 24px -8px ${TONES.rose.bar}66` : "none",
+      }}
+    >
       {/* Header */}
-      <div className="px-5 py-3.5 flex items-center justify-between border-b border-edge/50">
+      <div className="px-5 py-3.5 flex items-center justify-between border-b border-edge/60">
         <div className="flex items-center gap-3">
-          {alerts.length > 0 && (
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+          {hasAlerts && (
+            <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: TONES.rose.bar }} />
           )}
           <h3 className="text-sm font-semibold text-gray-200">
-            {alerts.length > 0 ? "Guvenlik Bildirimleri" : "Guvenlik Durumu"}
+            {hasAlerts ? "Guvenlik Bildirimleri" : "Guvenlik Durumu"}
           </h3>
-          {alerts.length > 0 && (
-            <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-medium">
-              {alerts.length} yeni
-            </span>
-          )}
+          {hasAlerts && <Badge tone="rose">{alerts.length} yeni</Badge>}
           {activeBans > 0 && (
-            <Link href="/admin/bans" className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-medium hover:bg-yellow-500/30 transition-colors">
-              {activeBans} aktif ban
+            <Link href="/admin/bans" className="hover:opacity-80 transition-opacity">
+              <Badge tone="gold">{activeBans} aktif ban</Badge>
             </Link>
           )}
         </div>
-        {alerts.length > 0 && (
-          <button onClick={handleClear}
-            className="text-[11px] text-gray-500 hover:text-gray-300 cursor-pointer transition-colors">
-            Temizle
-          </button>
+        {hasAlerts && (
+          <Button variant="ghost" size="sm" onClick={handleClear}>Temizle</Button>
         )}
       </div>
 
       {/* Alert listesi */}
-      {alerts.length > 0 && (
+      {hasAlerts && (
         <div className="max-h-72 overflow-y-auto divide-y divide-edge/20">
           {[...alerts].reverse().map((alert, i) => {
             const time = new Date(alert.time);
@@ -89,25 +97,24 @@ export default function BanAlerts() {
             const dateStr = time.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" });
 
             const sev = alert.severity || "bot";
-            const sevConfig = {
-              critical: { label: "KRITIK", bg: "bg-red-600/20", text: "text-red-400", icon: "M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z", rowBg: "bg-red-500/[0.05]" },
-              scan:     { label: "TARAMA", bg: "bg-orange-500/20", text: "text-orange-400", icon: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z", rowBg: "" },
-              flood:    { label: "FLOOD", bg: "bg-yellow-500/20", text: "text-yellow-400", icon: "M13 10V3L4 14h7v7l9-11h-7z", rowBg: "" },
-              bot:      { label: "BOT", bg: "bg-red-500/20", text: "text-red-400", icon: "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636", rowBg: "" },
-            };
-            const s = sevConfig[sev] || sevConfig.bot;
+            const s = SEV_CONFIG[sev] || SEV_CONFIG.bot;
+            const t = TONES[s.tone];
 
             return (
-              <div key={i} className={`px-5 py-3 flex items-center gap-4 transition-colors ${s.rowBg}`}>
-                <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center shrink-0`}>
-                  <svg className={`w-4 h-4 ${s.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div
+                key={i}
+                className="px-5 py-3 flex items-center gap-4 transition-colors"
+                style={sev === "critical" ? { background: "rgba(219,106,131,0.05)" } : undefined}
+              >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: t.bg }}>
+                  <svg className="w-4 h-4" style={{ color: t.fg }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={s.icon} />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-red-400 font-mono font-medium">{alert.ip}</span>
-                    <span className={`text-[9px] ${s.bg} ${s.text} px-1.5 py-0.5 rounded font-bold`}>{s.label}</span>
+                    <span className="text-sm font-mono font-medium" style={{ color: TONES.rose.fg }}>{alert.ip}</span>
+                    <Badge tone={s.tone} className="text-[9px] font-bold">{s.label}</Badge>
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5 truncate">{alert.reason}</p>
                 </div>

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchAdmin, putAdmin, postAdmin } from "@/lib/adminApi";
+import { Card, StatTile, Badge, Button, InfoNote } from "@/components/admin/ui";
+import { TONES, toneOf } from "@/components/admin/ui/tones";
 
 const TIER_LABELS = {
   EMERALD: "Zümrüt",
@@ -11,23 +13,23 @@ const TIER_LABELS = {
   CHALLENGER: "Challenger",
 };
 
-const TIER_COLORS = {
-  EMERALD: "text-emerald-400 border-emerald-500/40 bg-emerald-500/10",
-  DIAMOND: "text-sky-400 border-sky-500/40 bg-sky-500/10",
-  MASTER: "text-purple-400 border-purple-500/40 bg-purple-500/10",
-  GRANDMASTER: "text-red-400 border-red-500/40 bg-red-500/10",
-  CHALLENGER: "text-amber-400 border-amber-500/40 bg-amber-500/10",
+// Lig → tone paleti (muted, neon değil). Aktif çipin rengini buradan alır.
+const TIER_TONES = {
+  EMERALD: "mint",
+  DIAMOND: "azure",
+  MASTER: "violet",
+  GRANDMASTER: "rose",
+  CHALLENGER: "gold",
 };
 
-function StatCard({ label, value, hint }) {
-  return (
-    <div className="glass rounded-2xl p-4 border border-edge">
-      <p className="text-[11px] text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className="text-xl font-bold text-white mt-1">{value}</p>
-      {hint ? <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p> : null}
-    </div>
-  );
-}
+const ICON_COG = "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z";
+const ICON_BOLT = "M13 10V3L4 14h7v7l9-11h-7z";
+const ICON_CHECK = "M5 13l4 4L19 7";
+const ICON_USERS = "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z";
+const ICON_QUEUE = "M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4";
+const ICON_ACTIVITY = "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z";
+const ICON_SEARCH = "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z";
+const ICON_DOWNLOAD = "M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4";
 
 export default function WorkerPage() {
   const [status, setStatus] = useState(null);
@@ -108,144 +110,156 @@ export default function WorkerPage() {
 
   const rate = status?.rate || {};
   const poolByTier = status?.poolByTier || {};
+  const onCooldown = rate.cooldownUntil > 0;
 
   return (
     <>
-      {/* Başlık + kaydet */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">Meta Worker</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Ladder taraması + maç toplama. Personal key bütçesiyle küçük turlar halinde çalışır;
-            bir kullanıcı siteyi kullanırken worker otomatik yol verir.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {msg === "ok" && <span className="text-xs text-emerald-400">Kaydedildi!</span>}
-          {msg === "error" && <span className="text-xs text-red-400">Hata!</span>}
+      {/* Canlı worker durumu */}
+      {status && (
+        <InfoNote
+          tone={status.enabled ? "success" : "warn"}
+          title={status.enabled ? "Worker çalışıyor" : "Worker kapalı"}
+          className="mb-4"
+        >
+          {status.enabled ? (
+            <>
+              Ladder taraması her gece 04:15, maç toplama 10 dakikada bir (tur başına ~40 maç).
+              Personal key bütçesiyle küçük turlar halinde çalışır; bir kullanıcı siteyi kullanırken
+              worker otomatik yol verir.
+            </>
+          ) : (
+            <>
+              Kuyruktaki işler biter, yenisi başlamaz. Yeniden başlatmak için aşağıdaki anahtarı aç
+              ve Kaydet&apos;e bas.
+            </>
+          )}
+        </InfoNote>
+      )}
+
+      {/* Worker ayarları — aç/kapa + ligler + tarih (hepsi tek Kaydet ile yazılır) */}
+      <Card
+        title="Worker Ayarları"
+        subtitle="Ladder taraması + maç toplama. Değişiklikler Kaydet'e basana kadar uygulanmaz."
+        icon={ICON_COG}
+        className="mb-4"
+        actions={
+          <div className="flex items-center gap-2">
+            {msg === "ok" && <Badge tone="mint" dot>Kaydedildi</Badge>}
+            {msg === "error" && <Badge tone="rose" dot>Hata</Badge>}
+            <Button variant="primary" size="sm" icon={ICON_CHECK} onClick={handleSave} disabled={saving}>
+              {saving ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+          </div>
+        }
+      >
+        {/* Aç / Kapa */}
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-edge/50">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-100">Worker&apos;ı çalıştır</p>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              Açıkken ladder taraması + maç toplama otomatik döner. Kapatınca kuyruktaki işler biter,
+              yenisi başlamaz.
+            </p>
+          </div>
           <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors cursor-pointer"
+            onClick={() => { dirtyRef.current = true; setEnabled((v) => !v); }}
+            role="switch"
+            aria-checked={enabled}
+            className={`relative w-14 h-8 rounded-full border transition-colors cursor-pointer shrink-0 ${enabled ? "" : "border-edge"}`}
+            style={enabled
+              ? { background: TONES.mint.bg, borderColor: TONES.mint.bd }
+              : { background: "rgba(255,255,255,0.05)" }}
           >
-            {saving ? "Kaydediliyor..." : "Kaydet"}
+            <span
+              className={`absolute top-1 w-6 h-6 rounded-full shadow transition-all ${enabled ? "left-7" : "left-1"}`}
+              style={{ background: enabled ? TONES.mint.bar : "#868fa2" }}
+            />
           </button>
         </div>
-      </div>
 
-      {/* Aç / Kapa */}
-      <div className="glass rounded-2xl p-5 mb-4 border border-edge flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-100">Worker</h3>
-          <p className="text-xs text-gray-500 mt-1">
-            Açıkken: ladder taraması her gece 04:15, maç toplama 10 dakikada bir (tur başına ~40 maç).
-            Kapatınca kuyruktaki işler biter, yenisi başlamaz.
-          </p>
-        </div>
-        <button
-          onClick={() => { dirtyRef.current = true; setEnabled((v) => !v); }}
-          role="switch"
-          aria-checked={enabled}
-          className={`relative w-14 h-8 rounded-full transition-colors cursor-pointer shrink-0 ${
-            enabled ? "bg-emerald-500/80" : "bg-gray-600/60"
-          }`}
-        >
-          <span
-            className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow transition-all ${
-              enabled ? "left-7" : "left-1"
-            }`}
-          />
-        </button>
-      </div>
+        {/* Lig seçimi + tarih */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4">
+          <div>
+            <p className="text-sm font-medium text-gray-100 mb-1">Taranacak ligler</p>
+            <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+              Maçlar seçili liglerdeki oyunculardan toplanır. Her maç bulunduğu ligle damgalanır →
+              ileride kullanıcıya &quot;hangi elodan istatistik&quot; filtresi bu veriden gelecek.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(status?.tiersAvailable || []).map((t) => {
+                const active = tiers.includes(t);
+                const tone = toneOf(TIER_TONES[t] || "azure");
+                return (
+                  <button
+                    key={t}
+                    onClick={() => toggleTier(t)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+                      active ? "" : "text-gray-500 border-edge hover:text-gray-300 hover:border-gray-500/50"
+                    }`}
+                    style={active ? { color: tone.fg, background: tone.bg, borderColor: tone.bd } : undefined}
+                  >
+                    {active && <span className="w-1.5 h-1.5 rounded-full" style={{ background: tone.dot }} />}
+                    {TIER_LABELS[t] || t}
+                    {poolByTier[t] ? <span className="opacity-70 tabular-nums">{poolByTier[t]}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-      {/* Lig seçimi + tarih */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="glass rounded-2xl p-5 border border-edge">
-          <h3 className="text-sm font-semibold text-gray-100 mb-1">Taranacak ligler</h3>
-          <p className="text-xs text-gray-500 mb-3">
-            Maçlar seçili liglerdeki oyunculardan toplanır. Her maç bulunduğu ligle damgalanır →
-            ileride kullanıcıya "hangi elodan istatistik" filtresi bu veriden gelecek.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {(status?.tiersAvailable || []).map((t) => {
-              const active = tiers.includes(t);
-              return (
-                <button
-                  key={t}
-                  onClick={() => toggleTier(t)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
-                    active
-                      ? TIER_COLORS[t] || "text-blue-400 border-blue-500/40 bg-blue-500/10"
-                      : "text-gray-500 border-edge hover:border-gray-500/50"
-                  }`}
-                >
-                  {TIER_LABELS[t] || t}
-                  {poolByTier[t] ? (
-                    <span className="ml-1.5 opacity-70">{poolByTier[t]}</span>
-                  ) : null}
-                </button>
-              );
-            })}
+          <div>
+            <p className="text-sm font-medium text-gray-100 mb-1">Maç başlangıç tarihi</p>
+            <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+              Bu tarihten eski maçlar toplanmaz (istek bütçesi yeni patch verisine harcanır).
+            </p>
+            <input
+              type="date"
+              value={since}
+              onChange={(e) => { dirtyRef.current = true; setSince(e.target.value); }}
+              className="bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def] [color-scheme:dark]"
+            />
           </div>
         </div>
-
-        <div className="glass rounded-2xl p-5 border border-edge">
-          <h3 className="text-sm font-semibold text-gray-100 mb-1">Maç başlangıç tarihi</h3>
-          <p className="text-xs text-gray-500 mb-3">
-            Bu tarihten eski maçlar toplanmaz (istek bütçesi yeni patch verisine harcanır).
-          </p>
-          <input
-            type="date"
-            value={since}
-            onChange={(e) => { dirtyRef.current = true; setSince(e.target.value); }}
-            className="bg-soft border border-edge rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:border-blue-500/60 [color-scheme:dark]"
-          />
-        </div>
-      </div>
+      </Card>
 
       {/* Durum kartları */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Havuz" value={status?.poolSize ?? 0} hint="taranan oyuncu havuzu" />
-        <StatCard label="Kuyruk" value={status?.queueDepth ?? 0} hint="işlenmeyi bekleyen maç" />
-        <StatCard label="Bugün İşlenen" value={status?.processedToday ?? 0} hint={`toplam ${status?.processedTotal ?? 0}`} />
-        <StatCard
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <StatTile label="Havuz" value={status?.poolSize ?? 0} hint="taranan oyuncu havuzu" tone="azure" icon={ICON_USERS} />
+        <StatTile label="Kuyruk" value={status?.queueDepth ?? 0} hint="işlenmeyi bekleyen maç" icon={ICON_QUEUE} />
+        <StatTile label="Bugün İşlenen" value={status?.processedToday ?? 0} hint={`toplam ${status?.processedTotal ?? 0}`} tone="mint" icon={ICON_ACTIVITY} />
+        <StatTile
           label="Rate Limit"
-          value={rate.cooldownUntil > 0 ? `${rate.cooldownUntil}s bekle` : "Normal"}
+          value={onCooldown ? `${rate.cooldownUntil}s bekle` : "Normal"}
           hint={rate.appCount ? `sayaç: ${rate.appCount}` : "son 10dk istek: " + (rate.requests ?? 0)}
+          tone={onCooldown ? "rose" : "mint"}
+          icon={ICON_BOLT}
         />
       </div>
 
       {/* Elle tetikleme */}
-      <div className="glass rounded-2xl p-5 border border-edge">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-100">Elle çalıştır</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Cron beklemeden bir tur çalıştırır. Son tarama: {status?.lastCrawlAt || "—"} ·
-              Son toplama: {status?.lastCollectAt || "—"}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => runNow("crawl")}
-              disabled={!!running}
-              className="text-xs font-medium px-4 py-2 rounded-xl border border-edge text-gray-300 hover:text-white hover:border-gray-500/60 disabled:opacity-50 transition-colors cursor-pointer"
-            >
+      <Card
+        title="Elle çalıştır"
+        subtitle={`Cron beklemeden bir tur çalıştırır. Son tarama: ${status?.lastCrawlAt || "—"} · Son toplama: ${status?.lastCollectAt || "—"}`}
+        icon={ICON_BOLT}
+        actions={
+          <>
+            <Button variant="neutral" size="sm" icon={ICON_SEARCH} onClick={() => runNow("crawl")} disabled={!!running}>
               {running === "crawl" ? "Taranıyor..." : "Havuzu Tara"}
-            </button>
-            <button
-              onClick={() => runNow("collect")}
-              disabled={!!running}
-              className="text-xs font-medium px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-colors cursor-pointer"
-            >
+            </Button>
+            <Button variant="primary" size="sm" icon={ICON_DOWNLOAD} onClick={() => runNow("collect")} disabled={!!running}>
               {running === "collect" ? "Toplanıyor..." : "Maç Topla"}
-            </button>
-          </div>
-        </div>
+            </Button>
+          </>
+        }
+      >
         {runOutput ? (
-          <pre className="mt-3 text-[11px] text-gray-400 bg-soft rounded-xl p-3 whitespace-pre-wrap max-h-40 overflow-y-auto">{runOutput}</pre>
-        ) : null}
-      </div>
+          <pre className="text-[11px] text-gray-400 bg-soft rounded-xl p-3 border border-edge/50 whitespace-pre-wrap max-h-40 overflow-y-auto">{runOutput}</pre>
+        ) : (
+          <p className="text-xs text-gray-600">
+            Henüz çalıştırılmadı. Bir tur başlatmak için yukarıdaki butonları kullan.
+          </p>
+        )}
+      </Card>
     </>
   );
 }

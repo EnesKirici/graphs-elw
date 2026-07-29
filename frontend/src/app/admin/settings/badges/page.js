@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { fetchAdmin, putAdmin } from "@/lib/adminApi";
+import { Card, Badge, Button } from "@/components/admin/ui";
+import { TONES } from "@/components/admin/ui/tones";
 
+// Rozet önizleme/tier renkleri KULLANICI/DOMAIN verisidir (LoL rank kimliği) — korunur.
 const TIER_COLORS = {
   challenger:  { label: "Challenger",  bg: "bg-amber-400",   text: "text-amber-400",   ring: "ring-amber-400/40" },
   grandmaster: { label: "Grandmaster", bg: "bg-red-500",     text: "text-red-400",     ring: "ring-red-400/40" },
@@ -35,16 +38,22 @@ const DEFAULT_BADGES = {
   team_player:    { label: "Takim Oyuncusu", category: "teamplay",  enabled: true, threshold: 0.65, stat: "killParticipation",            tiers: { emerald: 0.72, diamond: 0.80, challenger: 0.90 } },
 };
 
+// Kategori ikonları (svg path d). Panel arayüz rengi tone paletinden gelir; ham accent kullanılmaz.
 const CATEGORIES = {
-  combat:    { label: "Savas",    icon: "M13 10V3L4 14h7v7l9-11h-7z", color: "text-red-400" },
-  damage:    { label: "Hasar",    icon: "M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0 .9.656 1.344 1.5 2 .344.656.5 1.1.5 2a1 1 0 01-2 0c0-.4.156-.744.344-1.1C8.844 12.344 8 12.1 8 11c-.9-.656-1.344-1.5-2-1.5-.656-.344-1.1-.5-2-.5a1 1 0 010-2", color: "text-orange-400" },
-  farming:   { label: "Farm",     icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z", color: "text-yellow-400" },
-  objective: { label: "Objektif", icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4", color: "text-purple-400" },
-  vision:    { label: "Gorus",    icon: "M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z", color: "text-cyan-400" },
-  teamplay:  { label: "Takim",    icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z", color: "text-blue-400" },
+  combat:    { label: "Savas",    icon: "M13 10V3L4 14h7v7l9-11h-7z" },
+  damage:    { label: "Hasar",    icon: "M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0 .9.656 1.344 1.5 2 .344.656.5 1.1.5 2a1 1 0 01-2 0c0-.4.156-.744.344-1.1C8.844 12.344 8 12.1 8 11c-.9-.656-1.344-1.5-2-1.5-.656-.344-1.1-.5-2-.5a1 1 0 010-2" },
+  farming:   { label: "Farm",     icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+  objective: { label: "Objektif", icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" },
+  vision:    { label: "Gorus",    icon: "M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" },
+  teamplay:  { label: "Takim",    icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
 };
 
 const TIER_ORDER = ["silver", "gold", "emerald", "diamond", "grandmaster", "challenger"];
+
+const ICON_STAR = "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z";
+const ICON_CHECK = "M5 13l4 4L19 7";
+const ICON_CHEVRON = "M19 9l-7 7-7-7";
+const FOCUS = "focus:outline-none focus:border-[#5b8def]"; // TONES.azure.bar
 
 export default function BadgesSettingsPage() {
   const [badges, setBadges] = useState({});
@@ -104,61 +113,60 @@ export default function BadgesSettingsPage() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">Rozet Sistemi</h1>
-          <p className="text-sm text-gray-500 mt-1">Mac icinde kazanilan rozetlerin esik degerleri ve tier sinirlari</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {msg === "ok" && <span className="text-xs text-emerald-400">Kaydedildi!</span>}
-          {msg === "error" && <span className="text-xs text-red-400">Hata!</span>}
-          <button onClick={handleSave} disabled={saving}
-            className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors cursor-pointer">
-            {saving ? "Kaydediliyor..." : "Kaydet"}
-          </button>
-        </div>
-      </div>
-
-      {/* Bilgi */}
-      <div className="glass rounded-2xl p-5 mb-6 border border-blue-500/10">
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      {/* Genel bilgi + kaydet */}
+      <Card
+        title="Rozet Sistemi"
+        subtitle="Maç içinde kazanılan rozetlerin eşik değerleri ve tier sınırları"
+        icon={ICON_STAR}
+        className="mb-4"
+        actions={
+          <div className="flex items-center gap-3">
+            {msg === "ok" && <span className="text-xs" style={{ color: TONES.mint.fg }}>Kaydedildi!</span>}
+            {msg === "error" && <span className="text-xs" style={{ color: TONES.rose.fg }}>Hata!</span>}
+            <Button variant="primary" size="sm" icon={ICON_CHECK} onClick={handleSave} disabled={saving}>
+              {saving ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
           </div>
-          <div className="text-xs text-gray-400 space-y-1">
-            <p><strong className="text-gray-300">Rozetler</strong>, oyuncunun mac icindeki basarilarini ozel ikonlarla gosterir. Her rozet bir <strong className="text-gray-300">esik degeri</strong> (minimum kosul) ve <strong className="text-gray-300">tier sinirlari</strong> (ne kadar iyi oldugunu gosteren rank) icerir.</p>
-            <p><strong className="text-gray-300">Tier sistemi:</strong> LoL rank sistemine benzer. Ornegin &quot;Duellocu&quot; rozeti icin 2 solo kill = Gold tier, 4 kill = Diamond, 8 kill = Challenger tier.</p>
-            <div className="flex items-center gap-2 mt-2">
-              {TIER_ORDER.slice().reverse().map((t) => (
-                <span key={t} className={`inline-flex items-center gap-1 text-[10px] ${TIER_COLORS[t].text}`}>
-                  <span className={`w-2 h-2 rounded-full ${TIER_COLORS[t].bg}`} />
-                  {TIER_COLORS[t].label}
-                </span>
-              ))}
-            </div>
-          </div>
+        }
+      >
+        <div className="text-xs text-gray-400 space-y-2 leading-relaxed max-w-3xl">
+          <p>
+            <strong className="text-gray-200">Rozetler</strong>, oyuncunun maç içindeki başarılarını özel ikonlarla gösterir.
+            Her rozet bir <strong className="text-gray-200">eşik değeri</strong> (minimum koşul) ve{" "}
+            <strong className="text-gray-200">tier sınırları</strong> (ne kadar iyi olduğunu gösteren rank) içerir.
+          </p>
+          <p>
+            <strong className="text-gray-200">Tier sistemi:</strong> LoL rank sistemine benzer. Örneğin &quot;Duellocu&quot;
+            rozeti için 2 solo kill = Gold tier, 4 kill = Diamond, 8 kill = Challenger tier.
+          </p>
         </div>
-      </div>
+        {/* Tier lejantı — renkler domain kimliği (korunur) */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-edge/50">
+          {TIER_ORDER.slice().reverse().map((t) => (
+            <span key={t} className={`inline-flex items-center gap-1.5 text-[11px] ${TIER_COLORS[t].text}`}>
+              <span className={`w-2 h-2 rounded-full ${TIER_COLORS[t].bg}`} />
+              {TIER_COLORS[t].label}
+            </span>
+          ))}
+        </div>
+      </Card>
 
       {/* Kategori gruplari */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {Object.entries(CATEGORIES).map(([catKey, cat]) => {
           const items = grouped[catKey] || [];
           if (items.length === 0) return null;
 
           return (
-            <div key={catKey} className="glass rounded-2xl overflow-hidden">
-              {/* Kategori baslik */}
-              <div className="px-5 py-3.5 border-b border-edge/50 flex items-center gap-2.5">
-                <svg className={`w-4 h-4 ${cat.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d={cat.icon} />
-                </svg>
-                <h3 className="text-sm font-semibold text-gray-200">{cat.label} Rozetleri</h3>
-                <span className="text-[10px] text-gray-600 ml-auto">{items.length} rozet</span>
-              </div>
-
+            <Card
+              key={catKey}
+              title={`${cat.label} Rozetleri`}
+              icon={cat.icon}
+              flush
+              actions={<Badge tone="neutral">{items.length} rozet</Badge>}
+            >
               {/* Rozet listesi */}
-              <div className="divide-y divide-edge/20">
+              <div className="divide-y divide-edge/30">
                 {items.map((badge) => {
                   const isExpanded = expandedKey === badge.key;
                   const tierEntries = Object.entries(badge.tiers || {}).sort((a, b) => {
@@ -170,27 +178,30 @@ export default function BadgesSettingsPage() {
                       {/* Ana satir */}
                       <div className={`px-5 py-3.5 flex items-center gap-4 transition-opacity ${badge.enabled === false ? "opacity-40" : ""}`}>
                         {/* Toggle */}
-                        <button onClick={() => updateBadge(badge.key, "enabled", !(badge.enabled ?? true))}
-                          className={`w-9 h-5 rounded-full relative transition-colors cursor-pointer shrink-0 ${badge.enabled !== false ? "bg-emerald-500" : "bg-gray-700"}`}>
+                        <button
+                          onClick={() => updateBadge(badge.key, "enabled", !(badge.enabled ?? true))}
+                          className="w-9 h-5 rounded-full relative transition-colors cursor-pointer shrink-0"
+                          style={{ background: badge.enabled !== false ? TONES.mint.bar : "rgba(255,255,255,0.12)" }}
+                        >
                           <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${badge.enabled !== false ? "left-[18px]" : "left-[3px]"}`} />
                         </button>
 
                         {/* Label */}
                         <input value={badge.label} onChange={(e) => updateBadge(badge.key, "label", e.target.value)}
-                          className="bg-soft border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-200 w-40 focus:outline-none focus:border-blue-500/50" />
+                          className={`bg-soft border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-200 w-40 ${FOCUS}`} />
 
                         {/* Stat */}
-                        <span className="text-[11px] text-gray-600 font-mono flex-1 truncate">{badge.stat}</span>
+                        <span className="text-[11px] text-gray-500 font-mono flex-1 truncate">{badge.stat}</span>
 
                         {/* Esik */}
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-[10px] text-gray-600">Esik:</span>
+                          <span className="text-[10px] text-gray-500">Eşik:</span>
                           <input type="number" step="any" value={badge.threshold ?? 0}
                             onChange={(e) => updateBadge(badge.key, "threshold", Number(e.target.value))}
-                            className="w-16 bg-soft border border-edge rounded-lg px-2 py-1 text-xs text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                            className={`w-16 bg-soft border border-edge rounded-lg px-2 py-1 text-xs text-gray-300 text-center ${FOCUS}`} />
                         </div>
 
-                        {/* Tier badges */}
+                        {/* Tier gostergeleri (domain renkleri) */}
                         <div className="flex items-center gap-1 shrink-0">
                           {tierEntries.map(([tier]) => (
                             <span key={tier} className={`w-2.5 h-2.5 rounded-full ${TIER_COLORS[tier]?.bg || "bg-gray-600"}`} title={TIER_COLORS[tier]?.label} />
@@ -199,17 +210,17 @@ export default function BadgesSettingsPage() {
 
                         {/* Genislet */}
                         <button onClick={() => setExpandedKey(isExpanded ? null : badge.key)}
-                          className="text-gray-500 hover:text-gray-300 cursor-pointer p-1">
+                          className="text-gray-500 hover:text-gray-200 cursor-pointer p-1">
                           <svg className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={ICON_CHEVRON} />
                           </svg>
                         </button>
                       </div>
 
                       {/* Genisletilmis: Tier duzenle */}
                       {isExpanded && (
-                        <div className="px-5 pb-5 pt-2 border-t border-edge/20">
-                          <p className="text-[11px] text-gray-500 mb-3">Tier sinirlari — deger ne kadar yuksekse tier o kadar iyi. Kullanilmayan tier&apos;leri kaldirabilirsiniz.</p>
+                        <div className="px-5 pb-5 pt-3 border-t border-edge/40 bg-white/[0.015]">
+                          <p className="text-[11px] text-gray-500 mb-3">Tier sınırları — değer ne kadar yüksekse tier o kadar iyi. Kullanılmayan tier&apos;leri kaldırabilirsiniz.</p>
                           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
                             {TIER_ORDER.map((tierKey) => {
                               const tierVal = badge.tiers?.[tierKey];
@@ -217,22 +228,22 @@ export default function BadgesSettingsPage() {
                               const hasValue = tierVal !== undefined && tierVal !== null;
 
                               return (
-                                <div key={tierKey} className={`rounded-xl p-3 border transition-all ${hasValue ? `bg-soft border-edge/50` : "bg-transparent border-dashed border-edge/20 opacity-40"}`}>
+                                <div key={tierKey} className={`rounded-xl p-3 border transition-all ${hasValue ? "bg-card border-edge" : "bg-transparent border-dashed border-edge/40 opacity-50"}`}>
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-1.5">
                                       <span className={`w-3 h-3 rounded-full ${tierInfo.bg}`} />
-                                      <span className={`text-xs font-medium ${hasValue ? tierInfo.text : "text-gray-600"}`}>{tierInfo.label}</span>
+                                      <span className={`text-xs font-medium ${hasValue ? tierInfo.text : "text-gray-500"}`}>{tierInfo.label}</span>
                                     </div>
                                     {hasValue ? (
-                                      <button onClick={() => removeTier(badge.key, tierKey)} className="text-gray-700 hover:text-red-400 cursor-pointer text-[10px]">Kaldir</button>
+                                      <button onClick={() => removeTier(badge.key, tierKey)} style={{ color: TONES.rose.fg }} className="cursor-pointer text-[10px] opacity-80 hover:opacity-100 transition-opacity">Kaldır</button>
                                     ) : (
-                                      <button onClick={() => updateTier(badge.key, tierKey, badge.threshold || 0)} className="text-gray-700 hover:text-blue-400 cursor-pointer text-[10px]">Ekle</button>
+                                      <button onClick={() => updateTier(badge.key, tierKey, badge.threshold || 0)} style={{ color: TONES.azure.fg }} className="cursor-pointer text-[10px] opacity-80 hover:opacity-100 transition-opacity">Ekle</button>
                                     )}
                                   </div>
                                   {hasValue && (
                                     <input type="number" step="any" value={tierVal}
                                       onChange={(e) => updateTier(badge.key, tierKey, e.target.value)}
-                                      className="w-full bg-card border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-300 text-center focus:outline-none focus:border-blue-500/50" />
+                                      className={`w-full bg-soft border border-edge rounded-lg px-2.5 py-1.5 text-sm text-gray-300 text-center ${FOCUS}`} />
                                   )}
                                 </div>
                               );
@@ -244,7 +255,7 @@ export default function BadgesSettingsPage() {
                   );
                 })}
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

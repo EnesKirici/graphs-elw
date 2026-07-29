@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { fetchAdmin, putAdmin } from "@/lib/adminApi";
+import { Card, Badge, Button, InfoNote } from "@/components/admin/ui";
+import { TONES } from "@/components/admin/ui/tones";
 
 const OPTIONS = [
   {
@@ -15,6 +17,9 @@ const OPTIONS = [
     desc: "Yeni sabit koyu (navy) tasarım. LP yükseliş grafiği, koridor eşleşmeli maç satırları, takım kalite etiketleri ve ELW skoru daire/sıra gösterimi.",
   },
 ];
+
+const ICON_SAVE = "M5 13l4 4L19 7";
+const ICON_LAYOUT = "M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 9h16M9 20V9";
 
 export default function DesignSettingsPage() {
   const [design, setDesign] = useState("classic");
@@ -47,71 +52,55 @@ export default function DesignSettingsPage() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">Profil Tasarımı</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Profil ve sıralama sayfalarının hangi tasarımla gösterileceğini seç (siteye geneline uygulanır).
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {msg === "ok" && <span className="text-xs text-emerald-400">Kaydedildi!</span>}
-          {msg === "error" && <span className="text-xs text-red-400">Hata!</span>}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors cursor-pointer"
-          >
-            {saving ? "Kaydediliyor..." : "Kaydet"}
-          </button>
-        </div>
+      {/* Global kaydet + durum */}
+      <div className="mb-5 flex items-center justify-end gap-3">
+        {msg === "ok" && <Badge tone="mint" dot>Kaydedildi</Badge>}
+        {msg === "error" && <Badge tone="rose" dot>Hata</Badge>}
+        <Button variant="primary" size="md" icon={ICON_SAVE} onClick={handleSave} disabled={saving}>
+          {saving ? "Kaydediliyor..." : "Kaydet"}
+        </Button>
       </div>
 
-      <div className="glass rounded-2xl p-5 mb-6 border border-blue-500/10">
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div className="text-xs text-gray-400 space-y-1">
-            <p>
-              <strong className="text-gray-300">Pro tasarım</strong> sabit koyu temadır — site açık moddayken bile profil/sıralama
-              sayfaları koyu (navy) kalır. Değişiklik tüm ziyaretçilere uygulanır.
-            </p>
-            <p className="text-gray-500">Not: Sunucu önbelleği nedeniyle değişiklik birkaç saniye gecikebilir (sayfa yenileyin).</p>
-          </div>
-        </div>
-      </div>
+      {/* Pro tasarım = sabit koyu tema; değişiklik tüm ziyaretçilere uygulanır. */}
+      <InfoNote tone="info" title="Pro tasarım sabit koyu temadır" className="mb-4">
+        Site açık moddayken bile profil/sıralama sayfaları koyu (navy) kalır. Değişiklik tüm ziyaretçilere uygulanır.
+      </InfoNote>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {OPTIONS.map((opt) => {
-          const active = design === opt.key;
-          return (
-            <button
-              key={opt.key}
-              onClick={() => setDesign(opt.key)}
-              className={`text-left glass rounded-2xl p-5 border transition-all cursor-pointer ${
-                active
-                  ? "border-blue-500/60 ring-1 ring-blue-500/40"
-                  : "border-edge hover:border-edge/80"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-100">{opt.title}</h3>
-                <span
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    active ? "border-blue-400" : "border-gray-600"
-                  }`}
-                >
-                  {active && <span className="w-2 h-2 rounded-full bg-blue-400" />}
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed">{opt.desc}</p>
-            </button>
-          );
-        })}
-      </div>
+      <Card
+        title="Görünüm"
+        subtitle="Profil ve sıralama sayfalarının hangi tasarımla gösterileceğini seç (siteye geneline uygulanır). Not: Sunucu önbelleği nedeniyle değişiklik birkaç saniye gecikebilir (sayfa yenileyin)."
+        icon={ICON_LAYOUT}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {OPTIONS.map((opt) => {
+            const active = design === opt.key;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => setDesign(opt.key)}
+                className={`text-left rounded-xl p-4 border transition-all cursor-pointer ${
+                  active ? "" : "border-edge bg-card/40 hover:bg-hover"
+                }`}
+                style={active ? { borderColor: TONES.azure.bar, background: TONES.azure.bg, boxShadow: `inset 0 0 0 1px ${TONES.azure.bd}` } : undefined}
+              >
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h3 className={`text-sm font-semibold truncate ${active ? "text-white" : "text-gray-200"}`}>{opt.title}</h3>
+                    {active && <Badge tone="azure" dot>Seçili</Badge>}
+                  </div>
+                  <span
+                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
+                    style={{ borderColor: active ? TONES.azure.bar : "#4b5563" }}
+                  >
+                    {active && <span className="w-2 h-2 rounded-full" style={{ background: TONES.azure.bar }} />}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">{opt.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
     </>
   );
 }

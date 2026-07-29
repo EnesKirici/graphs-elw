@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { fetchAdmin, postAdmin, putAdmin, deleteAdmin, getAdminUser } from "@/lib/adminApi";
+import { Card, Badge, Button, ConfirmButton, DataTable, InfoNote } from "@/components/admin/ui";
+import { TONES } from "@/components/admin/ui/tones";
+
+const ICON_PLUS = "M12 4v16m8-8H4";
+const ICON_USERS = "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z";
 
 function randomPassword() {
   const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -24,7 +29,10 @@ export default function AdminsPage() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [formLoading, setFormLoading] = useState(false);
 
-  // Şifre sıfırlama (satır içi)
+  // Silme isleminde hangi satirin beklemede oldugunu izler (buton busy state'i icin)
+  const [deletingId, setDeletingId] = useState(null);
+
+  // Sifre sifirlama (satir ici)
   const [resetId, setResetId] = useState(null);
   const [resetPass, setResetPass] = useState("");
 
@@ -58,13 +66,15 @@ export default function AdminsPage() {
   }
 
   async function handleDelete(admin) {
-    if (!window.confirm(`"${admin.username}" hesabı silinsin mi? Açık oturumları da kapanır.`)) return;
+    setDeletingId(admin.id);
     try {
       await deleteAdmin(`/admins/${admin.id}`);
       flash(`"${admin.username}" silindi.`);
       loadAdmins();
     } catch {
       flash("Hata oluştu!");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -88,146 +98,125 @@ export default function AdminsPage() {
       + " " + d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
   }
 
+  const columns = [
+    {
+      key: "user", label: "Kullanıcı",
+      render: (a) => (
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: a.online ? TONES.mint.dot : TONES.neutral.dot }}
+            title={a.online ? "Aktif oturumu var" : "Oturum yok"} />
+          <span className="text-sm text-gray-200">{a.username}</span>
+          {a.username === me?.username && <span className="text-[10px] text-gray-600">(sen)</span>}
+        </div>
+      ),
+    },
+    {
+      key: "role", label: "Rol",
+      render: (a) => a.role === "super_admin"
+        ? <Badge tone="gold" dot>Süper Admin</Badge>
+        : <Badge tone="azure" dot>Admin</Badge>,
+    },
+    {
+      key: "created", label: "Oluşturulma",
+      render: (a) => <span className="text-xs text-gray-500">{formatDate(a.created_at)}</span>,
+    },
+    {
+      key: "active", label: "Son Aktivite",
+      render: (a) => <span className="text-xs text-gray-500">{formatDate(a.last_active_at)}</span>,
+    },
+    {
+      key: "actions", label: "İşlem", align: "right", width: "300px",
+      render: (a) => {
+        const canReset = a.role !== "super_admin" || a.username === me?.username;
+        const canDelete = a.role !== "super_admin";
+        return (
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center justify-end gap-2">
+              {canReset && (
+                <Button variant="neutral" size="sm" onClick={() => { setResetId(resetId === a.id ? null : a.id); setResetPass(""); }}>
+                  Şifre Sıfırla
+                </Button>
+              )}
+              {canDelete && (
+                <ConfirmButton
+                  label="Sil"
+                  question={`"${a.username}" silinsin mi?`}
+                  confirmLabel="Evet, sil"
+                  busyLabel="Siliniyor..."
+                  onConfirm={() => handleDelete(a)}
+                  busy={deletingId === a.id}
+                />
+              )}
+            </div>
+            {resetId === a.id && (
+              <div className="w-full flex flex-wrap items-center justify-end gap-2 bg-soft border border-edge rounded-lg px-3 py-2">
+                <span className="text-[11px] text-gray-500 mr-auto">Yeni şifre — kaydedilince açık oturumları kapanır:</span>
+                <input value={resetPass} onChange={(e) => setResetPass(e.target.value)}
+                  placeholder="En az 8 karakter" type="text" autoComplete="off" autoFocus
+                  className="w-44 bg-card border border-edge rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono focus:outline-none focus:border-[#5b8def]" />
+                <Button variant="neutral" size="sm" onClick={() => setResetPass(randomPassword())}>Üret</Button>
+                <Button variant="primary" size="sm" disabled={resetPass.length < 8} onClick={() => handleReset(a)}>Kaydet</Button>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">Adminler</h1>
-          <p className="text-sm text-gray-500 mt-1">Panele giriş yapabilen hesapları yönet</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {msg && <span className={`text-xs ${msg.includes("Hata") ? "text-red-400" : "text-emerald-400"}`}>{msg}</span>}
-          <button onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors cursor-pointer flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            Yeni Admin
-          </button>
-        </div>
+      <div className="mb-4 flex items-center justify-end gap-3">
+        {msg && <span className="text-xs" style={{ color: msg.includes("Hata") ? TONES.rose.fg : TONES.mint.fg }}>{msg}</span>}
+        <Button variant="primary" icon={ICON_PLUS} onClick={() => setShowForm((v) => !v)}>Yeni Admin</Button>
       </div>
 
-      {/* Bilgi */}
-      <div className="glass rounded-2xl p-5 mb-6 border border-blue-500/10">
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
-          <div className="text-xs text-gray-400 space-y-1">
-            <p><strong className="text-gray-300">Her hesap kendi oturumunu açar</strong> — kimse kimseyi panelden atmaz.</p>
-            <p><strong className="text-gray-300">Şifre sıfırlanınca</strong> o hesabın açık oturumları güvenlik için kapatılır, yeni şifreyle tekrar girer.</p>
-            <p><strong className="text-gray-300">Süper admin</strong> hesabı silinemez; bu sayfayı yalnız süper admin görür.</p>
-          </div>
-        </div>
-      </div>
+      <InfoNote tone="info" title="Hesap ve oturum kuralları" className="mb-4">
+        <b className="text-gray-300">Her hesap kendi oturumunu açar</b> — kimse kimseyi panelden atmaz.<br />
+        <b className="text-gray-300">Şifre sıfırlanınca</b> o hesabın açık oturumları güvenlik için kapatılır, yeni şifreyle tekrar girer.<br />
+        <b className="text-gray-300">Süper admin</b> hesabı silinemez; bu sayfayı yalnız süper admin görür.
+      </InfoNote>
 
-      {/* Yeni hesap formu */}
       {showForm && (
-        <div className="glass rounded-2xl p-6 mb-6 border border-blue-500/20">
-          <h3 className="text-sm font-semibold text-gray-200 mb-4">Yeni Admin Hesabı</h3>
+        <Card title="Yeni Admin Hesabı" icon={ICON_PLUS} className="mb-4">
           <form onSubmit={handleCreate} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div>
               <label className="text-[10px] text-gray-500 block mb-1">Kullanıcı Adı</label>
               <input value={form.username} onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
                 placeholder="ornek: nuray" required minLength={3}
-                className="w-full bg-card border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50" />
+                className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def]" />
             </div>
             <div>
               <label className="text-[10px] text-gray-500 block mb-1">Şifre (en az 8 karakter)</label>
               <div className="flex items-center gap-2">
                 <input value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                   placeholder="Şifre" required minLength={8} type="text" autoComplete="off"
-                  className="flex-1 bg-card border border-edge rounded-lg px-3 py-2 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500/50" />
-                <button type="button" onClick={() => setForm((f) => ({ ...f, password: randomPassword() }))}
-                  className="text-xs text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-2 rounded-lg transition-colors cursor-pointer shrink-0">
+                  className="flex-1 bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:border-[#5b8def]" />
+                <Button type="button" variant="neutral" size="sm" onClick={() => setForm((f) => ({ ...f, password: randomPassword() }))}>
                   Üret
-                </button>
+                </Button>
               </div>
             </div>
             <div className="flex items-end">
-              <button type="submit" disabled={formLoading || !form.username || form.password.length < 8}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white text-sm font-medium py-2 rounded-xl transition-colors cursor-pointer">
+              <Button type="submit" variant="primary" disabled={formLoading || !form.username || form.password.length < 8} className="w-full">
                 {formLoading ? "Oluşturuluyor..." : "Oluştur"}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
-      {/* Tablo */}
-      <div className="glass rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-edge/50 text-[10px] text-gray-600 uppercase tracking-wider">
-          <div className="col-span-3">Kullanıcı</div>
-          <div className="col-span-2">Rol</div>
-          <div className="col-span-2">Oluşturulma</div>
-          <div className="col-span-2">Son Aktivite</div>
-          <div className="col-span-3 text-right">İşlem</div>
-        </div>
-
+      <Card title="Adminler" subtitle="Panele giriş yapabilen hesapları yönetir." icon={ICON_USERS} flush>
         {loading ? (
           <div className="p-10 text-center">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-5 h-5 border-2 rounded-full animate-spin mx-auto" style={{ borderColor: TONES.azure.bar, borderTopColor: "transparent" }} />
           </div>
         ) : err ? (
           <div className="p-10 text-center text-sm text-gray-400">{err}</div>
         ) : (
-          admins?.map((admin) => (
-            <div key={admin.id}>
-              <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-edge/20 hover:bg-hover transition-colors items-center">
-                <div className="col-span-3 flex items-center gap-2">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${admin.online ? "bg-emerald-400" : "bg-gray-600"}`}
-                    title={admin.online ? "Aktif oturumu var" : "Oturum yok"} />
-                  <span className="text-sm text-gray-200">{admin.username}</span>
-                  {admin.username === me?.username && <span className="text-[10px] text-gray-600">(sen)</span>}
-                </div>
-                <div className="col-span-2">
-                  {admin.role === "super_admin" ? (
-                    <span className="text-[10px] font-semibold text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 uppercase tracking-wider">Süper Admin</span>
-                  ) : (
-                    <span className="text-[10px] font-semibold text-blue-400/90 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5 uppercase tracking-wider">Admin</span>
-                  )}
-                </div>
-                <div className="col-span-2">
-                  <span className="text-xs text-gray-500">{formatDate(admin.created_at)}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-xs text-gray-500">{formatDate(admin.last_active_at)}</span>
-                </div>
-                <div className="col-span-3 text-right space-x-2">
-                  {(admin.role !== "super_admin" || admin.username === me?.username) && (
-                    <button onClick={() => { setResetId(resetId === admin.id ? null : admin.id); setResetPass(""); }}
-                      className="text-xs text-gray-500 hover:text-blue-400 bg-soft hover:bg-blue-500/10 px-3 py-1 rounded-lg transition-colors cursor-pointer">
-                      Şifre Sıfırla
-                    </button>
-                  )}
-                  {admin.role !== "super_admin" && (
-                    <button onClick={() => handleDelete(admin)}
-                      className="text-xs text-gray-500 hover:text-red-400 bg-soft hover:bg-red-500/10 px-3 py-1 rounded-lg transition-colors cursor-pointer">
-                      Sil
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Satır içi şifre sıfırlama */}
-              {resetId === admin.id && (
-                <div className="px-5 py-3 border-b border-edge/20 bg-soft/50 flex items-center gap-2 justify-end">
-                  <span className="text-[11px] text-gray-500 mr-auto">Yeni şifre — kaydedilince açık oturumları kapanır:</span>
-                  <input value={resetPass} onChange={(e) => setResetPass(e.target.value)}
-                    placeholder="En az 8 karakter" type="text" autoComplete="off" autoFocus
-                    className="w-52 bg-card border border-edge rounded-lg px-3 py-1.5 text-xs text-gray-300 font-mono focus:outline-none focus:border-blue-500/50" />
-                  <button onClick={() => setResetPass(randomPassword())}
-                    className="text-xs text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
-                    Üret
-                  </button>
-                  <button onClick={() => handleReset(admin)} disabled={resetPass.length < 8}
-                    className="text-xs text-white bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/40 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
-                    Kaydet
-                  </button>
-                </div>
-              )}
-            </div>
-          ))
+          <DataTable columns={columns} rows={admins || []} rowKey={(a) => a.id} empty="Kayıt yok." />
         )}
-      </div>
+      </Card>
     </>
   );
 }
