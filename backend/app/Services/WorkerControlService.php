@@ -29,14 +29,17 @@ class WorkerControlService
     }
 
     /**
-     * Apex (Challenger/GM/Master) oyuncularını tarama SIRASINDA öne al. Açıkken worker
-     * en aktif oyunculara öncelik verir → yeni patch maçları çok daha hızlı toplanır,
-     * boşa "sorma" azalır. Kapalıyken tüm ligler adil (last_scanned_at) sırayla taranır.
-     * Default AÇIK (yeni patch tazeliği için); panelden değiştirilir.
+     * Tarama modu — hangi ligler ne öncelikle taranacak (CollectMatches uygular):
+     *  - 'apex'  : SADECE apex (Challenger/GM/Master) → yeni patch en hızlı dolar, alt elo beklemede
+     *  - 'mixed' : apex AĞIRLIKLI ama Zümrüt/Elmas da az az taranır (tur bütçesi ~%70 / %30)
+     *  - 'fair'  : TÜM ligler adil (last_scanned_at) sırayla → en geniş meta, 16.15 daha yavaş
+     * Default 'apex' (yeni patch tazeliği için); panelden değiştirilir.
      */
-    public function apexPriority(): bool
+    public function scanMode(): string
     {
-        return (bool) AdminSetting::getValue('worker_apex_priority', true);
+        $mode = (string) AdminSetting::getValue('worker_scan_mode', 'apex');
+
+        return in_array($mode, ['apex', 'fair', 'mixed'], true) ? $mode : 'apex';
     }
 
     /** Taranacak ligler (admin seçimi ∩ config'te tanımlı olanlar). */
@@ -84,7 +87,7 @@ class WorkerControlService
 
         return [
             'enabled'       => $this->isEnabled(),
-            'apexPriority'  => $this->apexPriority(),
+            'scanMode'      => $this->scanMode(),
             'tiers'         => $this->tiers(),
             'tiersAvailable' => config('elwgraphs.worker.tiers_available', []),
             'collectSince'  => AdminSetting::getValue('worker_collect_since', '2026-07-16'),

@@ -46,17 +46,23 @@ class CollectMatches extends Command
             return self::SUCCESS;
         }
 
-        $query = CrawlPlayer::whereIn('tier', $tiers);
-        if ($control->apexPriority()) {
-            // Apex (Challenger/GM/Master = priority 'high') ÖNCE → en aktif oyuncular,
-            // boşa "sorma" azalır, taze patch hızlı yakalanır. Panelden kapatılabilir
-            // (kapalıyken tüm ligler adil last_scanned_at sırasıyla taranır).
-            $query->orderByRaw("(priority = 'high') DESC");
+        // Tarama sırası — panelden seçilen moda göre (WorkerControlService::scanMode):
+        //  apex  → sadece apex önde (alt elo beklemede), mixed → ~%70 apex + %30 alt elo,
+        //  fair  → tüm ligler adil last_scanned_at sırasıyla.
+        $limit = max(1, (int) $this->option('players'));
+        $mode = $control->scanMode();
+        $ordered = fn ($q) => $q->orderByRaw('last_scanned_at IS NULL DESC, last_scanned_at ASC');
+
+        if ($mode === 'mixed') {
+            $apexN = (int) ceil($limit * 0.7); // turun ~%70'i apex, kalanı alt elo
+            $apex = $ordered(CrawlPlayer::whereIn('tier', $tiers)->where('priority', 'high'))->limit($apexN)->get();
+            $rest = $ordered(CrawlPlayer::whereIn('tier', $tiers)->where('priority', '!=', 'high'))->limit($limit - $apex->count())->get();
+            $players = $apex->concat($rest);
+        } elseif ($mode === 'apex') {
+            $players = $ordered(CrawlPlayer::whereIn('tier', $tiers)->orderByRaw("(priority = 'high') DESC"))->limit($limit)->get();
+        } else { // fair
+            $players = $ordered(CrawlPlayer::whereIn('tier', $tiers))->limit($limit)->get();
         }
-        $players = $query
-            ->orderByRaw('last_scanned_at IS NULL DESC, last_scanned_at ASC')
-            ->limit((int) $this->option('players'))
-            ->get();
 
         if ($players->isEmpty()) {
             $this->warn('Havuz boş. Önce `ladder:crawl` çalıştır.');

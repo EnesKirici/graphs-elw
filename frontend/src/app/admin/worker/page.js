@@ -13,6 +13,13 @@ const TIER_LABELS = {
   CHALLENGER: "Challenger",
 };
 
+// Tarama modu seçenekleri (panelden tam kontrol) — CollectMatches::scanMode uygular.
+const SCAN_MODES = [
+  { key: "apex", label: "Sadece Apex", desc: "Challenger/GM/Master. Yeni patch EN hızlı dolar; Zümrüt/Elmas beklemede." },
+  { key: "mixed", label: "Karışık", desc: "Apex ağırlıklı ama Zümrüt/Elmas da az az taranır (~%70 / %30)." },
+  { key: "fair", label: "Tüm ligler eşit", desc: "Hepsi adil sırayla → en geniş meta; 16.15 daha yavaş dolar." },
+];
+
 // Lig → tone paleti (muted, neon değil). Aktif çipin rengini buradan alır.
 const TIER_TONES = {
   EMERALD: "mint",
@@ -41,7 +48,7 @@ export default function WorkerPage() {
 
   // Form state (status'tan beslenir, kullanıcı değiştirir, Kaydet ile yazılır)
   const [enabled, setEnabled] = useState(false);
-  const [apexPriority, setApexPriority] = useState(true);
+  const [scanMode, setScanMode] = useState("apex");
   const [tiers, setTiers] = useState([]);
   const [since, setSince] = useState("2026-07-16");
   const dirtyRef = useRef(false);
@@ -54,7 +61,7 @@ export default function WorkerPage() {
       // otomatik yenileme kullanıcının seçimini ezmesin.
       if (syncForm || !dirtyRef.current) {
         setEnabled(!!s.enabled);
-        setApexPriority(s.apexPriority ?? true);
+        setScanMode(s.scanMode || "apex");
         setTiers(s.tiers || []);
         setSince(s.collectSince || "2026-07-16");
       }
@@ -81,7 +88,7 @@ export default function WorkerPage() {
     setMsg("");
     try {
       await putAdmin("/settings/worker_enabled", { value: enabled });
-      await putAdmin("/settings/worker_apex_priority", { value: apexPriority });
+      await putAdmin("/settings/worker_scan_mode", { value: scanMode });
       await putAdmin("/settings/worker_tiers", { value: tiers });
       await putAdmin("/settings/worker_collect_since", { value: since });
       dirtyRef.current = false;
@@ -224,30 +231,37 @@ export default function WorkerPage() {
           </div>
         </div>
 
-        {/* Apex öncelikli tarama */}
-        <div className="flex items-center justify-between gap-4 pt-4 mt-4 border-t border-edge/50">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-100">Apex öncelikli tarama</p>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed max-w-2xl">
-              Açıkken worker önce en üst ligleri (Challenger/GM/Master) tarar — en aktif oyuncular
-              olduğundan yeni patch maçları çok daha hızlı toplanır, boşa istek azalır. Alt eloları
-              (Zümrüt/Elmas) da tam kapsamak istersen kapat → tüm ligler adil sırayla taranır.
-            </p>
+        {/* Tarama modu — 3 seçenek, tam kontrol */}
+        <div className="pt-4 mt-4 border-t border-edge/50">
+          <p className="text-sm font-medium text-gray-100 mb-1">Tarama modu</p>
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed max-w-2xl">
+            Worker hangi ligleri ne öncelikle tarasın. Yeni patch tazeliği için <b className="text-gray-300">Sadece Apex</b> en
+            hızlısı; geniş meta için <b className="text-gray-300">Tüm ligler eşit</b>. İkisinin arası: <b className="text-gray-300">Karışık</b>.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {SCAN_MODES.map((m) => {
+              const active = scanMode === m.key;
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => { dirtyRef.current = true; setScanMode(m.key); }}
+                  className="text-left rounded-xl border p-3 transition-colors cursor-pointer"
+                  style={active
+                    ? { borderColor: TONES.gold.bd, background: TONES.gold.bg }
+                    : { borderColor: "var(--c-edge)", background: "rgba(255,255,255,0.02)" }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-3.5 h-3.5 rounded-full border grid place-items-center shrink-0"
+                      style={{ borderColor: active ? TONES.gold.bar : "#4b5563" }}>
+                      {active && <span className="w-1.5 h-1.5 rounded-full" style={{ background: TONES.gold.bar }} />}
+                    </span>
+                    <span className="text-sm font-medium" style={active ? { color: TONES.gold.fg } : undefined}>{m.label}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1.5 leading-snug">{m.desc}</p>
+                </button>
+              );
+            })}
           </div>
-          <button
-            onClick={() => { dirtyRef.current = true; setApexPriority((v) => !v); }}
-            role="switch"
-            aria-checked={apexPriority}
-            className={`relative w-14 h-8 rounded-full border transition-colors cursor-pointer shrink-0 ${apexPriority ? "" : "border-edge"}`}
-            style={apexPriority
-              ? { background: TONES.gold.bg, borderColor: TONES.gold.bd }
-              : { background: "rgba(255,255,255,0.05)" }}
-          >
-            <span
-              className={`absolute top-1 w-6 h-6 rounded-full shadow transition-all ${apexPriority ? "left-7" : "left-1"}`}
-              style={{ background: apexPriority ? TONES.gold.bar : "#868fa2" }}
-            />
-          </button>
         </div>
       </Card>
 

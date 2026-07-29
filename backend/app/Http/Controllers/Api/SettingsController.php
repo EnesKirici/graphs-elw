@@ -65,7 +65,7 @@ class SettingsController extends Controller
         $allowed = [
             'performance_labels', 'badge_config', 'elw_score', 'profile_design',
             'meta_insufficient_mode', 'labels_config',
-            'worker_enabled', 'worker_tiers', 'worker_collect_since', 'worker_apex_priority',
+            'worker_enabled', 'worker_tiers', 'worker_collect_since', 'worker_scan_mode',
             'seo_overrides',
         ];
 
@@ -78,8 +78,10 @@ class SettingsController extends Controller
             $request->validate(['value' => 'required|string|in:classic,pro']);
         } elseif ($key === 'meta_insufficient_mode') {
             $request->validate(['value' => 'required|string|in:label,sim']);
-        } elseif ($key === 'worker_enabled' || $key === 'worker_apex_priority') {
+        } elseif ($key === 'worker_enabled') {
             $request->validate(['value' => 'required|boolean']);
+        } elseif ($key === 'worker_scan_mode') {
+            $request->validate(['value' => 'required|string|in:apex,fair,mixed']);
         } elseif ($key === 'worker_collect_since') {
             $request->validate(['value' => 'required|date']);
         } elseif ($key === 'seo_overrides') {
@@ -103,6 +105,61 @@ class SettingsController extends Controller
         return response()->json([
             'ok'  => true,
             'key' => $key,
+        ]);
+    }
+
+    /**
+     * Riot anahtarının durumu (admin paneli + header uyarısı).
+     * GET /api/v1/admin/riot-key
+     *
+     * Anahtarın tamamı ASLA dönmez — yalnızca maskeli hâli.
+     */
+    public function riotKey(): JsonResponse
+    {
+        $key = \App\Services\RiotApi\RiotKeyStore::current();
+        $meta = \App\Services\RiotApi\RiotKeyStore::meta();
+
+        return response()->json([
+            'masked'    => $key ? substr($key, 0, 11) . '••••••••' . substr($key, -4) : null,
+            'source'    => $meta['source'] ?? null,
+            'setAt'     => $meta['set_at'] ?? null,
+            'expiresIn' => \App\Services\RiotApi\RiotKeyStore::secondsLeft(),
+            'invalid'   => (bool) Cache::get('riot:key_invalid', false),
+        ]);
+    }
+
+    /**
+     * Riot anahtarını değiştir.
+     * PUT /api/v1/admin/riot-key
+     *
+     * Kaydetmeden önce Riot'a sorulur: kabul edilmeyen anahtar kaydedilmez,
+     * eski anahtar yerinde kalır. Amaç, hatalı yapıştırmanın canlıyı
+     * düşürmesini engellemek.
+     */
+    public function updateRiotKey(Request $request): JsonResponse
+    {
+        $request->validate(['key' => 'required|string']);
+
+        $key = trim($request->input('key'));
+
+        if (! \App\Services\RiotApi\RiotKeyStore::looksValid($key)) {
+            return response()->json([
+                'error' => 'Anahtar biçimi hatalı. Beklenen: RGAPI- ile başlayan 42 karakter.',
+            ], 422);
+        }
+
+        if (! \App\Services\RiotApi\RiotKeyStore::verify($key)) {
+            return response()->json([
+                'error' => 'Riot bu anahtarı kabul etmedi. Kaydedilmedi — eski anahtar duruyor.',
+            ], 422);
+        }
+
+        \App\Services\RiotApi\RiotKeyStore::put($key, 'manual');
+
+        return response()->json([
+            'ok'        => true,
+            'masked'    => substr($key, 0, 11) . '••••••••' . substr($key, -4),
+            'expiresIn' => \App\Services\RiotApi\RiotKeyStore::secondsLeft(),
         ]);
     }
 
