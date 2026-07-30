@@ -25,7 +25,7 @@ class CollectMatches extends Command
 {
     private const RANKED_QUEUES = [420, 440];
 
-    protected $signature = 'matches:collect {--players=15 : Bu turda taranacak oyuncu sayısı} {--force : worker_enabled kapalıyken de çalıştır}';
+    protected $signature = 'matches:collect {--players=40 : Bu turda taranacak oyuncu sayısı} {--force : worker_enabled kapalıyken de çalıştır}';
 
     protected $description = 'Havuzdaki oyuncuların yeni ranked maçlarını (bütçeli) ProcessMatchJob kuyruğuna atar';
 

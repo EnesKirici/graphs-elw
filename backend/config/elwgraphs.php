@@ -171,11 +171,14 @@ return [
         // Tüm ladder ancak prod key gelince mantıklı (bütçe + tarama hızı yeter).
         'entry_pages_per_division' => 8,
         // matches:collect turu başına kuyruğa atılacak maksimum YENİ maç (≈ maç-detay isteği bütçesi).
-        'match_budget' => 40,
+        // AGRESİF MOD (2026-07-30): yeni patch verisini hızlı toplamak için 40→80. Veri
+        // oturunca 40'a düşür (site payı geri gelsin).
+        'match_budget' => 80,
         // Oyuncu başına en yeni kaç ranked maç ID'si istensin (count parametresi).
         'recent_per_player' => 10,
         // Son N saniyede kullanıcı kaynaklı Riot isteği olduysa worker o turu bırakır (kullanıcı önceliği).
-        'user_yield_seconds' => 8,
+        // AGRESİF MOD: 8→2 (worker siteye neredeyse yol vermez). Veri oturunca 8'e geri al.
+        'user_yield_seconds' => 2,
     ],
 
     /*
