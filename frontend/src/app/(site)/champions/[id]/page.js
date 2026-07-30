@@ -32,6 +32,25 @@ export async function generateMetadata({ params }) {
     return { title: id, description: `${id} — League of Legends şampiyon bilgileri.` };
   }
   const name = champ.name;
+
+  // Classic (Jade) varyantı: build/tier verisi yok → "Build, Rünler" başlığı yanıltıcı olur.
+  // Yeteneklere ve "ne değişti"ye odaklı, indekslenebilir kendine özgü SEO döndür.
+  if (champ.isClassic) {
+    return {
+      title: `${name} Classic — Yetenekler ve Değişiklikler`,
+      description: `${name} Classic varyantı (${champ.title}): yetenekleri, temel istatistikleri ve normal sürüme göre ne değiştiği. League of Legends özel mod şampiyonu.`,
+      keywords: [`${name} classic`, `${name} jade`, name, champ.title, "lol classic mod", "league of legends"],
+      alternates: { canonical: `/champions/${id}` },
+      openGraph: {
+        title: `${name} Classic — ${champ.title}`,
+        description: `${name} Classic varyantının yetenekleri ve normal sürümden farkları.`,
+        url: `https://elwgraphs.com/champions/${id}`,
+        type: "article",
+        images: champ.splash ? [{ url: champ.splash, alt: `${name} Classic` }] : undefined,
+      },
+    };
+  }
+
   const mainPos = data?.build?.positions?.[0];
   const patch = data?.build?.patches?.[0];
   const posShort = mainPos ? (POS_SEO[mainPos.position]?.short || mainPos.position) : null;

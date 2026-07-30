@@ -27,6 +27,8 @@ export default async function ChampionsPage() {
   } catch {}
 
   const champions = data?.champions || [];
+  // Başlık sayacı gerçek şampiyonları göstersin (Classic varyantlar sekmede ayrı sayılır).
+  const realCount = champions.filter((c) => !c.isClassic).length;
 
   // Profil sayfasıyla AYNI zemin: pro tasarımda dpm-scope (navy), classic'te arka plan görseli.
   const settings = await getPublicSettings();
@@ -39,8 +41,8 @@ export default async function ChampionsPage() {
         <h2 style={{ fontSize: 24, fontWeight: 800 }}>
           <span className="dot-mark" />Tüm Şampiyonlar
         </h2>
-        {champions.length > 0 && (
-          <span className="tag">{champions.length} şampiyon · Patch {data?.version}</span>
+        {realCount > 0 && (
+          <span className="tag">{realCount} şampiyon · Patch {data?.version}</span>
         )}
       </div>
 

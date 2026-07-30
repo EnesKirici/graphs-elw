@@ -1,18 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
 export default function ChampionGrid({ champions, showSearch = true }) {
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState("meta"); // "meta" = normal şampiyonlar · "classic" = Jade varyantları
 
-  const filtered = champions.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // isClassic backend'den gelir ("Jade_*"). Alan yoksa (eski/cache response) hepsi normal
+  // sayılır → Classic sekmesi gizlenir, davranış eskisi gibi kalır.
+  const normal = useMemo(() => champions.filter((c) => !c.isClassic), [champions]);
+  const classic = useMemo(() => champions.filter((c) => c.isClassic), [champions]);
+
+  const hasClassic = classic.length > 0;
+  const isClassic = hasClassic && tab === "classic";
+  const source = isClassic ? classic : normal;
+  const filtered = source.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <>
-      {/* Search */}
+      {/* Sekmeler — yalnız Classic varyant varsa görünür */}
+      {hasClassic && (
+        <div className="flex items-center gap-1 mb-4 border-b border-edge">
+          <TabButton active={!isClassic} onClick={() => setTab("meta")} count={normal.length}>
+            Şampiyonlar
+          </TabButton>
+          <TabButton active={isClassic} onClick={() => setTab("classic")} count={classic.length}>
+            Classic
+          </TabButton>
+        </div>
+      )}
+
+      {/* Classic bilgi notu */}
+      {isClassic && (
+        <div className="mb-4 rounded-lg border border-edge bg-card/60 px-4 py-3 flex items-start gap-2.5">
+          <svg className="w-4 h-4 mt-0.5 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-[13px] text-gray-400 leading-relaxed">
+            <span className="text-gray-200 font-medium">Classic</span> şampiyonlar özel bir mod varyantıdır — dereceli maç verisi (build/tier) yoktur.
+            <span className="block text-gray-600 text-xs mt-0.5">
+              Detay sayfasında yetenekler ve “ne değişti?” bilgisi bulunur.
+            </span>
+          </p>
+        </div>
+      )}
+
+      {/* Arama */}
       {showSearch && (
         <div className="mb-5">
           <div className="relative max-w-xs">
@@ -46,7 +80,7 @@ export default function ChampionGrid({ champions, showSearch = true }) {
         </div>
       )}
 
-      {/* Grid */}
+      {/* Grid — her iki sekme de tıklanabilir (Classic detay sayfası SEO için açık) */}
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
         {filtered.map((champ, i) => (
           <Link
@@ -82,5 +116,23 @@ export default function ChampionGrid({ champions, showSearch = true }) {
         )}
       </div>
     </>
+  );
+}
+
+// Alt çizgili sekme düğmesi (aktifte mavi vurgu + sayı rozeti).
+function TabButton({ active, onClick, count, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer ${
+        active ? "text-gray-100" : "text-gray-500 hover:text-gray-300"
+      }`}
+    >
+      {children}
+      <span className={`ml-1.5 text-[11px] tabular-nums ${active ? "text-gray-400" : "text-gray-600"}`}>
+        {count}
+      </span>
+      {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 rounded-full bg-blue-500" />}
+    </button>
   );
 }

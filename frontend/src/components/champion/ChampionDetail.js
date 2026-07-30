@@ -8,14 +8,15 @@ import DuoPartners from "@/components/champion/DuoPartners";
   (sol) ve yetenekler + skinler + hikaye (sağ). page.js'ten çıkarıldı; ChampionView
   bu component'i "Detay" tabında render eder.
 */
-export default function ChampionDetail({ champ, version, duos }) {
+export default function ChampionDetail({ champ, version, duos, isClassic = false }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* Sol kolon — Radar + Base Stats + Duo + İpuçları */}
       <div className="lg:col-span-4 space-y-4">
         <ChampionRadar info={champ.info} />
         <StatsTable stats={champ.stats} />
-        <DuoPartners duos={duos} version={version} />
+        {/* Duo sinerjisi maç verisinden gelir → Classic varyantta yok, gizle */}
+        {!isClassic && <DuoPartners duos={duos} version={version} />}
 
         {(champ.allytips?.length > 0 || champ.enemytips?.length > 0) && (
           <div className="glass rounded-xl overflow-hidden">
@@ -130,13 +131,18 @@ export default function ChampionDetail({ champ, version, duos }) {
         {/* Skin Galerisi */}
         {champ.skins?.length > 0 && <SkinGallery skins={champ.skins} championName={champ.name} />}
 
-        {/* Hikaye */}
+        {/* Hikaye (normal) / Ne değişti? (Classic: DDragon lore alanına normal↔classic
+            farklarını yazmış, <br> içeriyor → HTML olarak render et) */}
         <div className="glass rounded-xl overflow-hidden">
           <div className="px-5 py-3.5 border-b border-edge/50">
-            <h3 className="text-sm font-semibold text-gray-200">Hikaye</h3>
+            <h3 className="text-sm font-semibold text-gray-200">{isClassic ? "Ne değişti?" : "Hikaye"}</h3>
           </div>
           <div className="p-5">
-            <p className="text-sm text-gray-400 leading-relaxed">{champ.lore}</p>
+            {isClassic ? (
+              <p className="text-sm text-gray-400 leading-relaxed" dangerouslySetInnerHTML={{ __html: champ.lore }} />
+            ) : (
+              <p className="text-sm text-gray-400 leading-relaxed">{champ.lore}</p>
+            )}
           </div>
         </div>
       </div>

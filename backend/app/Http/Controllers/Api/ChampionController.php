@@ -36,6 +36,9 @@ class ChampionController extends Controller
                 'tags'      => $champ['tags'],      // ["Fighter", "Tank"]
                 'image'     => $this->ddragon->championIconUrl($champ['id']),
                 'positions' => $positionMap[$champ['id']] ?? [],
+                // "Jade_*" = özel mod varyantı (dereceli maç verisi yok). Frontend bunları
+                // ayrı "Classic" sekmesinde gösterir; detay sayfası yalnız Detay tab'ı açar.
+                'isClassic' => str_starts_with($champ['id'], 'Jade_'),
             ];
         })->values();
 
@@ -69,6 +72,8 @@ class ChampionController extends Controller
                 'key'       => $champion['key'],
                 'name'      => $champion['name'],
                 'title'     => $champion['title'],
+                // "Jade_*" varyantı mı → detay sayfası yalnız Detay tab'ı + "Ne değişti?" gösterir.
+                'isClassic' => str_starts_with($champion['id'], 'Jade_'),
                 'lore'      => $champion['lore'],
                 'tags'      => $champion['tags'],
                 'positions' => $positionMap[$champion['id']] ?? [],

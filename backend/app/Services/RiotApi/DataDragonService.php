@@ -144,15 +144,7 @@ class DataDragonService
 
         return Cache::remember('ddragon:champions', config('riot.cache_ttl.ddragon'), function () use ($version) {
             $data = $this->fetchJson("/cdn/{$version}/data/{$this->lang}/champion.json", 'champion');
-
-            // DDragon "Jade_*" varyantlarını (özel mod kayıtları, key 60xxx — Jade_Ahri,
-            // Jade_Annie...) ELE. Dereceli maçta yoklar, worker istatistiği hiç oluşmaz;
-            // roster'ı 173 → 233'e şişirip listeye boş/tıklanan çöp şampiyon ekliyorlardı.
-            return array_filter(
-                $data['data'],
-                fn ($id) => ! str_starts_with($id, 'Jade_'),
-                ARRAY_FILTER_USE_KEY
-            );
+            return $data['data'];
         });
     }
 
