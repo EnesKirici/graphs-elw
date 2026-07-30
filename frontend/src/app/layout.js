@@ -1,6 +1,7 @@
 import { Geist, Archivo, Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "./dashboard-theme.css";
+import "./tier-theme.css";
 import Providers from "@/components/Providers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import RateLimitToast from "@/components/shared/RateLimitToast";

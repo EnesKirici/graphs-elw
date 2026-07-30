@@ -27,15 +27,35 @@ export default async function TierListPage() {
   } catch {}
 
   const champions = data?.champions || [];
+  const totalGames = data?.totalGames || 0;
 
   return (
-    <div className="dpm-scope min-h-screen">
+    <div className="dpm-scope soft-scope min-h-screen">
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="mb-5">
-          <h1 className="text-2xl font-extrabold text-white">Meta Tier List</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Topladığımız maçlardan hesaplanan meta — role göre kazanma / seçilme / banlanma oranı ve koridor dağılımı.
-          </p>
+        {/* Başlık satırı kapsamı da taşır (maç/kuyruk/patch) → araç çubuğu sade kalır */}
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-extrabold text-white">Meta Tier List</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Topladığımız maçlardan hesaplanan meta — role göre kazanma / seçilme / banlanma oranı ve koridor dağılımı.
+            </p>
+          </div>
+          {/* Kapsam bilgisi: sayılar okunur olmalı — etiketler soluk gri kalıyordu,
+              maç sayısı ve patch beyaz/kalın, açıklama sözcükleri gri. */}
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className="px-3 py-1.5 rounded-lg bg-white/[0.05] border border-edge whitespace-nowrap text-gray-400"
+              title="Topladığımız maçlardan. Production key + ladder crawler ile Emerald+ filtresi gelecek."
+            >
+              <b className="text-gray-100 font-bold tabular-nums">{totalGames.toLocaleString("tr-TR")}</b> maç
+            </span>
+            <span className="px-3 py-1.5 rounded-lg bg-white/[0.05] border border-edge whitespace-nowrap text-gray-300">
+              Ranked Solo/Flex
+            </span>
+            <span className="px-3 py-1.5 rounded-lg bg-white/[0.05] border border-edge whitespace-nowrap text-gray-400">
+              Patch <b className="text-gray-100 font-bold tabular-nums">{data?.version || data?.patch}</b>
+            </span>
+          </div>
         </div>
 
         {champions.length === 0 ? (

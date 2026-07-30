@@ -1,0 +1,361 @@
+/* ===========================================================================
+   ELW GRAPHS — Tier list tasarımı + "soft scope" nötr yüzeyler
+
+   1) .soft-scope: dpm-scope'un navy tini (#161c30) bazı sayfalarda mavimtırak
+      duruyordu. Bu ek sınıf YALNIZ yüzey token'larını nötr koyuya çeker
+      (accent'lere, tipografiye, gölgelere dokunmaz). Şimdilik /tier-list'te
+      deneniyor; beğenilirse .dpm-scope'un kendisine taşınacak.
+   2) .tl-*: TEK panel — araç çubuğu, öne çıkanlar ve dereceler ayrı kart değil,
+      aynı yüzeyin ince ayraçlarla bölünmüş satırları. Her derece: yatay başlık
+      şeridi + dikey karakter görselli şampiyon ızgarası. Kalabalık dereceler iki
+      satıra kırpılır → sayfa gereksiz uzamaz.
+
+   Renkler @/lib/tones paletinden (canlı ama yumuşak — neon değil).
+   =========================================================================== */
+
+.dpm-scope.soft-scope {
+  --c-base: #0a0c11;
+  --c-card: #13161d;
+  --c-edge: #232833;
+  --c-soft: rgba(255, 255, 255, 0.035);
+  --c-hover: rgba(255, 255, 255, 0.055);
+  --c-grid: #232833;
+  --c-grid-strong: #333a49;
+  --c-scrim: #0a0c11;
+  --glass-bg: rgba(19, 22, 29, 0.88);
+  --glass-border: rgba(45, 51, 64, 0.75);
+  --dpm-panel: #0f1218;
+}
+
+/* Arka plan görseli / saydam kart tercihleri: navy yerine nötr tonu koru
+   (globals.css'teki html.has-bg + html.glass-cards kurallarını iki sınıflı
+   seçiciyle ezer — sıra değil spesifiklik kazanır). */
+html.has-bg .dpm-scope.soft-scope .card,
+html.has-bg .dpm-scope.soft-scope .glass {
+  background: color-mix(in oklab, #13161d 92%, transparent);
+}
+html.glass-cards .dpm-scope.soft-scope .card,
+html.glass-cards .dpm-scope.soft-scope .glass {
+  background: color-mix(in oklab, #13161d 56%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+/* Tıklanabilir her şey işaretçi göstersin (dpm-scope sayfaları globals'taki
+   .content button kuralının dışında kalıyor). */
+.tl-panel button,
+.tl-panel a,
+.tl-panel .tl-tile,
+.tl-panel th[class*="cursor"] {
+  cursor: pointer;
+}
+
+/* ========================= Panel =========================
+   overflow: clip (hidden DEĞİL) — hidden bir kaydırma bağlamı açıyor ve bölüm
+   başlıklarının position:sticky'sini etkisiz bırakıyor. clip köşeleri aynı şekilde
+   kırpar ama bağlam açmaz. */
+.tl-panel { border-radius: 16px; overflow: clip; }
+
+/* ========================= Araç çubuğu ========================= */
+.tl-toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--c-edge);
+  background: rgba(255, 255, 255, .015);
+}
+.tl-roles { display: flex; align-items: center; gap: 4px; overflow-x: auto; flex: 1; min-width: 0; }
+.tl-role {
+  display: inline-flex; align-items: center; gap: 7px; flex: none;
+  height: 32px; padding: 0 12px; border-radius: 9px;
+  font-size: 13px; font-weight: 600; color: #99a1b0; white-space: nowrap;
+  transition: background .16s, color .16s;
+}
+.tl-role img { opacity: .6; transition: opacity .16s; }
+.tl-role:hover { background: var(--c-hover); color: #dfe4ee; }
+.tl-role[data-on="1"] { background: rgba(255, 255, 255, .07); color: #f2f5fa; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.tl-role[data-on="1"] img { opacity: 1; }
+
+/* Derece filtresi — çoklu seçim. Seçili çip kendi tier rengini alır, seçili çip
+   yokken tüm dereceler görünür (filtre "kapalı" demek için ek düğme gerekmiyor). */
+.tl-tiers { display: flex; align-items: center; gap: 4px; flex: none; padding-left: 10px; border-left: 1px solid var(--c-edge); }
+.tl-tier-chip {
+  min-width: 32px; height: 28px; padding: 0 8px; border-radius: 8px;
+  font-family: var(--f-display); font-size: 13px; font-weight: 900; letter-spacing: -.02em;
+  color: #7d8593; background: rgba(255, 255, 255, .03);
+  box-shadow: inset 0 0 0 1px var(--c-edge);
+  transition: color .16s, background .16s, box-shadow .16s;
+}
+.tl-tier-chip:hover { color: var(--tier-fg); }
+.tl-tier-chip[data-on="1"] {
+  color: var(--tier-fg);
+  background: color-mix(in oklab, var(--tier) 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tier) 48%, transparent);
+}
+.tl-tier-chip:focus-visible { outline: 2px solid #6f9bf0; outline-offset: 2px; }
+
+.tl-tools { display: flex; align-items: center; gap: 8px; flex: none; }
+.tl-search {
+  display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px;
+  border-radius: 9px; background: rgba(255, 255, 255, .04);
+  border: 1px solid var(--c-edge); color: #6b7382; transition: border-color .16s;
+  cursor: text;
+}
+.tl-search:focus-within { border-color: #3b4354; }
+.tl-search input { width: 122px; min-width: 0; background: none; border: 0; outline: none; font-size: 13px; color: #e7ecf4; }
+.tl-search input::placeholder { color: #656d7c; }
+.tl-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+.tl-view { display: flex; gap: 2px; padding: 2px; border-radius: 10px; background: rgba(255, 255, 255, .04); border: 1px solid var(--c-edge); }
+.tl-view button {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
+  border-radius: 7px; font-size: 12px; font-weight: 600; color: #8d95a4;
+  transition: background .16s, color .16s;
+}
+.tl-view button:hover { color: #dfe4ee; }
+.tl-view button[data-on="1"] { background: rgba(255, 255, 255, .08); color: #f2f5fa; }
+
+/* ========================= Öne çıkanlar şeridi ========================= */
+.tl-featured {
+  display: flex; align-items: center; gap: 12px; position: relative;
+  padding: 9px 14px 9px 17px;
+  border-bottom: 1px solid var(--c-edge);
+}
+.tl-featured::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--tier); }
+.tl-featured-art { position: relative; flex: none; }
+.tl-featured-art img { display: block; border-radius: 10px; animation: tlFade .3s ease; }
+.tl-featured-art em {
+  position: absolute; right: -4px; bottom: -4px; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 6px; display: grid; place-items: center;
+  font-size: 10.5px; font-weight: 800; font-style: normal; color: #0b0d12;
+}
+.tl-featured-txt { flex: 1; min-width: 0; font-size: 13px; line-height: 1.5; color: #99a1b0; }
+.tl-featured-txt a { color: #f2f5fa; font-weight: 700; }
+.tl-featured-txt a:hover { text-decoration: underline; }
+.tl-featured-txt b { color: #dfe4ee; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Yüksek banlanma vurgusu — ana sayfa slider'ındaki hs-ban-hot ile AYNI tarif
+   (gradyan + banGlassSweep keyframe, dashboard-theme.css'te tanımlı, site geneli
+   yüklü). Orada .hero-stat/.hs-val'a bağlıydı; burada bağımsız aynı görünüm. */
+.tl-featured-txt b.hs-ban-hot {
+  background: linear-gradient(100deg, #ff4d6b 0%, #ff4d6b 38%, #ffd9de 50%, #ff4d6b 62%, #ff4d6b 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  animation: banGlassSweep 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tl-featured-txt b.hs-ban-hot { animation: none; -webkit-text-fill-color: #ff4d6b; color: #ff4d6b; background: none; }
+}
+.tl-featured-dots { display: flex; gap: 5px; flex: none; }
+.tl-featured-dots button { width: 6px; height: 6px; border-radius: 20px; background: #313848; transition: width .25s, background .2s; }
+.tl-featured-dots button[data-on="1"] { width: 16px; background: var(--tier); }
+@keyframes tlFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ========================= Derece bölümü =========================
+   Sol kenarda dev soluk tier harfi denendi ve KALDIRILDI: harfler (S+ / S / A)
+   farklı genişlikte olduğu için hizaları tutmuyordu ve başlıktaki işaretle
+   birlikte tekrar gibi okunuyordu. Kalan: ince dikey şerit. */
+.tl-band { position: relative; }
+.tl-band + .tl-band { border-top: 1px solid var(--c-edge); }
+/* Sol kenarda bölümün tamamı boyunca uzanan tier şeridi — kutu çizmeden bölümü
+   sınırlar ve rengi taşır. z-index: yapışkan başlığın (z:3) üstünde kalmalı. */
+.tl-band::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; z-index: 4;
+  background: var(--tier); opacity: .5;
+}
+
+/* Derece işareti kutu/rozet DEĞİL: büyük tipografik harf + altında tier rengi
+   çizgi. Kutulu rozetler yan yana "logo" gibi duruyordu; bu hâli editoryal ve
+   sakin, ayrıca tier rengini tek bir vurguda taşıyor. */
+/* Yapışkan başlık: uzun bölümlerde (A/B 40-80 şampiyon) kaydırırken hangi derecede
+   olduğun görünür kalır. Üst çubuğun (--topbar-h) altına oturur. */
+.tl-band-head {
+  position: sticky; top: var(--topbar-h, 68px); z-index: 3;
+  display: flex; align-items: baseline; gap: 13px;
+  width: 100%; text-align: left; padding: 13px 14px 11px 16px;
+  background: var(--c-card);
+  transition: background .18s;
+}
+.tl-band-head:hover { background: color-mix(in oklab, var(--c-card) 92%, #ffffff); }
+.tl-band-mark {
+  flex: none; padding-bottom: 5px;
+  font-family: var(--f-display); font-size: 28px; font-weight: 900; line-height: 1;
+  letter-spacing: -.035em; color: var(--tier-fg);
+  border-bottom: 3px solid var(--tier);
+}
+.tl-band-num {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11.5px; color: #7d8593; font-variant-numeric: tabular-nums;
+}
+.tl-band-num i { margin: 0 6px; font-style: normal; opacity: .5; }
+/* Başlığı satır sonuna bağlayan hairline — bölüm sınırını kutu çizmeden belli eder */
+.tl-band-rule {
+  flex: 1; min-width: 18px; height: 1px; align-self: center;
+  background: linear-gradient(90deg, var(--c-edge), transparent 85%);
+}
+
+.tl-band-peek { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; align-self: center; }
+.tl-band-peek img { flex: none; border-radius: 50%; opacity: .62; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+
+.tl-band-chev { flex: none; align-self: center; color: #6f7787; transition: transform .22s, color .18s; }
+.tl-band-chev[data-open="1"] { transform: rotate(180deg); }
+.tl-band-head:hover .tl-band-chev { color: #c3cad8; }
+
+/* ========================= Şampiyon ızgarası =========================
+   Kare ikon değil, dikey karakter görseli: sanat üstte, oran/isim altta. */
+.tl-band-body { padding: 8px 14px 16px 16px; }
+/* Kare ölçüsü her bölümde AYNI — bölüm kalabalığına göre büyütmek denendi, düzeni
+   bozuyordu (kullanıcı geri aldı). Az şampiyonlu bölümde satır boş kalır, sorun değil. */
+.tl-tiles {
+  display: grid; gap: 9px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tw), 1fr));
+  grid-auto-rows: var(--th);
+  --tw: 118px; --th: 188px;
+}
+
+.tl-tile {
+  display: flex; flex-direction: column; overflow: hidden; border-radius: 11px;
+  background: #0f1218; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .055);
+  transition: transform .18s var(--ease, ease), box-shadow .18s;
+}
+.tl-tile:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1px var(--tier), 0 10px 22px rgba(0, 0, 0, .5); }
+.tl-tile-art { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.tl-tile-art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 14%; }
+/* Sanatı alttaki metne bağlayan geçiş — ayrı bant çizgisi olmasın */
+.tl-tile-art::after {
+  content: ""; position: absolute; inset: auto 0 -1px 0; height: 48%;
+  background: linear-gradient(transparent, #0f1218);
+}
+/* Koridor rozetleri — çift koridor oynanan şampiyonda iki tane yan yana.
+   2026-07-30: 21→26px büyütüldü (kullanıcı talebi — okunması/ayırt edilmesi kolay olsun). */
+.tl-tile-lanes { position: absolute; right: 4px; top: 4px; z-index: 1; display: flex; gap: 4px; }
+.tl-tile-lane {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; background: rgba(6, 8, 12, .88);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22);
+}
+.tl-tile-lane img { width: 16px; height: 16px; }
+.tl-tile-thin {
+  position: absolute; left: 5px; top: 5px; z-index: 1; width: 7px; height: 7px;
+  border-radius: 50%; background: #c9a66b; box-shadow: 0 0 0 2px rgba(8, 10, 14, .75);
+}
+.tl-tile-foot { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 0 6px 9px; }
+.tl-tile-foot b { font-size: 13.5px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tl-tile-name {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11px; line-height: 1.25; color: #8a92a2; transition: color .16s;
+}
+.tl-tile:hover .tl-tile-name { color: #dfe4ee; }
+/* Dokunmatikte hover kartı çalışmadığı için seçilme/banlanma buraya düşer.
+   Masaüstünde gizli (bilgi hover kartında) — bkz. aşağıdaki (hover: none) bloğu. */
+.tl-tile-extra { display: none; gap: 6px; font-size: 9.5px; line-height: 1.2; color: #6f7787; }
+.tl-tile-extra i { font-style: normal; font-variant-numeric: tabular-nums; }
+
+
+/* ========================= Hover detay kartı ========================= */
+/* Tooltip büyütüldü (2026-07-30, kullanıcı talebi — "net görünmüyor, büyült"):
+   min-width +40, iç boşluk +40%, tüm yazı boyutları bir kademe yukarı, koridor
+   rozetleri 11-12px'ten 15px'e çıktı (hem kartta hem burada — kolay okunsun diye). */
+.tl-tip {
+  min-width: 230px; margin: 6px 0; padding: 13px 15px; border-radius: 13px;
+  background: #0d1016; border: 1px solid #2f3646;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .6);
+}
+/* align-items: center DEĞİL flex-start — ortalayınca "S+" rozeti iki satırlık
+   isim+altyazı bloğunun DÜŞEY ORTASINA denk geliyordu, ne isimle ne alt çizgiyle
+   hizalı; "eşit durmuyor" hissi buradan geliyordu. flex-start ile rozet ismin
+   İLK SATIRIYLA aynı hizada başlar (kullanıcı adı + rozet paterni). */
+.tl-tip-head { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #232833; }
+.tl-tip-head img { flex: none; border-radius: 9px; }
+.tl-tip-head b { display: block; font-size: 15px; font-weight: 700; line-height: 1.3; color: #f2f5fa; }
+.tl-tip-head span { display: block; font-size: 12px; color: #838b9a; margin-top: 1px; }
+/* Derece işareti (tooltip): kutu yok — harf + altında tier çizgisi, bölüm
+   başlıklarıyla aynı dil. */
+.tl-tip-head em {
+  flex: none; margin-left: auto; margin-top: 2px; padding-bottom: 2px; border-bottom: 2px solid;
+  font-family: var(--f-display); font-style: normal; font-size: 17px; font-weight: 900; letter-spacing: -.02em;
+}
+.tl-tip-rows { display: flex; flex-direction: column; gap: 7px; }
+.tl-tip-rows > div { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.tl-tip-rows dt { font-size: 13px; color: #838b9a; }
+.tl-tip-rows dd { font-size: 14px; font-weight: 700; color: #dfe4ee; font-variant-numeric: tabular-nums; }
+.tl-tip-note { margin-top: 9px; font-size: 12px; color: #c9a66b; }
+
+/* Çift koridor ayrımı — "toplam" satırın altında, hangi koridorun kendi WR'i ne
+   ayrı ayrı gösterir (Hwei gibi Mid+Bottom karışık şampiyonlarda üstteki tek sayı
+   ikisini de temsil ediyormuş gibi yanıltmasın diye). */
+.tl-tip-lanes {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 10px; padding-top: 10px; border-top: 1px dashed #2b323f;
+}
+.tl-tip-lanes > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.tl-tip-lanes dt { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #9aa2b1; }
+.tl-tip-lanes dt img { opacity: .9; }
+.tl-tip-lanes dt i { font-style: normal; color: #656d7c; }
+.tl-tip-lanes dd { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ========================= Tablo görünümü ========================= */
+.tl-thead { border-bottom: 1px solid var(--c-edge); background: rgba(255, 255, 255, .02); }
+.tl-th-on { color: #8ab4f8; }
+.tl-row { border-bottom: 1px solid rgba(255, 255, 255, .04); transition: background .16s; }
+.tl-row:last-child { border-bottom: 0; }
+.tl-row:hover { background: rgba(255, 255, 255, .035); }
+.tl-grade {
+  display: inline-block; padding-bottom: 2px; border-bottom: 2px solid;
+  font-family: var(--f-display); font-size: 15px; font-weight: 900; letter-spacing: -.02em;
+}
+
+.tl-empty { padding: 34px 20px; text-align: center; font-size: 13px; color: #6f7787; }
+
+.tl-tile:focus-visible, .tl-role:focus-visible, .tl-view button:focus-visible,
+.tl-band-head:focus-visible, .tl-featured-dots button:focus-visible {
+  outline: 2px solid #6f9bf0; outline-offset: 2px;
+}
+
+/* ========================= Responsive ========================= */
+/* Fare/hover OLMAYAN cihazlar: hover kartı hiç açılmaz (dokunulunca şampiyon
+   sayfasına gidiliyor, tooltip okunamıyordu) → seçilme/banlanma kartın altında
+   kalıcı satır olur, kare de bu satıra yer açmak için biraz uzar. */
+@media (hover: none) {
+  .tl-tip { display: none; }
+  .tl-tile-extra { display: flex; }
+  .tl-tiles { --th: 206px; }
+}
+@media (max-width: 900px) {
+  /* Dar ekranda derece çipleri kendi satırına düşer → ayırıcı çizgi anlamsız kalır */
+  .tl-tiers { padding-left: 0; border-left: 0; }
+}
+@media (max-width: 720px) {
+  .tl-toolbar { padding: 9px 10px; }
+  .tl-tools { width: 100%; }
+  .tl-search { flex: 1; }
+  .tl-search input { width: 100%; }
+  .tl-featured { padding: 9px 10px 9px 14px; }
+  .tl-featured-txt { font-size: 12.5px; }
+  .tl-band-head { gap: 10px; padding: 12px 10px 9px 13px; }
+  .tl-band-mark { font-size: 22px; }
+  .tl-band-body { padding: 8px 10px 13px 13px; }
+  .tl-tiles { gap: 7px; --tw: 96px; --th: 158px; }
+  /* Telefonda kalabalık bölümler 2 satıra kırpılır (masaüstü açık kalır) */
+  .tl-tiles.clamped { max-height: 323px; overflow: hidden; } /* 158 + 7 + 158 */
+  .tl-more {
+    display: block; width: 100%; height: 32px; margin-top: 9px;
+    border-radius: 9px; font-size: 12px; font-weight: 700; color: #8d95a4;
+    background: rgba(255, 255, 255, .035); border: 1px solid var(--c-edge);
+  }
+  .tl-more:hover { color: #e7ecf4; background: rgba(255, 255, 255, .06); }
+}
+/* Telefon (dar EKRAN + dokunmatik) — iki ayrı @media bloğu (hover:none ve
+   max-width:720px) aynı --th değişkenine yazıyordu; dosyada SONRA gelen
+   (max-width:720px, 158px) her zaman kazanıp dokunmatik için ayrılan ekstra
+   satır alanını (206px) eziyordu. Bu blok ikisinin KESİŞİMİNİ hedefleyip en
+   sonda durarak doğru (daha uzun) değeri geri kazandırır. */
+@media (hover: none) and (max-width: 720px) {
+  .tl-tiles { --th: 176px; }
+  .tl-tiles.clamped { max-height: 359px; } /* 176 + 7 + 176 */
+}
+@media (max-width: 560px) {
+  .tl-band-peek { display: none; } /* dar şeritte portreler nota yer bırakmıyor */
+}
+@media (prefers-reduced-motion: reduce) {
+  .tl-tile, .tl-band-chev, .tl-featured-dots button { transition: none; }
+  .tl-featured-art img { animation: none; }
+}

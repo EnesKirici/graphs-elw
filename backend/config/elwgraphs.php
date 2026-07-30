@@ -81,24 +81,34 @@ return [
     | 0–1 normalize edilip ağırlıklı toplamından üretilir. Ağırlıklar buradan.
     */
     'tier' => [
+        // 2026-07-30 yeniden dengelendi (kullanıcı talebi + gerçek veriyle sınandı):
+        // ESKİ ağırlıklarda (wr .55/pick .20/ban .10/sample .15) popülerlik gerçek bir
+        // WR farkını ezebiliyordu — somut örnek: Yasuo (%50.5 WR, %16.8 seçilme) skoru
+        // Rammus'u (%54.5 WR, %1.5 seçilme) GEÇİYORDU, 4 puanlık WR üstünlüğüne rağmen.
+        // Sebep: pick_rate + ban_rate toplamda %30 ağırlık taşıyordu, bu ikisi "ne kadar
+        // popüler/tehditkar" ölçer, "ne kadar güçlü" değil. Wilson WR zaten küçük
+        // örneklemi kendi başına cezalandırıyor (shrinkage) — pick/ban'a GÜVEN için değil,
+        // sadece hafif bir "topluluk teyidi" için ihtiyaç var.
+        // Yeni ağırlıklarla: Rammus 0.72 (S+), Yasuo 0.58 (A) — WR belirleyici.
+        // Bonus: 25 maçlık Lulu (Mid, %55.2 WR) S tier'e girebiliyor — az oynanan ama
+        // gerçekten güçlü şampiyonlar artık öne çıkabiliyor (istenen davranış).
         'weights' => [
-            'wilson_wr' => 0.55, // ana ağırlık
-            'pick_rate' => 0.20,
-            'ban_rate'  => 0.10,
+            'wilson_wr' => 0.70, // ana ağırlık — WR belirleyici olsun
+            'pick_rate' => 0.10, // hafif "topluluk teyidi", artık ezici değil
+            'ban_rate'  => 0.05, // banlanma GÜÇ değil TEHDİT algısı ölçer (bkz. banTone) — küçük ağırlık
             'sample'    => 0.15, // örneklem güveni (n büyüdükçe artar)
         ],
 
         // Kompozit skor (0–1) → tier. Skor >= sınır olan ilk tier atanır.
         //
-        // S+ = 0.64 (2026-07-30 kalibrasyonu): 0.70 mevcut örneklemde ULAŞILAMAZ bir
-        // sınırdı (pick_max=20 iken en yüksek gerçek skor ~0.66) → "Tümü" listesinde
-        // S+ hiç çıkmıyor, tier list'in tepesi 13 şampiyonluk tek S bloğu oluyordu.
-        // 0.64 ile: Tümü → 3 S+ / 10 S, roller → 0–3 S+. Yani S+ "yamanın gerçekten
-        // ayrışan birkaç şampiyonu" oluyor. Örneklem büyüyünce (prod key + crawler)
-        // skorlar yukarı kayacağı için bu sınır tekrar gözden geçirilmeli.
+        // S+ = 0.70 (2026-07-30): eski ağırlıklarla bu sınır ULAŞILAMAZ olduğu için
+        // geçici olarak 0.64'e indirilmişti. Ağırlıklar WR-ağırlıklı hâle gelince 0.70
+        // tekrar ulaşılabilir oldu (Zeri 0.745, Fiora 0.732, Hwei 0.719, Rammus 0.716)
+        // — kodun ORİJİNAL tasarımına dönüldü. S de aynı mantıkla 0.60→0.62'ye alındı
+        // (S+ ile aralarında anlamlı boşluk kalsın diye). A/B/C değişmedi.
         'thresholds' => [
-            'S+' => 0.64,
-            'S'  => 0.60,
+            'S+' => 0.70,
+            'S'  => 0.62,
             'A'  => 0.50,
             'B'  => 0.36,
             'C'  => 0.20,
