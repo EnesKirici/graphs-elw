@@ -89,8 +89,15 @@ return [
         ],
 
         // Kompozit skor (0–1) → tier. Skor >= sınır olan ilk tier atanır.
+        //
+        // S+ = 0.64 (2026-07-30 kalibrasyonu): 0.70 mevcut örneklemde ULAŞILAMAZ bir
+        // sınırdı (pick_max=20 iken en yüksek gerçek skor ~0.66) → "Tümü" listesinde
+        // S+ hiç çıkmıyor, tier list'in tepesi 13 şampiyonluk tek S bloğu oluyordu.
+        // 0.64 ile: Tümü → 3 S+ / 10 S, roller → 0–3 S+. Yani S+ "yamanın gerçekten
+        // ayrışan birkaç şampiyonu" oluyor. Örneklem büyüyünce (prod key + crawler)
+        // skorlar yukarı kayacağı için bu sınır tekrar gözden geçirilmeli.
         'thresholds' => [
-            'S+' => 0.70,
+            'S+' => 0.64,
             'S'  => 0.60,
             'A'  => 0.50,
             'B'  => 0.36,
@@ -158,7 +165,11 @@ return [
         // Seçilebilir ligler (admin panel bu listeden çoklu seçim yaptırır).
         'tiers_available' => ['EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'],
         // Emerald/Diamond League-V4 entries: division başına çekilecek sayfa (1 sayfa ≈ 205 oyuncu, 1 istek).
-        'entry_pages_per_division' => 1,
+        // 8 = division başına ~1640 aktif oyuncu → havuz apex'e daha az kayar, meta Emerald/Diamond'ı
+        // daha iyi temsil eder. Crawl günlük (8×4×2=64 istek). DİKKAT: "tümünü çek" YAPMA —
+        // dev key'le on binlerce oyuncu = crawl kotayı boğar + worker (15/tur) aylarca tarayamaz.
+        // Tüm ladder ancak prod key gelince mantıklı (bütçe + tarama hızı yeter).
+        'entry_pages_per_division' => 8,
         // matches:collect turu başına kuyruğa atılacak maksimum YENİ maç (≈ maç-detay isteği bütçesi).
         'match_budget' => 40,
         // Oyuncu başına en yeni kaç ranked maç ID'si istensin (count parametresi).

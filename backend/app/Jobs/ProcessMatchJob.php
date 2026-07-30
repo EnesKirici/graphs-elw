@@ -82,6 +82,12 @@ class ProcessMatchJob implements ShouldQueue
                 \App\Models\MatchRecord::where('match_id', $this->matchId)
                     ->whereNull('tier_bucket')
                     ->update(['tier_bucket' => $this->tierBucket]);
+
+                // Snowball: bu maçtaki 10 oyuncuyu havuza ekle — BEDAVA keşif (maçı zaten
+                // çektik, ekstra Riot isteği YOK). Yeni maçta çıkanlar = AKTİF oyuncular →
+                // havuz kendiliğinden aktif oyuncularla büyür, ladder crawl'a daha az gerek.
+                // Yeni satırların last_scanned_at'i null → worker onları ÖNCELİKLE tarar.
+                $this->harvestPlayers($detail);
             }
         } catch (\Throwable $e) {
             // İşleme başarısızsa claim'i geri al → maç tekrar denenebilir (yine çift sayılmaz)
@@ -98,6 +104,34 @@ class ProcessMatchJob implements ShouldQueue
             }
 
             throw $e; // job retry mekanizması devreye girsin
+        }
+    }
+
+    /**
+     * Maçtaki katılımcıları crawl havuzuna ekle (snowball). Yalnız YENİ puuid'ler eklenir
+     * (PK=puuid → insertOrIgnore var olanları atlar, last_scanned_at'lerini EZMEZ). Tier =
+     * maçın havuz ligi (matchmaking gereği katılımcılar ~aynı elo). Riot isteği harcamaz.
+     */
+    private function harvestPlayers(array $detail): void
+    {
+        $now = Carbon::now();
+        $rows = [];
+        foreach ($detail['info']['participants'] ?? [] as $p) {
+            $puuid = $p['puuid'] ?? null;
+            if (is_string($puuid) && $puuid !== '') {
+                $rows[$puuid] = [
+                    'puuid'      => $puuid,
+                    'region'     => $this->region,
+                    'tier'       => $this->tierBucket,
+                    'priority'   => 'normal',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+        }
+
+        if ($rows) {
+            \App\Models\CrawlPlayer::insertOrIgnore(array_values($rows));
         }
     }
 
