@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Tek maçı işleyip aggregate sayaçlara ekler (champion_stats/builds/top_players).
@@ -39,8 +40,26 @@ class ProcessMatchJob implements ShouldQueue
         // Anahtar GEÇERSİZ (401/403): işlemeyi DENEME — boşa 401 atıp maçı 15 kez
         // deneyerek failed_jobs'a düşürmesin. İşi 2 dk gecikmeyle geri bırak; yeni key
         // panelden girilince (RiotKeyStore::put flag'i temizler) bekleyen işler işlenir.
-        if (\Illuminate\Support\Facades\Cache::get('riot:key_invalid')) {
+        if (Cache::get('riot:key_invalid')) {
             $this->release(120);
+
+            return;
+        }
+
+        // 429 COOLDOWN AKTİF: geri sayım bitene kadar Riot'a HİÇ dokunma.
+        // Eskiden job normal akışına devam eder, RiotApiService::request() ilk satırda
+        // cooldown'u görüp 'blocked' sayacını artırıp exception fırlatırdı. Ağ beklemesi
+        // olmadığı için kuyruk saniyeler içinde boşa akıyor ve her deneme $tries hakkından
+        // bir tane götürüyordu → panelde 47 gerçek 429'a karşılık 12.4k "engellenen"
+        // birikmişti (kullanıcı bildirdi). Artık pencere kadar TEK sefer beklenir:
+        // bir cooldown = job başına bir release, boşa istek ve boşa deneme yok.
+        // WorkerControlService::shouldYield() aynı kontrolü tarama komutları için yapıyor;
+        // burası kuyruğa ÇOKTAN girmiş işlerin karşılığı.
+        $cooldownUntil = (int) Cache::get('riot:rate_limit_cooldown', 0);
+        if ($cooldownUntil > time()) {
+            // En az 5sn: kalan 1sn olsa bile job'ın anında geri dönüp dönmesini engeller.
+            // En çok 150sn: catch bloğundaki 429 gecikmesiyle aynı üst sınır.
+            $this->release(min(max($cooldownUntil - time() + 2, 5), 150));
 
             return;
         }
