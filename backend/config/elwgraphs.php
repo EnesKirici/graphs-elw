@@ -170,15 +170,17 @@ return [
         // dev key'le on binlerce oyuncu = crawl kotayı boğar + worker (15/tur) aylarca tarayamaz.
         // Tüm ladder ancak prod key gelince mantıklı (bütçe + tarama hızı yeter).
         'entry_pages_per_division' => 8,
-        // matches:collect turu başına kuyruğa atılacak maksimum YENİ maç (≈ maç-detay isteği bütçesi).
-        // AGRESİF MOD (2026-07-30): yeni patch verisini hızlı toplamak için 40→80. Veri
-        // oturunca 40'a düşür (site payı geri gelsin).
-        'match_budget' => 80,
+        // ↓ Aşağıdaki 3 değer artık PANELDEN yönetiliyor (admin_settings: worker_match_budget /
+        //   worker_players / worker_user_yield — /admin/worker "Performans" bölümü). Buradakiler
+        //   yalnız TEMEL/YEDEK: admin ayarı yoksa bunlar kullanılır. WorkerControlService okur.
+        // Tur başına kuyruğa atılacak maks YENİ maç (≈ maç-detay isteği bütçesi).
+        'match_budget' => 40,
+        // Tur başına taranacak oyuncu sayısı.
+        'players' => 15,
+        // Kullanıcı Riot isteğinden sonra worker kaç sn yol versin (0 = worker öncelikli, site yavaşlar).
+        'user_yield_seconds' => 8,
         // Oyuncu başına en yeni kaç ranked maç ID'si istensin (count parametresi).
         'recent_per_player' => 10,
-        // Son N saniyede kullanıcı kaynaklı Riot isteği olduysa worker o turu bırakır (kullanıcı önceliği).
-        // AGRESİF MOD: 8→2 (worker siteye neredeyse yol vermez). Veri oturunca 8'e geri al.
-        'user_yield_seconds' => 2,
     ],
 
     /*

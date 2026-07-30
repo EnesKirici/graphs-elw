@@ -51,6 +51,26 @@ class WorkerControlService
         return array_values(array_intersect((array) $selected, $available));
     }
 
+    // --- Performans ayarları (panelden: admin_settings → yoksa config yedeği) ---
+
+    /** Tur başına kuyruğa atılacak maks yeni maç (hız düğmesi). */
+    public function matchBudget(): int
+    {
+        return max(1, (int) AdminSetting::getValue('worker_match_budget', config('elwgraphs.worker.match_budget', 40)));
+    }
+
+    /** Tur başına taranacak oyuncu sayısı. */
+    public function playersPerRun(): int
+    {
+        return max(1, (int) AdminSetting::getValue('worker_players', config('elwgraphs.worker.players', 15)));
+    }
+
+    /** Kullanıcı Riot isteğinden sonra worker'ın yol verdiği saniye (0 = worker öncelikli). */
+    public function userYieldSeconds(): int
+    {
+        return max(0, (int) AdminSetting::getValue('worker_user_yield', config('elwgraphs.worker.user_yield_seconds', 8)));
+    }
+
     /** Bu epoch'tan (saniye) eski maçlar toplanmaz. Default: 16.14 patch dönemi başı. */
     public function collectSinceTimestamp(): int
     {
@@ -75,9 +95,9 @@ class WorkerControlService
         }
 
         $last = (int) Cache::get(self::USER_ACTIVITY_KEY, 0);
-        $window = (int) config('elwgraphs.worker.user_yield_seconds', 8);
+        $window = $this->userYieldSeconds(); // panelden; 0 = worker öncelikli, kullanıcıya yol vermez
 
-        return $last > 0 && (time() - $last) < $window;
+        return $window > 0 && $last > 0 && (time() - $last) < $window;
     }
 
     /** Admin paneli durum kartları için özet. */
@@ -88,6 +108,9 @@ class WorkerControlService
         return [
             'enabled'       => $this->isEnabled(),
             'scanMode'      => $this->scanMode(),
+            'matchBudget'   => $this->matchBudget(),
+            'playersPerRun' => $this->playersPerRun(),
+            'userYield'     => $this->userYieldSeconds(),
             'tiers'         => $this->tiers(),
             'tiersAvailable' => config('elwgraphs.worker.tiers_available', []),
             'collectSince'  => AdminSetting::getValue('worker_collect_since', '2026-07-16'),

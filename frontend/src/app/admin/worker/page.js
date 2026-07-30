@@ -49,6 +49,9 @@ export default function WorkerPage() {
   // Form state (status'tan beslenir, kullanıcı değiştirir, Kaydet ile yazılır)
   const [enabled, setEnabled] = useState(false);
   const [scanMode, setScanMode] = useState("apex");
+  const [matchBudget, setMatchBudget] = useState(40);
+  const [players, setPlayers] = useState(15);
+  const [userYield, setUserYield] = useState(8);
   const [tiers, setTiers] = useState([]);
   const [since, setSince] = useState("2026-07-16");
   const dirtyRef = useRef(false);
@@ -62,6 +65,9 @@ export default function WorkerPage() {
       if (syncForm || !dirtyRef.current) {
         setEnabled(!!s.enabled);
         setScanMode(s.scanMode || "apex");
+        setMatchBudget(s.matchBudget ?? 40);
+        setPlayers(s.playersPerRun ?? 15);
+        setUserYield(s.userYield ?? 8);
         setTiers(s.tiers || []);
         setSince(s.collectSince || "2026-07-16");
       }
@@ -89,6 +95,9 @@ export default function WorkerPage() {
     try {
       await putAdmin("/settings/worker_enabled", { value: enabled });
       await putAdmin("/settings/worker_scan_mode", { value: scanMode });
+      await putAdmin("/settings/worker_match_budget", { value: Number(matchBudget) });
+      await putAdmin("/settings/worker_players", { value: Number(players) });
+      await putAdmin("/settings/worker_user_yield", { value: Number(userYield) });
       await putAdmin("/settings/worker_tiers", { value: tiers });
       await putAdmin("/settings/worker_collect_since", { value: since });
       dirtyRef.current = false;
@@ -261,6 +270,36 @@ export default function WorkerPage() {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Performans — hız ↔ site payı (panelden tam kontrol) */}
+        <div className="pt-4 mt-4 border-t border-edge/50">
+          <p className="text-sm font-medium text-gray-100 mb-1">Performans (hız ↔ site payı)</p>
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed max-w-2xl">
+            Worker ne kadar agresif toplasın. Yüksek maç/oyuncu + düşük &quot;yol verme&quot; = hızlı veri
+            ama <b className="text-gray-300">canlı site yavaşlar</b> (aynı Riot key paylaşılıyor). Dev key
+            sınırı tavan; prod key gelince serbest bırakabilirsin.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { label: "Tur başına maç", val: matchBudget, set: setMatchBudget, min: 1, max: 300, hint: "Her turda toplanacak maks maç. Yüksek = hızlı ama dev key'i çok yer." },
+              { label: "Tur başına oyuncu", val: players, set: setPlayers, min: 1, max: 200, hint: "Her turda taranacak oyuncu — bütçeyi doldurmak için." },
+              { label: "Kullanıcıya yol ver (sn)", val: userYield, set: setUserYield, min: 0, max: 60, hint: "0 = worker öncelikli (site yavaşlar) · 8+ = site öncelikli. Kullanıcı Riot'a istek atınca worker bu kadar bekler." },
+            ].map((f) => (
+              <div key={f.label}>
+                <label className="text-xs text-gray-400 mb-1 block">{f.label}</label>
+                <input
+                  type="number"
+                  min={f.min}
+                  max={f.max}
+                  value={f.val}
+                  onChange={(e) => { dirtyRef.current = true; f.set(e.target.value); }}
+                  className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def] [color-scheme:dark]"
+                />
+                <p className="text-[11px] text-gray-500 mt-1 leading-snug">{f.hint}</p>
+              </div>
+            ))}
           </div>
         </div>
       </Card>

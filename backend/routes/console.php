@@ -50,9 +50,11 @@ Schedule::command('assets:sync')->hourly()->withoutOverlapping();
 // Ladder havuzunu günde bir tazele (off-peak, TR gece).
 Schedule::command('ladder:crawl')->dailyAt('04:15')->when($workerOn)->withoutOverlapping();
 // Havuzdan bütçeli maç toplama (tur başına ~40 maç; user-yield ile kullanıcıya yol verir).
-// AGRESİF MOD (2026-07-30): yeni patch verisini hızlı toplamak için 10dk→2dk. withoutOverlapping
-// sayesinde rate limitin izin verdiği kadar sürekli döner. Veri oturunca everyTenMinutes'e geri al.
-Schedule::command('matches:collect')->everyTwoMinutes()->when($workerOn)->withoutOverlapping();
+// Sürekli döner (everyMinute + withoutOverlapping → önceki tur bitmeden yenisi başlamaz).
+// HIZ artık PANELDEN kontrol ediliyor: tur başına maç/oyuncu (match_budget/players) ve
+// kullanıcıya yol verme (user_yield) → /admin/worker "Performans". Yani sıklığı elle
+// değiştirmeye gerek yok; yavaşlatmak için budget'ı düşür / yield'i artır.
+Schedule::command('matches:collect')->everyMinute()->when($workerOn)->withoutOverlapping();
 // Eski maçların timeline istatistikleri (skill_order/starter/item_slot) — bütçeli backfill;
 // stok bitince turlar "bekleyen yok" ile anında biter (maliyetsiz).
 Schedule::command('timelines:backfill')->everyTenMinutes()->when($workerOn)->withoutOverlapping();

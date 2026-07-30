@@ -25,7 +25,7 @@ class CollectMatches extends Command
 {
     private const RANKED_QUEUES = [420, 440];
 
-    protected $signature = 'matches:collect {--players=40 : Bu turda taranacak oyuncu sayısı} {--force : worker_enabled kapalıyken de çalıştır}';
+    protected $signature = 'matches:collect {--players= : Bu turda taranacak oyuncu (boşsa panel ayarı)} {--force : worker_enabled kapalıyken de çalıştır}';
 
     protected $description = 'Havuzdaki oyuncuların yeni ranked maçlarını (bütçeli) ProcessMatchJob kuyruğuna atar';
 
@@ -49,7 +49,10 @@ class CollectMatches extends Command
         // Tarama sırası — panelden seçilen moda göre (WorkerControlService::scanMode):
         //  apex  → sadece apex önde (alt elo beklemede), mixed → ~%70 apex + %30 alt elo,
         //  fair  → tüm ligler adil last_scanned_at sırasıyla.
-        $limit = max(1, (int) $this->option('players'));
+        // Oyuncu sayısı: --players verildiyse o, yoksa panel ayarı (worker_players).
+        $limit = $this->option('players') !== null
+            ? max(1, (int) $this->option('players'))
+            : $control->playersPerRun();
         $mode = $control->scanMode();
         $ordered = fn ($q) => $q->orderByRaw('last_scanned_at IS NULL DESC, last_scanned_at ASC');
 
@@ -69,7 +72,7 @@ class CollectMatches extends Command
             return self::SUCCESS;
         }
 
-        $budget = max(1, (int) config('elwgraphs.worker.match_budget', 40));
+        $budget = $control->matchBudget(); // panelden (worker_match_budget)
         $perPlayer = max(1, (int) config('elwgraphs.worker.recent_per_player', 10));
         $since = $control->collectSinceTimestamp();
 

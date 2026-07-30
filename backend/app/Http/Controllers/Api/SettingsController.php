@@ -66,6 +66,7 @@ class SettingsController extends Controller
             'performance_labels', 'badge_config', 'elw_score', 'profile_design',
             'meta_insufficient_mode', 'labels_config',
             'worker_enabled', 'worker_tiers', 'worker_collect_since', 'worker_scan_mode',
+            'worker_match_budget', 'worker_players', 'worker_user_yield',
             'seo_overrides',
         ];
 
@@ -82,6 +83,12 @@ class SettingsController extends Controller
             $request->validate(['value' => 'required|boolean']);
         } elseif ($key === 'worker_scan_mode') {
             $request->validate(['value' => 'required|string|in:apex,fair,mixed']);
+        } elseif ($key === 'worker_match_budget') {
+            $request->validate(['value' => 'required|integer|min:1|max:300']);
+        } elseif ($key === 'worker_players') {
+            $request->validate(['value' => 'required|integer|min:1|max:200']);
+        } elseif ($key === 'worker_user_yield') {
+            $request->validate(['value' => 'required|integer|min:0|max:60']);
         } elseif ($key === 'worker_collect_since') {
             $request->validate(['value' => 'required|date']);
         } elseif ($key === 'seo_overrides') {
