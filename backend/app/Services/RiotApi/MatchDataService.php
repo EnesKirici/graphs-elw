@@ -384,7 +384,7 @@ class MatchDataService
         if (empty($missing)) return;
 
         $regionUrl = config('riot.region_url');
-        $apiKey = config('riot.api_key');
+        $apiKey = RiotKeyStore::current();
 
         foreach (array_chunk($missing, 20) as $chunk) {
             // Cooldown aktifse bu chunk'ı atla
@@ -446,7 +446,7 @@ class MatchDataService
         if (empty($missing)) return $out;
 
         $regionUrl = config('riot.region_url');
-        $apiKey = config('riot.api_key');
+        $apiKey = RiotKeyStore::current();
 
         foreach (array_chunk($missing, 20) as $chunk) {
             $cooldown = Cache::get('riot:rate_limit_cooldown');
@@ -485,7 +485,7 @@ class MatchDataService
         if (empty($missing)) return;
 
         $regionUrl = config('riot.region_url');
-        $apiKey = config('riot.api_key');
+        $apiKey = RiotKeyStore::current();
 
         foreach (array_chunk($missing, 20) as $chunk) {
             $cooldown = Cache::get('riot:rate_limit_cooldown');

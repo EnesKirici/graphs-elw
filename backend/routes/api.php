@@ -101,6 +101,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/settings/{key}', [SettingsController::class, 'show']);
         Route::put('/settings/{key}', [SettingsController::class, 'update']);
 
+        // Riot anahtarı — panelden yapıştırılır, doğrulanıp DB'ye yazılır.
+        // Ayrı uç: değer şifreli saklanıyor ve kaydetmeden önce Riot'a soruluyor,
+        // yani genel settings akışına sığmıyor.
+        Route::get('/riot-key', [SettingsController::class, 'riotKey']);
+        Route::put('/riot-key', [SettingsController::class, 'updateRiotKey']);
+
         // Meta worker (durum + elle tetikleme; ayarlar settings/worker_* üzerinden)
         Route::get('/worker', [\App\Http\Controllers\Api\WorkerController::class, 'status']);
         Route::post('/worker/crawl', [\App\Http\Controllers\Api\WorkerController::class, 'crawl']);

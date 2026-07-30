@@ -45,6 +45,14 @@ const ROLE_ICONS = {
   ADC: "/roles/bot.webp", Support: "/roles/support.webp",
 };
 
+/* Kalan süreyi kısa yaz: 47dk, 3s 10dk, bitti. */
+function fmtLeft(sec) {
+  if (sec <= 0) return "bitti";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return h > 0 ? `${h}s ${m}dk` : `${m}dk`;
+}
+
 /* Riot API kullanım göstergesi — tasarımın topbar "XP gauge"i olarak stillenir.
    Hesaplama mantığı korunur; yalnızca admin görür. */
 function RateLimitIndicator() {
@@ -92,6 +100,10 @@ function RateLimitIndicator() {
   // ama istek var" diye tahmin ediliyordu; rate limit kaydı sayaçtan önce
   // dolduğu için sapasağlam key'de bile "GEÇERSİZ" yazıyordu.
   const noKey = !!data.keyInvalid;
+  // Dev key 24 saatte bir ölüyor. Son saate girince uyar ki key, site kırılmadan
+  // önce yenilensin. null = anahtar .env'de, bitiş zamanı bilinmiyor → uyarı yok.
+  const expiresIn = Number.isFinite(data.keyExpiresIn) ? data.keyExpiresIn : null;
+  const expiringSoon = expiresIn !== null && expiresIn <= 3600;
   const color = noKey || isCooldown || isHot ? "var(--loss)" : pct > 40 ? "var(--gold)" : "var(--win)";
 
   return (
@@ -100,6 +112,13 @@ function RateLimitIndicator() {
       <div className="tb-pill" style={{ gap: 10 }}>
         {noKey ? (
           <span className="mono" style={{ color: "var(--loss)", fontWeight: 800, fontSize: 11 }}>API KEY!</span>
+        ) : expiringSoon ? (
+          <>
+            <span className="sf-dot" style={{ background: "var(--gold)", boxShadow: "0 0 8px var(--gold)" }} />
+            <span className="mono" style={{ color: "var(--gold)", fontWeight: 800, fontSize: 11 }}>
+              KEY {fmtLeft(expiresIn)}
+            </span>
+          </>
         ) : isCooldown ? (
           <>
             <span className="sf-dot" style={{ background: "var(--loss)", boxShadow: "0 0 8px var(--loss)" }} />
@@ -157,6 +176,35 @@ function RateLimitIndicator() {
               <p style={{ fontSize: 9, color: "var(--txt-3)" }}>Engellenen</p>
             </div>
           </div>
+
+          {/* Anahtar ömrü — dev key 24 saatte bir ölüyor, son saatte buradan
+              tek tıkla yenileme sayfasına gidilsin. */}
+          {expiresIn !== null && (
+            <div className="flex items-center justify-between pt-3 mt-3" style={{ borderTop: "1px solid var(--border)" }}>
+              <span style={{ fontSize: 10, color: "var(--txt-3)" }}>Anahtar ömrü</span>
+              <span
+                className="mono"
+                style={{ fontSize: 11, fontWeight: 700, color: expiringSoon ? "var(--gold)" : "var(--txt-2)" }}
+              >
+                {fmtLeft(expiresIn)}
+              </span>
+            </div>
+          )}
+
+          {(noKey || expiringSoon) && (
+            <Link
+              href="/admin/settings/riot-key"
+              className="block text-center mt-3 py-2 rounded-lg transition-opacity hover:opacity-80"
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: noKey ? "var(--loss)" : "var(--gold)",
+                border: `1px solid ${noKey ? "var(--loss)" : "var(--gold)"}`,
+              }}
+            >
+              Anahtarı yenile →
+            </Link>
+          )}
         </div>
       )}
     </div>

@@ -44,7 +44,7 @@ class RiotApiService
         }
 
         $response = Http::timeout(10)
-            ->withHeaders(['X-Riot-Token' => config('riot.api_key')])
+            ->withHeaders(['X-Riot-Token' => RiotKeyStore::current()])
             ->get($url, $query);
 
         self::track('request');
@@ -179,6 +179,10 @@ class RiotApiService
             'cooldownUntil'=> $cooldown ? max(0, $cooldown - time()) : 0,
             'lastUpdate'   => $rateInfo['time'] ?? null,
             'keyInvalid'   => (bool) Cache::get(self::KEY_INVALID_KEY, false),
+            // Anahtarın kalan ömrü — Navbar admin göstergesi son saatte uyarı basar.
+            // null: anahtar DB'de değil (.env modu), bitiş zamanı bilinmiyor.
+            'keyExpiresIn' => RiotKeyStore::secondsLeft(),
+            'keySource'    => RiotKeyStore::meta()['source'] ?? null,
         ];
     }
 }

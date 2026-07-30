@@ -82,7 +82,18 @@ async function authRequest(endpoint, options = {}) {
   });
 
   if (res.status === 401) { logout(); throw new Error("Oturum süresi doldu."); }
-  if (!res.ok) throw new Error(`API Hatası: ${res.status}`);
+
+  if (!res.ok) {
+    // Backend'in anlamlı hata mesajını (422 doğrulama vb.) yutma — kullanıcı
+    // "API Hatası: 422" yerine sebebi görsün.
+    let detail = null;
+    try {
+      const body = await res.json();
+      detail = body?.error || body?.message || null;
+    } catch {}
+    throw new Error(detail || `API Hatası: ${res.status}`);
+  }
+
   return res.json();
 }
 
