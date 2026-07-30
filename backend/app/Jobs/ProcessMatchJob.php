@@ -36,6 +36,15 @@ class ProcessMatchJob implements ShouldQueue
 
     public function handle(MatchDataService $matchData, BuildAggregationService $agg): void
     {
+        // Anahtar GEÇERSİZ (401/403): işlemeyi DENEME — boşa 401 atıp maçı 15 kez
+        // deneyerek failed_jobs'a düşürmesin. İşi 2 dk gecikmeyle geri bırak; yeni key
+        // panelden girilince (RiotKeyStore::put flag'i temizler) bekleyen işler işlenir.
+        if (\Illuminate\Support\Facades\Cache::get('riot:key_invalid')) {
+            $this->release(120);
+
+            return;
+        }
+
         // ATOMİK CLAIM — çift sayımın TEK garantisi burası.
         // Aynı maç 10 oyuncunun da geçmişinde çıkar; match_id PRIMARY KEY olduğu için
         // insertOrIgnore yalnızca İLK job'ta 1 döner, diğerlerinde 0 (zaten var) → atlanır.

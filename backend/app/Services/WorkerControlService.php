@@ -89,6 +89,13 @@ class WorkerControlService
      */
     public function shouldYield(): bool
     {
+        // Anahtar GEÇERSİZ (401/403 → key_invalid): worker hiç istek atmasın, boşa 401
+        // yağdırıp failed_jobs'u şişirmesin. Yeni key panelden girilince RiotKeyStore::put
+        // bu flag'i temizler → worker kendiliğinden devam eder.
+        if (Cache::get('riot:key_invalid')) {
+            return true;
+        }
+
         $cooldown = Cache::get('riot:rate_limit_cooldown');
         if ($cooldown && time() < $cooldown) {
             return true;
