@@ -20,9 +20,8 @@ export default function TierList({ data }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState("board");
   const [openTiers, setOpenTiers] = useState(TIER_OPEN_DEFAULT);
-  // null = "henüz dokunulmadı" → o koridorun en üst derecesi gösterilir. Kullanıcı
-  // bir çipe basar basmaz dizi olur ve seçim tamamen ona geçer (boş dizi = hepsi).
-  const [tierFilter, setTierFilter] = useState(null);
+  // Boş dizi = filtre yok → BÜTÜN dereceler görünür. Sayfa hep böyle açılır.
+  const [tierFilter, setTierFilter] = useState([]);
 
   // Görünüm tercihi kalıcı — okuma mount sonrası (sunucu/istemci ilk render aynı kalsın).
   useEffect(() => {
@@ -37,10 +36,10 @@ export default function TierList({ data }) {
     try { localStorage.setItem(VIEW_KEY, v); } catch {}
   }
 
-  // Koridor değişince derece seçimi sıfırlanır → yeni koridorun en üst derecesi açılır.
+  // Koridor değişince derece seçimi sıfırlanır → yeni koridor tam listeyle açılır.
   function changeRole(r) {
     setRole(r);
-    setTierFilter(null);
+    setTierFilter([]);
   }
 
   const inRole = useMemo(() => championsInRole(champions, role), [champions, role]);
@@ -59,16 +58,13 @@ export default function TierList({ data }) {
     return acc;
   }, [inRole]);
 
-  /* Açılışta yalnız EN ÜST derece gösterilir: koridorda S+ varsa o, yoksa S, yoksa
-     sıradaki. Böylece sayfa "yamanın en güçlüleri" ile açılıyor; alt dereceler
-     çiplerden bir tıkla ekleniyor. Arama yapılırken filtre devre dışı — aranan
-     şampiyon hangi derecede olursa olsun bulunmalı. */
-  const topTier = useMemo(() => TIER_ORDER.find((t) => tierCounts[t]) || null, [tierCounts]);
-  const activeTiers = useMemo(() => {
-    if (searching) return [];
-    if (tierFilter === null) return topTier ? [topTier] : [];
-    return tierFilter;
-  }, [searching, tierFilter, topTier]);
+  /* Açılışta LİSTENİN TAMAMI görünür — derece filtresi sadece kullanıcı bir çipe
+     bastığında devreye girer. Önceden sayfa otomatik olarak yalnız en üst dereceyle
+     (pratikte S+) açılıyordu; "tier list" beklentisi tam liste olduğu için bu
+     şaşırtıcıydı ve alt dereceler gizli kalıyordu (kullanıcı bildirdi).
+     Arama yapılırken filtre devre dışı — aranan şampiyon hangi derecede olursa
+     olsun bulunmalı. */
+  const activeTiers = useMemo(() => (searching ? [] : tierFilter), [searching, tierFilter]);
 
   // Derece bölümleri — boş dereceler ve filtre dışı dereceler hiç çizilmez.
   const groups = useMemo(
@@ -85,17 +81,10 @@ export default function TierList({ data }) {
     [filtered, activeTiers]
   );
 
+  // Çipler çoklu seçim: basılan derece listeye girer/çıkar. Hepsi kapanınca
+  // filtre kalkar (boş dizi) ve liste yine tam görünür.
   function toggleTierFilter(tier) {
-    setTierFilter((prev) => {
-      // İlk tıklama (prev henüz null — kullanıcı hiç dokunmadı, sadece topTier
-      // görünürde "seçili" duruyordu): farklı bir dereceye tıklarsa TEK BAŞINA o
-      // seçili olsun, görünmez varsayılanla birleşmesin. Önceden burada varsayılan
-      // her zaman tıklanana EKLENİYORDU → "B'ye bastım ama S+ hâlâ açık" gibi
-      // şaşırtıcı bir sonuç çıkıyordu (kullanıcı bildirdi, doğrulandı). Zaten
-      // varsayılan olan dereceye basmak (S+'a tekrar gibi) onu kapatır → hepsi görünür.
-      if (prev === null) return tier === topTier ? [] : [tier];
-      return prev.includes(tier) ? prev.filter((t) => t !== tier) : [...prev, tier];
-    });
+    setTierFilter((prev) => (prev.includes(tier) ? prev.filter((t) => t !== tier) : [...prev, tier]));
   }
 
   // Öne çıkanlar: en üstteki iki derece; hiç yoksa listenin başı.
