@@ -112,6 +112,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/worker/crawl', [\App\Http\Controllers\Api\WorkerController::class, 'crawl']);
         Route::post('/worker/collect', [\App\Http\Controllers\Api\WorkerController::class, 'collect']);
 
+        // Sunucu durumu — CPU/RAM/disk/DB/kuyruk (panel izleme)
+        Route::get('/server', [\App\Http\Controllers\Api\ServerController::class, 'status']);
+
         // Maç verisi saklama (retention) — patch dağılımı raporu + elle prune (otomatik silme yok)
         Route::get('/retention', [\App\Http\Controllers\Api\RetentionController::class, 'status']);
         Route::post('/retention/prune', [\App\Http\Controllers\Api\RetentionController::class, 'prune']);
