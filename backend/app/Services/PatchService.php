@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AdminSetting;
 use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
 use Carbon\Carbon;
@@ -76,7 +77,10 @@ class PatchService
      */
     public function keptPatches(): array
     {
-        $keep = max(1, (int) config('elwgraphs.meta.keep_patches', 2));
+        // Meta gösterim + prune penceresi kaç patch (güncel dahil). Panelden ayarlanır
+        // (admin_settings: meta_keep_patches), yoksa config yedeği. 1 = yalnız güncel,
+        // 2 = güncel+önceki birleşik. Ana sayfa VE tier list bunu kullanır.
+        $keep = max(1, (int) AdminSetting::getValue('meta_keep_patches', config('elwgraphs.meta.keep_patches', 2)));
 
         return $this->ddragon->getRecentPatches($keep);
     }

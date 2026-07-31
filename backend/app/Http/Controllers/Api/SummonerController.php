@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AnalyticsEvent;
 use App\Models\CachedPlayer;
 use App\Models\LpSnapshot;
 use App\Services\RiotApi\SummonerService;
@@ -525,6 +526,18 @@ class SummonerController extends Controller
             return response()->json([]);
         }
 
+        // Arama popülerliği: son 30 günün 'search' event'lerinden isim#tag -> sayı (10 dk
+        // cache; her tuşta sorgu koşmasın). Çok aranan oyuncu önerilerde ÖNE çıkar.
+        $popularity = Cache::remember('search:popularity', 600, function () {
+            return AnalyticsEvent::where('type', 'search')
+                ->where('created_at', '>=', now()->subDays(30))
+                ->selectRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(data, '$.query'))) AS q, COUNT(*) AS c")
+                ->groupBy('q')
+                ->pluck('c', 'q')
+                ->toArray();
+        });
+        $popOf = fn($p) => (int) ($popularity[mb_strtolower($p->game_name . '#' . $p->tag_line)] ?? 0);
+
         $query = CachedPlayer::where('game_name', 'LIKE', "{$q}%");
 
         // Tag varsa filtrele
@@ -535,9 +548,6 @@ class SummonerController extends Controller
         // Riot, puuid'leri API uygulaması (key) bazında şifreler — key/app değişince
         // aynı oyuncuya YENİ puuid'li ikinci satır açılır. Aynı isim#tag'in yalnız
         // en güncel satırı gösterilir (bkz. players:dedupe komutu — kalıcı temizlik).
-        // Sıralama: profili gerçekten açılmış (ranklı/rollü) oyuncular önce, sonra
-        // en yakın eşleşme (kısa isim) — worker'ın maçlardan tanıdığı çıplak
-        // kayıtlar (tier=null, rol yok) listenin sonuna düşer.
         $bare = fn($p) => $p->tier === null && empty($p->top_roles);
         $players = $query
             ->orderByDesc('updated_at')
@@ -550,14 +560,17 @@ class SummonerController extends Controller
                 return $b->updated_at <=> $a->updated_at;
             })
             ->unique(fn($p) => mb_strtolower($p->game_name . '#' . $p->tag_line))
-            // Gösterim sırası: ranklı/rollü önce, sonra en yakın eşleşme (kısa isim)
-            ->sort(function ($a, $b) use ($bare) {
+            // Gösterim sırası: ÇOK ARANAN önce, sonra dolu profil (rank/rol), sonra en
+            // yakın eşleşme (kısa isim). Frekans birincil anahtar (kullanıcı talebi).
+            ->sort(function ($a, $b) use ($bare, $popOf) {
+                if ($popOf($a) !== $popOf($b)) return $popOf($b) <=> $popOf($a);
                 if ($bare($a) !== $bare($b)) return $bare($a) <=> $bare($b);
                 return mb_strlen($a->game_name) <=> mb_strlen($b->game_name);
             })
             ->take(5)
             ->values()
             ->map(fn($p) => [
+                'type'        => 'player',
                 'puuid'       => $p->puuid,
                 'gameName'    => $p->game_name,
                 'tagLine'     => $p->tag_line,
@@ -570,7 +583,28 @@ class SummonerController extends Controller
                 'topRoles'    => $p->top_roles ? array_slice($p->top_roles, 0, 2) : null,
             ]);
 
-        return response()->json($players);
+        // Şampiyon eşleşmeleri — yalnız TAG YOKKEN (isim#tag = net oyuncu araması).
+        // Jade_ varyantları hariç; isim başında eşleşenler öne (mb_strpos = 0).
+        $champions = collect([]);
+        if (! $tag) {
+            $needle = mb_strtolower($q);
+            $champions = collect($this->ddragon->getChampions())
+                ->reject(fn($c) => str_starts_with($c['id'], 'Jade_'))
+                ->filter(fn($c) => str_contains(mb_strtolower($c['name']), $needle))
+                ->sortBy(fn($c) => mb_strpos(mb_strtolower($c['name']), $needle))
+                ->take(4)
+                ->map(fn($c) => [
+                    'type'  => 'champion',
+                    'id'    => $c['id'],
+                    'name'  => $c['name'],
+                    'image' => $this->ddragon->championIconUrl($c['id']),
+                    'tags'  => $c['tags'] ?? [],
+                ])
+                ->values();
+        }
+
+        // Oyuncular önce, şampiyonlar sonra (tek düz dizi; frontend type'a göre ayırır).
+        return response()->json($players->concat($champions)->values());
     }
 
     /**

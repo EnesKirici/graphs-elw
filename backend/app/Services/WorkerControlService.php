@@ -118,6 +118,8 @@ class WorkerControlService
             'matchBudget'   => $this->matchBudget(),
             'playersPerRun' => $this->playersPerRun(),
             'userYield'     => $this->userYieldSeconds(),
+            // Meta gösterim penceresi (kaç patch birleşik). PatchService::keptPatches ile aynı kaynak.
+            'metaKeepPatches' => (int) AdminSetting::getValue('meta_keep_patches', config('elwgraphs.meta.keep_patches', 2)),
             'tiers'         => $this->tiers(),
             'tiersAvailable' => config('elwgraphs.worker.tiers_available', []),
             'collectSince'  => AdminSetting::getValue('worker_collect_since', '2026-07-16'),

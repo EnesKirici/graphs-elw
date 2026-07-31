@@ -54,6 +54,7 @@ export default function WorkerPage() {
   const [userYield, setUserYield] = useState(8);
   const [tiers, setTiers] = useState([]);
   const [since, setSince] = useState("2026-07-16");
+  const [metaKeep, setMetaKeep] = useState(2); // meta gösterim penceresi (kaç patch birleşik)
   const dirtyRef = useRef(false);
 
   const load = useCallback(async (syncForm = false) => {
@@ -70,6 +71,7 @@ export default function WorkerPage() {
         setUserYield(s.userYield ?? 8);
         setTiers(s.tiers || []);
         setSince(s.collectSince || "2026-07-16");
+        setMetaKeep(s.metaKeepPatches ?? 2);
       }
     } catch {
       setMsg("load-error");
@@ -100,6 +102,7 @@ export default function WorkerPage() {
       await putAdmin("/settings/worker_user_yield", { value: Number(userYield) });
       await putAdmin("/settings/worker_tiers", { value: tiers });
       await putAdmin("/settings/worker_collect_since", { value: since });
+      await putAdmin("/settings/meta_keep_patches", { value: Number(metaKeep) });
       dirtyRef.current = false;
       setMsg("ok");
       setTimeout(() => setMsg(""), 3000);
@@ -300,6 +303,31 @@ export default function WorkerPage() {
                 <p className="text-[11px] text-gray-500 mt-1 leading-snug">{f.hint}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Meta gösterim penceresi — ana sayfa + tier list kaç patch birleştirsin */}
+        <div className="pt-4 mt-4 border-t border-edge/50">
+          <p className="text-sm font-medium text-gray-100 mb-1">Meta gösterim penceresi</p>
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed max-w-2xl">
+            Ana sayfa <b className="text-gray-300">ve</b> tier list kaç yamayı birleştirip göstersin.
+            Yeni yama tazeyken birleşik pencere listeleri dolu tutar; ama önceki yama güncelden büyükse
+            &quot;güncel meta&quot;yı eskiye kaydırır. <b className="text-gray-300">Worker toplamasını etkilemez</b> —
+            yalnız gösterim (+ elle prune eşiği). Eski veri silinmez.
+          </p>
+          <div className="max-w-xs">
+            <select
+              value={metaKeep}
+              onChange={(e) => { dirtyRef.current = true; setMetaKeep(Number(e.target.value)); }}
+              className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def] [color-scheme:dark]"
+            >
+              <option value={1}>Yalnız güncel patch</option>
+              <option value={2}>Güncel + önceki (birleşik)</option>
+              <option value={3}>Son 3 yama (birleşik)</option>
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+              Yeni yama çıkınca veri seyrek görünürse geçici 2/3'e çek; güncel oturunca 1'e döndür.
+            </p>
           </div>
         </div>
       </Card>

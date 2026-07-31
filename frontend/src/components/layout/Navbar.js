@@ -271,7 +271,7 @@ export default function Navbar() {
   function handleSubmit(e) {
     if (e) e.preventDefault();
     if (selectedIdx >= 0 && selectedIdx < suggestions.length) {
-      selectPlayer(suggestions[selectedIdx]);
+      selectItem(suggestions[selectedIdx]);
       return;
     }
     if (query.includes("#")) {
@@ -284,7 +284,7 @@ export default function Navbar() {
       }
       return;
     }
-    if (suggestions.length > 0) selectPlayer(suggestions[0]);
+    if (suggestions.length > 0) selectItem(suggestions[0]);
   }
 
   function handleKeyDown(e) {
@@ -308,6 +308,19 @@ export default function Navbar() {
     setShowDropdown(false);
     setSuggestions([]);
     setSelectedIdx(-1);
+  }
+
+  function selectChamp(c) {
+    router.push(`/champions/${c.id}`);
+    setQuery("");
+    setShowDropdown(false);
+    setSuggestions([]);
+    setSelectedIdx(-1);
+  }
+
+  // Öneri hem oyuncu hem şampiyon olabilir (autocomplete type alanı verir).
+  function selectItem(item) {
+    return item?.type === "champion" ? selectChamp(item) : selectPlayer(item);
   }
 
   return (
@@ -361,7 +374,7 @@ export default function Navbar() {
               onChange={(e) => handleChange(e.target.value)}
               onFocus={() => (suggestions.length > 0 || query.includes("#")) && setShowDropdown(true)}
               onKeyDown={handleKeyDown}
-              placeholder="Oyuncu ara… (isim#tag)"
+              placeholder="Şampiyon veya oyuncu ara… (isim#tag)"
             />
           </div>
         </form>
@@ -375,6 +388,33 @@ export default function Navbar() {
             }}
           >
             {suggestions.map((p, idx) => {
+              // Şampiyon önerisi — ikon + ad, tıkla → /champions/{id}
+              if (p.type === "champion") {
+                return (
+                  <button
+                    key={"champ-" + p.id}
+                    onClick={() => selectChamp(p)}
+                    onMouseEnter={() => setSelectedIdx(idx)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 14px",
+                      textAlign: "left", background: idx === selectedIdx ? "var(--surface-2)" : "transparent", transition: "background .15s",
+                    }}
+                  >
+                    <img src={p.image} alt="" width={40} height={40} style={{ borderRadius: 10 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {p.name}
+                      </p>
+                      <p style={{ fontSize: 11, color: "var(--txt-2)", marginTop: 2 }}>
+                        Şampiyon{p.tags?.length ? " · " + p.tags.join(" / ") : ""}
+                      </p>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                      <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                );
+              }
               const tierName = p.tier ? p.tier.charAt(0) + p.tier.slice(1).toLowerCase() : null;
               const rankText = tierName
                 ? `${tierName}${p.rank ? " " + p.rank : ""}${p.lp != null ? " · " + p.lp + " LP" : ""}`

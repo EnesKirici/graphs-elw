@@ -64,9 +64,22 @@ export default function BigSearch({ chips = [] }) {
     setSel(-1);
   }
 
+  function selectChamp(c) {
+    router.push(`/champions/${c.id}`);
+    setQuery("");
+    setOpen(false);
+    setSuggestions([]);
+    setSel(-1);
+  }
+
+  // Öneri hem oyuncu hem şampiyon olabilir (autocomplete type alanı verir).
+  function selectItem(item) {
+    return item?.type === "champion" ? selectChamp(item) : selectPlayer(item);
+  }
+
   function handleSubmit(e) {
     if (e) e.preventDefault();
-    if (sel >= 0 && sel < suggestions.length) return selectPlayer(suggestions[sel]);
+    if (sel >= 0 && sel < suggestions.length) return selectItem(suggestions[sel]);
     if (query.includes("#")) {
       const [n, t] = query.split("#");
       if (n && t) {
@@ -77,7 +90,7 @@ export default function BigSearch({ chips = [] }) {
       }
       return;
     }
-    if (suggestions.length > 0) selectPlayer(suggestions[0]);
+    if (suggestions.length > 0) selectItem(suggestions[0]);
   }
 
   function handleKeyDown(e) {
@@ -125,6 +138,35 @@ export default function BigSearch({ chips = [] }) {
               }}
             >
               {suggestions.map((p, idx) => {
+                // Şampiyon önerisi — ikon + ad + tür, tıkla → /champions/{id}
+                if (p.type === "champion") {
+                  return (
+                    <button
+                      key={"champ-" + p.id}
+                      type="button"
+                      onClick={() => selectChamp(p)}
+                      onMouseEnter={() => setSel(idx)}
+                      className="bigsearch-sugg"
+                      style={{
+                        width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 14px",
+                        textAlign: "left", background: idx === sel ? "var(--surface-2)" : "transparent", transition: "background .15s",
+                      }}
+                    >
+                      <img src={p.image} alt="" width={36} height={36} style={{ borderRadius: 9 }} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {p.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--txt-2)", marginTop: 2 }}>
+                          Şampiyon{p.tags?.length ? " · " + p.tags.join(" / ") : ""}
+                        </div>
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                        <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  );
+                }
                 const tierName = p.tier ? p.tier.charAt(0) + p.tier.slice(1).toLowerCase() : null;
                 const rankText = tierName
                   ? `${tierName}${p.rank ? " " + p.rank : ""}${p.lp != null ? " · " + p.lp + " LP" : ""}`

@@ -64,7 +64,7 @@ class SettingsController extends Controller
     {
         $allowed = [
             'performance_labels', 'badge_config', 'elw_score', 'profile_design',
-            'meta_insufficient_mode', 'labels_config',
+            'meta_insufficient_mode', 'labels_config', 'meta_keep_patches',
             'worker_enabled', 'worker_tiers', 'worker_collect_since', 'worker_scan_mode',
             'worker_match_budget', 'worker_players', 'worker_user_yield',
             'seo_overrides',
@@ -79,6 +79,9 @@ class SettingsController extends Controller
             $request->validate(['value' => 'required|string|in:classic,pro']);
         } elseif ($key === 'meta_insufficient_mode') {
             $request->validate(['value' => 'required|string|in:label,sim']);
+        } elseif ($key === 'meta_keep_patches') {
+            // 1 = yalnız güncel patch · 2 = güncel+önceki birleşik · 3 = son 3 yama
+            $request->validate(['value' => 'required|integer|min:1|max:3']);
         } elseif ($key === 'worker_enabled') {
             $request->validate(['value' => 'required|boolean']);
         } elseif ($key === 'worker_scan_mode') {
@@ -104,8 +107,8 @@ class SettingsController extends Controller
 
         AdminSetting::setValue($key, $request->input('value'));
 
-        // Meta modu değişince ana sayfa dashboard cache'ini tazele (anında yansısın).
-        if ($key === 'meta_insufficient_mode') {
+        // Meta modu/penceresi değişince ana sayfa dashboard cache'ini tazele (anında yansısın).
+        if ($key === 'meta_insufficient_mode' || $key === 'meta_keep_patches') {
             Cache::forget(MetaService::DASHBOARD_STATS_CACHE_KEY);
         }
 

@@ -270,12 +270,15 @@ export default function HeroCarousel({ sliderPool = [], version }) {
                   <div className="hs-lab">Pick</div>
                 </div>
                 <div className="hero-stat">
-                  {/* Yeni şampiyonun dikkat çeken yüksek ban'ı: kırmızı, soldan sağa
-                      cam parlaması süpürmeli sayı (hs-ban-hot) */}
+                  {/* Yüksek ban'ı vurgula: soldan sağa cam parlaması süpüren sayı
+                      (hs-ban-hot). GENEL kural: ban ≥ %30 → her kategoride uygulanır
+                      (ör. En Çok Banlanan Mel %38.7). Yeni şampiyonda eşik daha düşük (20). */}
                   <div
                     className={
                       "hs-val" +
-                      (st.label === "YENİ ŞAMPİYON" && (s.banRate ?? 0) >= 20 ? " hs-ban-hot" : "")
+                      ((s.banRate ?? 0) >= 30 || (st.label === "YENİ ŞAMPİYON" && (s.banRate ?? 0) >= 20)
+                        ? " hs-ban-hot"
+                        : "")
                     }
                     style={st.label === "BAN" ? { color: st.color } : undefined}
                   >
