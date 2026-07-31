@@ -201,34 +201,38 @@ class MetaService
                 }
             }
 
-            // Yeni şampiyon Locke — slider'ın BAŞINA sabitle (tanıtım): "Yeni Şampiyon" rozetiyle
-            // ilk açılır, sonra döngüyle diğerlerine geçer. Yeni şampiyon az oynanır → dashboard
-            // MIN_SAMPLE eşiğine takılıp WR/pick "0,0%" (null) görünürdü. Öne çıkan kartta bu yanıltıcı;
-            // WR/pick/ban'ı doğrudan sayaçtan hesapla + "düşük örneklem" işaretiyle dürüstçe göster.
-            $lockeStat = collect($stats)->firstWhere('id', 'Locke');
-            if ($lockeStat) {
-                $lockeRow = ChampionStat::where('patch', $currentPatch)
-                    ->where('champion_id', 'Locke')->where('position', 'ALL')->first();
+            // Yeni şampiyon — slider'ın BAŞINA sabitlenir (tanıtım): "Yeni Şampiyon" rozetiyle
+            // ilk açılır. Hangi şampiyon PANELDEN seçilir (admin_settings: slider_new_champion),
+            // yoksa config yedeği; BOŞ ise slayt hiç eklenmez → slider tamamen dinamik kalır
+            // (WR/Popüler/Banlanan). DDragon key kronolojik değil + Meraki yeni şampiyonu geç
+            // ekliyor → otomatik "en yeni" tespiti güvenilmez olduğu için seçim panelde.
+            // Yeni şampiyon az oynanır → MIN_SAMPLE'a takılıp WR/pick null görünürdü; öne çıkan
+            // kartta yanıltıcı olmasın diye WR/pick/ban doğrudan sayaçtan + "düşük örneklem" ile.
+            $newChampId = AdminSetting::getValue('slider_new_champion', config('elwgraphs.meta.new_champion', 'Locke'));
+            $newStat = $newChampId ? collect($stats)->firstWhere('id', $newChampId) : null;
+            if ($newStat) {
+                $newRow = ChampionStat::where('patch', $currentPatch)
+                    ->where('champion_id', $newChampId)->where('position', 'ALL')->first();
                 $patchTotal = optional(StatPatch::find($currentPatch))->total_games ?? 0;
-                $detail = $this->ddragon->getChampionDetail('Locke');
+                $detail = $this->ddragon->getChampionDetail($newChampId);
                 $lastRealSkin = $this->getLastRealSkin($detail['skins'] ?? []);
 
-                $entry = $lockeStat;
-                if ($lockeRow && $lockeRow->games > 0) {
-                    $g = (int) $lockeRow->games;
-                    $wns = (int) $lockeRow->wins;
+                $entry = $newStat;
+                if ($newRow && $newRow->games > 0) {
+                    $g = (int) $newRow->games;
+                    $wns = (int) $newRow->wins;
                     $adj = Statistics::shrunkWinRate($wns, $g);
                     $entry['winRate']    = round($wns / $g * 100, 1);
                     $entry['adjWr']      = round($adj * 100, 1);
                     $entry['pickRate']   = $patchTotal > 0 ? round($g / $patchTotal * 100, 1) : 0.0;
-                    $entry['banRate']    = $patchTotal > 0 ? round($lockeRow->bans / $patchTotal * 100, 1) : ($lockeStat['banRate'] ?? 0);
+                    $entry['banRate']    = $patchTotal > 0 ? round($newRow->bans / $patchTotal * 100, 1) : ($newStat['banRate'] ?? 0);
                     $entry['sampleSize'] = $g;
                     $entry['lowSample']  = $g < $minGames;
                     $entry['dataSource'] = 'real';
                     $entry['tier']       = $this->tierFromScore($this->compositeTierScore($adj, $entry['pickRate'], $entry['banRate'], $g));
                 }
-                $entry['latestSkinSplash'] = "{$ddragonBase}/cdn/img/champion/splash/Locke_{$lastRealSkin}.jpg";
-                $entry['latestSkinName'] = $lockeStat['name'];
+                $entry['latestSkinSplash'] = "{$ddragonBase}/cdn/img/champion/splash/{$newChampId}_{$lastRealSkin}.jpg";
+                $entry['latestSkinName'] = $newStat['name'];
                 $entry['sliderCategory'] = 'Yeni Şampiyon';
                 $entry['sliderRank'] = 1;
                 $entry['sliderValue'] = ($entry['adjWr'] ?? $entry['winRate'] ?? 0).'%';

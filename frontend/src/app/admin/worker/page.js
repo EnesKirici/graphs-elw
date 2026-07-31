@@ -5,6 +5,8 @@ import { fetchAdmin, putAdmin, postAdmin } from "@/lib/adminApi";
 import { Card, StatTile, Badge, Button, InfoNote } from "@/components/admin/ui";
 import { TONES, toneOf } from "@/components/admin/ui/tones";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
 const TIER_LABELS = {
   EMERALD: "Zümrüt",
   DIAMOND: "Elmas",
@@ -55,6 +57,8 @@ export default function WorkerPage() {
   const [tiers, setTiers] = useState([]);
   const [since, setSince] = useState("2026-07-16");
   const [metaKeep, setMetaKeep] = useState(2); // meta gösterim penceresi (kaç patch birleşik)
+  const [sliderChamp, setSliderChamp] = useState(""); // slider "yeni şampiyon" (boş = kapalı)
+  const [champs, setChamps] = useState([]); // slider seçici için şampiyon listesi
   const dirtyRef = useRef(false);
 
   const load = useCallback(async (syncForm = false) => {
@@ -72,6 +76,7 @@ export default function WorkerPage() {
         setTiers(s.tiers || []);
         setSince(s.collectSince || "2026-07-16");
         setMetaKeep(s.metaKeepPatches ?? 2);
+        setSliderChamp(s.sliderNewChampion || "");
       }
     } catch {
       setMsg("load-error");
@@ -85,6 +90,20 @@ export default function WorkerPage() {
     const t = setInterval(() => load(false), 15000); // canlı durum
     return () => clearInterval(t);
   }, [load]);
+
+  // Slider "yeni şampiyon" seçici için şampiyon listesi (public, bir kez). Jade hariç,
+  // key'e göre yeniden eskiye (en yeni üstte) → doğru seçim kolaylaşsın.
+  useEffect(() => {
+    fetch(`${API_BASE}/champions`)
+      .then((r) => r.json())
+      .then((d) => {
+        const list = (d?.champions || [])
+          .filter((c) => !c.isClassic)
+          .sort((a, b) => Number(b.key) - Number(a.key));
+        setChamps(list);
+      })
+      .catch(() => {});
+  }, []);
 
   function toggleTier(t) {
     dirtyRef.current = true;
@@ -103,6 +122,7 @@ export default function WorkerPage() {
       await putAdmin("/settings/worker_tiers", { value: tiers });
       await putAdmin("/settings/worker_collect_since", { value: since });
       await putAdmin("/settings/meta_keep_patches", { value: Number(metaKeep) });
+      await putAdmin("/settings/slider_new_champion", { value: sliderChamp });
       dirtyRef.current = false;
       setMsg("ok");
       setTimeout(() => setMsg(""), 3000);
@@ -327,6 +347,31 @@ export default function WorkerPage() {
             </select>
             <p className="text-[11px] text-gray-500 mt-1 leading-snug">
               Yeni yama çıkınca veri seyrek görünürse geçici 2/3'e çek; güncel oturunca 1'e döndür.
+            </p>
+          </div>
+        </div>
+
+        {/* Slider "Yeni Şampiyon" — panelden seç ya da kapat (kapalı = tamamen dinamik) */}
+        <div className="pt-4 mt-4 border-t border-edge/50">
+          <p className="text-sm font-medium text-gray-100 mb-1">Slider &quot;Yeni Şampiyon&quot;</p>
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed max-w-2xl">
+            Ana sayfa slider'ının başına sabitlenen tanıtım şampiyonu. <b className="text-gray-300">Kapalı</b>{" "}
+            seçersen slayt hiç eklenmez → slider tamamen <b className="text-gray-300">WR / Popüler / Banlanan</b>'a
+            göre dinamik olur. (Otomatik tespit güvenilmez: DDragon key kronolojik değil, Meraki yeni şampiyonu geç ekliyor.)
+          </p>
+          <div className="max-w-xs">
+            <select
+              value={sliderChamp}
+              onChange={(e) => { dirtyRef.current = true; setSliderChamp(e.target.value); }}
+              className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#5b8def] [color-scheme:dark]"
+            >
+              <option value="">— Kapalı (tamamen dinamik) —</option>
+              {champs.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+              Liste en yeni şampiyon üstte (key sırası). Seçilen şampiyonun bu patch'te verisi yoksa slayt gösterilmez.
             </p>
           </div>
         </div>

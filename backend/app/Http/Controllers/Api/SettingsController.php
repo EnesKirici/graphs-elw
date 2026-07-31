@@ -64,7 +64,7 @@ class SettingsController extends Controller
     {
         $allowed = [
             'performance_labels', 'badge_config', 'elw_score', 'profile_design',
-            'meta_insufficient_mode', 'labels_config', 'meta_keep_patches',
+            'meta_insufficient_mode', 'labels_config', 'meta_keep_patches', 'slider_new_champion',
             'worker_enabled', 'worker_tiers', 'worker_collect_since', 'worker_scan_mode',
             'worker_match_budget', 'worker_players', 'worker_user_yield',
             'seo_overrides',
@@ -82,6 +82,9 @@ class SettingsController extends Controller
         } elseif ($key === 'meta_keep_patches') {
             // 1 = yalnız güncel patch · 2 = güncel+önceki birleşik · 3 = son 3 yama
             $request->validate(['value' => 'required|integer|min:1|max:3']);
+        } elseif ($key === 'slider_new_champion') {
+            // Slider "Yeni Şampiyon" DDragon id'si; boş string = slaytı kapat.
+            $request->validate(['value' => 'present|string|max:64']);
         } elseif ($key === 'worker_enabled') {
             $request->validate(['value' => 'required|boolean']);
         } elseif ($key === 'worker_scan_mode') {
@@ -107,8 +110,8 @@ class SettingsController extends Controller
 
         AdminSetting::setValue($key, $request->input('value'));
 
-        // Meta modu/penceresi değişince ana sayfa dashboard cache'ini tazele (anında yansısın).
-        if ($key === 'meta_insufficient_mode' || $key === 'meta_keep_patches') {
+        // Meta modu/penceresi/yeni-şampiyon değişince ana sayfa dashboard cache'ini tazele.
+        if (in_array($key, ['meta_insufficient_mode', 'meta_keep_patches', 'slider_new_champion'], true)) {
             Cache::forget(MetaService::DASHBOARD_STATS_CACHE_KEY);
         }
 

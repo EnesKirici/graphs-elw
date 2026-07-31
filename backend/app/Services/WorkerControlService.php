@@ -120,6 +120,8 @@ class WorkerControlService
             'userYield'     => $this->userYieldSeconds(),
             // Meta gösterim penceresi (kaç patch birleşik). PatchService::keptPatches ile aynı kaynak.
             'metaKeepPatches' => (int) AdminSetting::getValue('meta_keep_patches', config('elwgraphs.meta.keep_patches', 2)),
+            // Slider "Yeni Şampiyon" seçimi (boş = kapalı, slider tamamen dinamik).
+            'sliderNewChampion' => (string) AdminSetting::getValue('slider_new_champion', config('elwgraphs.meta.new_champion', 'Locke')),
             'tiers'         => $this->tiers(),
             'tiersAvailable' => config('elwgraphs.worker.tiers_available', []),
             'collectSince'  => AdminSetting::getValue('worker_collect_since', '2026-07-16'),

@@ -166,6 +166,12 @@ return [
         // rebuild non-kept'i silmez); yalnız gösterimden çıkar + elle prune eşiği kayar.
         // Yeni yama çıktığında taze/seyrek görünürse geçici 2'ye çekilebilir.
         'keep_patches' => 1,
+
+        // Slider'da "Yeni Şampiyon" olarak öne çıkan şampiyon (DDragon id). Panelden
+        // (admin_settings: slider_new_champion) ezilir; BOŞ = slaytı gösterme (slider
+        // tamamen WR/Popüler/Banlanan dinamik olur). Otomatik tespit güvenilmez (key
+        // kronolojik değil, Meraki yeni şampiyonu geç ekliyor) → seçim panelde.
+        'new_champion' => 'Locke',
     ],
 
     /*
