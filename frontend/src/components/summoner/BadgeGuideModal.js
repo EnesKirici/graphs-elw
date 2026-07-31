@@ -47,8 +47,12 @@ const BADGE_CATEGORIES = [
       { label: "Ölümsüz", desc: "0 ölüm ile galibiyet", tiers: [{ t: "emerald", v: "Galibiyet" }, { t: "diamond", v: "10+ K+A" }, { t: "challenger", v: "15+ K+A" }] },
       { label: "İlk Kan", desc: "Maçta ilk öldürme", tiers: [{ t: "gold", v: "First Blood" }] },
       { label: "PENTA KILL", desc: "5 kişiyi ard arda öldürme", tiers: [{ t: "challenger", v: "Pentakill" }] },
+      { label: "Quadra Kill", desc: "4 kişiyi ard arda öldürme", tiers: [{ t: "grandmaster", v: "Quadrakill" }] },
       { label: "Son Nefes", desc: "10 HP altında hayatta kalma", tiers: [{ t: "silver", v: "1x" }, { t: "gold", v: "2x" }, { t: "diamond", v: "3x" }, { t: "challenger", v: "5x" }] },
       { label: "Kaçış Ustası", desc: "Savuşturulan skillshot sayısı", tiers: [{ t: "gold", v: "20+" }, { t: "emerald", v: "35+" }, { t: "diamond", v: "50+" }, { t: "challenger", v: "70+" }] },
+      { label: "Tek Büyü Katliamı", desc: "Tek yetenekle multikill (ör. Brand R, Annie R)", tiers: [{ t: "diamond", v: "1x" }, { t: "challenger", v: "2x" }] },
+      { label: "Sayıca Az, Yürekçe Çok", desc: "Dezavantajlıyken (1vX) alınan kill", tiers: [{ t: "emerald", v: "2+" }, { t: "diamond", v: "4+" }, { t: "challenger", v: "6+" }] },
+      { label: "Geri Dönüş", desc: "Açık nexus'tan dönüp galibiyet", tiers: [{ t: "diamond", v: "Comeback" }] },
     ],
   },
   {
@@ -57,6 +61,7 @@ const BADGE_CATEGORIES = [
       { label: "Hasar Makinesi", desc: "Takım toplam hasarındaki pay (%)", tiers: [{ t: "silver", v: "%28" }, { t: "gold", v: "%30" }, { t: "diamond", v: "%35" }, { t: "grandmaster", v: "%42" }, { t: "challenger", v: "%50" }] },
       { label: "Yüksek DPM", desc: "Dakika başı şampiyonlara verilen hasar", tiers: [{ t: "gold", v: "600" }, { t: "emerald", v: "800" }, { t: "diamond", v: "1000" }, { t: "grandmaster", v: "1200" }, { t: "challenger", v: "1500" }] },
       { label: "Duvar", desc: "Takım için alınan hasar payı (Top/JG/Sup)", tiers: [{ t: "gold", v: "%28" }, { t: "emerald", v: "%35" }, { t: "diamond", v: "%45" }] },
+      { label: "Yıkılmaz", desc: "Tüm takım hasarını yiyip sağ kaldı (Top/JG/Sup)", tiers: [{ t: "emerald", v: "1x" }, { t: "diamond", v: "2x" }, { t: "challenger", v: "3x" }] },
     ],
   },
   {
@@ -67,6 +72,7 @@ const BADGE_CATEGORIES = [
       { label: "Altın Madencisi", desc: "Dakika başı gold", tiers: [{ t: "gold", v: "400" }, { t: "emerald", v: "480" }, { t: "diamond", v: "550" }, { t: "challenger", v: "650" }] },
       { label: "Kule Yıkıcı", desc: "Alınan kule plakası", tiers: [{ t: "gold", v: "3" }, { t: "emerald", v: "5" }, { t: "diamond", v: "7" }, { t: "challenger", v: "10" }] },
       { label: "Hırsız", desc: "Çalınan epic monster", tiers: [{ t: "diamond", v: "1" }, { t: "grandmaster", v: "2" }, { t: "challenger", v: "3" }] },
+      { label: "İlk Kule", desc: "Maçta ilk kuleyi yıkma", tiers: [{ t: "gold", v: "First Tower" }] },
     ],
   },
   {
@@ -74,6 +80,7 @@ const BADGE_CATEGORIES = [
     badges: [
       { label: "Görüş Ustası", desc: "Dakika başı vision score", tiers: [{ t: "gold", v: "1.0" }, { t: "emerald", v: "1.5" }, { t: "diamond", v: "2.0" }, { t: "challenger", v: "2.5" }] },
       { label: "Ward Ustası", desc: "Kontrol ward sayısı", tiers: [{ t: "silver", v: "4" }, { t: "gold", v: "7" }, { t: "emerald", v: "10" }, { t: "diamond", v: "15" }] },
+      { label: "Ward Avcısı", desc: "Temizlenen düşman ward'ı", tiers: [{ t: "gold", v: "5+" }, { t: "emerald", v: "9+" }, { t: "diamond", v: "14+" }, { t: "challenger", v: "20+" }] },
       { label: "Takım Oyuncusu", desc: "Kill katılım oranı", tiers: [{ t: "gold", v: "%65" }, { t: "emerald", v: "%72" }, { t: "diamond", v: "%80" }, { t: "challenger", v: "%90" }] },
     ],
   },
@@ -88,42 +95,48 @@ const BADGE_CATEGORIES = [
     badges: [
       { label: "Erken Ölüm", desc: "10dk başına ortalama 3+ ölüm", tiers: [{ t: "silver", v: "3+/10dk" }], negative: true },
       { label: "Altın Kaybı", desc: "Takım goldda önde ama maç kaybedilmiş", tiers: [{ t: "silver", v: "Gold↑ + Kayıp" }], negative: true },
-      { label: "Kayıp Serisi", desc: "Art arda 3+ mağlubiyet", tiers: [{ t: "silver", v: "3+ kayıp" }], negative: true },
-      { label: "[Şampiyon] ile Kötü", desc: "Belirli şampiyonla %35 altı kazanma oranı (3+ maç)", tiers: [{ t: "silver", v: "≤%35 WR" }], negative: true },
+      { label: "Zor Koridor", desc: "Koridor rakibine belirgin altın geride (≥2500)", tiers: [{ t: "silver", v: "≥2500 geride" }, { t: "gold", v: "≥5000" }], negative: true },
+      { label: "Kayıp Serisi", desc: "Art arda 3+ mağlubiyet (profil geneli)", tiers: [{ t: "silver", v: "3+ kayıp" }], negative: true },
+      { label: "[Şampiyon] ile Kötü", desc: "Belirli şampiyonla %35 altı kazanma oranı, 3+ maç (profil geneli)", tiers: [{ t: "silver", v: "≤%35 WR" }], negative: true },
     ],
   },
 ];
 
-const ELW_METRICS = [
-  { key: "kda",      label: "KDA",           desc: "(Kill + Assist) / Death oranı (log ölçek)", max: "≈9 = max" },
-  { key: "dpm",      label: "Hasar/dk",      desc: "Dakika başı şampiyonlara verilen hasar", max: "1500 DPM = max" },
-  { key: "gpm",      label: "Gold/dk",       desc: "Dakika başı kazanılan gold",         max: "700 GPM = max" },
-  { key: "kp",       label: "Kill Katılımı", desc: "Takım kill'lerine katılım oranı",    max: "%100 = max" },
-  { key: "vision",   label: "Görüş/dk",      desc: "Dakika başı vision score",           max: "3.0 VS/dk = max" },
-  { key: "towerDmg", label: "Kule Hasarı",   desc: "Kulelere verilen toplam hasar",      max: "10000 = max" },
-  { key: "objDmg",   label: "Objektif Hasarı",desc: "Baron/Dragon/Herald hasarı",        max: "30000 = max" },
-  { key: "tankPct",  label: "Tank Katkısı",  desc: "Takım için alınan hasar payı",       max: "%100 = max" },
-  { key: "healing",  label: "İyileştirme & Kalkan",  desc: "Takım arkadaşlarına heal + shield /dk", max: "800/dk = max" },
+// ELW metrikleri — backend ElwScoreService.METRIC_META ile aynı, 5 KATEGORİDE (ELW #7, 2026-06-30).
+// Her metrik 0–1 normalize (vs-Rakip işaretli -1..1) × role-bazlı ağırlık (ROLE_W). Tam sayısal
+// ağırlık tablosu artık BURADA TUTULMUYOR: maç kartındaki skor dial'i (ElwScoreModal) o maça özel
+// puanları canlı gösteriyor → backend ağırlıkları değişince bu rehber bayatlamıyor.
+const ELW_CATEGORIES = [
+  { key: "global", label: "Global", desc: "Rolden bağımsız temel performans",
+    metrics: ["Kill", "Ölüm (ceza)", "Asist", "CS / dk", "Altın / dk", "Hasar / dk", "Vizyon / dk", "İlk Kan", "Multikill"] },
+  { key: "vsOpp", label: "vs Rakip", desc: "Koridor rakibiyle fark (işaretli: +önde / −geride)",
+    metrics: ["Altın farkı", "CS farkı", "XP farkı", "Vizyon farkı", "Erken üstünlük"] },
+  { key: "objective", label: "Objektif", desc: "Ejder/Baron/Herald ve harita kontrolü",
+    metrics: ["Ejder", "Baron", "Herald", "Grub", "Obj. hasarı", "Epic çalma", "Kule katkısı", "Counter-jungle"] },
+  { key: "team", label: "Takım", desc: "Takıma katkı ve koordinasyon",
+    metrics: ["Kill katılımı", "Hasar payı", "Alınan hasar payı", "Koordineli kill", "Erken gank", "Roam kill"] },
+  { key: "role", label: "Role-Özel", desc: "Rolün kendine has işleri",
+    metrics: ["Kule plakası", "Solo kill", "CS @10", "Kule hasarı", "Ward", "Kontrol ward", "Heal / kalkan", "CC süresi", "Ward temizleme", "Clutch kurtarma", "Kule dalış kill"] },
 ];
 
-// Bireysel mod ağırlıkları — backend ElwScoreService.INDIVIDUAL_WEIGHTS ile birebir (2026-06-25).
-// Destek 3 alt-tipe ayrılır (otomatik seçilir): Şifa (enchanter), Hasar, Tank.
-// Ek: tüm rollere eşit CC bonusu (1.0, bonus-only) + ölüm dengesi (×0.4). Galibiyet/Mağlubiyet
-// puana GİRMEZ — "sonuca değil, ne yaptığına" göre puan.
-const ELW_WEIGHTS = {
-  TOP:     { kda: 2.5, dpm: 2.0, gpm: 1.5, kp: 1.5, vision: 1.0, towerDmg: 2.0, objDmg: 0.5, tankPct: 1.0, healing: 0.0 },
-  JUNGLE:  { kda: 2.5, dpm: 1.5, gpm: 1.0, kp: 2.0, vision: 2.0, towerDmg: 0.0, objDmg: 2.5, tankPct: 0.5, healing: 0.0 },
-  MIDDLE:  { kda: 2.5, dpm: 2.5, gpm: 2.0, kp: 2.0, vision: 1.0, towerDmg: 1.5, objDmg: 0.5, tankPct: 0.0, healing: 0.0 },
-  BOTTOM:  { kda: 2.5, dpm: 3.0, gpm: 2.0, kp: 2.0, vision: 0.5, towerDmg: 1.5, objDmg: 0.5, tankPct: 0.0, healing: 0.0 },
-  UTILITY_ENCHANTER: { kda: 2.5, dpm: 0.5, gpm: 0.5, kp: 2.0, vision: 2.5, towerDmg: 0.0, objDmg: 0.5, tankPct: 1.0, healing: 2.0 },
-  UTILITY_DAMAGE:    { kda: 2.0, dpm: 2.0, gpm: 0.5, kp: 2.5, vision: 2.0, towerDmg: 0.0, objDmg: 0.5, tankPct: 0.5, healing: 2.0 },
-  UTILITY_TANK:      { kda: 2.0, dpm: 1.0, gpm: 0.5, kp: 2.5, vision: 2.5, towerDmg: 0.0, objDmg: 0.5, tankPct: 2.0, healing: 0.5 },
-};
+// Rolün ağırlık odağı (ROLE_W özeti — tam sayısal kırılım skor dial'inde).
+const ELW_ROLE_FOCUS = [
+  { role: "Top", focus: "Dayanıklılık + kule/plaka, solo kill, kill katılımı" },
+  { role: "Orman", focus: "Objektif (ejder/baron/grub) + gank/KP + vizyon" },
+  { role: "Orta", focus: "Hasar/dk + koridor farkı + roam" },
+  { role: "ADC", focus: "Hasar/dk + CS/altın + koridor farkı" },
+  { role: "Destek", focus: "Vizyon + heal/kalkan (veya tank) + kill katılımı" },
+];
 
-const ROLE_LABELS = {
-  TOP: "Top", JUNGLE: "Orman", MIDDLE: "Orta", BOTTOM: "ADC",
-  UTILITY_ENCHANTER: "Dst·Şifa", UTILITY_DAMAGE: "Dst·Hasar", UTILITY_TANK: "Dst·Tank",
-};
+// Skor → harf notu (ElwScoreService.scoreGrade ile birebir).
+const ELW_GRADES = [
+  { g: "S+", range: "9.0+",    color: "text-yellow-400",  bg: "bg-yellow-500/10" },
+  { g: "S",  range: "8.0–9.0", color: "text-yellow-300",  bg: "bg-yellow-500/8" },
+  { g: "A",  range: "7.0–8.0", color: "text-emerald-400", bg: "bg-emerald-500/10" },
+  { g: "B",  range: "5.5–7.0", color: "text-blue-400",    bg: "bg-blue-500/10" },
+  { g: "C",  range: "4.0–5.5", color: "text-gray-400",    bg: "bg-gray-500/10" },
+  { g: "D",  range: "0–4.0",   color: "text-red-400",     bg: "bg-red-500/10" },
+];
 
 const LANE_METRICS = [
   { name: "KDA", desc: "(K+A)/D farkı, ±3 normalize" },
@@ -242,72 +255,57 @@ export default function BadgeGuideModal({ open, onClose }) {
               <div className="tip-dark bg-[#0a0e14] rounded-lg p-4 border border-edge/30">
                 <h3 className="text-sm font-bold text-white mb-1">ELW Score Nedir?</h3>
                 <p className="text-[11px] text-gray-400 leading-relaxed">
-                  Her maçta 10 oyuncunun performansı 8 farklı metrikle puanlanır. Her metrik 0-1 arası normalize edilir ve koridora özel ağırlıklarla çarpılır. Sonuç Z-score ile 0-10 arasına dönüştürülür. Maç ortalaması = 5.0.
+                  Bir maçtaki performansını <strong className="text-gray-200">10 üzerinden</strong> puanlar. ~30 istatistik <strong className="text-gray-200">5 kategoride</strong> toplanır; her biri 0–1 arası normalize edilip koridora özel ağırlıkla çarpılır. Ham puan rolünün ortalamasına bölünür → <strong className="text-gray-200">role-göreli</strong> (mükemmel destek = mükemmel ADC). Final skor, lobi-içi sıralama (z-score) ile mutlak mükemmellik referansının <strong className="text-gray-200">%50/%50</strong> harmanıdır.
+                </p>
+                <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+                  <strong className="text-gray-400">Galibiyet/mağlubiyet puana girmez</strong> — "sonuca değil, ne yaptığına" bakılır. Maç kartındaki <strong className="text-gray-400">skor dial'ine tıklayınca</strong> o maça özel tam kırılım (kategori notları + her istatistiğin puanı) açılır.
                 </p>
               </div>
 
-              {/* Metrikler */}
+              {/* 5 Kategori + metrikleri */}
               <div>
-                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3">Metrikler</h3>
-                <div className="space-y-2">
-                  {ELW_METRICS.map((m) => (
-                    <div key={m.key} className="flex items-center gap-3 py-1.5 border-b border-edge/15">
-                      <span className="text-[11px] font-semibold text-gray-200 w-32">{m.label}</span>
-                      <span className="text-[10px] text-gray-500 flex-1">{m.desc}</span>
-                      <span className="text-[9px] text-gray-600">{m.max}</span>
+                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3">5 Kategori</h3>
+                <div className="space-y-3">
+                  {ELW_CATEGORIES.map((cat) => (
+                    <div key={cat.key} className="border-b border-edge/15 pb-3 last:border-0">
+                      <div className="flex items-baseline gap-2 mb-1.5">
+                        <span className="text-[11px] font-bold text-blue-400">{cat.label}</span>
+                        <span className="text-[10px] text-gray-500">{cat.desc}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {cat.metrics.map((m) => (
+                          <span key={m} className="px-1.5 py-0.5 rounded bg-soft border border-edge/50 text-[10px] text-gray-300">{m}</span>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Rol ağırlık tablosu */}
+              {/* Rol odağı */}
               <div>
-                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Koridor Çarpanları <span className="text-gray-600 normal-case font-normal">(Bireysel mod)</span></h3>
-                <p className="text-[10px] text-gray-500 mb-3">Her koridorun güçlü olması gereken metriklere daha fazla ağırlık verilir. Destek; maçtaki şifa/kalkan, hasar ve alınan-hasar oranına göre <strong className="text-gray-400">Şifa, Hasar veya Tank</strong> alt-tipine ayrılır — Leona/Alistar gibi tank destekler tank katkısından tam puan alır.</p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[10px]">
-                    <thead>
-                      <tr className="border-b border-edge/30">
-                        <th className="text-left text-gray-500 py-1.5 pr-2">Metrik</th>
-                        {Object.keys(ELW_WEIGHTS).map((role) => (
-                          <th key={role} className="text-center text-gray-400 py-1.5 px-1 font-semibold">{ROLE_LABELS[role]}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ELW_METRICS.map((m) => (
-                        <tr key={m.key} className="border-b border-edge/10">
-                          <td className="text-gray-300 py-1.5 pr-2 font-medium">{m.label}</td>
-                          {Object.entries(ELW_WEIGHTS).map(([role, weights]) => {
-                            const v = weights[m.key];
-                            const maxInRow = Math.max(...Object.values(ELW_WEIGHTS).map((w) => w[m.key]));
-                            const isMax = v === maxInRow && v > 0;
-                            return (
-                              <td key={role} className={`text-center py-1.5 px-1 font-mono ${v === 0 ? "text-gray-700" : isMax ? "text-emerald-400 font-bold" : "text-gray-400"}`}>
-                                {v === 0 ? "—" : v.toFixed(1)}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Rol Ağırlıkları</h3>
+                <p className="text-[10px] text-gray-500 mb-3">Her rolde farklı metrikler öne çıkar. Tam sayısal ağırlıklar maç kartındaki skor dial'inde (o maça özel puanlarla) görünür.</p>
+                <div className="space-y-1">
+                  {ELW_ROLE_FOCUS.map((r) => (
+                    <div key={r.role} className="flex items-start gap-3 py-1 border-b border-edge/10">
+                      <span className="text-[11px] font-semibold text-gray-200 w-14 flex-shrink-0">{r.role}</span>
+                      <span className="text-[10px] text-gray-500 flex-1">{r.focus}</span>
+                    </div>
+                  ))}
                 </div>
+                <p className="text-[10px] text-gray-500 mt-2.5 leading-relaxed">
+                  Destek ayrıca maçtaki şifa/kalkan, hasar ve alınan-hasara göre <strong className="text-gray-400">Şifa · Hasar · Tank</strong> alt-tipine ayrılır — tank destekler (Leona/Alistar) alınan hasardan tam puan alır.
+                </p>
               </div>
 
-              {/* Skor aralıkları */}
+              {/* Harf notları */}
               <div>
-                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3">Skor Aralıkları</h3>
+                <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3">Skor → Harf Notu</h3>
                 <div className="flex gap-2 flex-wrap">
-                  {[
-                    { range: "8-10", label: "Olağanüstü", color: "text-yellow-400", bg: "bg-yellow-500/10" },
-                    { range: "6-8",  label: "İyi",        color: "text-emerald-400", bg: "bg-emerald-500/10" },
-                    { range: "4-6",  label: "Ortalama",   color: "text-blue-400",    bg: "bg-blue-500/10" },
-                    { range: "2-4",  label: "Düşük",      color: "text-gray-400",    bg: "bg-gray-500/10" },
-                    { range: "0-2",  label: "Kötü",       color: "text-red-400",     bg: "bg-red-500/10" },
-                  ].map((s) => (
-                    <span key={s.range} className={`px-2.5 py-1 rounded ${s.bg} ${s.color} text-[10px] font-semibold`}>
-                      {s.range}: {s.label}
+                  {ELW_GRADES.map((s) => (
+                    <span key={s.g} className={`px-2.5 py-1 rounded ${s.bg} ${s.color} text-[10px] font-semibold`}>
+                      {s.g} · {s.range}
                     </span>
                   ))}
                 </div>
@@ -398,6 +396,9 @@ export default function BadgeGuideModal({ open, onClose }) {
               <div className="tip-dark bg-[#0a0e14] rounded-lg p-4 border border-edge/30">
                 <p className="text-[11px] text-gray-400 leading-relaxed">
                   Her maç sonunda ELW Score, sıralama ve Timeline verisi analiz edilerek performans etiketi belirlenir. Timeline API maç içi gold/XP değişimini dakika dakika takip eder.
+                </p>
+                <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+                  Bu etiket, maç kartındaki <strong className="text-gray-400">skor dial'inin üzerine gelince</strong> (yön oku + açıklama) görünür.
                 </p>
               </div>
               <div className="space-y-2">

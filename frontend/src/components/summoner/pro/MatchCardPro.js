@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown } from "lucide-react";
+import { ChevronDown, ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, Crown, Users, AlertTriangle } from "lucide-react";
 import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
 import Tooltip from "@/components/shared/Tooltip";
@@ -42,6 +42,17 @@ const TQ_PILL = {
   avg:      "text-gray-400 bg-gray-500/10 border-gray-500/30",
   bad:      "text-orange-400 bg-orange-500/10 border-orange-500/25",
   terrible: "text-red-400 bg-red-500/10 border-red-500/25",
+};
+
+// Maç sebebi çipi tonu (MatchReasonService.tone → yeşilsiz pro paleti + ikon).
+// Neden kazanıldı/kaybedildi tek etikette: carry=camgöbeği, good=mavi, neutral=gri,
+// warn=kehribar (throw), bad=kırmızı.
+const REASON_TONE = {
+  carry:   { cls: "text-cyan-300 bg-cyan-500/10 border-cyan-500/30",   Icon: Crown },
+  good:    { cls: "text-blue-400 bg-blue-500/10 border-blue-500/25",   Icon: ArrowUp },
+  neutral: { cls: "text-gray-300 bg-gray-500/10 border-gray-500/30",   Icon: Users },
+  warn:    { cls: "text-amber-400 bg-amber-500/10 border-amber-500/25", Icon: AlertTriangle },
+  bad:     { cls: "text-red-400 bg-red-500/10 border-red-500/25",      Icon: ArrowDown },
 };
 
 // Rozet renkleri — SADECE üst tier'lar (challenger/grandmaster/master) kendi
@@ -141,6 +152,37 @@ function BadgeChip({ badge }) {
               <span className="text-[9px] text-gray-500 capitalize bg-edge px-1.5 py-0.5 rounded">{badge.tier}</span>
             </div>
             {badge.desc && <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{badge.desc}</p>}
+          </div>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+
+// Maç sebebi çipi — "neden kazanıldı/kaybedildi" tek etiket (Taşıdın · Takımın taşıdı ·
+// Öne geçip kaybettiniz · …). Hover'da açıklama. Rozet şeridinin başında, öne çıkarılmış.
+function ReasonChip({ reason }) {
+  const [anchor, setAnchor] = useState(null);
+  const t = REASON_TONE[reason.tone] || REASON_TONE.neutral;
+  const Icon = t.Icon;
+  return (
+    <>
+      <span
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-default whitespace-nowrap ${t.cls}`}
+      >
+        <Icon size={11} strokeWidth={2.6} className="flex-shrink-0" />
+        {reason.label}
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-lg px-3 py-2 shadow-2xl shadow-black/90 max-w-[240px]">
+            <div className={`flex items-center gap-1.5 text-xs font-bold ${t.cls.split(" ")[0]}`}>
+              <Icon size={13} strokeWidth={2.6} className="flex-shrink-0" />
+              {reason.label}
+            </div>
+            {reason.desc && <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{reason.desc}</p>}
           </div>
         </Tooltip>
       )}
@@ -498,17 +540,20 @@ export default function MatchCardPro({ match: m, expanded, onToggle }) {
         </div>
       </div>
 
-      {/* Rozetler — alt şerit. flex-nowrap: "+N" asla alt satıra düşmez.
-          Mobil 3 rozet (dar ekran), masaüstü 4. */}
-      {!remake && badges.length > 0 && (
+      {/* Alt şerit: maç sebebi çipi (başta, öne çıkarılmış) + performans rozetleri.
+          flex-nowrap: "+N" asla alt satıra düşmez. Sebep varsa rozet payı 1 azalır.
+          Mobil 3, masaüstü 4 çip. */}
+      {!remake && (m.matchReason || badges.length > 0) && (
         <>
           <div className="sm:hidden flex flex-nowrap items-center gap-1 px-3 pb-2 -mt-0.5 overflow-hidden">
-            {badges.slice(0, 3).map((b) => <span key={b.key} className="flex-shrink-0"><BadgeChip badge={b} /></span>)}
-            {badges.length > 3 && <span className="flex-shrink-0"><MoreBadges badges={badges.slice(3)} /></span>}
+            {m.matchReason && <span className="flex-shrink-0"><ReasonChip reason={m.matchReason} /></span>}
+            {badges.slice(0, m.matchReason ? 2 : 3).map((b) => <span key={b.key} className="flex-shrink-0"><BadgeChip badge={b} /></span>)}
+            {badges.length > (m.matchReason ? 2 : 3) && <span className="flex-shrink-0"><MoreBadges badges={badges.slice(m.matchReason ? 2 : 3)} /></span>}
           </div>
           <div className="hidden sm:flex flex-nowrap items-center gap-1 px-3.5 pb-2 -mt-0.5 overflow-hidden">
-            {badges.slice(0, 4).map((b) => <span key={b.key} className="flex-shrink-0"><BadgeChip badge={b} /></span>)}
-            {badges.length > 4 && <span className="flex-shrink-0"><MoreBadges badges={badges.slice(4)} /></span>}
+            {m.matchReason && <span className="flex-shrink-0"><ReasonChip reason={m.matchReason} /></span>}
+            {badges.slice(0, m.matchReason ? 3 : 4).map((b) => <span key={b.key} className="flex-shrink-0"><BadgeChip badge={b} /></span>)}
+            {badges.length > (m.matchReason ? 3 : 4) && <span className="flex-shrink-0"><MoreBadges badges={badges.slice(m.matchReason ? 3 : 4)} /></span>}
           </div>
         </>
       )}

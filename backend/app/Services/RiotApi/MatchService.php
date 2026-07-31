@@ -47,6 +47,7 @@ class MatchService
         private MatchStatisticsService $statistics,
         private DataDragonService $ddragon,
         private LeagueService $league,
+        private MatchReasonService $reason,
     ) {}
 
     // ────────────────────────────────────────────
@@ -949,6 +950,9 @@ class MatchService
         if (array_key_exists('runes', $summary)) {
             $summary['runes'] = $this->hydrateRunes($summary['runes'], $ctx['runeMap']);
         }
+        // Maç sebebi çipi — okuma anında saklanan alanlardan türer (eski maçlarda da çalışır,
+        // ALGO_VERSION bump'ı gerekmez). Bkz. MatchReasonService.
+        $summary['matchReason'] = $this->reason->reasonFor($summary);
         return $summary;
     }
 
