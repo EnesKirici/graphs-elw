@@ -584,14 +584,16 @@ class SummonerController extends Controller
             ]);
 
         // Şampiyon eşleşmeleri — yalnız TAG YOKKEN (isim#tag = net oyuncu araması).
-        // Jade_ varyantları hariç; isim başında eşleşenler öne (mb_strpos = 0).
+        // Jade_ varyantları hariç. İsmin BAŞINDAN eşleşme (prefix) — "el" → Elise;
+        // "elwyore" → hiç şampiyon. (Eskiden str_contains'ti; "el" içeren Bel'Veth/
+        // Mel/Rell gibi alakasızlar çıkıyordu.) Kısa isim önce.
         $champions = collect([]);
         if (! $tag) {
             $needle = mb_strtolower($q);
             $champions = collect($this->ddragon->getChampions())
                 ->reject(fn($c) => str_starts_with($c['id'], 'Jade_'))
-                ->filter(fn($c) => str_contains(mb_strtolower($c['name']), $needle))
-                ->sortBy(fn($c) => mb_strpos(mb_strtolower($c['name']), $needle))
+                ->filter(fn($c) => str_starts_with(mb_strtolower($c['name']), $needle))
+                ->sortBy(fn($c) => mb_strlen($c['name']))
                 ->take(4)
                 ->map(fn($c) => [
                     'type'  => 'champion',

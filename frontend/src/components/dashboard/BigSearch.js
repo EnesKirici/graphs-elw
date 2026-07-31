@@ -20,6 +20,7 @@ export default function BigSearch({ chips = [] }) {
   const [sel, setSel] = useState(-1);
   const ref = useRef(null);
   const debounce = useRef(null);
+  const reqIdRef = useRef(0); // bayat yanıt koruması: yalnız EN SON isteğin sonucu uygulanır
 
   useEffect(() => {
     function onDocClick(e) {
@@ -39,6 +40,7 @@ export default function BigSearch({ chips = [] }) {
       return;
     }
     const [namePart, tagPart] = value.includes("#") ? value.split("#") : [value, ""];
+    const reqId = ++reqIdRef.current;
     debounce.current = setTimeout(async () => {
       try {
         const url = tagPart
@@ -46,9 +48,11 @@ export default function BigSearch({ chips = [] }) {
           : `${API_BASE}/summoner/autocomplete?q=${encodeURIComponent(namePart)}`;
         const res = await fetch(url);
         const data = await res.json();
+        if (reqId !== reqIdRef.current) return; // daha yeni istek başladı → bayat, yoksay
         setSuggestions(Array.isArray(data) ? data : []);
         setOpen(true);
       } catch {
+        if (reqId !== reqIdRef.current) return;
         setSuggestions([]);
         setOpen(value.includes("#"));
       }

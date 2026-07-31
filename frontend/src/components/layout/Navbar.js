@@ -225,6 +225,7 @@ export default function Navbar() {
   const [badgeGuideOpen, setBadgeGuideOpen] = useState(false);
   const ref = useRef(null);
   const debounceRef = useRef(null);
+  const reqIdRef = useRef(0); // bayat yanıt koruması: yalnız EN SON isteğin sonucu uygulanır
 
   useEffect(() => {
     function handleClick(e) {
@@ -252,6 +253,7 @@ export default function Navbar() {
     }
     const hasTag = value.includes("#");
     const [namePart, tagPart] = hasTag ? value.split("#") : [value, ""];
+    const reqId = ++reqIdRef.current;
     debounceRef.current = setTimeout(async () => {
       try {
         const url = tagPart
@@ -259,9 +261,11 @@ export default function Navbar() {
           : `${API_BASE}/summoner/autocomplete?q=${encodeURIComponent(namePart)}`;
         const res = await fetch(url);
         const data = await res.json();
+        if (reqId !== reqIdRef.current) return; // daha yeni bir istek başladı → bu yanıt bayat, yoksay
         setSuggestions(data);
         setShowDropdown(true);
       } catch {
+        if (reqId !== reqIdRef.current) return;
         setSuggestions([]);
         setShowDropdown(hasTag);
       }
