@@ -158,8 +158,14 @@ return [
             '16.12' => '2026-06-09',
             '16.11' => '2026-05-27',
         ],
-        // Meta + prune kaç patch tutsun (güncel dahil). 2 = güncel + önceki.
-        'keep_patches' => 2,
+        // Meta gösterimi + prune eşiği kaç patch tutsun (güncel dahil).
+        // 1 = YALNIZ güncel patch (kullanıcı talebi 2026-07-31): önceki patch (16.14)
+        // güncelden büyük olduğu için birleşik pencere "güncel meta"yı eski yamaya
+        // kaydırıyordu (Yasuo birleşik 6020 vs 16.15'te 2255). Artık sayılar gerçekten
+        // güncel patch'i yansıtır. NOT: eski patch verisi SİLİNMEZ (otomatik prune yok,
+        // rebuild non-kept'i silmez); yalnız gösterimden çıkar + elle prune eşiği kayar.
+        // Yeni yama çıktığında taze/seyrek görünürse geçici 2'ye çekilebilir.
+        'keep_patches' => 1,
     ],
 
     /*
