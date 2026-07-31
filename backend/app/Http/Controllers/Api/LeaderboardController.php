@@ -31,7 +31,8 @@ class LeaderboardController extends Controller
             return response()->json(['error' => 'tier: challenger, grandmaster veya master'], 400);
         }
 
-        $cacheKey = "leaderboard:v5:{$tier}:{$queue}";
+        // v6: topChamps.splash eklendi (yükleme ekranı görseli) — eski cache'te bu alan yok.
+        $cacheKey = "leaderboard:v6:{$tier}:{$queue}";
 
         $data = Cache::remember($cacheKey, 1800, function () use ($tier, $queue) {
             // 1 API çağrısı — tüm lig
@@ -93,7 +94,7 @@ class LeaderboardController extends Controller
      */
     private function enrichPlayer(string $puuid, string $tier, string $queue, array $leagueEntry): array
     {
-        return Cache::remember("player:enriched:v2:{$puuid}", 86400, function () use ($puuid, $tier, $queue, $leagueEntry) {
+        return Cache::remember("player:enriched:v3:{$puuid}", 86400, function () use ($puuid, $tier, $queue, $leagueEntry) {
             $name = null;
             $topChamps = null;
             $topRoles = null;
@@ -124,9 +125,10 @@ class LeaderboardController extends Controller
             try {
                 $masteries = $this->mastery->getTopMasteries($puuid, 5);
                 $topChamps = array_map(fn($m) => [
-                    'name'  => $m['championName'],
-                    'image' => $m['championImage'],
-                    'level' => $m['championLevel'],
+                    'name'   => $m['championName'],
+                    'image'  => $m['championImage'],
+                    'splash' => $m['championSplash'],
+                    'level'  => $m['championLevel'],
                 ], $masteries);
             } catch (\Exception $e) {}
 

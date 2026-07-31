@@ -20,7 +20,8 @@ class ChampionMasteryService
      */
     public function getTopMasteries(string $puuid, int $count = 7): array
     {
-        $cacheKey = "mastery:top:{$puuid}:{$count}";
+        // v2: championSplash eklendi — eski cache'te bu alan yok.
+        $cacheKey = "mastery:top:v2:{$puuid}:{$count}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($puuid, $count) {
             $masteries = $this->api->platformRequest(
@@ -43,6 +44,11 @@ class ChampionMasteryService
                     'championName'   => $champData['name'] ?? 'Bilinmeyen',
                     'championImage'  => $champData
                         ? $this->ddragon->championIconUrl($champData['id'])
+                        : null,
+                    // Yükleme ekranı görseli (dikey, "3D" hissi veren portre) — leaderboard'da
+                    // küçük kare ikon yerine bunu kullanıyoruz (bkz. LeaderboardController).
+                    'championSplash' => $champData
+                        ? $this->ddragon->loadingScreenUrl($champData['id'])
                         : null,
                     'championLevel'  => $m['championLevel'],
                     'championPoints' => $m['championPoints'],

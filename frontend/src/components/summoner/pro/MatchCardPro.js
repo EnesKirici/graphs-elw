@@ -139,8 +139,8 @@ function BadgeChip({ badge }) {
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
         className={t
-          ? `inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-default whitespace-nowrap ${t.bg} ${t.bd}`
-          : "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium text-gray-300 bg-soft border border-edge/60 cursor-default whitespace-nowrap"}
+          ? `inline-flex items-center align-middle px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-default whitespace-nowrap ${t.bg} ${t.bd}`
+          : "inline-flex items-center align-middle px-1.5 py-0.5 rounded text-[10px] font-medium text-gray-300 bg-soft border border-edge/60 cursor-default whitespace-nowrap"}
       >
         {labelEl}
       </span>
@@ -170,7 +170,7 @@ function ReasonChip({ reason }) {
       <span
         onMouseEnter={(e) => setAnchor(e.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
-        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-default whitespace-nowrap ${t.cls}`}
+        className={`inline-flex items-center align-middle gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-default whitespace-nowrap ${t.cls}`}
       >
         <Icon size={11} strokeWidth={2.6} className="flex-shrink-0" />
         {reason.label}
@@ -409,19 +409,22 @@ export default function MatchCardPro({ match: m, expanded, onToggle }) {
 
   return (
     <div className={`${rowAccent} ${rowBg} hover:bg-hover transition-colors`}>
-      {/* ── MOBİL (<640): op.gg tarzı — 2 satır. Üst: portre · sonuç/süre · (sağ) KDA/pill + dial + ok.
-          Alt: spell/rün/eşyalar. Rozetler ayrı alt şeritte. Kart gövdesi tıklamayla AÇILMAZ — yalnız ok. */}
-      <div className="sm:hidden px-3 py-3">
-        {/* 3 dengeli bölge: SOL sonuç/süre · ORTA KDA+pill (ortalı) · SAĞ dial+ok */}
-        <div className="flex items-center gap-2">
+      {/* ── MOBİL (<640): 2026-07-31 büyütüldü + ayraçla gruplandı (kullanıcı:
+          "her şey çok dağınık ve küçük"). Üst satır aynı 3-bölge mantığı (portre
+          · sonuç/süre · KDA+pill · dial+ok) ama daha büyük öğeler + daha nefes
+          alan boşluklar; ekipman şeridi artık ince bir üst ayraçla görsel olarak
+          AYRI bir grup gibi duruyor (önceden aynı bloğun içinde sıkışık kalıyordu).
+          Kart gövdesi tıklamayla AÇILMAZ — yalnız ok. */}
+      <div className="sm:hidden px-3.5 py-3.5">
+        <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
             <ChampPortrait champ={m.champion} corner={m.laneDuo} cornerRole={m.laneDuo?.role || m.partnerRole}
-              size={46} cornerSize={22} role={m.role} roleSize={15} />
+              size={54} cornerSize={24} role={m.role} roleSize={16} />
           </div>
 
           {/* SOL — sonuç + LP / queue·süre·zaman (sabit dar) */}
-          <div className="w-[88px] flex-shrink-0 leading-tight">
-            <p className="text-[12px] font-bold leading-none whitespace-nowrap">
+          <div className="w-[94px] flex-shrink-0 leading-tight">
+            <p className="text-[13px] font-bold leading-none whitespace-nowrap">
               <span className={resClr}>{resTxt}</span>
               {m.lpChange != null && (
                 <span className={`ml-1 ${m.lpChange > 0 ? "text-blue-400" : "text-red-400"}`}>
@@ -429,46 +432,47 @@ export default function MatchCardPro({ match: m, expanded, onToggle }) {
                 </span>
               )}
             </p>
-            <p className="text-[10px] text-gray-500 mt-1 truncate" suppressHydrationWarning>
+            <p className="text-[10.5px] text-gray-500 mt-1.5 truncate" suppressHydrationWarning>
               {m.queueType || fmtDur(m.duration)}
             </p>
-            <p className="text-[9px] text-gray-600 truncate" suppressHydrationWarning>
+            <p className="text-[9.5px] text-gray-600 truncate" suppressHydrationWarning>
               {timeAgo(m.gameCreation)}
             </p>
           </div>
 
           {/* ORTA — KDA + takım pill, ortalı (esner) */}
           <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center">
-            <p className="text-[15px] font-bold text-gray-50 whitespace-nowrap leading-none">
+            <p className="text-[17px] font-bold text-gray-50 whitespace-nowrap leading-none">
               {m.kills}<span className="text-gray-500 font-normal"> / </span><span className="text-red-400">{m.deaths}</span><span className="text-gray-500 font-normal"> / </span>{m.assists}
             </p>
-            {!remake && tq && <div className="mt-1.5"><TeamQualityTag tq={tq} inline /></div>}
+            {!remake && tq && <div className="mt-2"><TeamQualityTag tq={tq} inline /></div>}
           </div>
 
           {/* SAĞ — skor dial + ok */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {!remake && m.ranking ? <ScoreBlock m={m} /> : <div className="w-[58px]" />}
             <button onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
-              className="flex-shrink-0 p-1 -mr-1 cursor-pointer" aria-label={expanded ? "Kapat" : "Detayları aç"}>
-              <ChevronDown size={16} className={`text-gray-500 transition-transform ${expanded ? "rotate-180" : ""}`} />
+              className="flex-shrink-0 p-1.5 -mr-1.5 cursor-pointer" aria-label={expanded ? "Kapat" : "Detayları aç"}>
+              <ChevronDown size={17} className={`text-gray-500 transition-transform ${expanded ? "rotate-180" : ""}`} />
             </button>
           </div>
         </div>
 
-        {/* alt: spell + rün + eşyalar (ortalı) */}
-        <div className="flex items-center justify-center gap-1.5 mt-2.5">
-          <div className="flex gap-0.5 flex-shrink-0">
-            {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={18} height={18} className="rounded" title={m.spells[0].name} />}
-            {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={18} height={18} className="rounded" title={m.spells[1].name} />}
+        {/* Ekipman şeridi — ince üst ayraçla üstteki bloktan görsel olarak ayrılır
+            ("dağınık" hissi buradan geliyordu — hepsi tek blok gibi duruyordu) */}
+        <div className="flex items-center justify-center gap-2.5 mt-3 pt-2.5 border-t border-edge/25">
+          <div className="flex gap-1 flex-shrink-0">
+            {m.spells?.[0]?.image && <img src={m.spells[0].image} alt="" width={21} height={21} className="rounded-md" title={m.spells[0].name} />}
+            {m.spells?.[1]?.image && <img src={m.spells[1].image} alt="" width={21} height={21} className="rounded-md" title={m.spells[1].name} />}
           </div>
-          <RuneTooltip runes={m.runes} keystoneSize={18} subTreeSize={18} />
-          <div className="flex gap-[3px] flex-shrink-0">
+          <RuneTooltip runes={m.runes} keystoneSize={21} subTreeSize={21} />
+          <div className="flex gap-1 flex-shrink-0">
             {[0, 1, 2, 3, 4, 5].map((i) => (m.items[i]
-              ? <ItemTooltip key={i} item={m.items[i]} size={22} />
-              : <div key={i} className="w-[22px] h-[22px] rounded bg-edge" />))}
+              ? <ItemTooltip key={i} item={m.items[i]} size={26} />
+              : <div key={i} className="w-[26px] h-[26px] rounded-md bg-edge" />))}
             {m.items[6]
-              ? <ItemTooltip item={m.items[6]} size={22} />
-              : <div className="w-[22px] h-[22px] rounded-full bg-edge" />}
+              ? <ItemTooltip item={m.items[6]} size={26} />
+              : <div className="w-[26px] h-[26px] rounded-full bg-edge" />}
           </div>
         </div>
       </div>

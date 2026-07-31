@@ -55,28 +55,38 @@ html.glass-cards .dpm-scope.soft-scope .glass {
    kırpar ama bağlam açmaz. */
 .tl-panel { border-radius: 16px; overflow: clip; }
 
-/* ========================= Araç çubuğu ========================= */
+/* ========================= Araç çubuğu =========================
+   2026-07-31: SOL grup (koridor + arama) / SAĞ grup (derece + görünüm) —
+   Tüm Şampiyonlar'daki "tablar solda, filtre sağda" ritmiyle aynı hizaya
+   girsin diye (kullanıcı: "koridor filtrelerini... şampiyon arayı sola al"). */
 .tl-toolbar {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--c-edge);
   background: rgba(255, 255, 255, .015);
 }
-.tl-roles { display: flex; align-items: center; gap: 4px; overflow-x: auto; flex: 1; min-width: 0; }
+.tl-toolbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 auto; }
+.tl-toolbar-right { display: flex; align-items: center; gap: 10px; flex: none; }
+
+.tl-roles { display: flex; align-items: center; gap: 5px; overflow-x: auto; flex: 0 1 auto; min-width: 0; }
+/* .tl-role — Tüm Şampiyonlar'daki koridor filtresiyle BİREBİR AYNI sınıf (ayrı
+   kopya yok). 2026-07-31 iki kez büyütüldü: önce kutu 32→38px (metinsiz kalınca
+   küçük duruyordu), sonra İKON 18→24px (kutu içinde ikon fazla küçük kalıyordu,
+   çok boşluk vardı) — kutu da 42px'e çıktı ki 24px ikon rahat otursun (~9px pay). */
 .tl-role {
-  display: inline-flex; align-items: center; gap: 7px; flex: none;
-  height: 32px; padding: 0 12px; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none;
+  height: 42px; min-width: 42px; padding: 0 10px; border-radius: 11px;
   font-size: 13px; font-weight: 600; color: #99a1b0; white-space: nowrap;
   transition: background .16s, color .16s;
 }
-.tl-role img { opacity: .6; transition: opacity .16s; }
+.tl-role img { opacity: .68; transition: opacity .16s; }
 .tl-role:hover { background: var(--c-hover); color: #dfe4ee; }
 .tl-role[data-on="1"] { background: rgba(255, 255, 255, .07); color: #f2f5fa; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
 .tl-role[data-on="1"] img { opacity: 1; }
 
 /* Derece filtresi — çoklu seçim. Seçili çip kendi tier rengini alır, seçili çip
    yokken tüm dereceler görünür (filtre "kapalı" demek için ek düğme gerekmiyor). */
-.tl-tiers { display: flex; align-items: center; gap: 4px; flex: none; padding-left: 10px; border-left: 1px solid var(--c-edge); }
+.tl-tiers { display: flex; align-items: center; gap: 4px; flex: none; }
 .tl-tier-chip {
   min-width: 32px; height: 28px; padding: 0 8px; border-radius: 8px;
   font-family: var(--f-display); font-size: 13px; font-weight: 900; letter-spacing: -.02em;
@@ -92,15 +102,18 @@ html.glass-cards .dpm-scope.soft-scope .glass {
 }
 .tl-tier-chip:focus-visible { outline: 2px solid #6f9bf0; outline-offset: 2px; }
 
-.tl-tools { display: flex; align-items: center; gap: 8px; flex: none; }
+/* 2026-07-31 büyütüldü: 32→42px — .tl-role ile AYNI yükseklik (kullanıcı: arama
+   ikonların yanında "çok küçük kalmış"). Bu eşitlik ayrıca Tüm Şampiyonlar'da
+   Classic sekmesinde koridor filtresi kalkınca satır yüksekliğinin sabit
+   kalmasını sağlıyor (arama tek başına da aynı yükseklikte). */
 .tl-search {
-  display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px;
-  border-radius: 9px; background: rgba(255, 255, 255, .04);
+  display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 13px; flex: none;
+  border-radius: 11px; background: rgba(255, 255, 255, .04);
   border: 1px solid var(--c-edge); color: #6b7382; transition: border-color .16s;
   cursor: text;
 }
 .tl-search:focus-within { border-color: #3b4354; }
-.tl-search input { width: 122px; min-width: 0; background: none; border: 0; outline: none; font-size: 13px; color: #e7ecf4; }
+.tl-search input { width: 155px; min-width: 0; background: none; border: 0; outline: none; font-size: 13.5px; color: #e7ecf4; }
 .tl-search input::placeholder { color: #656d7c; }
 .tl-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
 
@@ -116,7 +129,7 @@ html.glass-cards .dpm-scope.soft-scope .glass {
 /* ========================= Öne çıkanlar şeridi ========================= */
 .tl-featured {
   display: flex; align-items: center; gap: 12px; position: relative;
-  padding: 9px 14px 9px 17px;
+  padding: 9px 16px;
   border-bottom: 1px solid var(--c-edge);
 }
 .tl-featured::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--tier); }
@@ -170,7 +183,7 @@ html.glass-cards .dpm-scope.soft-scope .glass {
 .tl-band-head {
   position: sticky; top: var(--topbar-h, 68px); z-index: 3;
   display: flex; align-items: baseline; gap: 13px;
-  width: 100%; text-align: left; padding: 13px 14px 11px 16px;
+  width: 100%; text-align: left; padding: 13px 16px 11px 16px;
   background: var(--c-card);
   transition: background .18s;
 }
@@ -201,7 +214,7 @@ html.glass-cards .dpm-scope.soft-scope .glass {
 
 /* ========================= Şampiyon ızgarası =========================
    Kare ikon değil, dikey karakter görseli: sanat üstte, oran/isim altta. */
-.tl-band-body { padding: 8px 14px 16px 16px; }
+.tl-band-body { padding: 8px 16px 16px 16px; }
 /* Kare ölçüsü her bölümde AYNI — bölüm kalabalığına göre büyütmek denendi, düzeni
    bozuyordu (kullanıcı geri aldı). Az şampiyonlu bölümde satır boş kalır, sorun değil. */
 .tl-tiles {
@@ -319,20 +332,24 @@ html.glass-cards .dpm-scope.soft-scope .glass {
   .tl-tile-extra { display: flex; }
   .tl-tiles { --th: 206px; }
 }
-@media (max-width: 900px) {
-  /* Dar ekranda derece çipleri kendi satırına düşer → ayırıcı çizgi anlamsız kalır */
-  .tl-tiers { padding-left: 0; border-left: 0; }
-}
 @media (max-width: 720px) {
-  .tl-toolbar { padding: 9px 10px; }
-  .tl-tools { width: 100%; }
-  .tl-search { flex: 1; }
+  /* Yatay dolgu mobilde HER YERDE 13px — masaüstündeki 16px'in aynı mantıkla
+     küçültülmüş hâli, aralarında fark kalmasın diye (kullanıcı: "hepsi aynı
+     standartta olmalıydı"). */
+  .tl-toolbar { padding: 9px 13px; }
+  /* Sol/sağ grup sığmayınca ayrı satıra düşer — her biri o satırı tam kaplasın.
+     Gruplar İÇİNDE de wrap açık: sol'da roller+arama aynı satıra sıkışınca
+     roller 288px'lik doğal genişliğinin altına küçülüp son ikon(lar) kırpılıyordu
+     (263px'e sıkışmıştı); sağ'da tier çipleri + görünüm sığmayınca S+ kesiliyordu. */
+  .tl-toolbar-left, .tl-toolbar-right { width: 100%; flex-wrap: wrap; row-gap: 8px; }
+  .tl-toolbar-right { justify-content: flex-start; }
+  .tl-search { flex: 1; min-width: 160px; }
   .tl-search input { width: 100%; }
-  .tl-featured { padding: 9px 10px 9px 14px; }
+  .tl-featured { padding: 9px 13px; }
   .tl-featured-txt { font-size: 12.5px; }
-  .tl-band-head { gap: 10px; padding: 12px 10px 9px 13px; }
+  .tl-band-head { gap: 10px; padding: 12px 13px 9px 13px; }
   .tl-band-mark { font-size: 22px; }
-  .tl-band-body { padding: 8px 10px 13px 13px; }
+  .tl-band-body { padding: 8px 13px 13px 13px; }
   .tl-tiles { gap: 7px; --tw: 96px; --th: 158px; }
   /* Telefonda kalabalık bölümler 2 satıra kırpılır (masaüstü açık kalır) */
   .tl-tiles.clamped { max-height: 323px; overflow: hidden; } /* 158 + 7 + 158 */
@@ -358,4 +375,466 @@ html.glass-cards .dpm-scope.soft-scope .glass {
 @media (prefers-reduced-motion: reduce) {
   .tl-tile, .tl-band-chev, .tl-featured-dots button { transition: none; }
   .tl-featured-art img { animation: none; }
+}
+
+/* ===========================================================================
+   ELW GRAPHS — "Tüm Şampiyonlar" paneli (.cg-*)
+   2026-07-31: arama kutusu ve koridor filtresi artık AYRI bir tarif DEĞİL —
+   tier list'in zaten onaylanmış .tl-search / .tl-role sınıflarını BİREBİR
+   kullanıyor (kullanıcı: "farklı uzak tasarımlar olmasın"). Burada yalnız bu
+   sayfaya özgü şeyler var: panel, büyük sekmeler, ızgara, Classic notu, ve
+   .tl-search/.tl-role'e eklenen küçük BAĞLAM modifikatörleri (genişlik vb.).
+   =========================================================================== */
+/* padding 16px yanlar — tier list'in .tl-band-body/.tl-band-head ile AYNI yatay
+   dolgu (2026-07-31: önce 20px'ti, sayfa kapsayıcısı da farklıydı, iki sayfada
+   kartların sol kenarı hizalı değildi — kullanıcı bildirdi). */
+.cg-panel { border-radius: 16px; overflow: clip; padding: 18px 16px 20px; }
+
+.cg-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  flex-wrap: wrap; gap: 14px; margin-bottom: 6px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--c-edge);
+}
+/* Sol grup: koridor filtresi + arama BİRLİKTE — tier list'teki .tl-toolbar-left
+   ile BİREBİR aynı dizilim ve boşluk (12px). 2026-07-31: önce burada sekmeler
+   vardı, arama+sekme (iki farklı görsel dil: pill vs alt-çizgi metin) yan yana
+   kötü duruyordu; şimdi sol taraf tier list gibi TAMAMEN pill ailesi, sekmeler
+   sağa taşındı (aşağıda .cg-tabs). */
+.cg-head-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+
+/* Büyük alt-çizgi sekmeler — 2026-07-31 kullanıcı talebi ("büyükçe"): önceki
+   hâli text-sm + ince çizgiydi, göze çarpmıyordu. */
+.cg-tabs { display: flex; align-items: center; gap: 22px; }
+.cg-tab {
+  position: relative; padding-bottom: 12px;
+  font-size: 16px; font-weight: 700; color: #6f7787; transition: color .16s;
+}
+.cg-tab i { margin-left: 6px; font-style: normal; font-size: 12.5px; font-weight: 600; color: #4d5461; font-variant-numeric: tabular-nums; }
+.cg-tab:hover { color: #b7bfcc; }
+.cg-tab[data-on="1"] { color: #f2f5fa; }
+.cg-tab[data-on="1"] i { color: #7d8593; }
+.cg-tab[data-on="1"]::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2.5px;
+  border-radius: 2px; background: #5b8def;
+}
+
+/* Koridor filtresi = .tl-roles + .tl-role (tier list'le birebir aynı buton),
+   yalnız BU sayfada sağa hizalı ve büyümesin diye .tl-roles'ün flex:1/overflow-x
+   davranışını iptal ediyoruz — buton görünümüne (renk/boyut/radius) dokunmuyoruz. */
+.cg-lanes { flex: none; overflow: visible; }
+
+.cg-note {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px;
+  padding: 12px 14px; border-radius: 11px;
+  background: rgba(255, 255, 255, .025); box-shadow: inset 0 0 0 1px var(--c-edge);
+  color: #6f7787;
+}
+.cg-note svg { flex: none; margin-top: 1px; }
+.cg-note p { font-size: 13px; line-height: 1.55; color: #9aa2b1; }
+.cg-note b { color: #dfe4ee; font-weight: 700; }
+.cg-note span { display: block; color: #5b6270; font-size: 12px; margin-top: 2px; }
+
+/* Arama = .tl-search (tier list'le birebir aynı: yükseklik/radius/kenarlık
+   tekniği), yalnız genişlik değişiyor — burada araç çubuğunun İKİNCİL bir
+   parçası değil, sayfanın ANA aracı. Artık .cg-head-left içinde, sekmelerin
+   yanında (kendi satırında yalnız kalmıyor). */
+.cg-search-wide { width: 240px; }
+.cg-search-wide input { width: 100%; }
+.cg-result-count { margin-bottom: 12px; font-size: 11.5px; color: #656d7c; }
+
+.cg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 4px; }
+.cg-item {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 10px 6px; border-radius: 12px; transition: background .16s;
+}
+.cg-item:hover { background: var(--c-hover); }
+.cg-item img { border-radius: 11px; transition: transform .18s; }
+.cg-item:hover img { transform: scale(1.06); }
+.cg-item span {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; font-weight: 500; color: #9aa2b1; transition: color .16s;
+}
+.cg-item:hover span { color: #e7ecf4; }
+.cg-empty { grid-column: 1 / -1; padding: 48px 0; text-align: center; font-size: 13px; color: #6f7787; }
+
+.cg-panel button { cursor: pointer; }
+.cg-tab:focus-visible, .cg-item:focus-visible { outline: 2px solid #6f9bf0; outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .cg-panel { padding: 15px 13px 16px; }
+  .cg-head { align-items: flex-start; }
+  .cg-head-left { width: 100%; }
+  .cg-tabs { gap: 16px; }
+  .cg-tab { font-size: 14.5px; padding-bottom: 10px; }
+  .cg-search-wide { width: 100%; }
+  .cg-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cg-item, .cg-item img, .cg-tab { transition: none; }
+}
+
+/* ===========================================================================
+   ELW GRAPHS — Sıralama (leaderboard) paneli (.lb-*)
+   2026-07-31: tier-list/Tüm Şampiyonlar'la AYNI dil — .glass panel, sayfa
+   kapsayıcısı max-w-7xl px-6 py-6, filtre pilleri .tl-role/.tl-view'dan
+   türetilmiş. Yeşil KULLANILMAZ (kullanıcı talebi) — WR/kazanma mavi-mor
+   ailesinden (profil sayfalarıyla aynı konvansiyon: cyan/mavi/mor/kırmızı).
+   =========================================================================== */
+.lb-panel { border-radius: 16px; overflow: clip; }
+
+.lb-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--c-edge);
+  background: rgba(255, 255, 255, .015);
+}
+.lb-tiers { display: flex; align-items: center; gap: 5px; overflow-x: auto; flex: 1 1 auto; min-width: 0; }
+/* Derece pilleri — 2026-07-31 İKON-ONLY oldu (site geneli aynı dil — .tl-role/
+   Tüm Şampiyonlar'daki koridor filtresiyle aynı fikir): 10 derece metinle
+   sığmazdı. İsim artık yalnız title tooltip'inde. Her derecenin KENDİ rengi var
+   (rozet varlıklarıyla eşleşsin). Devre dışı dereceler (henüz prod key
+   gerektiren Diamond ve altı) soluk + kilit rozetli, tıklanamaz.
+   4. tur: CommunityDragon "mini crest" denemesi geri alındı — sitenin yerleşik
+   konvansiyonu `rankBadgeUrl()` (büyük detaylı .webp, küçük gösterilir), JS'te
+   değişti. Kutu/görsel bir kademe daha büyüdü (52→56 / 30→38) — detaylı rozet
+   düz glife göre biraz daha büyük gösterildiğinde daha net okunuyor. */
+.lb-tier {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  flex: none; width: 56px; height: 56px; border-radius: 14px;
+  background: rgba(255, 255, 255, .03); box-shadow: inset 0 0 0 1px var(--c-edge);
+  transition: background .16s, box-shadow .16s;
+}
+.lb-tier img { width: 38px; height: 38px; opacity: .78; transition: opacity .16s; }
+.lb-tier:hover { background: var(--c-hover); }
+.lb-tier[data-on="1"] { background: color-mix(in oklab, var(--tier) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tier) 45%, transparent); }
+.lb-tier[data-on="1"] img { opacity: 1; }
+.lb-tier[disabled] { cursor: not-allowed; }
+.lb-tier[disabled] img { opacity: .32; filter: grayscale(1); }
+.lb-tier[disabled]:hover { background: rgba(255, 255, 255, .03); }
+.lb-tier-lock {
+  position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%;
+  display: grid; place-items: center; background: #14171f; box-shadow: inset 0 0 0 1px var(--c-edge);
+  color: #656d7c;
+}
+
+/* ========================= Tablo ========================= */
+/* 4. tur: "tablolardaki içerikler küçük kalmış" (kullanıcı) — avatar/şampiyon/
+   koridor/yazı bir kademe büyüdü, kolonlar buna göre genişledi. */
+.lb-grid { grid-template-columns: 54px minmax(0,1fr) 200px 112px 118px 82px 114px 80px 120px; }
+.lb-thead {
+  display: grid; align-items: center; gap: 10px; padding: 12px 16px;
+  font-size: 12px; font-weight: 600; color: #6f7787; text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--c-edge);
+}
+.lb-row {
+  display: grid; align-items: center; gap: 10px; padding: 13px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, .04); transition: background .16s;
+}
+.lb-row:last-child { border-bottom: 0; }
+.lb-row:hover { background: rgba(255, 255, 255, .025); }
+.lb-row.top3 { background: rgba(255, 255, 255, .015); }
+
+.lb-rank { font-family: var(--f-display); font-size: 16px; font-weight: 800; color: #6f7787; font-variant-numeric: tabular-nums; }
+.lb-rank[data-medal="1"] { color: #e6b968; }
+.lb-rank[data-medal="2"] { color: #c7cdd8; }
+.lb-rank[data-medal="3"] { color: #c98a4b; }
+
+/* Oyuncu — profil ikonu (statik rozet tekrarı yerine gerçek avatar) + isim */
+.lb-player { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.lb-avatar { flex: none; width: 40px; height: 40px; border-radius: 11px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); background: #171b24; }
+.lb-avatar-ph { flex: none; width: 40px; height: 40px; border-radius: 11px; background: #171b24; box-shadow: inset 0 0 0 1px var(--c-edge); }
+.lb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; color: #dfe4ee; transition: color .16s; }
+.lb-name:hover { color: #8ab4f8; }
+.lb-name span { color: #656d7c; font-weight: 500; font-size: 13px; }
+.lb-name-ph { font-size: 14px; color: #545b68; font-style: italic; }
+
+/* Şampiyonlar (kompakt tablo, 4. sıradan itibaren) — dar sütunda dürüstçe küçük
+   kare ikon (yükleme ekranı "3D" tedavisi PODYUMA ait, bkz. .lb-pod-champ).
+   4. tur: 24→32px büyüdü. */
+.lb-champs { display: flex; align-items: center; gap: 4px; }
+.lb-champ { flex: none; width: 32px; height: 32px; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
+.lb-champs-empty { font-size: 11px; color: #545b68; }
+
+.lb-roles { display: flex; align-items: center; gap: 6px; }
+.lb-roles img { width: 24px; height: 24px; opacity: .82; }
+
+/* LP — sayının yanında filtrelenen derecenin rozeti. 5. tur: büyük .webp bu dar
+   bağlamda "yapay" durdu (kullanıcı) → miniCrestUrl (CommunityDragon SVG, düz
+   glif, LivePlayerCard'daki "LP yanı" ile AYNI varlık) — filtre satırı büyük
+   rozette kalıyor, yalnız burası değişti. */
+.lb-lp { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.lb-lp img { width: 22px; height: 22px; flex: none; }
+.lb-lp b { font-family: var(--f-display); font-size: 18px; font-weight: 800; color: #8ab4f8; font-variant-numeric: tabular-nums; }
+
+.lb-games { font-size: 14.5px; color: #9aa2b1; text-align: center; font-variant-numeric: tabular-nums; }
+.lb-wl { text-align: center; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.lb-wl b { font-weight: 700; }
+.lb-wl .w { color: #8ab4f8; }
+.lb-wl .l { color: #ef8ba0; }
+.lb-wl i { color: #4d5461; font-style: normal; margin: 0 3px; }
+
+.lb-wr { text-align: center; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Rozetler — anlamlı ikonlar (Flame/Zap/Shield, JS'te lucide-react — canlı
+   maçtaki StreakBadge ve LeaderboardClassic ile AYNI ikon ailesi). 5. tur: kutu
+   NÖTR pill'e döndü (kullanıcı: renkli/"neon" arka plan yapay duruyordu) —
+   StreakBadge'in kendi dolgusuyla AYNI (siyah/yarı-saydam + ince kenarlık),
+   yalnız ikonun kendisi rengini koruyor. */
+.lb-badges { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.lb-badge {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px;
+  background: rgba(0, 0, 0, .4); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .13); cursor: default;
+}
+/* Maraton rozeti — kullanıcının ürettiği görsel (kendi glow'u var), diğer
+   ikonlardan farklı olarak object-fit ile kutuya sığdırılıyor. 7. tur: kutu
+   içinde küçük kalıyordu (kullanıcı) — JS'teki boyut CSS'te ezilip büyütüldü
+   (kaynak görsel kendi içinde biraz boşluk/glow taşıyor, kutuyu doldurması için
+   diğer ikonlardan orantılı daha büyük olması gerekiyor). */
+.lb-badge-img { width: 27px !important; height: 27px !important; object-fit: contain; }
+.lb-pod-meta .lb-badge-img { width: 21px !important; height: 21px !important; }
+.lb-badges-empty { font-size: 11px; color: #545b68; }
+
+.lb-empty-cell { font-size: 11px; color: #454b57; }
+
+/* ========================= Podyum (ilk 3) =========================
+   2026-07-31: "3D" şampiyon kartları kompakt tabloda seçilmiyordu — çözüm
+   ikisi birden değil, AYRIM: ilk 3 kendi genişçe kartını alır (portreler
+   gerçekten görünür), 4. sıradan itibaren dürüstçe küçük ikona döner
+   (yukarıdaki .lb-champ). Madalya rengi kart üstünde ince bir şerit olarak
+   tekrar eder (masaüstü .lb-rank ile aynı altın/gümüş/bronz dili). */
+.lb-podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 16px; }
+.lb-pod-card {
+  position: relative; overflow: hidden; border-radius: 14px; padding: 16px 16px 14px;
+  background: rgba(255, 255, 255, .025); box-shadow: inset 0 0 0 1px var(--c-edge);
+}
+.lb-pod-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--medal); }
+.lb-pod-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.lb-pod-rank { font-family: var(--f-display); font-size: 22px; font-weight: 900; color: var(--medal); line-height: 1; }
+.lb-pod-avatar { flex: none; width: 38px; height: 38px; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); background: #171b24; }
+.lb-pod-avatar-ph { flex: none; width: 38px; height: 38px; border-radius: 10px; background: #171b24; box-shadow: inset 0 0 0 1px var(--c-edge); }
+/* 6. tur: isim bloğu flex:1. 7. tur: LP oradan ayrıldı ("sağ üstte kötü durdu"),
+   yerine koridor ikonları geldi (küçük, etiketsiz — tam liste aşağıdaki
+   .lb-pod-meta'da). */
+.lb-pod-id { flex: 1; min-width: 0; }
+.lb-pod-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 700; color: #f2f5fa; transition: color .16s; }
+.lb-pod-name:hover { color: #8ab4f8; }
+.lb-pod-name span { display: block; color: #656d7c; font-weight: 500; font-size: 11.5px; margin-top: 1px; }
+.lb-pod-head-roles { display: flex; align-items: center; gap: 4px; flex: none; }
+.lb-pod-head-roles img { width: 20px; height: 20px; opacity: .8; }
+
+/* Galibiyet/Mağlubiyet/Kazanma — 5. tur: eski hâli tek satır ince yazıydı,
+   "boş kalmış" geri bildirimi → değer+etiket, 3 hücreli kutulu şerit. */
+.lb-pod-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 14px;
+  border-radius: 10px; overflow: hidden; background: rgba(255, 255, 255, .025);
+  box-shadow: inset 0 0 0 1px var(--c-edge);
+}
+.lb-pod-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 4px; }
+.lb-pod-stat + .lb-pod-stat { box-shadow: inset 1px 0 0 var(--c-edge); }
+.lb-pod-stat b { font-family: var(--f-display); font-size: 17px; font-weight: 800; color: #dfe4ee; font-variant-numeric: tabular-nums; }
+.lb-pod-stat b.w { color: #8ab4f8; }
+.lb-pod-stat b.l { color: #ef8ba0; }
+.lb-pod-stat span { font-size: 9.5px; color: #6f7787; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Koridor + LP + rozet satırı — önceki turda unutulmuştu (kullanıcı: "koridor
+   bilgileri rozetleri bile yok"). Kompakt tablodaki .lb-roles/.lb-badges'in
+   AYNI sınıfları burada da kullanılıyor (ayrı kopya yok), yalnız podyum
+   bağlamında biraz büyütülüp mikro-etiketle (KORİDOR/ROZET) tanıtılıyor —
+   kartta ayrı sütun başlığı olmadığı için tek başına ikon belirsiz kalırdı.
+   6. tur: space-between'e geçti. 7. tur: LP buraya, koridor ile rozetin
+   ARASINA eklendi (kullanıcı: "sağ üstte kötü durdu, ortada kalması iyi olurdu,
+   koridor ile rozetin ortasına koysak") — space-between 3 öğeyle de çalışıyor,
+   LP ortada. */
+.lb-pod-meta {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-top: 12px;
+  border-top: 1px dashed rgba(255, 255, 255, .07);
+}
+.lb-pod-meta-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lb-pod-meta-lp { display: flex; align-items: baseline; gap: 7px; flex: none; }
+.lb-pod-meta-lp img { width: 26px; height: 26px; align-self: center; }
+.lb-pod-meta-lp b { font-family: var(--f-display); font-size: 26px; font-weight: 900; color: #8ab4f8; letter-spacing: -.01em; }
+.lb-pod-meta-lp span { font-size: 12px; font-weight: 700; color: #6f89ab; text-transform: uppercase; }
+.lb-pod-meta-label {
+  flex: none; font-size: 9.5px; font-weight: 700; color: #545b68;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.lb-pod-meta .lb-roles img { width: 20px; height: 20px; }
+.lb-pod-meta .lb-badge { width: 24px; height: 24px; border-radius: 7px; }
+.lb-pod-meta .lb-empty-cell, .lb-pod-meta .lb-badges-empty { font-size: 10.5px; }
+
+/* Podyuma özel şampiyon kartları — yükleme ekranı portresi. 2026-07-31: 46×62'de
+   bile "belli olmuyor" (kullanıcı) — kart genişliğinde çok boşluk vardı, üst
+   üste bindirme (negative margin) çözümü terk edildi: artık 4 portre GERÇEK
+   aralıkla (üst üste binmeden) yan yana, çok daha büyük — yüz/kostüm net seçiliyor.
+   4. tur: "çok sade, daha gösterişli yap" (kullanıcı) — köşede cam parlaması
+   (::before), alt gradyan scrim + üstüne ustalık seviyesi rozeti (M7 gibi —
+   dekorasyon değil, gerçek bilgi) eklendi.
+   5. tur: madalya renginde DIŞ GLOW kaldırıldı ("gereksiz animasyon" — statikti
+   ama öyle okunuyordu); cam parlaması + scrim + ustalık rozeti (beğenildi) kaldı. */
+.lb-pod-champs { display: flex; align-items: center; gap: 7px; }
+.lb-pod-champ {
+  position: relative; flex: 1 1 0; min-width: 0; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .55), inset 0 0 0 1.5px rgba(255, 255, 255, .1);
+  transition: transform .18s, box-shadow .18s;
+}
+.lb-pod-champ img { width: 100%; height: 100%; object-fit: cover; object-position: center 16%; display: block; }
+/* Cam parlaması — sol üst köşede diyagonal ışık, "premium kart" hissi */
+.lb-pod-champ::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(120deg, rgba(255, 255, 255, .16) 0%, transparent 32%);
+}
+/* Alt gradyan scrim — ustalık rozetinin okunabilmesi için */
+.lb-pod-champ::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 44%; z-index: 1; pointer-events: none;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .82));
+}
+.lb-pod-champ-lvl {
+  position: absolute; left: 6px; bottom: 6px; z-index: 2;
+  padding: 2px 6px; border-radius: 6px; font-style: normal;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .01em; color: #ffe7b0;
+  background: rgba(10, 8, 4, .55); box-shadow: inset 0 0 0 1px rgba(255, 208, 110, .35);
+}
+.lb-pod-champ:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .6), inset 0 0 0 1.5px rgba(255, 255, 255, .2);
+}
+
+.lb-loading { padding: 70px 0; text-align: center; color: #6f7787; }
+.lb-spin { width: 24px; height: 24px; margin: 0 auto 12px; border-radius: 50%; border: 2px solid rgba(91,141,239,.25); border-top-color: #5b8def; animation: lbSpin .8s linear infinite; }
+@keyframes lbSpin { to { transform: rotate(360deg); } }
+
+.lb-panel a, .lb-panel button { cursor: pointer; }
+
+@media (max-width: 860px) {
+  /* Dar ekranda ikincil kolonlar gizlenir — # / Oyuncu / LP / WR kalır */
+  .lb-grid { grid-template-columns: 32px minmax(0,1fr) 76px 56px; }
+  .lb-col-champs, .lb-col-roles, .lb-col-games, .lb-col-wl, .lb-col-badges { display: none; }
+  .lb-toolbar { padding: 10px 13px; }
+  .lb-thead, .lb-row { padding: 9px 13px; }
+  .lb-podium { grid-template-columns: 1fr; padding: 13px; gap: 10px; }
+  .lb-pod-champs { flex-wrap: wrap; }
+}
+@media (max-width: 560px) {
+  /* 10 derece ikonu + kuyruk anahtarı dar telefonda aynı satıra sığmıyordu
+     (kuyruk taşıyordu) — kuyruk kendi satırına düşer, derece şeridi yatay kayar. */
+  .lb-toolbar { flex-wrap: wrap; }
+  .lb-tiers { width: 100%; }
+  /* Podyumun Koridor/LP/Rozet üçlüsü dar kartta (tek sütuna düşmüş podyum,
+     ~284px iç genişlik) büyütülen LP ile çakışıyordu — LP kendi tam genişlikte
+     satırına düşer, Koridor+Rozet üstte kalır. */
+  .lb-pod-meta { flex-wrap: wrap; row-gap: 8px; }
+  .lb-pod-meta-lp { order: 3; flex-basis: 100%; justify-content: center; }
+}
+
+/* ===========================================================================
+   ELW GRAPHS — Profil "Şampiyonlar" sekmesi (.cp-*)
+   2026-07-31: eski hâli (AllChampionsContent.js) ham Tailwind flex-satır +
+   sabit width'lerdi, site geneli yeniden tasarımının dışında kalmıştı
+   (kullanıcı: "burası kötü"). Artık tier-list/leaderboard'la AYNI dil — TEK
+   .glass panel (araç çubuğu + tablo), .tl-view segment anahtarı (ayrı kopya
+   yok), .lb-grid'le aynı CSS grid tablo yaklaşımı. Şampiyon isminin altına
+   "TR Sırası" için HER ZAMAN yer ayrılıyor (kullanıcı: "ona dikkat, içinde bir
+   pay bırakacaksın") — veri gelmeden de (championRank henüz backend'den
+   gelmiyor, bkz. PROFILE_RANKINGS_PLAN.md) satır yüksekliği veri geldiğinde
+   ne olacaksa o, ileride sıçrama olmasın diye.
+   =========================================================================== */
+.cp-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.cp-tile {
+  border-radius: 14px; padding: 14px 12px; text-align: center;
+  background: rgba(255, 255, 255, .025); box-shadow: inset 0 0 0 1px var(--c-edge);
+}
+.cp-tile b { display: block; font-family: var(--f-display); font-size: 22px; font-weight: 800; color: #dfe4ee; font-variant-numeric: tabular-nums; }
+.cp-tile span { display: block; margin-top: 4px; font-size: 10.5px; color: #6f7787; text-transform: uppercase; letter-spacing: .04em; }
+
+.cp-panel { border-radius: 16px; overflow: clip; }
+.cp-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 10px 16px; border-bottom: 1px solid var(--c-edge); background: rgba(255, 255, 255, .015);
+}
+/* Sıralama çipleri — .tl-view'un küçük kardeşi, aynı görsel dil */
+.cp-sort { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.cp-sort button {
+  display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px;
+  border-radius: 7px; font-size: 11.5px; font-weight: 600; color: #8d95a4;
+  transition: background .16s, color .16s;
+}
+.cp-sort button:hover { color: #dfe4ee; }
+.cp-sort button[data-on="1"] { background: rgba(255, 255, 255, .08); color: #f2f5fa; }
+.cp-sort button i { font-style: normal; font-size: 9px; }
+
+.cp-thead {
+  display: grid; align-items: center; gap: 10px; padding: 12px 16px;
+  font-size: 12px; font-weight: 600; color: #6f7787; text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--c-edge);
+}
+.cp-grid, .cp-thead { grid-template-columns: 40px minmax(200px,1fr) 70px 90px 116px 140px 70px 80px 70px 184px; }
+.cp-row {
+  display: grid; align-items: center; gap: 10px; padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, .04); transition: background .16s;
+}
+.cp-row:last-child { border-bottom: 0; }
+.cp-row:hover { background: rgba(255, 255, 255, .025); }
+
+.cp-rank { font-family: var(--f-display); font-size: 14px; font-weight: 800; color: #6f7787; text-align: right; font-variant-numeric: tabular-nums; }
+
+.cp-champ { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.cp-champ img { flex: none; width: 40px; height: 40px; border-radius: 11px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.cp-champ-id { min-width: 0; }
+.cp-champ-name {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 15px; font-weight: 700; color: #f2f5fa; transition: color .16s;
+}
+.cp-row:hover .cp-champ-name { color: #8ab4f8; }
+/* "TR Sırası" — championRank gelene kadar tire, yer HER ZAMAN ayrılıyor (bkz. yukarıdaki not) */
+.cp-champ-rank { display: block; margin-top: 2px; font-size: 11px; color: #545b68; }
+.cp-champ-rank b { color: #9aa2b1; font-weight: 700; }
+
+.cp-games { text-align: center; font-size: 15px; font-weight: 800; color: #dfe4ee; font-variant-numeric: tabular-nums; }
+.cp-games.empty { color: #545b68; font-weight: 600; }
+
+.cp-wl { text-align: center; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.cp-wl b { font-weight: 700; }
+.cp-wl .w { color: #8ab4f8; }
+.cp-wl .l { color: #ef8ba0; }
+
+.cp-wr-cell { padding: 0 4px; }
+.cp-wr { display: block; text-align: center; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cp-wr-bar { margin-top: 5px; height: 3px; border-radius: 3px; background: var(--c-edge); overflow: hidden; }
+.cp-wr-bar i { display: block; height: 100%; border-radius: 3px; background: currentColor; }
+
+.cp-kda { text-align: center; }
+.cp-kda p { font-size: 12.5px; }
+.cp-kda .k { color: #8ab4f8; font-weight: 600; }
+.cp-kda .d { color: #ef8ba0; font-weight: 600; }
+.cp-kda .a { color: #c9a66b; font-weight: 600; }
+.cp-kda-ratio { margin-top: 2px; font-size: 12px; font-weight: 700; }
+
+.cp-num { text-align: center; font-size: 13px; color: #9aa2b1; font-variant-numeric: tabular-nums; }
+.cp-num.gold { color: #c9a66b; }
+
+/* Multi kill — 4 sabit slot (D/T/Q/P), boş olan nokta ile işaretlenir (site
+   geneli "—" konvansiyonuyla aynı ruh). */
+.cp-mk { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.cp-mk-slot {
+  display: grid; place-items: center; height: 24px; border-radius: 7px;
+  font-size: 10.5px; font-weight: 800; background: rgba(0, 0, 0, .3); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+}
+.cp-mk-slot.empty { color: #454b57; font-weight: 400; background: transparent; box-shadow: none; }
+
+.cp-empty { padding: 48px 20px; text-align: center; font-size: 13px; color: #6f7787; }
+.cp-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 16px; font-size: 11.5px; color: #6f7787;
+}
+
+@media (max-width: 900px) {
+  /* Sadece # / Şampiyon / Oyun / WR kalır — WR de gizlenirse 5. grid öğesi
+     (WR) tanımsız kolona düşüp alt satıra taşıyordu (gerçek taşma, düzeltildi). */
+  .cp-grid, .cp-thead { grid-template-columns: 34px minmax(0,1fr) 60px 84px; }
+  .cp-col-kda, .cp-col-cs, .cp-col-gold, .cp-col-dur, .cp-col-mk, .cp-col-wl { display: none; }
+  .cp-summary { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .cp-toolbar { flex-wrap: wrap; }
+  .cp-sort { width: 100%; }
 }

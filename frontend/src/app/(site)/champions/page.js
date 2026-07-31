@@ -35,8 +35,12 @@ export default async function ChampionsPage() {
   const design = settings?.profile_design === "pro" ? "pro" : "classic";
 
   return (
-    <div className={design === "pro" ? "dpm-scope min-h-screen" : undefined}>
-    <div className="content">
+    <div className={design === "pro" ? "dpm-scope soft-scope min-h-screen" : undefined}>
+    {/* max-w-7xl mx-auto px-6 py-6 — tier list'teki SAYFA KAPSAYICISIYLA birebir
+        aynı (2026-07-31). Önce burada eski ".content" sınıfı vardı (max-width
+        1320px, padding 26px) — tier list'in Tailwind kapsayıcısından (1280px,
+        24px) farklıydı, bu yüzden iki sayfanın panel/kart hizası tutmuyordu. */}
+    <div className="max-w-7xl mx-auto px-6 py-6">
       <div className="section-head" style={{ marginBottom: 20 }}>
         <h2 style={{ fontSize: 24, fontWeight: 800 }}>
           <span className="dot-mark" />Tüm Şampiyonlar
@@ -51,9 +55,7 @@ export default async function ChampionsPage() {
           <p className="dim" style={{ fontSize: 13 }}>Şampiyon listesi şu anda yüklenemedi. Kısa süre sonra tekrar deneyin.</p>
         </div>
       ) : (
-        <div className="card pad">
-          <ChampionGrid champions={champions} showSearch={true} />
-        </div>
+        <ChampionGrid champions={champions} showSearch={true} />
       )}
     </div>
     </div>

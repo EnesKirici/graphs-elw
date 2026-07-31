@@ -92,7 +92,7 @@ export default async function SummonerPage({ params }) {
   const couple = getCoupleProfile(profile.gameName, profile.tagLine);
 
   return (
-    <div className={design === "pro" ? "dpm-scope min-h-screen" : undefined}>
+    <div className={design === "pro" ? "dpm-scope soft-scope min-h-screen" : undefined}>
       {couple && <CoupleFX />}
       <ProfileHeader
         profile={profile}

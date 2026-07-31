@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LayoutGrid, PieChart, Gem } from "lucide-react";
+import { LayoutGrid, PieChart, Gem, Swords } from "lucide-react";
 import ItemTooltip from "@/components/shared/ItemTooltip";
 import RuneTooltip from "@/components/shared/RuneTooltip";
 import RuneTip from "@/components/shared/RuneTip";
@@ -12,6 +12,7 @@ import MatchDetailsTab from "./MatchDetailsTab";
 const DETAIL_TABS = [
   { key: "general", label: "Genel", icon: LayoutGrid },
   { key: "details", label: "Detaylar", icon: PieChart },
+  { key: "lanes", label: "Koridor", icon: Swords },
   { key: "runes", label: "Rünler", icon: Gem },
 ];
 
@@ -339,8 +340,196 @@ export default function MatchDetailPro({ matchId, puuid }) {
         <MatchDetailsTab t1={t1} t2={t2} searchedPuuid={puuid} duration={data.duration} />
       )}
 
+      {/* KORİDOR — 5 rol verdict (kim önde/baskın, jungle dahil) */}
+      {tab === "lanes" && (
+        <LanesTab t1={t1} t2={t2} laneAnalysis={data.laneAnalysis || []} swapped={swapped} />
+      )}
+
       {/* RÜNLER — oyuncu başına rün sayfası */}
       {tab === "runes" && <RunesTab t1={t1} t2={t2} searchedPuuid={puuid} />}
+    </div>
+  );
+}
+
+/* ===== KORİDOR sekmesi — 5 rol verdict (kim önde/baskın, jungle dahil) =====
+   Veri: LaneAnalysisService::buildAnalysis (data.laneAnalysis) — backend'de zaten hesaplı.
+   swapped ise (aranan oyuncu kırmızı takımda) yönleri çevir → Mavi HER ZAMAN senin takımın. */
+const LANE_ROLES = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
+const LANE_ROLE_TR = { TOP: "Üst", JUNGLE: "Orman", MIDDLE: "Orta", BOTTOM: "Alt", UTILITY: "Destek" };
+const LANE_ROLE_ICON = {
+  TOP: "/roles/top.webp", JUNGLE: "/roles/jungle.webp", MIDDLE: "/roles/mid.webp",
+  BOTTOM: "/roles/bot.webp", UTILITY: "/roles/support.webp",
+};
+const VERDICT_CFG = {
+  blue_dominant: { cls: "text-blue-300", bg: "bg-blue-500/15", border: "border-blue-500/30", icon: "◀◀", label: "Baskın", side: "blue" },
+  blue_ahead:    { cls: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", icon: "◀",  label: "Önde",  side: "blue" },
+  even:          { cls: "text-gray-400", bg: "bg-card/40",     border: "border-edge/30",     icon: "=",  label: "Denk",  side: "even" },
+  red_ahead:     { cls: "text-red-400",  bg: "bg-red-500/10",  border: "border-red-500/20",  icon: "▶",  label: "Önde",  side: "red" },
+  red_dominant:  { cls: "text-red-300",  bg: "bg-red-500/15",  border: "border-red-500/30",  icon: "▶▶", label: "Baskın", side: "red" },
+};
+function flipVerdictPro(v) {
+  if (!v) return v;
+  if (v.startsWith("blue_")) return v.replace("blue_", "red_");
+  if (v.startsWith("red_")) return v.replace("red_", "blue_");
+  return v;
+}
+// "Metrik: X vs Y" ve "+N/-N" highlight'larını swapped'ta çevir (mavi↔kırmızı perspektifi).
+function flipHighlights(hs) {
+  return (hs || []).map((h) => {
+    if (h.charAt(0) === "+") return "-" + h.slice(1);
+    if (h.charAt(0) === "-") return "+" + h.slice(1);
+    const vs = h.match(/^(.+?): (.+?) vs (.+?)$/);
+    if (vs) return `${vs[1]}: ${vs[3]} vs ${vs[2]}`;
+    return h;
+  });
+}
+
+function LaneVerdict({ analysis }) {
+  const [anchor, setAnchor] = useState(null);
+  const cfg = VERDICT_CFG[analysis?.verdict] || VERDICT_CFG.even;
+  const score = analysis?.score;
+  return (
+    <>
+      <div
+        className={`flex flex-col items-center justify-center px-2 py-1 rounded-lg border ${cfg.bg} ${cfg.border} cursor-help min-w-[70px]`}
+        onMouseEnter={(e) => setAnchor(e.currentTarget)}
+        onMouseLeave={() => setAnchor(null)}
+      >
+        <span className={`text-sm font-bold leading-none ${cfg.cls}`}>{cfg.icon}</span>
+        <span className={`text-[10px] font-bold mt-0.5 ${cfg.cls}`}>{cfg.label}</span>
+      </div>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="tip-dark bg-[#0a0e14] border border-[#2a3441] rounded-xl px-4 py-3 shadow-2xl shadow-black/90 w-60">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-300 font-medium">{analysis?.label} Koridor</span>
+              <span className={`text-sm font-bold ${cfg.cls}`}>{cfg.icon} {cfg.label}</span>
+            </div>
+            {typeof score === "number" && (
+              <p className="text-center text-[10px] text-gray-400 mb-2">
+                Skor: <span className={score > 0 ? "text-blue-400 font-bold" : score < 0 ? "text-red-400 font-bold" : "text-gray-400"}>
+                  {score > 0 ? `Mavi +${score}` : score < 0 ? `Kırmızı +${Math.abs(score)}` : "0"}
+                </span>
+              </p>
+            )}
+            {analysis?.highlights?.length > 0 && (
+              <div className="space-y-0.5">
+                {analysis.highlights.map((h, i) => (
+                  <p key={i} className="text-[10px] text-gray-300 text-center">{h}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+
+// Koridordaki bir şampiyon — portre + isim + KDA (align='right' → sağ takım, aynalı).
+function LaneChamp({ p, align }) {
+  if (!p) return <div className="flex-1" />;
+  const right = align === "right";
+  return (
+    <div className={`flex items-center gap-2 flex-1 min-w-0 ${right ? "flex-row-reverse" : ""}`}>
+      <img src={p.champion?.image} alt="" width={36} height={36} className="rounded-md flex-shrink-0" title={p.champion?.name} />
+      <div className={`min-w-0 ${right ? "text-right" : ""}`}>
+        <p className="text-[12px] text-gray-200 font-medium truncate">{p.champion?.name}</p>
+        <p className="text-[10px] text-gray-500 tabular-nums">
+          {p.kills}<span className="text-gray-700">/</span><span className="text-red-400/80">{p.deaths}</span><span className="text-gray-700">/</span>{p.assists}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Tek stat için ortadan iki yana "halat çekme" barı — büyük dilim önde olanın.
+function StatBar({ label, blue, red, fmt }) {
+  const b = Math.max(0, blue || 0), r = Math.max(0, red || 0);
+  const total = b + r;
+  const bluePct = total > 0 ? (b / total) * 100 : 50;
+  const f = fmt || ((x) => x);
+  return (
+    <div className="grid grid-cols-[2.3rem_2rem_1fr_2rem] items-center gap-1">
+      <span className="text-[9px] text-gray-500 uppercase tracking-wide">{label}</span>
+      <span className={`text-[10px] text-right tabular-nums ${b > r ? "text-blue-300 font-semibold" : "text-gray-500"}`}>{f(b)}</span>
+      <div className="h-1.5 rounded-full overflow-hidden bg-edge/50 flex">
+        <div className="h-full bg-blue-500/70" style={{ width: `${bluePct}%` }} />
+        <div className="h-full bg-red-500/70" style={{ width: `${100 - bluePct}%` }} />
+      </div>
+      <span className={`text-[10px] tabular-nums ${r > b ? "text-red-300 font-semibold" : "text-gray-500"}`}>{f(r)}</span>
+    </div>
+  );
+}
+
+const laneKda = (p) => (p ? (p.kills + p.assists) / Math.max(p.deaths, 1) : 0);
+
+// Tek koridor satırı — üst: şampiyon(mavi) · rol+verdict · şampiyon(kırmızı);
+// alt: KDA/CS/Altın/Hasar kafa-kafaya barları.
+function LaneRow({ role, bp, rp, analysis }) {
+  return (
+    <div className="px-3 py-2.5 rounded-lg bg-card/30 border border-edge/30">
+      <div className="flex items-center gap-2 mb-2">
+        <LaneChamp p={bp} align="left" />
+        <div className="flex flex-col items-center flex-shrink-0 gap-0.5 w-[88px]">
+          <img src={LANE_ROLE_ICON[role]} alt={role} width={13} height={13} className="opacity-60" title={LANE_ROLE_TR[role]} />
+          <LaneVerdict analysis={analysis} />
+        </div>
+        <LaneChamp p={rp} align="right" />
+      </div>
+      <div className="space-y-1">
+        <StatBar label="KDA"   blue={laneKda(bp)} red={laneKda(rp)} fmt={(x) => x.toFixed(1)} />
+        <StatBar label="CS"    blue={bp?.cs}      red={rp?.cs} />
+        <StatBar label="Altın" blue={bp?.gold}    red={rp?.gold}    fmt={fmtGold} />
+        <StatBar label="Hasar" blue={bp?.damage}  red={rp?.damage}  fmt={fmtDmg} />
+      </div>
+    </div>
+  );
+}
+
+function LanesTab({ t1, t2, laneAnalysis, swapped }) {
+  const byRole = (players) => {
+    const m = {};
+    (players || []).forEach((p) => { if (p.role) m[p.role] = p; });
+    return m;
+  };
+  const blue = byRole(t1?.players);
+  const red = byRole(t2?.players);
+
+  const analysisMap = {};
+  (laneAnalysis || []).forEach((a) => {
+    analysisMap[a.role] = swapped
+      ? { ...a, verdict: flipVerdictPro(a.verdict), highlights: flipHighlights(a.highlights), score: -(a.score || 0) }
+      : a;
+  });
+
+  let ahead = 0, even = 0, behind = 0;
+  LANE_ROLES.forEach((r) => {
+    const side = (VERDICT_CFG[analysisMap[r]?.verdict] || VERDICT_CFG.even).side;
+    if (side === "blue") ahead++; else if (side === "red") behind++; else even++;
+  });
+
+  return (
+    <div className="space-y-2">
+      {/* Özet — kaç koridor önde/denk/geride */}
+      <div className="flex items-center justify-center gap-3 py-2 rounded-lg bg-card/40 border border-edge/40 text-[11px] font-semibold">
+        <span className="text-blue-400">{ahead} koridor önde</span>
+        <span className="text-gray-600">·</span>
+        <span className="text-gray-400">{even} denk</span>
+        <span className="text-gray-600">·</span>
+        <span className="text-red-400">{behind} geride</span>
+      </div>
+
+      {/* 5 rol satırı — Mavi (senin takımın) sol · verdict orta · Kırmızı sağ */}
+      {LANE_ROLES.map((role) => {
+        const bp = blue[role], rp = red[role];
+        if (!bp && !rp) return null;
+        return <LaneRow key={role} role={role} bp={bp} rp={rp} analysis={analysisMap[role]} />;
+      })}
+
+      <p className="text-[10px] text-gray-600 text-center pt-1 leading-relaxed">
+        <span className="text-blue-400 font-medium">Mavi</span> = senin takımın. Barlar KDA/CS/Altın/Hasar; verdict 9 metriğin ağırlıklı toplamı (Rozet & Skor → Koridor Analizi).
+      </p>
     </div>
   );
 }
@@ -379,6 +568,13 @@ function ShardIcon({ shard, size = 24 }) {
   );
 }
 
+/* 2026-07-31: mobilde tek satırda isim + TÜM rün grupları (flex-shrink-0,
+   hiçbiri küçülmüyordu) sığmıyor, kart overflow-hidden olduğu için sağ taraf
+   sessizce KIRPILIYORDU (kullanıcı: "rünlerde kırpılmış içeride kalmış").
+   Çözüm: dar ekranda isim kendi satırına çıkar, rün grupları ALTTA kendi
+   satırında — hâlâ sığmazsa (çok küçük telefon) o satır artık dürüstçe yatay
+   kaydırılır (.no-scrollbar — site genelinde .lb-tiers'la aynı desen),
+   sessiz kırpma yerine. Masaüstünde (sm+) eski tek-satır düzeni AYNEN kalıyor. */
 function RuneRow({ p, isMe }) {
   const r = p.runes || {};
   // primaryPerks[0] = keystone (backend tüm seçimleri sırayla gönderiyor)
@@ -387,9 +583,9 @@ function RuneRow({ p, isMe }) {
   const hasRunes = keystone?.icon || r.secondaryPerks?.length;
 
   return (
-    <div className={`flex items-center gap-2.5 sm:gap-4 px-2.5 sm:px-4 py-2.5 ${isMe ? "bg-cyan-500/[0.07]" : ""} hover:bg-hover transition-colors`}>
+    <div className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-2.5 sm:px-4 py-2.5 ${isMe ? "bg-cyan-500/[0.07]" : ""} hover:bg-hover transition-colors`}>
       {/* Şampiyon + isim */}
-      <div className="flex items-center gap-2 w-[120px] sm:w-[160px] min-w-0 flex-shrink-0">
+      <div className="flex items-center gap-2 sm:w-[160px] min-w-0 flex-shrink-0">
         <img src={p.champion?.image} alt="" width={34} height={34} className="rounded-md flex-shrink-0" />
         <span className={`text-[13px] truncate ${p.isBot ? "text-gray-500 italic" : isMe ? "text-cyan-300 font-semibold" : "text-gray-200"}`}>
           {p.summonerName}
@@ -399,7 +595,7 @@ function RuneRow({ p, isMe }) {
       {!hasRunes ? (
         <span className="text-[11px] text-gray-600">Rün verisi yok</span>
       ) : (
-        <>
+        <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar -mx-2.5 px-2.5 sm:mx-0 sm:px-0">
           {/* Ana ağaç: ağaç ikonu + keystone (vurgulu) + 3 rün */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <RuneTip rune={r.primaryTree} size={16} dim />
@@ -407,7 +603,7 @@ function RuneRow({ p, isMe }) {
             {primaryMinors.map((perk, i) => <RuneTip key={i} rune={perk} />)}
           </div>
 
-          <span className="h-8 border-l border-edge/40 hidden sm:block" />
+          <span className="h-8 border-l border-edge/40 hidden sm:block flex-shrink-0" />
 
           {/* Yan ağaç: ağaç ikonu + 2 rün */}
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -415,13 +611,13 @@ function RuneRow({ p, isMe }) {
             {(r.secondaryPerks || []).map((perk, i) => <RuneTip key={i} rune={perk} />)}
           </div>
 
-          <span className="h-8 border-l border-edge/40 hidden sm:block" />
+          <span className="h-8 border-l border-edge/40 hidden sm:block flex-shrink-0" />
 
           {/* Stat parçaları — gerçek shard ikonları (mini rün) */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {(r.statShards || []).map((s, i) => <ShardIcon key={i} shard={s} />)}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

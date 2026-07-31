@@ -166,10 +166,10 @@ export default function LpRiseChart({ timeline, peak, estimated, tracked, showHe
         ) : (
           statusBadge || <span />
         )}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {TIME_FILTERS.map((f) => (
             <button key={f.key} onClick={() => { setFilter(f.key); setHovIdx(null); }}
-              className={`text-[9px] px-1.5 py-0.5 rounded-full transition-colors cursor-pointer ${filter === f.key ? "text-cyan-300 bg-cyan-500/10" : "text-gray-500 hover:text-gray-300"}`}>
+              className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors cursor-pointer ${filter === f.key ? "text-cyan-300 bg-cyan-500/10" : "text-gray-500 hover:text-gray-300"}`}>
               {f.label}
             </button>
           ))}

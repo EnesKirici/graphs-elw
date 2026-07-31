@@ -2,12 +2,57 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Flame, Shield, Zap } from "lucide-react";
+import { Flame, Zap, Shield } from "lucide-react";
+import Tooltip from "@/components/shared/Tooltip";
+import { rankBadgeUrl, miniCrestUrl } from "@/components/summoner/pro/rankUtils";
+
+/* 2026-07-31 tamamen yeniden yazıldı, sonra dört tur genişletildi — tier list /
+   Tüm Şampiyonlar ile aynı dil (.glass panel, max-w-7xl sayfa kapsayıcısı,
+   .tl-view segment anahtarı).
+
+   5. tur (ince ayar — "gereksiz animasyon", "neon kutu", "boş kalmış"):
+   - Podyum portrelerindeki madalya-renkli DIŞ GLOW kaldırıldı (kullanıcı:
+     "gereksiz animasyon" — statikti ama öyle okunuyordu). Cam parlaması + alt
+     gradyan + ustalık rozeti (beğenildi) kaldı.
+   - Rozet kutusu artık NÖTR pill (siyah/yarı-saydam + ince kenarlık) — canlı
+     maçtaki StreakBadge ile AYNI dolgu, önceki renkli/"neon" arka plan atıldı.
+   - hotStreak artık StreakBadge'in KENDİ parçacık animasyonunu kullanıyor
+     (`.streak-fx`/`.ember`, globals.css'te zaten global — kopyalanmadı, aynı
+     class'lar). Riot'un hotStreak bayrağı sayı vermiyor, o yüzden sayı YOK,
+     yalnız canlı maçtaki "3+ seri" animasyonunun kendisi.
+   - Podyumun LP/galibiyet/mağlubiyet/WR satırı "boş kalmış" (kullanıcı) —
+     3 hücreli değer+etiket şeridine dönüştürüldü, LP rozeti büyüdü.
+   - LP yanındaki derece rozeti: filtre satırında BÜYÜK .webp (rankBadgeUrl,
+     4. turda karar verildi) kalıyor, ama LP SAYISININ yanında (tablo + podyum)
+     `miniCrestUrl()`'e (aynı rankUtils.js, CommunityDragon SVG) geri dönüldü —
+     kullanıcı o dar bağlamda büyük detaylı rozetin "yapay" durduğunu belirtti;
+     bu zaten `LivePlayerCard.js`'in "LP yanında" için kullandığı varlık.
+
+   4. tur: derece filtresi büyük .webp'e döndü (site konvansiyonu, rankUtils.js),
+   tablo içerikleri büyüdü, rozetler lucide-react ikonlarına geçti.
+   3. tur: podyuma koridor/rozet satırı + şampiyon portreleri 46×62→68×92.
+   2. tur: derece pilleri ikon-only (10 derece, Diamond altı kilitli — prod key
+   bekliyor, bkz. docs/plans/LEADERBOARD_DIVISIONS_PLAN.md), ilk 3 ayrı podyum,
+   yeşil YOK (profil WR konvansiyonu: cyan/mavi/mor/kırmızı 60/50/44). */
+
+// Canlı maçtaki seri parçacık animasyonu (LivePlayerCard.js) — AYNI koordinatlar,
+// globals.css'teki .streak-fx/.ember class'ları site genelinde zaten yüklü.
+const STREAK_PARTS = [
+  { x: 36, y: 42, dx: -3 }, { x: 52, y: 26, dx: 0 }, { x: 66, y: 44, dx: 3 },
+  { x: 44, y: 60, dx: -2 }, { x: 58, y: 56, dx: 2 }, { x: 50, y: 72, dx: 0 },
+];
 
 const TIERS = [
-  { key: "challenger", label: "Challenger", color: "text-yellow-300", badge: "/ranks/badges/challenger.webp" },
-  { key: "grandmaster", label: "Grandmaster", color: "text-red-400", badge: "/ranks/badges/grandmaster.webp" },
-  { key: "master", label: "Master", color: "text-purple-400", badge: "/ranks/badges/master.webp" },
+  { key: "challenger", label: "Challenger", tier: "#e6b968", enabled: true },
+  { key: "grandmaster", label: "Grandmaster", tier: "#ef8ba0", enabled: true },
+  { key: "master", label: "Master", tier: "#b79df5", enabled: true },
+  { key: "diamond", label: "Diamond", tier: "#5b8def", enabled: false },
+  { key: "emerald", label: "Emerald", tier: "#2d9e6e", enabled: false },
+  { key: "platinum", label: "Platinum", tier: "#4d95a0", enabled: false },
+  { key: "gold", label: "Gold", tier: "#c89b3c", enabled: false },
+  { key: "silver", label: "Silver", tier: "#80939e", enabled: false },
+  { key: "bronze", label: "Bronze", tier: "#a9765a", enabled: false },
+  { key: "iron", label: "Iron", tier: "#5c5a57", enabled: false },
 ];
 
 const QUEUES = [
@@ -16,31 +61,160 @@ const QUEUES = [
 ];
 
 const ROLE_ICONS = {
-  Top: "/roles/top.webp", Mid: "/roles/mid.webp", Jungle: "/roles/jungle.webp",
-  ADC: "/roles/bot.webp", Support: "/roles/support.webp",
+  Top: "/roles/top.svg", Mid: "/roles/mid.svg", Jungle: "/roles/jungle.svg",
+  ADC: "/roles/bot.svg", Support: "/roles/support.svg",
 };
+
+const MEDALS = ["#e6b968", "#c7cdd8", "#c98a4b"];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
+// Kazanma rengi — SİTENİN PROFİL KONVANSİYONU (ChampPerfListPro/Last30Panel ile
+// birebir aynı eşikler): leaderboard tek oyuncu verisi, tier list'in agrega
+// eşiğiyle (54/51/48) karıştırılmaz.
+function wrTone(wr) {
+  if (wr >= 60) return "#22d3ee";
+  if (wr >= 50) return "#60a5fa";
+  if (wr >= 44) return "#c084fc";
+  return "#f87171";
+}
+
+// 6. tur: "maç oynama rozeti" — 400+ oyunla apex derecede zaten sık rastlanıyor,
+// gerçek eşik tüm derecelerin verisi gelince (ladder:crawl sonrası) kalibre
+// edilmeli (WR eşiklerinde yaptığımız gibi) — şimdilik makul bir başlangıç.
+const MARATHON_GAMES = 600;
+
+// Rozetler — hotStreak/freshBlood/veteran: LeaderboardClassic'in zaten kullandığı
+// ikon eşlemesiyle AYNI (Flame/Zap/Shield). Kutu NÖTR (canlı maçtaki StreakBadge
+// ile aynı dolgu) — renkli/"neon" arka plan yok, yalnız ikon renkli.
+// marathon: kullanıcının ChatGPT ile ürettiği görsel (public/badges/marathon.png).
 const BADGES = {
-  hotStreak: { icon: Flame, color: "text-orange-400", bg: "bg-orange-500/15", label: "Galibiyet Serisi", desc: "Son 3+ maçı üst üste kazanmış" },
-  freshBlood: { icon: Zap, color: "text-emerald-400", bg: "bg-emerald-500/15", label: "Yeni Giriş", desc: "Bu lig'e yeni yükselmiş" },
-  veteran: { icon: Shield, color: "text-blue-400", bg: "bg-blue-500/15", label: "Veteran", desc: "Bu lig'de 100+ maç oynamış" },
+  hotStreak: { Icon: Flame, fg: "#f0a94e", label: "Galibiyet Serisi", desc: "Son maçlarını üst üste kazanmış" },
+  freshBlood: { Icon: Zap, fg: "#8ab4f8", label: "Yeni Giriş", desc: "Bu lige yeni yükselmiş" },
+  veteran: { Icon: Shield, fg: "#b79df5", label: "Veteran", desc: "Bu ligde 100+ maç oynamış" },
+  marathon: { img: "/badges/marathon.png", fg: "#f0a94e", label: "Maraton", desc: `Bu sezon ${MARATHON_GAMES}+ maç oynamış` },
 };
 
-function BadgeIcon({ type, active }) {
+function BadgeIcon({ type, active, size = 15 }) {
+  const [anchor, setAnchor] = useState(null);
   if (!active) return null;
-  const badge = BADGES[type];
-  const Icon = badge.icon;
+  const b = BADGES[type];
+  const Icon = b.Icon;
+  // Riot'un hotStreak bayrağı boolean (sayı vermiyor) — canlı maçtaki 3+ seri
+  // animasyonunu (kıvılcım parçacıkları) sayı göstermeden, doğrudan uyguluyoruz.
+  const isHot = type === "hotStreak";
   return (
-    <span className={`relative group/badge p-1 rounded ${badge.bg} cursor-default`} title={`${badge.label} — ${badge.desc}`}>
-      <Icon size={15} className={badge.color} />
-    </span>
+    <>
+      <span className="lb-badge" onMouseEnter={(e) => setAnchor(e.currentTarget)} onMouseLeave={() => setAnchor(null)}>
+        {b.img ? (
+          <img src={b.img} alt="" width={size + 6} height={size + 6} className="lb-badge-img" />
+        ) : (
+          <span className="relative inline-flex">
+            {isHot && (
+              <span className="streak-fx" aria-hidden="true">
+                {STREAK_PARTS.map((pt, n) => (
+                  <i key={n} className="ember" style={{ left: `${pt.x}%`, top: `${pt.y}%`, "--dx": `${pt.dx}px`, animationDelay: `${n * 0.12}s` }} />
+                ))}
+              </span>
+            )}
+            <Icon size={size} strokeWidth={2.4} color={b.fg} fill={isHot ? b.fg : "none"} className="relative" />
+          </span>
+        )}
+      </span>
+      {anchor && (
+        <Tooltip anchorEl={anchor}>
+          <div className="tl-tip" style={{ minWidth: 0 }}>
+            <b style={{ display: "block", fontSize: 13, fontWeight: 700, color: b.fg }}>{b.label}</b>
+            <span style={{ fontSize: 11.5, color: "#9aa2b1" }}>{b.desc}</span>
+          </div>
+        </Tooltip>
+      )}
+    </>
   );
 }
 
-// Mobil: yalnız # / Oyuncu / LP / WR (sabit ~750px grid 390'ı taşırıyordu — diğer kolonlar md+)
-const GRID = "grid-cols-[34px_minmax(0,1fr)_64px_48px] md:grid-cols-[50px_1fr_150px_80px_90px_64px_104px_60px_76px]";
+/* Podyum kartı — ilk 3 için. Kompakt tablodan farkı: koridor + rozet burada da
+   var, şampiyon portreleri madalya rengiyle parlayan "gösterişli" kartlar
+   (cam parlaması + alt gradyan + ustalık rozeti).
+   7. tur: LP başlık satırının sağında "kötü durdu" (kullanıcı) — koridor ile
+   rozetin ARASINA, kartın daha "ortasına" taşındı; LP'nin eski yerine (başlık
+   satırının sağı) artık koridor ikonları geçti — ikisi yer değiştirdi. LP'ye
+   "LP" birimi geri eklendi (kullanıcı: "yanında LP yazmıyor"). */
+function PodiumCard({ entry, tierInfo, medal }) {
+  const noBadges = !entry.hotStreak && !entry.freshBlood && !entry.veteran && entry.games < MARATHON_GAMES;
+  return (
+    <div className="lb-pod-card" style={{ "--medal": medal }}>
+      <div className="lb-pod-head">
+        <span className="lb-pod-rank">{entry.rank}</span>
+        {entry.profileIcon ? (
+          <img src={entry.profileIcon} alt="" className="lb-pod-avatar" />
+        ) : (
+          <span className="lb-pod-avatar-ph" />
+        )}
+        <div className="lb-pod-id">
+          {entry.name?.gameName ? (
+            <Link href={`/summoner/${encodeURIComponent(entry.name.gameName)}/${encodeURIComponent(entry.name.tagLine)}`} className="lb-pod-name">
+              {entry.name.gameName}
+              <span>#{entry.name.tagLine}</span>
+            </Link>
+          ) : (
+            <span className="lb-name-ph">Oyuncu #{entry.rank}</span>
+          )}
+        </div>
+        {/* LP'nin eski yeri — artık koridor ikonları (küçük, etiketsiz) */}
+        <div className="lb-pod-head-roles">
+          {entry.topRoles ? entry.topRoles.map((r, ri) => (
+            <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role} title={r.role} />
+          )) : null}
+        </div>
+      </div>
+
+      {/* Değer+etiket şeridi — önceki hâli tek satır ince yazıydı, "boş kalmış"
+          geri bildirimi (kullanıcı) — 3 hücreli kutuya dönüştürüldü. */}
+      <div className="lb-pod-stats">
+        <div className="lb-pod-stat"><b className="w">{entry.wins}</b><span>Galibiyet</span></div>
+        <div className="lb-pod-stat"><b className="l">{entry.losses}</b><span>Mağlubiyet</span></div>
+        <div className="lb-pod-stat"><b style={{ color: wrTone(entry.winRate) }}>%{entry.winRate}</b><span>Kazanma</span></div>
+      </div>
+
+      {/* Koridor + LP + rozet — LP artık kartın ortasında, koridor ile rozetin
+          arasında. .lb-roles/.lb-badges kompakt tablodakiyle AYNI sınıf. */}
+      <div className="lb-pod-meta">
+        <div className="lb-pod-meta-group">
+          <span className="lb-pod-meta-label">Koridor</span>
+          <div className="lb-roles">
+            {entry.topRoles ? entry.topRoles.map((r, ri) => (
+              <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role} title={r.role} />
+            )) : <span className="lb-empty-cell">—</span>}
+          </div>
+        </div>
+        <div className="lb-pod-meta-lp">
+          <img src={miniCrestUrl(tierInfo?.key)} alt="" title={tierInfo?.label} />
+          <b>{entry.lp.toLocaleString()}</b><span>LP</span>
+        </div>
+        <div className="lb-pod-meta-group">
+          <span className="lb-pod-meta-label">Rozet</span>
+          <div className="lb-badges">
+            <BadgeIcon type="hotStreak" active={entry.hotStreak} size={14} />
+            <BadgeIcon type="freshBlood" active={entry.freshBlood} size={14} />
+            <BadgeIcon type="veteran" active={entry.veteran} size={14} />
+            <BadgeIcon type="marathon" active={entry.games >= MARATHON_GAMES} size={14} />
+            {noBadges && <span className="lb-badges-empty">—</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="lb-pod-champs">
+        {entry.topChamps ? entry.topChamps.slice(0, 4).map((c, ci) => (
+          <span key={ci} className="lb-pod-champ" title={`${c.name} · Ustalık ${c.level}`}>
+            <img src={c.splash || c.image} alt={c.name} loading="lazy" />
+            <em className="lb-pod-champ-lvl">M{c.level}</em>
+          </span>
+        )) : <span className="lb-champs-empty">Şampiyon verisi yok</span>}
+      </div>
+    </div>
+  );
+}
 
 export default function LeaderboardPro() {
   const [tier, setTier] = useState("challenger");
@@ -57,140 +231,147 @@ export default function LeaderboardPro() {
   }, [tier, queue]);
 
   const tierInfo = TIERS.find((t) => t.key === tier);
+  const podium = data?.entries?.slice(0, 3) || [];
+  const rest = data?.entries?.slice(3) || [];
 
   return (
-    <div className="dpm-scope min-h-screen">
+    <div className="dpm-scope soft-scope min-h-screen">
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Başlık + Filtreler */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <img src={tierInfo?.badge} alt={tier} width={56} height={56} className="drop-shadow-[0_4px_14px_rgba(0,0,0,0.5)]" />
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <img src={rankBadgeUrl(tier)} alt={tier} width={44} height={44} className="drop-shadow-[0_4px_14px_rgba(0,0,0,0.5)]" />
             <div>
-              <h1 className="text-2xl font-bold text-white">Sıralama</h1>
-              <p className="text-sm text-gray-500">TR1 — {tierInfo?.label} — {data?.total || 0} oyuncu</p>
+              <h1 className="text-2xl font-extrabold text-white">Sıralama</h1>
+              <p className="text-sm text-gray-500 mt-1">TR1 — {tierInfo?.label} — {data?.total || 0} oyuncu</p>
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1 bg-card border border-edge rounded-lg p-1">
+        <div className="lb-panel glass">
+          {/* Araç çubuğu — derece solda (ikon-only, kendi rengiyle), kuyruk sağda */}
+          <div className="lb-toolbar">
+            <div className="lb-tiers no-scrollbar" role="group" aria-label="Derece">
               {TIERS.map((t) => (
-                <button key={t.key} onClick={() => setTier(t.key)}
-                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                    tier === t.key ? `bg-soft ${t.color} font-medium` : "text-gray-500 hover:text-gray-300"
-                  }`}>
-                  <img src={t.badge} alt="" width={16} height={16} />
-                  {t.label}
+                <button
+                  key={t.key}
+                  type="button"
+                  className="lb-tier"
+                  data-on={tier === t.key ? "1" : "0"}
+                  style={{ "--tier": t.tier, "--tier-fg": t.tier }}
+                  onClick={() => t.enabled && setTier(t.key)}
+                  disabled={!t.enabled}
+                  title={t.enabled ? t.label : `${t.label} — prod key onayı bekleniyor`}
+                >
+                  <img src={rankBadgeUrl(t.key)} alt={t.label} />
+                  {!t.enabled && (
+                    <span className="lb-tier-lock">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 018 0v4" />
+                      </svg>
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-1 bg-card border border-edge rounded-lg p-1">
+
+            <div className="tl-view" role="group" aria-label="Kuyruk">
               {QUEUES.map((q) => (
-                <button key={q.key} onClick={() => setQueue(q.key)}
-                  className={`text-xs px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                    queue === q.key ? "bg-cyan-500/10 text-cyan-300 font-medium" : "text-gray-500 hover:text-gray-300"
-                  }`}>
+                <button key={q.key} type="button" data-on={queue === q.key ? "1" : "0"} onClick={() => setQueue(q.key)}>
                   {q.label}
                 </button>
               ))}
             </div>
           </div>
-        </div>
-
-        {/* Tablo */}
-        <div className="glass rounded-xl overflow-visible">
-          <div className={`grid ${GRID} gap-2 px-3 md:px-6 py-3 text-[11px] text-gray-500 uppercase tracking-wider border-b border-edge/50 font-medium`}>
-            <span>#</span>
-            <span>Oyuncu</span>
-            <span className="hidden md:block text-center">Şampiyonlar</span>
-            <span className="hidden md:block text-center">Koridor</span>
-            <span className="text-center">LP</span>
-            <span className="hidden md:block text-center">Oyun</span>
-            <span className="hidden md:block text-center">G / M</span>
-            <span className="text-center">WR</span>
-            <span className="hidden md:block text-center">Rozet</span>
-          </div>
 
           {loading && (
-            <div className="py-20 text-center text-gray-500">
-              <div className="w-6 h-6 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mx-auto mb-3" />
+            <div className="lb-loading">
+              <div className="lb-spin" />
               Yükleniyor...
             </div>
           )}
 
-          {!loading && data?.entries?.map((entry, i) => (
-            <div key={entry.puuid || i}
-              className={`grid ${GRID} gap-2 items-center px-3 md:px-6 py-3 hover:bg-hover transition-colors border-b border-edge/15 ${i < 3 ? "bg-white/[0.015]" : ""}`}>
-              {/* Sıra — ilk 3 madalya rengi */}
-              <span className={`text-base font-bold font-mono ${
-                i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : "text-gray-500"
-              }`}>
-                {entry.rank}
-              </span>
+          {/* Podyum — ilk 3, geniş kart + gerçekten görünür şampiyon portreleri */}
+          {!loading && podium.length > 0 && (
+            <div className="lb-podium">
+              {podium.map((entry, i) => (
+                <PodiumCard key={entry.puuid || i} entry={entry} tierInfo={tierInfo} medal={MEDALS[i]} />
+              ))}
+            </div>
+          )}
 
-              {/* Oyuncu */}
-              <div className="flex items-center gap-3 min-w-0">
-                <img src={tierInfo?.badge} alt={tier} width={34} height={34} />
+          {/* Kolon başlıkları */}
+          {!loading && rest.length > 0 && (
+            <div className="lb-grid lb-thead">
+              <span>#</span>
+              <span>Oyuncu</span>
+              <span className="lb-col-champs">Şampiyonlar</span>
+              <span className="lb-col-roles">Koridor</span>
+              <span style={{ textAlign: "center" }}>LP</span>
+              <span className="lb-col-games" style={{ textAlign: "center" }}>Oyun</span>
+              <span className="lb-col-wl" style={{ textAlign: "center" }}>G / M</span>
+              <span style={{ textAlign: "center" }}>WR</span>
+              <span className="lb-col-badges" style={{ textAlign: "center" }}>Rozet</span>
+            </div>
+          )}
+
+          {!loading && rest.map((entry, i) => (
+            <div key={entry.puuid || i} className="lb-grid lb-row">
+              <span className="lb-rank">{entry.rank}</span>
+
+              {/* Oyuncu — gerçek profil ikonu (varsa) */}
+              <div className="lb-player">
+                {entry.profileIcon ? (
+                  <img src={entry.profileIcon} alt="" className="lb-avatar" />
+                ) : (
+                  <span className="lb-avatar-ph" />
+                )}
                 {entry.name?.gameName ? (
-                  <Link
-                    href={`/summoner/${encodeURIComponent(entry.name.gameName)}/${encodeURIComponent(entry.name.tagLine)}`}
-                    className="text-sm text-gray-200 font-medium hover:text-cyan-300 transition-colors truncate"
-                  >
-                    {entry.name.gameName}
-                    <span className="text-gray-600 text-xs ml-0.5">#{entry.name.tagLine}</span>
+                  <Link href={`/summoner/${encodeURIComponent(entry.name.gameName)}/${encodeURIComponent(entry.name.tagLine)}`} className="lb-name">
+                    {entry.name.gameName}<span>#{entry.name.tagLine}</span>
                   </Link>
                 ) : (
-                  <span className="text-sm text-gray-600 italic">Oyuncu #{entry.rank}</span>
+                  <span className="lb-name-ph">Oyuncu #{entry.rank}</span>
                 )}
               </div>
 
-              {/* Şampiyonlar */}
-              <div className="hidden md:flex items-center justify-center gap-1">
+              {/* Şampiyonlar — küçük kare ikon (dar sütun, "3D" portre podyumda) */}
+              <div className="lb-champs lb-col-champs">
                 {entry.topChamps ? entry.topChamps.slice(0, 5).map((c, ci) => (
-                  <img key={ci} src={c.image} alt={c.name} width={26} height={26} className="rounded-md" title={`${c.name} (Lvl ${c.level})`} />
-                )) : <span className="text-[10px] text-gray-600">—</span>}
+                  <img key={ci} src={c.image} alt={c.name} className="lb-champ" title={`${c.name} · Ustalık ${c.level}`} loading="lazy" />
+                )) : <span className="lb-champs-empty">—</span>}
               </div>
 
-              {/* Koridor */}
-              <div className="hidden md:flex items-center justify-center gap-1.5">
+              <div className="lb-roles lb-col-roles">
                 {entry.topRoles ? entry.topRoles.map((r, ri) => (
-                  <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role} width={22} height={22} title={r.role} />
-                )) : <span className="text-[10px] text-gray-600">—</span>}
+                  <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role} title={r.role} />
+                )) : <span className="lb-empty-cell">—</span>}
               </div>
 
-              {/* LP — cyan accent */}
-              <span className="text-base font-bold text-center font-mono" style={{ color: "var(--dpm-accent)" }}>
-                {entry.lp.toLocaleString()}
-              </span>
-
-              {/* Oyun */}
-              <span className="hidden md:block text-sm text-gray-300 text-center">{entry.games}</span>
-
-              {/* G / M */}
-              <div className="hidden md:block text-center">
-                <span className="text-xs text-emerald-400 font-medium">{entry.wins}G</span>
-                <span className="text-xs text-gray-600 mx-1">·</span>
-                <span className="text-xs text-red-400 font-medium">{entry.losses}M</span>
+              <div className="lb-lp">
+                <img src={miniCrestUrl(tierInfo?.key)} alt="" title={tierInfo?.label} />
+                <b>{entry.lp.toLocaleString()}</b>
               </div>
 
-              {/* WR */}
-              <span className={`text-sm font-mono font-bold text-center ${
-                entry.winRate >= 55 ? "text-emerald-400" : entry.winRate >= 50 ? "text-gray-200" : "text-red-400"
-              }`}>
-                {entry.winRate}%
-              </span>
+              <span className="lb-games lb-col-games">{entry.games}</span>
 
-              {/* Rozet */}
-              <div className="hidden md:flex items-center justify-center gap-1">
+              <div className="lb-wl lb-col-wl">
+                <b className="w">{entry.wins}G</b><i>·</i><b className="l">{entry.losses}M</b>
+              </div>
+
+              <span className="lb-wr" style={{ color: wrTone(entry.winRate) }}>%{entry.winRate}</span>
+
+              <div className="lb-badges lb-col-badges">
                 <BadgeIcon type="hotStreak" active={entry.hotStreak} />
                 <BadgeIcon type="freshBlood" active={entry.freshBlood} />
                 <BadgeIcon type="veteran" active={entry.veteran} />
-                {!entry.hotStreak && !entry.freshBlood && !entry.veteran && <span className="text-[10px] text-gray-600">—</span>}
+                <BadgeIcon type="marathon" active={entry.games >= MARATHON_GAMES} />
+                {!entry.hotStreak && !entry.freshBlood && !entry.veteran && entry.games < MARATHON_GAMES && <span className="lb-badges-empty">—</span>}
               </div>
             </div>
           ))}
 
           {!loading && (!data?.entries || data.entries.length === 0) && (
-            <div className="py-20 text-center text-gray-500">Veri bulunamadı</div>
+            <div className="lb-loading">Veri bulunamadı</div>
           )}
         </div>
       </div>

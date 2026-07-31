@@ -116,7 +116,7 @@ export default async function ChampionCounterPage({ params }) {
   };
 
   return (
-    <div className="dpm-scope min-h-screen relative overflow-hidden">
+    <div className="dpm-scope soft-scope min-h-screen relative overflow-hidden">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       <ChampionBg splash={champ.splash} />
 

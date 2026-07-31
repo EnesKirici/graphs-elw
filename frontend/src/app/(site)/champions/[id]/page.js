@@ -126,7 +126,7 @@ export default async function ChampionDetailPage({ params }) {
   };
 
   return (
-    <div className="dpm-scope min-h-screen relative overflow-hidden">
+    <div className="dpm-scope soft-scope min-h-screen relative overflow-hidden">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       {/* Karakter = sayfa arka planı (sınırlı banner yok) */}
       <ChampionBg splash={champ.splash} />
