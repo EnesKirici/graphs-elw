@@ -141,8 +141,8 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         her panel genişliğini içeriğine göre alıyor, item sırası tam genişlikte nefes alıyor.
       */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* SOL (geniş) — Rünler + Yetenek Sırası */}
-        <Panel className="lg:col-span-8">
+        {/* SOL — Rünler (tek başına yüksek panel) */}
+        <Panel className="lg:col-span-7">
           <Section title="Rünler" extra={
             activeKeystone && (
               <span className="text-[10px] text-gray-600">
@@ -188,24 +188,15 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             )}
           </Section>
 
-          <Section title="Yetenek Sırası" extra={<span className="text-[10px] text-gray-600">Pick · WR</span>}>
-            {skillOrders.length ? (
-              <div className="space-y-3">
-                {skillOrders.slice(0, 2).map((o, idx) => (
-                  <SkillOrderRow key={o.key} o={o} champion={champion} big={idx === 0} />
-                ))}
-              </div>
-            ) : (
-              <ComingSoon>
-                Yetenek sırası istatistikleri toplanıyor — worker maç timeline&apos;larını işledikçe burada gerçek verilerle görünecek
-                {(samples.skill_order || 0) > 0 ? ` (şu ana kadar ${samples.skill_order} maç işlendi)` : ""}.
-              </ComingSoon>
-            )}
-          </Section>
         </Panel>
 
-        {/* SAĞ (dar) — Sihirdar büyüleri + Başlangıç/Çizme */}
-        <div className="lg:col-span-4 space-y-4">
+        {/*
+          SAĞ — üç panel alt alta. Yetenek sırası bilerek BURAYA alındı: soldaki rün
+          paneli tek başına çok yüksek olduğu için sağ sütun kısa kalıyor ve geniş
+          ekranda altında koca bir boşluk oluşuyordu. Üç panel iki sütunun yüksekliğini
+          dengeliyor.
+        */}
+        <div className="lg:col-span-5 space-y-4">
           <Panel>
             <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
               {spellPairs.length ? (
@@ -229,6 +220,23 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 </div>
               ) : (
                 <ComingSoon>Büyü verisi henüz yok.</ComingSoon>
+              )}
+            </Section>
+          </Panel>
+
+          <Panel>
+            <Section title="Yetenek Sırası" extra={<span className="text-[10px] text-gray-600">Seçim · WR</span>}>
+              {skillOrders.length ? (
+                <div className="space-y-3">
+                  {skillOrders.slice(0, 2).map((o, idx) => (
+                    <SkillOrderRow key={o.key} o={o} champion={champion} big={idx === 0} />
+                  ))}
+                </div>
+              ) : (
+                <ComingSoon>
+                  Yetenek sırası istatistikleri toplanıyor — worker maç timeline&apos;larını işledikçe burada gerçek verilerle görünecek
+                  {(samples.skill_order || 0) > 0 ? ` (şu ana kadar ${samples.skill_order} maç işlendi)` : ""}.
+                </ComingSoon>
               )}
             </Section>
           </Panel>
@@ -259,27 +267,42 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         </div>
       </div>
 
-      {/* ITEM SIRASI — tam genişlik. Her sütun bir slot, altında o slotun seçenekleri. */}
+      {/*
+        EŞYA SIRASI — build bir LİSTE değil bir YOL; sütunlar ok'larla bağlanıp
+        okuma yönü veriliyor. Her sütunda en sık tercih büyük kartta, alternatifler
+        altında küçük satırlarda → hangisinin "asıl yol" olduğu bir bakışta belli.
+        Yüzdenin yanında MAÇ SAYISI da var: örneklem görünmeden orana güvenilmez.
+      */}
       <Panel>
-        <Section title="Item Sırası" extra={<span className="text-[10px] text-gray-600">WR · Seçim oranı</span>}>
+        <Section
+          title="Eşya Sırası"
+          extra={<span className="text-[10px] text-gray-600">Tamamlanma sırasına göre · WR · seçim · maç</span>}
+        >
           {itemSlots.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {itemSlots.map(({ n, list }) => (
-                <div key={n}>
-                  <div className="text-[11px] font-semibold text-gray-400 mb-2 text-center">{n}. Item</div>
-                  <div className="space-y-1.5">
-                    {list.slice(0, 4).map((it) => (
-                      <div key={it.key} className="flex items-center gap-2 rounded-lg bg-edge/25 border border-edge/40 p-1.5">
-                        <img src={itemIcon(version, it.key)} alt="" width={34} height={34}
-                          className="rounded-md border border-edge shrink-0" onError={hideOnError} title={`${it.games} maç`} />
-                        <div className="min-w-0">
-                          <div className={`text-xs font-bold leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</div>
-                          <div className="text-[10px] text-gray-500 mt-1 leading-none">{it.pickRate}%</div>
-                        </div>
+            <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
+              {itemSlots.map(({ n, list }, idx) => (
+                <Fragment key={n}>
+                  {idx > 0 && (
+                    <div className="shrink-0 flex items-center text-gray-700" aria-hidden>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-[138px]">
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 text-center">
+                      {n}. Eşya
+                    </div>
+                    <ItemPrimary it={list[0]} version={version} />
+                    {list.length > 1 && (
+                      <div className="mt-1.5 space-y-1">
+                        {list.slice(1, 4).map((it) => (
+                          <ItemAlt key={it.key} it={it} version={version} />
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
+                </Fragment>
               ))}
             </div>
           ) : (
@@ -314,6 +337,49 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           </Section>
         </Panel>
       </div>
+    </div>
+  );
+}
+
+/* Slotun ASIL tercihi — vurgulu kart (ince mavi kenar + büyük ikon + örneklem). */
+function ItemPrimary({ it, version }) {
+  if (!it) return null;
+  return (
+    <div className="rounded-lg bg-edge/30 border border-blue-400/25 p-2.5 text-center">
+      <img
+        src={itemIcon(version, it.key)}
+        alt=""
+        width={46}
+        height={46}
+        className="rounded-lg border border-edge mx-auto"
+        onError={hideOnError}
+      />
+      <div className={`text-base font-bold mt-2 leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</div>
+      <div className="text-[10px] text-gray-500 mt-1.5 leading-none">
+        {it.pickRate}% seçim
+      </div>
+      <div className="text-[10px] text-gray-600 mt-1 leading-none tabular-nums">{(it.games ?? 0).toLocaleString("tr-TR")} maç</div>
+    </div>
+  );
+}
+
+/* Aynı slottaki alternatifler — kompakt satır. */
+function ItemAlt({ it, version }) {
+  return (
+    <div
+      className="flex items-center gap-1.5 rounded-md bg-edge/20 border border-edge/30 px-1.5 py-1"
+      title={`${it.games} maç · %${it.pickRate} seçim`}
+    >
+      <img
+        src={itemIcon(version, it.key)}
+        alt=""
+        width={24}
+        height={24}
+        className="rounded border border-edge shrink-0"
+        onError={hideOnError}
+      />
+      <span className={`text-[11px] font-bold ${wrCls(it.winRate)}`}>{it.winRate}%</span>
+      <span className="text-[9px] text-gray-600 ml-auto tabular-nums">{it.pickRate}%</span>
     </div>
   );
 }
