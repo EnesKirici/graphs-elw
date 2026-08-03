@@ -55,7 +55,11 @@ class ChampionBuildService
         $patches = $this->patch->keptPatches();
         $key = 'champion:build:v6:' . $championId . ':' . implode(',', $patches);
 
-        return Cache::remember($key, 600, function () use ($championId, $patches) {
+        // TTL 10dk DEĞİL 2sa: bu veriyi besleyen stats:rebuild günde 3 kez koşuyor,
+        // yani 10 dakikalık tazelik hiçbir zaman yeni bilgi getirmiyordu — sadece her
+        // 10 dakikada bir "şanssız" ziyaretçiye hesaplama faturasını çıkarıyordu.
+        // Patch değişince cache anahtarı zaten değişir (bayat veri riski yok).
+        return Cache::remember($key, 7200, function () use ($championId, $patches) {
             return $this->compute($championId, $patches);
         });
     }
@@ -72,7 +76,9 @@ class ChampionBuildService
         // v4: bot lane çapraz eşleşmeleri (crossCounters/crossStrong) eklendi.
         $key = 'champion:counters:v4:' . $championId . ':' . implode(',', $patches);
 
-        return Cache::remember($key, 600, function () use ($championId, $patches) {
+        // TTL için gerekçe: yukarıdaki getChampionBuild ile aynı (stats:rebuild günde 3).
+        // Counter hesabı daha ağır (pozisyon başına aynı-koridor + çapraz eşleşme).
+        return Cache::remember($key, 7200, function () use ($championId, $patches) {
             $statRows = ChampionStat::where('champion_id', $championId)
                 ->whereIn('patch', $patches)->where('position', '!=', 'ALL')->get();
             $totalGames = (int) ChampionStat::where('champion_id', $championId)
