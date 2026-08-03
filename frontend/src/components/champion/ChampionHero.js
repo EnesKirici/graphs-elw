@@ -77,13 +77,32 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
           )}
         </div>
         <div className="pb-0.5">
-          {/* H1 sayfanın konusudur: counter sayfasında "X Counter" olmalı, yalnız "X" değil
+          {/* İsim + unvan AYNI satırda — unvan tek başına satır kaplamasın.
+              H1 sayfanın konusudur: counter sayfasında "X Counter" olmalı, yalnız "X" değil
               (aynı H1 iki farklı sayfada = arama motoru için ayırt edilemez içerik). */}
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)]">
-            {champ.name}
-            {headingSuffix && <span className="text-gray-300"> {headingSuffix}</span>}
-          </h1>
-          <p className="text-gray-200 mt-1 italic drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">{subtitle || champ.title}</p>
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)]">
+              {champ.name}
+              {headingSuffix && <span className="text-gray-300"> {headingSuffix}</span>}
+            </h1>
+            {/* Açık splash'lerde (ör. Kai'Sa) soluk gri okunmuyordu → daha güçlü gölge. */}
+            <p className="text-gray-200 italic text-sm md:text-base drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
+              {subtitle || champ.title}
+            </p>
+          </div>
+
+          {/* Sınıf/rol rozetleri — yeteneklerin ÜSTÜNDE (kimlik bilgisi önce, kit sonra) */}
+          <div className="flex flex-wrap items-center gap-2 mt-2.5">
+            {champ.tags?.slice(0, 1).map((tag) => (
+              <span key={tag} className={CLASS_CHIP}>{TAG_TR[tag] || tag}</span>
+            ))}
+            {champ.positions?.map((pos) => {
+              const rate = champ.positionRates?.[pos];
+              return (
+                <span key={pos} className={POS_CHIP}>{POS_TR[pos] || pos}{rate != null && ` ${rate}%`}</span>
+              );
+            })}
+          </div>
 
           {/* Yetenekler — tanıtım amaçlı (P/Q/W/E/R). Detay tab'ındaki tam açıklamanın
               kısa hâli: şampiyonu tanımayan ziyaretçi ilk bakışta kitini görsün. */}
@@ -105,18 +124,6 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
               ))}
             </div>
           )}
-
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            {champ.tags?.slice(0, 1).map((tag) => (
-              <span key={tag} className={CLASS_CHIP}>{TAG_TR[tag] || tag}</span>
-            ))}
-            {champ.positions?.map((pos) => {
-              const rate = champ.positionRates?.[pos];
-              return (
-                <span key={pos} className={POS_CHIP}>{POS_TR[pos] || pos}{rate != null && ` ${rate}%`}</span>
-              );
-            })}
-          </div>
         </div>
       </div>
     </div>

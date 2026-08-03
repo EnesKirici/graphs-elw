@@ -112,24 +112,33 @@ export default function ChampionBuild({ champion, version, runesData = [], build
       {/* Üst özet kartı: derece + statlar (eşit bölünmüş) + rol/patch — TEK kart */}
       <div className="glass rounded-xl overflow-hidden">
         <StatStrip pos={posInfo} roleLabel={ROLE_LABELS[role] || role} />
-        <div className="border-t border-edge/40 px-4 py-2.5 flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            {positions.map((p) => (
-              <button key={p.position} onClick={() => selectRole(p.position)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"}`}>
-                <img src={ROLE_ICON[p.position]} alt={ROLE_LABELS[p.position]} width={16} height={16} className={role === p.position ? "" : "opacity-70"} />
-                {ROLE_LABELS[p.position] || p.position}
-                <span className="text-[10px] text-gray-500">{p.share}%</span>
-              </button>
-            ))}
-          </div>
-          <div className="ml-auto flex items-center gap-2 text-[11px]">
+        {/*
+          Bağlam satırı — bilerek İNCE. Rol seçici YALNIZ birden fazla rolde çıkar:
+          tek rollü şampiyonda (ör. Samira %99 ADC) o buton yeni bilgi taşımıyor —
+          rol zaten hero rozetinde ve stat şeridinin etiketinde yazıyor — ama koca
+          bir satır harcıyordu.
+        */}
+        <div className="border-t border-edge/40 px-4 py-1.5 flex items-center gap-2 flex-wrap">
+          {positions.length > 1 && (
+            <div className="flex items-center gap-1">
+              {positions.map((p) => (
+                <button key={p.position} onClick={() => selectRole(p.position)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                    role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"}`}>
+                  <img src={ROLE_ICON[p.position]} alt="" width={14} height={14} className={role === p.position ? "" : "opacity-70"} />
+                  {ROLE_LABELS[p.position] || p.position}
+                  <span className="text-[10px] text-gray-500">{p.share}%</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="ml-auto flex items-center gap-1.5 text-[10px] text-gray-500">
             {lowSample && (
-              <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">Düşük örneklem</span>
+              <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Düşük örneklem</span>
             )}
-            <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Emerald +</span>
-            <span className="px-2.5 py-1 rounded-md bg-edge/60 text-gray-400">Patch {(build.patches || []).join(" + ")}</span>
+            <span>Emerald +</span>
+            <span className="text-gray-700">·</span>
+            <span>Patch {(build.patches || []).join(" + ")}</span>
           </div>
         </div>
       </div>
@@ -141,8 +150,8 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         her panel genişliğini içeriğine göre alıyor, item sırası tam genişlikte nefes alıyor.
       */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* SOL — Rünler (tek başına yüksek panel) */}
-        <Panel className="lg:col-span-7">
+        {/* SOL — Rünler (sayfanın ana içeriği, en geniş alan) */}
+        <Panel className="lg:col-span-8">
           <Section title="Rünler" extra={
             activeKeystone && (
               <span className="text-[10px] text-gray-600">
@@ -152,16 +161,18 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           }>
             {runePage ? (
               <>
+                {/* Rün sayfası seçici — site dilindeki ALT-ÇİZGİ tab yapısı
+                    (Genel/Detay/Counter ile aynı), kutu-buton değil. */}
                 {keystoneOptions.length > 1 && (
-                  <div className="flex items-center justify-center gap-2 mb-4">
+                  <div className="flex items-center gap-1 border-b border-edge/50 mb-5 -mt-1 overflow-x-auto">
                     {keystoneOptions.map((k, i) => (
                       <button key={k.key} onClick={() => setPageIdx(i)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] transition-colors cursor-pointer ${
-                          i === safeIdx ? "border-blue-500/60 bg-blue-500/10 text-blue-200" : "border-edge/60 text-gray-400 hover:text-gray-200 hover:bg-hover"}`}
+                        className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors cursor-pointer whitespace-nowrap ${
+                          i === safeIdx ? "border-blue-400 text-white" : "border-transparent text-gray-400 hover:text-gray-200"}`}
                         title={`${i + 1}. seçenek`}>
-                        <span className="text-gray-500">{i + 1}.</span>
-                        <img src={runeIconById(runesData, Number(k.key))} alt="" width={22} height={22} className="rounded-full" onError={hideOnError} />
-                        <span>{k.pickRate}%</span>
+                        <img src={runeIconById(runesData, Number(k.key))} alt="" width={24} height={24}
+                          className={`rounded-full ${i === safeIdx ? "" : "opacity-70"}`} onError={hideOnError} />
+                        <span className="text-gray-500 font-normal">{k.pickRate}%</span>
                         <span className={`font-bold ${wrCls(k.winRate)}`}>{k.winRate}%</span>
                       </button>
                     ))}
@@ -191,13 +202,12 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         </Panel>
 
         {/*
-          SAĞ — üç panel alt alta. Yetenek sırası bilerek BURAYA alındı: soldaki rün
-          paneli tek başına çok yüksek olduğu için sağ sütun kısa kalıyor ve geniş
-          ekranda altında koca bir boşluk oluşuyordu. Üç panel iki sütunun yüksekliğini
-          dengeliyor.
+          SAĞ — TEK panel, üç bölüm. Önce ayrı kartlardaydılar ama her biri az içerikli
+          olduğu için (2 sihirdar çifti, 2 yetenek sırası) kart başına düşen boşluk
+          içerikten fazlaydı. Panel'in divide-y'ı bölümleri zaten ayırıyor; tek çerçeve
+          hem daha derli toplu hem soldaki rün paneliyle yükseklik dengesi kuruyor.
         */}
-        <div className="lg:col-span-5 space-y-4">
-          <Panel>
+        <Panel className="lg:col-span-4">
             <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
               {spellPairs.length ? (
                 <div className="grid grid-cols-2 gap-2">
@@ -222,9 +232,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 <ComingSoon>Büyü verisi henüz yok.</ComingSoon>
               )}
             </Section>
-          </Panel>
 
-          <Panel>
             <Section title="Yetenek Sırası" extra={<span className="text-[10px] text-gray-600">Seçim · WR</span>}>
               {skillOrders.length ? (
                 <div className="space-y-3">
@@ -239,9 +247,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 </ComingSoon>
               )}
             </Section>
-          </Panel>
 
-          <Panel>
             <Section title="Başlangıç & Çizme" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
               <div className="space-y-3">
                 {starters.length > 0 && (
@@ -263,8 +269,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 {!starters.length && !items.boots.length && <ComingSoon>Başlangıç verisi henüz yok.</ComingSoon>}
               </div>
             </Section>
-          </Panel>
-        </div>
+        </Panel>
       </div>
 
       {/*
