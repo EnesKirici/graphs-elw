@@ -14,7 +14,7 @@ const POS_CHIP = "text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/15 te
   Yalnız BİRİNCİL sınıf gösterilir (Riot'un ikincil tag'i kafa karıştırıyordu:
   MissFortune "Büyücü" gibi). activeCrumb → breadcrumb'a ek kırıntı (ör. "Counter").
 */
-export default function ChampionHero({ champ, id, activeCrumb }) {
+export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, subtitle }) {
   return (
     <div className="max-w-7xl mx-auto px-6">
       {/* Breadcrumb — üstte, ince */}
@@ -55,10 +55,13 @@ export default function ChampionHero({ champ, id, activeCrumb }) {
           className="rounded-2xl border-2 border-white/15 shadow-2xl shrink-0"
         />
         <div className="pb-0.5">
+          {/* H1 sayfanın konusudur: counter sayfasında "X Counter" olmalı, yalnız "X" değil
+              (aynı H1 iki farklı sayfada = arama motoru için ayırt edilemez içerik). */}
           <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)]">
             {champ.name}
+            {headingSuffix && <span className="text-gray-300"> {headingSuffix}</span>}
           </h1>
-          <p className="text-gray-200 mt-1 italic drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">{champ.title}</p>
+          <p className="text-gray-200 mt-1 italic drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">{subtitle || champ.title}</p>
           <div className="flex flex-wrap items-center gap-2 mt-2.5">
             {champ.tags?.slice(0, 1).map((tag) => (
               <span key={tag} className={CLASS_CHIP}>{TAG_TR[tag] || tag}</span>

@@ -46,7 +46,14 @@ class BackfillMatchups extends Command
                     $skipped++; // ham veri prune edilmiş
                     continue;
                 }
-                foreach ($agg->matchupRows($data) as [$patch, $champ, $pos, $opp, $win]) {
+                foreach ($agg->matchupRows($data) as [$patch, $champ, $pos, $opp, $oppPos, $win]) {
+                    // Bu komut aynı koridor düellosunun games/wins'ini doldurur.
+                    // Bot lane çapraz satırları AYRI bayrakla (cross_done) yürür —
+                    // burada da sayılsalardı matchup_done sıfırlanmadan yazılamazdı ve
+                    // sıfırlanınca mevcut games/wins ikiye katlanırdı.
+                    if ($oppPos !== $pos) {
+                        continue;
+                    }
                     $k = "{$patch}|{$champ}|{$pos}|{$opp}";
                     $acc[$k] ??= [$patch, $champ, $pos, $opp, 0, 0];
                     $acc[$k][4]++;
@@ -62,11 +69,12 @@ class BackfillMatchups extends Command
                 $ph = [];
                 $bind = [];
                 foreach ($rows as $r) {
-                    $ph[] = '(?,?,?,?,?,?,?,?)';
-                    array_push($bind, $r[0], $r[1], $r[2], $r[3], $r[4], $r[5], $now, $now);
+                    // opponent_position = position (aynı koridor) — unique index'in parçası.
+                    $ph[] = '(?,?,?,?,?,?,?,?,?)';
+                    array_push($bind, $r[0], $r[1], $r[2], $r[3], $r[2], $r[4], $r[5], $now, $now);
                 }
                 DB::statement(
-                    'INSERT INTO champion_matchups (patch, champion_id, position, opponent_id, games, wins, created_at, updated_at) VALUES '
+                    'INSERT INTO champion_matchups (patch, champion_id, position, opponent_id, opponent_position, games, wins, created_at, updated_at) VALUES '
                     . implode(',', $ph)
                     . ' ON DUPLICATE KEY UPDATE games = games + VALUES(games), wins = wins + VALUES(wins), updated_at = VALUES(updated_at)',
                     $bind,

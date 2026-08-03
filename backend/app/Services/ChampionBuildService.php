@@ -69,7 +69,8 @@ class ChampionBuildService
     public function getChampionCounters(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        $key = 'champion:counters:v3:' . $championId . ':' . implode(',', $patches);
+        // v4: bot lane çapraz eşleşmeleri (crossCounters/crossStrong) eklendi.
+        $key = 'champion:counters:v4:' . $championId . ':' . implode(',', $patches);
 
         return Cache::remember($key, 600, function () use ($championId, $patches) {
             $statRows = ChampionStat::where('champion_id', $championId)
@@ -97,6 +98,9 @@ class ChampionBuildService
                 $shown = [$positions[0]];
             }
 
+            // Bot lane 2v2: ADC'nin karşısında sadece rakip ADC değil, rakip SUPPORT da var.
+            $crossOf = ['BOTTOM' => 'UTILITY', 'UTILITY' => 'BOTTOM'];
+
             $byPosition = [];
             foreach ($shown as $p) {
                 $mu = $this->aggregateMatchups($championId, $patches, $p['position'], (float) $p['winRate']); // delta DESC
@@ -104,13 +108,26 @@ class ChampionBuildService
                 // strongInto = bizim WR yüksek (delta>0). Nötr (delta=0) hiçbirine girmez.
                 $strong = array_values(array_filter($mu, fn ($m) => $m['delta'] > 0));                // delta DESC
                 $weak = array_values(array_filter(array_reverse($mu), fn ($m) => $m['delta'] < 0));   // delta ASC
-                $byPosition[$p['position']] = [
+                $entry = [
                     'winRate'    => $p['winRate'],
                     'games'      => $p['games'],
                     'opponents'  => count($mu),
                     'counters'   => $weak,   // şampiyonu yenenler (en zorlu önce)
                     'strongInto' => $strong, // şampiyonun ezdiği (en ezici önce)
                 ];
+
+                // Çapraz koridor (yalnız alt koridor): ADC için karşı SUPPORT'lar,
+                // SUPPORT için karşı ADC'ler. Veri yoksa alan hiç eklenmez.
+                if ($cp = $crossOf[$p['position']] ?? null) {
+                    $cm = $this->aggregateMatchups($championId, $patches, $p['position'], (float) $p['winRate'], $cp);
+                    if ($cm) {
+                        $entry['crossPosition'] = $cp;
+                        $entry['crossStrong'] = array_values(array_filter($cm, fn ($m) => $m['delta'] > 0));
+                        $entry['crossCounters'] = array_values(array_filter(array_reverse($cm), fn ($m) => $m['delta'] < 0));
+                    }
+                }
+
+                $byPosition[$p['position']] = $entry;
             }
 
             return [
@@ -295,11 +312,17 @@ class ChampionBuildService
      * WR − şampiyonun bu roldeki genel WR'si. matchupsFor + getChampionCounters ortak.
      * @return array<int, array{id:string,name:string,games:int,winRate:float,delta:float}>
      */
-    private function aggregateMatchups(string $championId, array $patches, string $pos, float $posWinRate): array
+    /**
+     * @param string|null $oppPos Rakibin pozisyonu. null = aynı koridor düellosu (ADC↔ADC).
+     *                            'UTILITY' gibi bir değer verilirse bot lane çaprazı
+     *                            (ör. ADC'nin karşı SUPPORT eşleşmeleri) döner.
+     */
+    private function aggregateMatchups(string $championId, array $patches, string $pos, float $posWinRate, ?string $oppPos = null): array
     {
         $rows = ChampionMatchup::where('champion_id', $championId)
             ->whereIn('patch', $patches)
             ->where('position', $pos)
+            ->where('opponent_position', $oppPos ?? $pos)
             ->get();
 
         // Rakip adları (DDragon) — id görüntü için, name etiket için.

@@ -48,7 +48,13 @@ class BackfillMatchupStats extends Command
                     $skipped++; // ham veri prune edilmiş → KDA yok (bayrak yine set edilir, tekrar denenmesin)
                     continue;
                 }
-                foreach ($agg->matchupRows($data) as [$patch, $champ, $pos, $opp, $win, $k, $d, $as, $kp, $dmg]) {
+                foreach ($agg->matchupRows($data) as [$patch, $champ, $pos, $opp, $oppPos, $win, $k, $d, $as, $kp, $dmg]) {
+                    // Bu komut YALNIZ aynı koridor düellosunu doldurur (sözleşmesi bu:
+                    // games/wins'e dokunmaz, sadece KDA/hasar ekler). Bot lane çapraz
+                    // satırlarının games/wins'i de yok → onlar builds:backfill-cross'ta.
+                    if ($oppPos !== $pos) {
+                        continue;
+                    }
                     $key = "{$patch}|{$champ}|{$pos}|{$opp}";
                     $acc[$key] ??= [$patch, $champ, $pos, $opp, 0, 0, 0, 0, 0, 0];
                     $acc[$key][4]++;          // n_stats
@@ -66,12 +72,13 @@ class BackfillMatchupStats extends Command
                 $ph = [];
                 $bind = [];
                 foreach ($rows as $r) {
-                    $ph[] = '(?,?,?,?,?,?,?,?,?,?,?,?)';
-                    array_push($bind, $r[0], $r[1], $r[2], $r[3], $r[4], $r[5], $r[6], $r[7], $r[8], $r[9], $now, $now);
+                    // opponent_position = position (aynı koridor) — unique index'in parçası.
+                    $ph[] = '(?,?,?,?,?,?,?,?,?,?,?,?,?)';
+                    array_push($bind, $r[0], $r[1], $r[2], $r[3], $r[2], $r[4], $r[5], $r[6], $r[7], $r[8], $r[9], $now, $now);
                 }
                 // games/wins INSERT'te 0 (edge; normalde satır zaten var), UPDATE'te DOKUNULMAZ.
                 DB::statement(
-                    'INSERT INTO champion_matchups (patch, champion_id, position, opponent_id, n_stats, sum_kills, sum_deaths, sum_assists, sum_kp, sum_dmg, created_at, updated_at) VALUES '
+                    'INSERT INTO champion_matchups (patch, champion_id, position, opponent_id, opponent_position, n_stats, sum_kills, sum_deaths, sum_assists, sum_kp, sum_dmg, created_at, updated_at) VALUES '
                     . implode(',', $ph)
                     . ' ON DUPLICATE KEY UPDATE n_stats = n_stats + VALUES(n_stats), sum_kills = sum_kills + VALUES(sum_kills), sum_deaths = sum_deaths + VALUES(sum_deaths), sum_assists = sum_assists + VALUES(sum_assists), sum_kp = sum_kp + VALUES(sum_kp), sum_dmg = sum_dmg + VALUES(sum_dmg), updated_at = VALUES(updated_at)',
                     $bind,

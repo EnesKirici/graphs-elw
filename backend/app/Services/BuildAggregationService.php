@@ -137,16 +137,19 @@ class BuildAggregationService
         }
     }
 
-    /** @15 farkını (işaretli) tek matchup satırına ekler. */
+    /**
+     * @15 farkını (işaretli) tek matchup satırına ekler.
+     * @15 karşılaştırması AYNI koridordaki rakiple yapılır (ADC'nin gold farkı karşı
+     * ADC'ye göre) → opponent_position = position. Çapraz satırlara @15 yazılmaz.
+     */
     private function bumpLane15(string $patch, string $champ, string $pos, string $opp, int $gd, int $csd, int $xpd): void
     {
-        ChampionMatchup::firstOrCreate(
-            ['patch' => $patch, 'champion_id' => $champ, 'position' => $pos, 'opponent_id' => $opp],
-            ['games' => 0, 'wins' => 0],
-        );
-        ChampionMatchup::where([
-            'patch' => $patch, 'champion_id' => $champ, 'position' => $pos, 'opponent_id' => $opp,
-        ])->update([
+        $keyCols = [
+            'patch' => $patch, 'champion_id' => $champ, 'position' => $pos,
+            'opponent_id' => $opp, 'opponent_position' => $pos,
+        ];
+        ChampionMatchup::firstOrCreate($keyCols, ['games' => 0, 'wins' => 0]);
+        ChampionMatchup::where($keyCols)->update([
             'n15'       => DB::raw('n15 + 1'),
             'sum_gd15'  => DB::raw('sum_gd15 + (' . (int) $gd . ')'),
             'sum_csd15' => DB::raw('sum_csd15 + (' . (int) $csd . ')'),
@@ -159,10 +162,14 @@ class BuildAggregationService
      * eşlenir, iki yönlü satır üretilir. Pozisyonu boş/çift olan maçlar atlanır.
      *
      * Her satır o şampiyonun O MAÇTAKİ stat'ıyla gelir (KDA/KP/hasar) → head-to-head
-     * detay agregasyonu için. Eski çağıranlar ilk 5 elemanı destructure eder (geri uyumlu).
+     * detay agregasyonu için.
      *
-     * @return array<array{0:string,1:string,2:string,3:string,4:bool,5:int,6:int,7:int,8:int,9:int}>
-     *         [patch, championId, position, opponentId, win, kills, deaths, assists, kp%, dmg]
+     * AYRICA bot lane çapraz satırları: alt koridor 2v2 oynanır, ADC için karşı
+     * SUPPORT da doğrudan rakiptir. opponent_position bu iki ilişkiyi ayırır
+     * (aynı koridor → position ile aynı; çapraz → BOTTOM vs UTILITY).
+     *
+     * @return array<array{0:string,1:string,2:string,3:string,4:string,5:bool,6:int,7:int,8:int,9:int,10:int}>
+     *         [patch, championId, position, opponentId, opponentPosition, win, kills, deaths, assists, kp%, dmg]
      */
     public function matchupRows(array $matchData): array
     {
@@ -199,6 +206,8 @@ class BuildAggregationService
         }
 
         $rows = [];
+
+        // 1) Aynı koridor düellosu (her pozisyon için iki yön).
         foreach ($byPos as $pos => $teams) {
             if (count($teams) !== 2) {
                 continue; // pozisyon verisi bozuk (çift jungle vb.) — güvenme
@@ -207,8 +216,25 @@ class BuildAggregationService
             if ($a[0] === $b[0]) {
                 continue; // aynı şampiyon (teorik) — anlamsız
             }
-            $rows[] = [$patch, $a[0], $pos, $b[0], $a[1], $a[2], $a[3], $a[4], $a[5], $a[6]];
-            $rows[] = [$patch, $b[0], $pos, $a[0], $b[1], $b[2], $b[3], $b[4], $b[5], $b[6]];
+            $rows[] = [$patch, $a[0], $pos, $b[0], $pos, $a[1], $a[2], $a[3], $a[4], $a[5], $a[6]];
+            $rows[] = [$patch, $b[0], $pos, $a[0], $pos, $b[1], $b[2], $b[3], $b[4], $b[5], $b[6]];
+        }
+
+        // 2) Bot lane çaprazı: ADC ↔ KARŞI support. Aynı takımdaki ADC+SUP eşleşmesi
+        //    burada ATLANIR — o bir rakiplik değil sinerjidir ve champion_duo_stats'ta
+        //    ayrıca tutulur. Her çift iki yönlü yazılır (ADC'nin ve SUP'un perspektifi).
+        $bots = $byPos['BOTTOM'] ?? [];
+        $sups = $byPos['UTILITY'] ?? [];
+        if (count($bots) === 2 && count($sups) === 2) {
+            foreach ($bots as $botTeam => $adc) {
+                foreach ($sups as $supTeam => $sup) {
+                    if ($botTeam === $supTeam || $adc[0] === $sup[0]) {
+                        continue; // aynı takım (sinerji) veya aynı şampiyon
+                    }
+                    $rows[] = [$patch, $adc[0], 'BOTTOM', $sup[0], 'UTILITY', $adc[1], $adc[2], $adc[3], $adc[4], $adc[5], $adc[6]];
+                    $rows[] = [$patch, $sup[0], 'UTILITY', $adc[0], 'BOTTOM', $sup[1], $sup[2], $sup[3], $sup[4], $sup[5], $sup[6]];
+                }
+            }
         }
 
         return $rows;
@@ -288,16 +314,17 @@ class BuildAggregationService
             $this->bumpTopPlayer($region, $champId, $p, $win);
         }
 
-        // 4) champion_matchups — karşı koridor eşleşmeleri (A-vs-B + B-vs-A) + KDA/hasar
-        foreach ($this->matchupRows($matchData) as [$mPatch, $champ, $pos, $opp, $win, $k, $d, $as, $kp, $dmg]) {
-            ChampionMatchup::firstOrCreate(
-                ['patch' => $mPatch, 'champion_id' => $champ, 'position' => $pos, 'opponent_id' => $opp],
-                ['games' => 0, 'wins' => 0],
-            );
+        // 4) champion_matchups — karşı koridor eşleşmeleri (A-vs-B + B-vs-A) + KDA/hasar.
+        //    Bot lane çapraz satırları (ADC↔karşı SUP) da buradan gelir; opponent_position
+        //    ikisini ayırır ve unique index'in parçasıdır → anahtara dahil edilmeli.
+        foreach ($this->matchupRows($matchData) as [$mPatch, $champ, $pos, $opp, $oppPos, $win, $k, $d, $as, $kp, $dmg]) {
+            $keyCols = [
+                'patch' => $mPatch, 'champion_id' => $champ, 'position' => $pos,
+                'opponent_id' => $opp, 'opponent_position' => $oppPos,
+            ];
+            ChampionMatchup::firstOrCreate($keyCols, ['games' => 0, 'wins' => 0]);
             // Tek update: games/wins (WR paydası) + KDA/hasar (n_stats ayrı payda).
-            ChampionMatchup::where([
-                'patch' => $mPatch, 'champion_id' => $champ, 'position' => $pos, 'opponent_id' => $opp,
-            ])->update([
+            ChampionMatchup::where($keyCols)->update([
                 'games'       => DB::raw('games + 1'),
                 'wins'        => DB::raw('wins + ' . ($win ? 1 : 0)),
                 'n_stats'     => DB::raw('n_stats + 1'),

@@ -29,10 +29,20 @@ export default async function sitemap() {
     if (res.ok) {
       const data = await res.json();
       // Her şampiyon: detay sayfası + counter sayfası ("x counter"/"x ct" araması).
-      champions = (data.champions || []).flatMap((c) => [
-        { url: `${BASE}/champions/${c.id}`, changeFrequency: "weekly", priority: 0.7 },
-        { url: `${BASE}/champions/${c.id}/counter`, changeFrequency: "weekly", priority: 0.6 },
-      ]);
+      // Classic (Jade_*) varyantlarının COUNTER sayfası hariç: dereceli maç verisi
+      // olmadığı için içeriği boş, üstelik başlığı gerçek şampiyonunkiyle çakışıp
+      // "ww ct" gibi aramalarda onun yerine çıkabiliyordu. Detay sayfaları kalır —
+      // onların kendine özgü "X Classic" başlığı var ve "classic kayle" gibi
+      // aramaların doğru hedefi onlar.
+      champions = (data.champions || []).flatMap((c) => {
+        const urls = [
+          { url: `${BASE}/champions/${c.id}`, changeFrequency: "weekly", priority: 0.7 },
+        ];
+        if (!c.isClassic) {
+          urls.push({ url: `${BASE}/champions/${c.id}/counter`, changeFrequency: "weekly", priority: 0.6 });
+        }
+        return urls;
+      });
     }
   } catch {
     // API erişilemedi — sitemap şampiyonsuz döner, bir sonraki revalidate'te tamamlanır

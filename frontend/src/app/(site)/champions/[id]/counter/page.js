@@ -6,6 +6,16 @@
   generateMetadata'sı + sitemap kaydı olan GERÇEK crawlable route (JS sekmesi değil).
   Tek sayfa iki terimi de yakalar (başlık + anahtar kelime + içerik) — ayrı /ct URL'i
   YOK (duplicate content). params async (Next 16) → await.
+
+  2026-08-03 SEO REVİZYONU (Search Console verisiyle):
+   - Sayfalar gösterim alıyordu ama TIK yoktu (Locke 365/0, Graves 307/0). Üç sebep:
+   1) Classic (Jade_*) varyantlarının counter sayfası GERÇEK şampiyonunkiyle neredeyse
+      aynı başlığa sahipti ("Warwick Counter (Warwick CT)...") ve içi BOŞTU. Google
+      "ww ct" aramasında boş olanı gösterebiliyordu → artık noindex + kullanıcıyı
+      gerçek sayfaya yönlendiren bir kart.
+   2) Başlık 90 karakterdi, arama sonucunda kesiliyordu → ~50 karaktere indirildi.
+   3) Aramalar KISALTMA ile yapılıyor ("ww ct" 151, "kata ct" 135, "naut ct", "mf ct").
+      Takma adlar artık başlıkta, açıklamada, H1 altında ve SSS'te GÖRÜNÜR halde.
 */
 
 import { fetchApi } from "@/lib/api";
@@ -15,6 +25,8 @@ import Link from "next/link";
 import ChampionHero from "@/components/champion/ChampionHero";
 import ChampionBg from "@/components/champion/ChampionBg";
 import ChampionCounters from "@/components/champion/ChampionCounters";
+import CounterFaq, { buildCounterFaq, faqJsonLd } from "@/components/champion/CounterFaq";
+import { primaryAlias, aliasesOf, counterKeywords } from "@/lib/championAliases";
 import { CHAMP_TABBAR_WRAP, CHAMP_TABBAR_INNER, CHAMP_TAB, CHAMP_TAB_ACTIVE, CHAMP_TAB_INACTIVE } from "@/components/champion/championTabStyles";
 
 // SEO metinlerinde kullanılan rol adları.
@@ -38,17 +50,39 @@ export async function generateMetadata({ params }) {
     };
   }
   const name = champ.name;
+
+  // Classic (Jade_*) varyantı: dereceli maç verisi toplanmıyor → sayfa boş kalır.
+  // Boş sayfayı indexletmek hem tarama bütçesi harcıyor hem de gerçek şampiyonun
+  // counter sayfasıyla yarışıyordu. noindex + follow (iç linkler taranmaya devam).
+  if (champ.isClassic) {
+    const realId = id.replace(/^Jade_/, "");
+    return {
+      title: `${name} Classic — Counter Verisi Yok`,
+      description: `${name} Classic, LoL Classic özel moduna ait varyanttır; dereceli maç verisi toplanmadığı için counter listesi bulunmuyor. Normal ${name} counter listesi için şampiyon sayfasına gidin.`,
+      robots: { index: false, follow: true },
+      alternates: { canonical: `/champions/${realId}/counter` },
+    };
+  }
+
   const patch = data?.counters?.patches?.[0];
   const primary = data?.counters?.primaryPosition;
   const posShort = primary ? POS_SEO[primary]?.short || primary : null;
-  const suffix = [posShort, patch ? `Patch ${patch}` : null].filter(Boolean).join(", ");
+  const posLong = primary ? POS_SEO[primary]?.long || primary : null;
+  const alias = primaryAlias(id);
+  const aliasPart = alias ? ` (${alias})` : "";
 
-  let title = `${name} Counter (${name} CT) — Kime Karşı Güçlü/Zayıf${suffix ? ` — ${suffix}` : ""}`;
-  let description = `${name} counter rehberi: ${name}'ya karşı en iyi şampiyonlar ve ${name}'nın güçlü/zayıf eşleşmeleri. ${patch ? `Patch ${patch} ` : ""}gerçek maç verileriyle matchup kazanma oranları — ${name} nasıl yenilir, kimlerle güçlü.`;
+  // ~50 karakter hedefi: Google ~60'ta kesiyor ve "| ElwGraphs" eki 12 karakter alıyor.
+  // Takma ad başlıkta çünkü sorguların çoğu kısaltmayla geliyor ("ww ct").
+  const suffix = [posShort, patch].filter(Boolean).join(" ");
+  let title = `${name}${aliasPart} Counter & CT${suffix ? ` — ${suffix}` : ""}`;
+  let description =
+    `${name}${aliasPart} counter: kime karşı zayıf, kime karşı güçlü? ` +
+    `${posLong ? `${posLong} rolünde ` : ""}${patch ? `Patch ${patch} ` : ""}` +
+    `gerçek maç verileriyle kazanma oranları, KDA ve koridor avantajı.`;
 
   // Admin SEO şablon ezmeleri (varsa)
   const seo = await getSeoOverrides();
-  const vars = { name, position: posShort || "", patch: patch || "" };
+  const vars = { name, position: posShort || "", patch: patch || "", alias: alias || "" };
   title = applySeoTemplate(seo.champion_counter?.title, vars) || title;
   description = applySeoTemplate(seo.champion_counter?.description, vars) || description;
 
@@ -56,13 +90,15 @@ export async function generateMetadata({ params }) {
     title,
     description,
     keywords: [
-      `${name} counter`, `${name} ct`, `${name} counters`, `${name} karşı`,
-      `${name} nasıl yenilir`, `${name} matchup`, `${name} zayıf`, name,
-      "lol counter", "lol ct", "matchup", "league of legends counter",
-    ],
+      // isim + tüm takma adlar × (counter|ct|ct X|counter X|counters)
+      ...counterKeywords(id, name),
+      `${name} nasıl yenilir`, `${name} matchup`, `${name} zayıf`,
+      posShort ? `${name} ${posShort.toLowerCase()} counter` : null,
+      name, "lol counter", "lol ct", "matchup", "league of legends counter",
+    ].filter(Boolean),
     alternates: { canonical: `/champions/${id}/counter` },
     openGraph: {
-      title: `${name} Counter — Matchup Rehberi`,
+      title: `${name}${aliasPart} Counter — Matchup Rehberi`,
       description,
       url: `https://elwgraphs.com/champions/${id}/counter`,
       type: "article",
@@ -71,8 +107,12 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// Veriyle beslenen, her şampiyonda benzersiz SEO özeti (ince içerik olmaması için).
-function buildCounterSeo(name, counters) {
+/*
+  Veriyle beslenen, her şampiyonda benzersiz SEO özeti (ince içerik olmaması için).
+  TÜRKÇE EK NOTU: şampiyon adları yabancı olduğundan "-'ya/-'yı" ekleri sık yanlış
+  düşüyor (Warwick'ya ❌). Cümleler ek gerektirmeyecek biçimde kuruldu.
+*/
+function buildCounterSeo(name, alias, counters) {
   const primary = counters?.primaryPosition;
   const data = primary && counters?.byPosition?.[primary];
   if (!data) return null;
@@ -81,14 +121,17 @@ function buildCounterSeo(name, counters) {
   const topCounter = data.counters?.[0];
   const topStrong = data.strongInto?.[0];
 
-  let text = `${name} counter (${name} CT) sayfası: ${posLong} rolünde ${name}'ya karşı en iyi seçimler ve ${name}'nın zorlandığı eşleşmeler${patch ? `, ${patch} yaması verileriyle` : ""}.`;
+  let text =
+    `${name}${alias ? ` (kısaca ${alias})` : ""} counter listesi: ${posLong} rolünde ` +
+    `${name} karşısında en avantajlı şampiyonlar ve ${name} tarafının üstün olduğu eşleşmeler` +
+    `${patch ? `, ${patch} yaması verileriyle` : ""}.`;
   if (topCounter) {
-    text += ` ${name}'yı en çok zorlayan şampiyon ${topCounter.name} (${name} bu eşleşmede %${topCounter.winRate} kazanıyor).`;
+    text += ` En zorlu rakip ${topCounter.name} — bu eşleşmede ${name} tarafı %${topCounter.winRate} kazanıyor (${topCounter.games} maç).`;
   }
   if (topStrong) {
-    text += ` ${name} ise ${topStrong.name}'a karşı güçlü (%${topStrong.winRate}).`;
+    text += ` En rahat eşleşme ise ${topStrong.name} (%${topStrong.winRate}).`;
   }
-  text += ` Tüm matchup kazanma oranları gerçek maç verilerinden derlenir ve her yamada güncellenir.`;
+  text += ` Tüm oranlar Emerald+ dereceli maçlardan derlenir ve her yamada güncellenir.`;
   return text;
 }
 
@@ -99,9 +142,53 @@ export default async function ChampionCounterPage({ params }) {
 
   const champ = data.champion;
   const counters = data.counters;
+
+  // Classic varyantı: veri yok. Google'dan buraya düşen kullanıcıyı boş sayfada
+  // bırakmak yerine gerçek şampiyonun counter sayfasına yönlendir.
+  if (champ.isClassic) {
+    const realId = id.replace(/^Jade_/, "");
+    return (
+      <div className="dpm-scope soft-scope min-h-screen relative overflow-hidden">
+        <ChampionBg splash={champ.splash} />
+        <div className="relative z-10">
+          <ChampionHero champ={champ} id={id} activeCrumb="Counter" headingSuffix="Classic" subtitle="LoL Classic özel mod varyantı" />
+          <div className="max-w-3xl mx-auto px-6 py-10">
+            <div className="glass rounded-xl p-8 text-center">
+              <p className="text-sm text-gray-200 font-medium">
+                Bu sayfa {champ.name} Classic varyantına ait — counter verisi yok
+              </p>
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                LoL Classic özel mod şampiyonlarının dereceli maçları toplanmadığı için
+                matchup istatistiği üretilmiyor.
+              </p>
+              <Link
+                href={`/champions/${realId}/counter`}
+                className="inline-block mt-5 px-4 py-2 rounded-lg bg-blue-500/15 text-blue-200 border border-blue-400/25 text-sm font-medium hover:bg-blue-500/25 transition-colors"
+              >
+                Normal {champ.name} counter listesine git →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const primary = counters?.primaryPosition;
   const posLong = primary ? POS_SEO[primary]?.long || primary : "";
-  const seoText = buildCounterSeo(champ.name, counters);
+  const patch = counters?.patches?.[0];
+  const alias = primaryAlias(id);
+  const allAliases = aliasesOf(id);
+  const seoText = buildCounterSeo(champ.name, alias, counters);
+  const faq = buildCounterFaq({ name: champ.name, alias, counters, id });
+
+  // H1 altındaki satır: takma adı GÖRÜNÜR kılar ("ww ct" sorgusunun eşleşmesi için)
+  // ve rol/patch bağlamını verir.
+  const heroSubtitle = [
+    allAliases.length ? `${allAliases.join(" / ")} olarak da aranır` : null,
+    posLong || null,
+    patch ? `Patch ${patch}` : null,
+  ].filter(Boolean).join(" · ");
 
   // Arama kırıntısı: Home › Şampiyonlar › Kai'Sa › Counter
   const breadcrumbLd = {
@@ -118,10 +205,19 @@ export default async function ChampionCounterPage({ params }) {
   return (
     <div className="dpm-scope soft-scope min-h-screen relative overflow-hidden">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      {faq.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(faq)) }} />
+      )}
       <ChampionBg splash={champ.splash} />
 
       <div className="relative z-10">
-        <ChampionHero champ={champ} id={id} activeCrumb="Counter" />
+        <ChampionHero
+          champ={champ}
+          id={id}
+          activeCrumb="Counter"
+          headingSuffix="Counter"
+          subtitle={heroSubtitle || undefined}
+        />
 
         {/* Alt-çizgi tab — ana sayfayla AYNI (Genel/Detay link, Counter aktif) */}
         <div className={CHAMP_TABBAR_WRAP}>
@@ -133,13 +229,18 @@ export default async function ChampionCounterPage({ params }) {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <h2 className="text-lg font-bold text-white mb-1">
-            {champ.name} Counter{posLong ? ` — ${posLong}` : ""}
-          </h2>
           {seoText && (
             <p className="text-xs text-gray-400 leading-relaxed mb-5 max-w-3xl">{seoText}</p>
           )}
-          <ChampionCounters champName={champ.name} counters={counters} version={data.version} />
+          <ChampionCounters
+            champName={champ.name}
+            champImage={champ.image}
+            champId={id}
+            counters={counters}
+            version={data.version}
+            duos={data.duos}
+          />
+          <CounterFaq faq={faq} />
         </div>
       </div>
     </div>

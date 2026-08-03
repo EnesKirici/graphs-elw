@@ -135,8 +135,16 @@ class ChampionController extends Controller
                 'positions' => $positionMap[$champion['id']] ?? [],
                 'image'     => $this->ddragon->championIconUrl($champion['id']),
                 'splash'    => $this->ddragon->splashArtUrl($champion['id']),
+                // "Jade_*" varyantının dereceli maç verisi YOK → counter sayfası boş kalır.
+                // Frontend bu bayrakla sayfayı noindex yapar: başlığı gerçek şampiyonunkiyle
+                // birebir çakışıyordu ("Warwick Counter (Warwick CT)...") ve Google "ww ct"
+                // aramasında BOŞ olanı gösterebiliyordu (2026-08-03 tespiti).
+                'isClassic' => str_starts_with($champion['id'], 'Jade_'),
             ],
             'counters' => $this->build->getChampionCounters($id),
+            // ADC+Support sinerjisi (aynı takım) — çapraz eşleşmenin (karşı takım)
+            // tamamlayıcısı: "kiminle güçlü" ve "kime karşı zorlanır" yan yana okunur.
+            'duos' => $this->stats->getBestPartners($id),
         ]);
     }
 

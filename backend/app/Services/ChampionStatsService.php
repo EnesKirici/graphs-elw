@@ -269,7 +269,16 @@ class ChampionStatsService
     {
         $minGames = (int) config('elwgraphs.duo.min_games', 5);
 
-        $build = function ($rows, string $partnerCol) use ($minGames, $limit) {
+        // Görünen ad (DDragon): "MissFortune" yerine "Miss Fortune". Çözülemezse id kalır.
+        $names = [];
+        try {
+            foreach ($this->ddragon->getChampions() as $c) {
+                $names[$c['id']] = $c['name'] ?? $c['id'];
+            }
+        } catch (\Throwable) {
+        }
+
+        $build = function ($rows, string $partnerCol) use ($minGames, $limit, $names) {
             $out = [];
             foreach ($rows as $r) {
                 if ($r->games < $minGames) {
@@ -278,6 +287,7 @@ class ChampionStatsService
                 $adj = Statistics::shrunkWinRate($r->wins, $r->games);
                 $out[] = [
                     'champion' => $r->{$partnerCol},
+                    'name'     => $names[$r->{$partnerCol}] ?? $r->{$partnerCol},
                     'games'    => $r->games,
                     'winRate'  => round($r->wins / $r->games * 100, 1),
                     'adjWr'    => round($adj * 100, 1),

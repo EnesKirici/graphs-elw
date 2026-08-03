@@ -43,7 +43,14 @@ $workerOn = fn () => app(\App\Services\WorkerControlService::class)->isEnabled()
 // Riot key kullanır → worker'a BAĞLI (kapalıyken key'i doldurmasın).
 Schedule::command('lp:capture')->everyTenMinutes()->when($workerOn)->withoutOverlapping();
 // Şampiyon meta istatistikleri — toplanan maçlardan (DB-only, Riot key'siz → hep koşar).
-Schedule::command('stats:rebuild')->hourly()->withoutOverlapping();
+// SIKLIK: saatlik DEĞİL. Komut TÜM ranked maçları (32k+) GZIP açıp iki kez tarıyor
+// (champion_stats + duo sinerji) ve ~1s40dk sürüyor; saatlik planda biri biterken
+// diğeri başlıyordu → sunucu 7/24 tarama yapıyor, load ~4.3 ve iowait %24 (2026-08-03
+// ölçümü). Saatte eklenen maç toplamın ~%1'i, yani WR ~%0.05 oynuyor: saatlik tazelik
+// ölçülebilir bir fayda vermiyordu. Günde 3 kez + TR akşam yoğunluğunun (19:00-01:00)
+// dışında koş → yük dörtte bire iner, veri yine gün içinde tazelenir.
+// Saatler UTC (config/app.php timezone=UTC): 00:10/06:10/12:10 UTC = 03:10/09:10/15:10 TR.
+Schedule::command('stats:rebuild')->cron('10 0,6,12 * * *')->withoutOverlapping();
 
 // DataDragon ikon aynası — DDragon CDN (Riot key kullanmaz → hep koşar).
 Schedule::command('assets:sync')->hourly()->withoutOverlapping();
