@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { gradeCls, gradeColor } from "@/components/champion/gradeStyle";
 
 // Riot sınıf tag'i → TR. Pozisyon → TR ("Bot" YOK: BOTTOM = ADC).
 const TAG_TR = { Fighter: "Dövüşçü", Tank: "Tank", Mage: "Büyücü", Assassin: "Suikastçi", Marksman: "Nişancı", Support: "Destek" };
@@ -14,7 +15,15 @@ const POS_CHIP = "text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/15 te
   Yalnız BİRİNCİL sınıf gösterilir (Riot'un ikincil tag'i kafa karıştırıyordu:
   MissFortune "Büyücü" gibi). activeCrumb → breadcrumb'a ek kırıntı (ör. "Counter").
 */
-export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, subtitle }) {
+export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, subtitle, grade }) {
+  // Yetenekler: pasif + Q/W/E/R. DDragon spells sırası zaten Q,W,E,R.
+  const keys = ["Q", "W", "E", "R"];
+  const abilities = [
+    champ.passive ? { ...champ.passive, label: "P" } : null,
+    ...(champ.spells || []).slice(0, 4).map((s, i) => ({ ...s, label: keys[i] })),
+  ].filter(Boolean);
+  const gCol = gradeColor(grade);
+
   return (
     <div className="max-w-7xl mx-auto px-6">
       {/* Breadcrumb — üstte, ince */}
@@ -47,13 +56,26 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
 
       {/* Kimlik — ikon + isim + rozetler */}
       <div className="pt-16 md:pt-24 pb-4 flex items-end gap-5">
-        <img
-          src={champ.image}
-          alt={champ.name}
-          width={104}
-          height={104}
-          className="rounded-2xl border-2 border-white/15 shadow-2xl shrink-0"
-        />
+        {/* İkon çerçevesi dereceyi taşır: rol sıralamasındaki tier tek bakışta okunur. */}
+        <div className="relative shrink-0">
+          <img
+            src={champ.image}
+            alt={champ.name}
+            width={104}
+            height={104}
+            className="rounded-2xl border-2 shadow-2xl"
+            style={gCol ? { borderColor: gCol, boxShadow: `0 0 22px -6px ${gCol}` } : { borderColor: "rgba(255,255,255,0.15)" }}
+          />
+          {grade && (
+            <span
+              className={`absolute -bottom-2 -right-2 min-w-[26px] h-[26px] px-1 flex items-center justify-center rounded-lg bg-base/95 border text-sm font-extrabold leading-none ${gradeCls(grade)}`}
+              style={{ borderColor: gCol }}
+              title={`Rol sıralamasındaki derece: ${grade}`}
+            >
+              {grade}
+            </span>
+          )}
+        </div>
         <div className="pb-0.5">
           {/* H1 sayfanın konusudur: counter sayfasında "X Counter" olmalı, yalnız "X" değil
               (aynı H1 iki farklı sayfada = arama motoru için ayırt edilemez içerik). */}
@@ -62,7 +84,29 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
             {headingSuffix && <span className="text-gray-300"> {headingSuffix}</span>}
           </h1>
           <p className="text-gray-200 mt-1 italic drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">{subtitle || champ.title}</p>
-          <div className="flex flex-wrap items-center gap-2 mt-2.5">
+
+          {/* Yetenekler — tanıtım amaçlı (P/Q/W/E/R). Detay tab'ındaki tam açıklamanın
+              kısa hâli: şampiyonu tanımayan ziyaretçi ilk bakışta kitini görsün. */}
+          {abilities.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2.5">
+              {abilities.map((a) => (
+                <span key={a.label} className="relative" title={`${a.label} — ${a.name}`}>
+                  <img
+                    src={a.image}
+                    alt={a.name}
+                    width={30}
+                    height={30}
+                    className="rounded-md border border-white/15 bg-black/40"
+                  />
+                  <span className="absolute -bottom-1 -right-1 text-[8px] font-bold text-gray-300 bg-black/85 rounded px-[3px] leading-[11px] border border-white/10">
+                    {a.label}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 mt-3">
             {champ.tags?.slice(0, 1).map((tag) => (
               <span key={tag} className={CLASS_CHIP}>{TAG_TR[tag] || tag}</span>
             ))}

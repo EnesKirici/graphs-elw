@@ -2,7 +2,9 @@
 
 import { Fragment, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { pickRealRunePage, groupRealItems, itemIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
+import Link from "next/link";
+import { pickRealRunePage, groupRealItems, itemIcon, profileIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
+import { gradeCls } from "@/components/champion/gradeStyle";
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", SUPPORT: "Support" };
 const ROLE_SHARE_LABEL = {
@@ -16,14 +18,7 @@ const ROLE_ICON = {
 
 const hideOnError = (e) => { e.currentTarget.style.visibility = "hidden"; };
 const wrCls = (wr) => (wr >= 52 ? "text-blue-300" : wr >= 49 ? "text-gray-200" : "text-red-400");
-const gradeCls = (g) =>
-  g === "S+" ? "text-cyan-300"
-  : g === "S" ? "text-blue-300"
-  : g === "A" ? "text-sky-400"
-  : g === "B" ? "text-gray-200"
-  : g === "C" ? "text-amber-400"
-  : g === "D" ? "text-red-400"
-  : "text-gray-500";
+// Derece renkleri gradeStyle.js'te (tek kaynak) — şampiyon ikonu çerçevesi de aynısını kullanır.
 const SPELL_IDX = { Q: 0, W: 1, E: 2, R: 3 };
 const TL_MIN_SAMPLE = 20;
 
@@ -139,37 +134,15 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         </div>
       </div>
 
+      {/*
+        DÜZEN NOTU: eskiden 3-6-3 sütun vardı ve sağ sütun (sihirdar + başlangıç + çizme +
+        1-5. item + tam build + duruma göre) tıka basa doluyken sol sütun neredeyse boştu;
+        sayfanın alt yarısı da bomboş kalıyordu. Artık içerik YATAY bölümlere açıldı:
+        her panel genişliğini içeriğine göre alıyor, item sırası tam genişlikte nefes alıyor.
+      */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* SOL — Koridor özeti + popüler itemler */}
-        <Panel className="lg:col-span-3">
-          <Section title={`${ROLE_LABELS[role] || role} Performansı`}>
-            <div className="grid grid-cols-2 gap-2 text-center">
-              <div className="rounded-lg bg-edge/40 py-2.5">
-                <p className={`text-lg font-bold ${wrCls(posInfo?.winRate || 0)}`}>{posInfo?.winRate}%</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">Win Rate</p>
-              </div>
-              <div className="rounded-lg bg-edge/40 py-2.5">
-                <p className="text-lg font-bold text-gray-200">{posInfo?.share}%</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">{ROLE_SHARE_LABEL[role] || "Rolde Oynanma"}</p>
-              </div>
-            </div>
-          </Section>
-          <Section title="En Popüler Itemler" extra={<span className="text-[10px] text-gray-600">Pick · WR</span>}>
-            <div className="space-y-2">
-              {(cats.item_full || []).slice(0, 5).map((it) => (
-                <div key={it.key} className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-hover">
-                  <img src={itemIcon(version, it.key)} alt="" width={28} height={28} className="rounded-md border border-edge" onError={hideOnError} />
-                  <span className="text-[11px] text-gray-400 flex-1">{it.pickRate}%</span>
-                  <span className={`text-xs font-bold ${wrCls(it.winRate)}`}>{it.winRate}%</span>
-                </div>
-              ))}
-              {!(cats.item_full || []).length && <ComingSoon>Bu koridor için item verisi henüz yok.</ComingSoon>}
-            </div>
-          </Section>
-        </Panel>
-
-        {/* ORTA — Rünler + Yetenek Sırası */}
-        <Panel className="lg:col-span-6">
+        {/* SOL (geniş) — Rünler + Yetenek Sırası */}
+        <Panel className="lg:col-span-8">
           <Section title="Rünler" extra={
             activeKeystone && (
               <span className="text-[10px] text-gray-600">
@@ -231,80 +204,107 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           </Section>
         </Panel>
 
-        {/* SAĞ — Sihirdar büyüleri + Itemler */}
-        <Panel className="lg:col-span-3">
-          <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">Pick · WR</span>}>
-            <div className="space-y-2.5">
-              {spellPairs.map((sp, idx) => {
-                const icons = String(sp.key).split("-").map((sid) => build?.spellMap?.[sid]).filter(Boolean);
-                if (!icons.length) return null;
-                return (
-                  <div key={sp.key} className="flex items-center gap-2">
-                    {icons.map((s, i) => (
-                      <img key={i} src={s.image} alt={s.name} title={s.name}
-                        width={idx === 0 ? 38 : 30} height={idx === 0 ? 38 : 30}
-                        className="rounded-lg border border-edge" onError={hideOnError} />
-                    ))}
-                    <span className="text-xs text-gray-400 ml-auto">{sp.pickRate}%</span>
-                    <span className={`text-sm font-bold ${wrCls(sp.winRate)}`}>{sp.winRate}%</span>
-                  </div>
-                );
-              })}
-              {!spellPairs.length && <ComingSoon>Büyü verisi henüz yok.</ComingSoon>}
-            </div>
-          </Section>
+        {/* SAĞ (dar) — Sihirdar büyüleri + Başlangıç/Çizme */}
+        <div className="lg:col-span-4 space-y-4">
+          <Panel>
+            <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
+              {spellPairs.length ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {spellPairs.slice(0, 4).map((sp) => {
+                    const icons = String(sp.key).split("-").map((sid) => build?.spellMap?.[sid]).filter(Boolean);
+                    if (!icons.length) return null;
+                    return (
+                      <div key={sp.key} className="rounded-lg bg-edge/30 border border-edge/50 p-2.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5 mb-2">
+                          {icons.map((s, i) => (
+                            <img key={i} src={s.image} alt={s.name} title={s.name}
+                              width={36} height={36} className="rounded-lg border border-edge" onError={hideOnError} />
+                          ))}
+                        </div>
+                        <div className={`text-sm font-bold leading-none ${wrCls(sp.winRate)}`}>{sp.winRate}%</div>
+                        <div className="text-[10px] text-gray-500 mt-1">{sp.pickRate}% seçim</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <ComingSoon>Büyü verisi henüz yok.</ComingSoon>
+              )}
+            </Section>
+          </Panel>
 
-          <Section title="Itemler">
-            <div className="space-y-4">
-              {starters.length > 0 && (
-                <div>
-                  <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Başlangıç</span>
+          <Panel>
+            <Section title="Başlangıç & Çizme" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
+              <div className="space-y-3">
+                {starters.length > 0 && (
                   <div className="space-y-2">
                     {starters.slice(0, 2).map((s) => (
                       <StarterRow key={s.key} s={s} version={version} />
                     ))}
                   </div>
-                </div>
-              )}
-              {items.boots.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] text-gray-400 font-medium">Ayakkabı</span>
-                    <span className={`text-[10px] font-bold ${wrCls(items.boots[0].winRate)}`}>{items.boots[0].winRate}% WR</span>
-                  </div>
-                  <ItemRow items={items.boots} />
-                </div>
-              )}
-              {itemSlots.length > 0 ? (
-                <div className="space-y-3.5 pt-3 border-t border-edge/40">
-                  {itemSlots.map(({ n, list }) => (
-                    <div key={n} className="flex items-start gap-2.5">
-                      <span className="text-[10px] text-gray-500 font-semibold w-10 shrink-0 mt-3">{n}. Item</span>
-                      <div className="flex items-start gap-2 flex-wrap">
-                        {list.slice(0, 4).map((it) => (
-                          <div key={it.key} className="flex flex-col items-center w-[46px]">
-                            <img src={itemIcon(version, it.key)} alt="" width={38} height={38}
-                              className="rounded-md border border-edge" onError={hideOnError} title={`${it.games} maç`} />
-                            <span className={`text-[10px] font-bold mt-1 leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</span>
-                            <span className="text-[9px] text-gray-500 leading-tight mt-0.5">{it.pickRate}%</span>
-                          </div>
-                        ))}
-                      </div>
+                )}
+                {items.boots.length > 0 && (
+                  <div className={starters.length ? "pt-3 border-t border-edge/40" : ""}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] text-gray-400 font-medium">Çizme</span>
+                      <span className={`text-[10px] font-bold ${wrCls(items.boots[0].winRate)}`}>{items.boots[0].winRate}% WR</span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div>
-                  <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Çekirdek</span>
-                  <ItemRow items={items.core} />
-                </div>
-              )}
-              <div className="pt-3 border-t border-edge/40">
-                <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Tam Build</span>
-                <ItemRow items={items.full} />
+                    <ItemRow items={items.boots} />
+                  </div>
+                )}
+                {!starters.length && !items.boots.length && <ComingSoon>Başlangıç verisi henüz yok.</ComingSoon>}
               </div>
+            </Section>
+          </Panel>
+        </div>
+      </div>
+
+      {/* ITEM SIRASI — tam genişlik. Her sütun bir slot, altında o slotun seçenekleri. */}
+      <Panel>
+        <Section title="Item Sırası" extra={<span className="text-[10px] text-gray-600">WR · Seçim oranı</span>}>
+          {itemSlots.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {itemSlots.map(({ n, list }) => (
+                <div key={n}>
+                  <div className="text-[11px] font-semibold text-gray-400 mb-2 text-center">{n}. Item</div>
+                  <div className="space-y-1.5">
+                    {list.slice(0, 4).map((it) => (
+                      <div key={it.key} className="flex items-center gap-2 rounded-lg bg-edge/25 border border-edge/40 p-1.5">
+                        <img src={itemIcon(version, it.key)} alt="" width={34} height={34}
+                          className="rounded-md border border-edge shrink-0" onError={hideOnError} title={`${it.games} maç`} />
+                        <div className="min-w-0">
+                          <div className={`text-xs font-bold leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</div>
+                          <div className="text-[10px] text-gray-500 mt-1 leading-none">{it.pickRate}%</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div>
+              <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Çekirdek</span>
+              <ItemRow items={items.core} />
+            </div>
+          )}
+        </Section>
+      </Panel>
+
+      {/* En iyi oyuncular + tam build + duruma göre */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        <Panel className="lg:col-span-5">
+          <Section title={`En İyi ${champion.name} Oyuncuları`} extra={<span className="text-[10px] text-gray-600">Maç · WR</span>}>
+            <TopPlayers players={build?.topPlayers} version={version} />
+          </Section>
+        </Panel>
+
+        <Panel className="lg:col-span-7">
+          <Section title="Tam Build" extra={<span className="text-[10px] text-gray-600">En sık tamamlanan</span>}>
+            <div className="space-y-4">
+              <ItemRow items={items.full} />
               {items.situational.length > 0 && (
-                <div>
+                <div className="pt-3 border-t border-edge/40">
                   <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Duruma Göre</span>
                   <ItemRow items={items.situational} size={28} />
                 </div>
@@ -314,6 +314,44 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           </Section>
         </Panel>
       </div>
+    </div>
+  );
+}
+
+/*
+  Şampiyonun en çok oynayan oyuncuları (champion_top_players). Profil sayfalarına
+  iç link verir — hem kullanıcı için gezinme hem site içi bağlantı değeri.
+*/
+function TopPlayers({ players, version }) {
+  if (!players?.length) {
+    return <ComingSoon>Bu şampiyon için henüz yeterli oyuncu verisi toplanmadı.</ComingSoon>;
+  }
+  return (
+    <div className="space-y-1.5">
+      {players.map((p, i) => (
+        <Link
+          key={`${p.name}-${p.tag}`}
+          href={`/summoner/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag || "")}`}
+          className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-hover transition-colors"
+          title={`${p.name}#${p.tag} — ${p.games} maç`}
+        >
+          <span className="text-[10px] font-bold text-gray-600 w-3 text-center shrink-0">{i + 1}</span>
+          {p.profileIconId != null ? (
+            <img src={profileIcon(version, p.profileIconId)} alt="" width={26} height={26}
+              className="rounded-md border border-edge shrink-0" onError={hideOnError} />
+          ) : (
+            <span className="w-[26px] h-[26px] rounded-md bg-edge/50 border border-edge shrink-0" />
+          )}
+          <span className="text-xs text-gray-200 truncate flex-1 min-w-0">{p.name}</span>
+          {p.tier && (
+            <span className="text-[10px] text-gray-500 shrink-0 hidden sm:inline">
+              {p.tier.charAt(0) + p.tier.slice(1).toLowerCase()}{p.rank ? ` ${p.rank}` : ""}
+            </span>
+          )}
+          <span className="text-[10px] text-gray-500 tabular-nums shrink-0">{p.games}</span>
+          <span className={`text-xs font-bold tabular-nums w-11 text-right shrink-0 ${wrCls(p.winRate)}`}>{p.winRate}%</span>
+        </Link>
+      ))}
     </div>
   );
 }

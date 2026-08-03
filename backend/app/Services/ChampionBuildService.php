@@ -414,7 +414,7 @@ class ChampionBuildService
     }
 
     /** Bu şampiyonu en çok oynayan gerçek oyuncular (isim bilinenler). */
-    private function topPlayers(string $championId, int $limit = 4): array
+    private function topPlayers(string $championId, int $limit = 6): array
     {
         $rows = ChampionTopPlayer::where('champion_id', $championId)
             ->whereNotNull('game_name')
