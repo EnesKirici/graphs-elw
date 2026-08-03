@@ -118,8 +118,11 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           rol zaten hero rozetinde ve stat şeridinin etiketinde yazıyor — ama koca
           bir satır harcıyordu.
         */}
-        <div className="border-t border-edge/40 px-4 py-1.5 flex items-center gap-2 flex-wrap">
-          {positions.length > 1 && (
+        {/* Rol seçici YALNIZ birden fazla rolde; tek rollü şampiyonda satır hiç açılmaz.
+            Kapsam bilgisi (Emerald+ / Patch) buradan ALINDI — kendi başına bir şerit gibi
+            durup ayrı bir kart izlenimi veriyordu; artık sayfa sonunda dipnot. */}
+        {positions.length > 1 && (
+          <div className="border-t border-edge/40 px-4 py-1.5 flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1">
               {positions.map((p) => (
                 <button key={p.position} onClick={() => selectRole(p.position)}
@@ -131,16 +134,13 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 </button>
               ))}
             </div>
-          )}
-          <div className="ml-auto flex items-center gap-1.5 text-[10px] text-gray-500">
             {lowSample && (
-              <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Düşük örneklem</span>
+              <span className="ml-auto text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Düşük örneklem
+              </span>
             )}
-            <span>Emerald +</span>
-            <span className="text-gray-700">·</span>
-            <span>Patch {(build.patches || []).join(" + ")}</span>
           </div>
-        </div>
+        )}
       </div>
 
       {/*
@@ -365,6 +365,12 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           </Section>
         </Panel>
       </div>
+
+      {/* Kapsam bilgisi — üstte kendi başına bir şerit gibi durup ayrı kart izlenimi
+          veriyordu; dipnot olarak burası doğru yeri. */}
+      <p className="text-[11px] text-gray-600 text-center pt-1">
+        Tüm veriler Emerald+ dereceli maçlardan derlenir · Patch {(build.patches || []).join(" + ")}
+      </p>
     </div>
   );
 }

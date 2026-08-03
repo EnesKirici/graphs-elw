@@ -7,14 +7,18 @@ import { DD_CDN } from "@/lib/ddragon";
 import { scoreColor } from "@/components/summoner/pro/scoreColor";
 
 /*
-  Counter sayfası — iki katmanlı okuma:
+  Counter sayfası — TEK okuma katmanı: splash şeritleri.
 
-  1) SPLASH ŞERİDİ (üstte): tek bakışta "kim ezer / kim ezilir". Soldan sağa renk
-     spektrumu akar — sol uç en mavi (bizim en rahat eşleşmemiz), sağ uç en kırmızı
-     (en zorlu rakip). Yani kartın rengi ve konumu aynı bilgiyi iki kez anlatır,
-     sayıyı okumadan da anlaşılır.
-  2) DETAY LİSTESİ (altta): head-to-head bar + KDA/KP/hasar + @15 koridor farkı.
-     Barlar okunabilirliği artırdığı için korundu (kullanıcı geri bildirimi).
+  Soldan sağa renk spektrumu akar: sol uç en mavi (bizim en rahat eşleşmemiz),
+  sağ uç en kırmızı (en zorlu rakip). Kartın rengi ve konumu aynı bilgiyi iki kez
+  anlatır, sayıyı okumadan da anlaşılır. Detay (KDA/katılım/hasar/@15) kartın
+  ÜZERİNE gelince açılır.
+
+  NOT: altta ayrıca iki barlı liste ("Zorlu Rakipler" / "Rahat Eşleşmeler") vardı;
+  aynı eşleşmeleri ikinci kez gösterdiği için hem sayfayı uzatıyor hem karıştırıyordu
+  (kullanıcı bildirdi). Kaldırıldı — bilgi hover'a taşındı. Yan fayda: sayfa 20 yerine
+  10 büyük dikey görsel çekiyor (loading art'lar Riot CDN'inden geliyor ve sayfanın
+  asıl yavaşlama sebebiydi).
 
   Renk mantığı profil sayfasıyla AYNI (scoreColor): kırmızı → mor (~%50) → mavi.
   İlk render (server) birincil rolü gösterir → SSR HTML'de gerçek içerik (crawlable).
@@ -38,8 +42,7 @@ const ROLE_ICON = {
 const loadingArt = (id) => `${DD_CDN}/cdn/img/champion/loading/${id}_0.jpg`;
 const hideOnError = (e) => { e.currentTarget.style.visibility = "hidden"; };
 
-const STRIP = 5;   // şeritte her yönde kaç kart
-const SHOWN = 10;  // detay listesinde her sütunda kaç satır
+const STRIP = 5; // şeritte her yönde kaç kart
 
 export default function ChampionCounters({ champName, champImage, champId, counters, version, duos }) {
   const positions = counters?.positions || [];
@@ -58,13 +61,10 @@ export default function ChampionCounters({ champName, champImage, champId, count
     );
   }
 
-  const counterList = (data.counters || []).slice(0, SHOWN);   // en zorlu önce
-  const strongList = (data.strongInto || []).slice(0, SHOWN);  // en ezici önce
-
   // Şerit: sol = en rahat (mavi), sağ = en zorlu (kırmızı). Zorlu liste ters çevrilir ki
   // en uç değer en sağda kalsın → renk spektrumu soldan sağa kesintisiz aksın.
-  const stripGood = strongList.slice(0, STRIP);
-  const stripBad = counterList.slice(0, STRIP).reverse();
+  const stripGood = (data.strongInto || []).slice(0, STRIP);
+  const stripBad = (data.counters || []).slice(0, STRIP).reverse();
 
   return (
     <div className="space-y-4">
@@ -102,30 +102,10 @@ export default function ChampionCounters({ champName, champImage, champId, count
         version={version}
       />
 
-      {/* 2) Detaylı head-to-head */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        <MatchupColumn
-          title="Zorlu Rakipler"
-          subtitle={`${champName} karşısında avantajlı olan şampiyonlar — en düşük kazanma oranları.`}
-          rows={counterList}
-          champName={champName}
-          version={version}
-          empty={`${champName} için zayıf eşleşme verisi henüz yok.`}
-        />
-        <MatchupColumn
-          title="Rahat Eşleşmeler"
-          subtitle={`${champName} tarafının üstün olduğu şampiyonlar — en yüksek kazanma oranları.`}
-          rows={strongList}
-          champName={champName}
-          version={version}
-          empty={`${champName} için güçlü eşleşme verisi henüz yok.`}
-        />
-      </div>
-
       <p className="text-[11px] text-gray-500 leading-relaxed">
         Yüzdeler {champName} tarafının o eşleşmedeki kazanma oranıdır (kalanı rakibin). Rakip başına en az 10 maç.
         Sıralama yalnız orana değil maç sayısına da göre ağırlıklandırılır — az örneklemli uç oranlar listeyi yanıltmaz.
-        Emerald+ · Patch {(counters.patches || []).join(" + ")}.
+        Karta gelince o eşleşmenin KDA / katılım / hasar detayı açılır. Emerald+ · Patch {(counters.patches || []).join(" + ")}.
       </p>
     </div>
   );
@@ -195,8 +175,8 @@ function BotLaneSection({ data, duos, role, champName, version }) {
   const footer = duoList.length ? (
     <div className="border-t border-edge/40 px-4 py-3.5">
       <p className="text-[11px] font-bold uppercase tracking-wide mb-2.5" style={{ color: COL_GOOD }}>
-        Birlikte en iyi {mateLabel}
-        <span className="font-normal normal-case tracking-normal text-gray-600"> — aynı takımdaki sinerji</span>
+        {champName} Best Duos
+        <span className="font-normal normal-case tracking-normal text-gray-600"> — aynı takımdaki en iyi {mateLabel} eşleri</span>
       </p>
       <div className="flex gap-2 overflow-x-auto">
         {duoList.map((d) => <DuoCard key={d.champion} d={d} version={version} />)}
@@ -273,6 +253,39 @@ function StripCard({ m }) {
         <span className="absolute bottom-1.5 inset-x-0 px-1.5 text-center text-[11px] font-semibold text-white/95 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
           {m.name}
         </span>
+
+        {/*
+          Head-to-head detayı (KDA / katılım / hasar / @15) HOVER'da açılır.
+          Önce sayfanın altında ayrı iki barlı listede duruyordu ama aynı eşleşmeleri
+          ikinci kez göstermek sayfayı hem uzatıyor hem karıştırıyordu — bilgi burada,
+          bağlamının içinde duruyor.
+        */}
+        {m.stats && (
+          <div className="absolute inset-0 bg-black/92 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1.5 px-1.5 text-center">
+            <div>
+              <div className="text-[9px] text-gray-500 uppercase tracking-wide leading-none">KDA</div>
+              <div className="text-[11px] font-bold text-gray-100 tabular-nums mt-1">
+                {m.stats.kda.k}/{m.stats.kda.d}/{m.stats.kda.a}
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] text-gray-500 uppercase tracking-wide leading-none">Katılım</div>
+              <div className="text-[11px] font-bold text-gray-100 tabular-nums mt-1">%{m.stats.kp}</div>
+            </div>
+            <div>
+              <div className="text-[9px] text-gray-500 uppercase tracking-wide leading-none">Hasar</div>
+              <div className="text-[11px] font-bold text-gray-100 tabular-nums mt-1">{(m.stats.dmg / 1000).toFixed(1)}k</div>
+            </div>
+            {m.lane15 && (
+              <div>
+                <div className="text-[9px] text-gray-500 uppercase tracking-wide leading-none">15. dk</div>
+                <div className={`text-[11px] font-bold tabular-nums mt-1 ${m.lane15.gd15 >= 0 ? "text-blue-300" : "text-red-400"}`}>
+                  {m.lane15.gd15 >= 0 ? "+" : ""}{m.lane15.gd15}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="px-1.5 py-1.5 text-center bg-black/35">
@@ -306,73 +319,3 @@ function laneTag(m) {
   return null;
 }
 
-function MatchupColumn({ title, subtitle, rows, champName, version, empty }) {
-  return (
-    <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-edge/50">
-        <h3 className="text-sm font-semibold text-gray-100">{title}</h3>
-        <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{subtitle}</p>
-      </div>
-      {rows.length ? (
-        <div className="divide-y divide-edge/25">
-          {rows.map((m, i) => (
-            <MatchupRow key={m.id} m={m} rank={i + 1} champName={champName} version={version} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-[11px] text-gray-600 leading-relaxed px-5 py-6 text-center">{empty}</p>
-      )}
-    </div>
-  );
-}
-
-/* Tek eşleşme — rakip portresi + kim-kime-karşı kazanma barı (head-to-head). */
-function MatchupRow({ m, rank, champName, version }) {
-  const champWr = m.winRate;                       // şampiyonun bu rakibe karşı WR'si
-  const oppWr = Math.round((100 - champWr) * 10) / 10;
-  const col = wrColor(champWr);                     // kırmızı→mor→mavi gradyan
-
-  return (
-    <Link
-      href={`/champions/${m.id}/counter`}
-      className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors group"
-      title={`${champName} vs ${m.name} — ${m.games} maç`}
-    >
-      <span className="text-[11px] font-bold text-gray-600 w-4 text-center shrink-0">{rank}</span>
-      <img
-        src={champIcon(version, m.id)}
-        alt={m.name}
-        width={40}
-        height={40}
-        className="rounded-lg border border-edge shrink-0"
-        onError={hideOnError}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-gray-100 truncate group-hover:text-white transition-colors">{m.name}</span>
-          <span className="text-[10px] text-gray-500 shrink-0 tabular-nums">{m.games} maç</span>
-        </div>
-        {/* Head-to-head WR barı: şampiyon% (gradyan renk) | rakip% */}
-        <div className="mt-1.5 flex items-center gap-2">
-          <span className="text-xs font-bold tabular-nums w-9 shrink-0" style={{ color: col }}>{champWr}%</span>
-          <div className="flex-1 h-1.5 rounded-full bg-edge/70 overflow-hidden">
-            <div className="h-full" style={{ width: `${Math.max(2, Math.min(98, champWr))}%`, backgroundColor: col }} />
-          </div>
-          <span className="text-xs font-medium tabular-nums text-gray-500 w-9 text-right shrink-0">{oppWr}%</span>
-        </div>
-
-        {/* Head-to-head detay: bu eşleşmedeki KDA / KP / hasar (+ @15 koridor avantajı) */}
-        {m.stats && (
-          <div className="mt-1.5 flex items-center gap-x-3 gap-y-0.5 flex-wrap text-[10px] text-gray-500">
-            <span>KDA <b className="text-gray-300 tabular-nums">{m.stats.kda.k}/{m.stats.kda.d}/{m.stats.kda.a}</b></span>
-            <span>KP <b className="text-gray-300 tabular-nums">%{m.stats.kp}</b></span>
-            <span><b className="text-gray-300 tabular-nums">{(m.stats.dmg / 1000).toFixed(1)}k</b> hasar</span>
-            {m.lane15 && (
-              <span>15dk <b className={`tabular-nums ${m.lane15.gd15 >= 0 ? "text-blue-300" : "text-red-400"}`}>{m.lane15.gd15 >= 0 ? "+" : ""}{m.lane15.gd15}</b> <span className="text-gray-600">gold</span></span>
-            )}
-          </div>
-        )}
-      </div>
-    </Link>
-  );
-}
