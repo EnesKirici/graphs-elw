@@ -61,7 +61,10 @@ export default function ServerPage() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 10000); // canlı yenile
+    // Canlı yenile — sekme arka plandayken boşuna istek atma.
+    const t = setInterval(() => {
+      if (!document.hidden) load();
+    }, 10000);
     return () => clearInterval(t);
   }, [load]);
 

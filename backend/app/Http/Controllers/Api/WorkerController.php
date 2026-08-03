@@ -28,6 +28,8 @@ class WorkerController extends Controller
     public function crawl(): JsonResponse
     {
         Artisan::call('ladder:crawl', ['--force' => true]);
+        // Havuz değişti → önbelleğe alınmış sayımlar bayat; panel taze göstersin.
+        $this->control->forgetPoolStats();
 
         return response()->json([
             'ok'     => true,

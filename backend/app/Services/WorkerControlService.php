@@ -23,6 +23,9 @@ class WorkerControlService
     /** Kullanıcı kaynaklı son Riot isteğinin damgalandığı cache anahtarı (RiotApiService yazar). */
     public const USER_ACTIVITY_KEY = 'riot:last_user_request';
 
+    /** Havuz sayımlarının (boyut + lig dağılımı) cache anahtarı — bkz. poolStats(). */
+    private const POOL_STATS_KEY = 'worker:pool_stats';
+
     public function isEnabled(): bool
     {
         return (bool) AdminSetting::getValue('worker_enabled', false);
@@ -107,10 +110,38 @@ class WorkerControlService
         return $window > 0 && $last > 0 && (time() - $last) < $window;
     }
 
+    /**
+     * Havuz sayımları: toplam boyut + lig dağılımı (panel kartları).
+     *
+     * Eskiden iki ayrı sorguydu (COUNT(*) + GROUP BY tier) ve crawl_players 180K satıra
+     * ulaştığından ikisi birlikte panel açılışının ~3 saniyesini yiyordu. Tek gruplama
+     * yeter — toplam, grupların toplamıdır. Havuz yalnız ladder:crawl çalışınca değişir
+     * (gecelik cron veya elle) → 60 sn cache güvenli; panel 15 sn'de bir yenilendiği için
+     * asıl kazanç burada. Elle tarama sonrası WorkerController::crawl cache'i düşürür.
+     */
+    private function poolStats(): array
+    {
+        return Cache::remember(self::POOL_STATS_KEY, 60, function () {
+            $byTier = CrawlPlayer::select('tier', DB::raw('COUNT(*) c'))
+                ->groupBy('tier')
+                ->pluck('c', 'tier')
+                ->all();
+
+            return ['byTier' => $byTier, 'size' => array_sum($byTier)];
+        });
+    }
+
+    /** Havuz sayımları cache'ini düşür — elle tarama sonrası panel taze göstersin. */
+    public function forgetPoolStats(): void
+    {
+        Cache::forget(self::POOL_STATS_KEY);
+    }
+
     /** Admin paneli durum kartları için özet. */
     public function status(): array
     {
         $todayStart = Carbon::today();
+        $pool = $this->poolStats();
 
         return [
             'enabled'       => $this->isEnabled(),
@@ -125,9 +156,8 @@ class WorkerControlService
             'tiers'         => $this->tiers(),
             'tiersAvailable' => config('elwgraphs.worker.tiers_available', []),
             'collectSince'  => AdminSetting::getValue('worker_collect_since', '2026-07-16'),
-            'poolSize'      => CrawlPlayer::count(),
-            'poolByTier'    => CrawlPlayer::select('tier', DB::raw('COUNT(*) c'))
-                ->groupBy('tier')->pluck('c', 'tier'),
+            'poolSize'      => $pool['size'],
+            'poolByTier'    => $pool['byTier'],
             'queueDepth'    => (int) DB::table('jobs')->count(),
             'processedTotal' => ProcessedMatch::count(),
             'processedToday' => ProcessedMatch::where('processed_at', '>=', $todayStart)->count(),

@@ -87,7 +87,11 @@ export default function WorkerPage() {
 
   useEffect(() => {
     load(true);
-    const t = setInterval(() => load(false), 15000); // canlı durum
+    // Canlı durum — ama sekme arka plandayken sorgu üretme (panel açık unutulunca
+    // 15 sn'de bir boşuna havuz sayımı çalışıyordu).
+    const t = setInterval(() => {
+      if (!document.hidden) load(false);
+    }, 15000);
     return () => clearInterval(t);
   }, [load]);
 
