@@ -39,6 +39,13 @@ class CollectMatches extends Command
             $this->info('Kullanıcı trafiği / rate limit aktif — bu tur atlandı.');
             return self::SUCCESS;
         }
+        // Kuyruk tavanı — oyuncu taramasından ÖNCE bakılır, çünkü taramanın kendisi de
+        // Riot isteği harcar. Kuyruk zaten doluyken toplamak hiçbir şey hızlandırmaz;
+        // turu atlayınca kota tamamen ProcessMatchJob'a kalır → kuyruk daha hızlı erir.
+        if ($control->queueSaturated()) {
+            $this->info("Kuyruk dolu (tavan: {$control->queueCeiling()}) — bu tur toplama yapılmadı, kota işlemeye bırakıldı.");
+            return self::SUCCESS;
+        }
 
         $tiers = $control->tiers();
         if (empty($tiers)) {

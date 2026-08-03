@@ -203,6 +203,11 @@ return [
         'user_yield_seconds' => 8,
         // Oyuncu başına en yeni kaç ranked maç ID'si istensin (count parametresi).
         'recent_per_player' => 10,
+        // Kuyruk tavanı: bekleyen iş bu sayıyı aşarsa toplama turu atlanır (0 = sınırsız).
+        // Tüketim Riot kotasıyla sınırlı olduğundan kuyruğa iş yığmak hız kazandırmaz;
+        // 2026-08-03'te 22K'lık backlog birikmiş ve derin kuyruk 5.156 maçı düşürmüştü.
+        // Panelden: admin_settings → worker_queue_ceiling.
+        'queue_ceiling' => 1000,
     ],
 
     /*

@@ -68,6 +68,28 @@ class WorkerControlService
         return max(1, (int) AdminSetting::getValue('worker_players', config('elwgraphs.worker.players', 15)));
     }
 
+    /**
+     * Kuyruk tavanı: bekleyen iş bu sayıyı aşarsa yeni maç TOPLAMA durur (0 = sınırsız).
+     *
+     * Tüketim hızı Riot key kotasıyla sınırlı (~380 maç/saat; her iş 2 istek: maç+timeline).
+     * Üretim bundan hızlı olduğunda kuyruğa iş yığmak hız KAZANDIRMAZ, tersine zarar verir:
+     * derin kuyrukta işler 429/cooldown'da sürekli release edilir ve maç kaybına yol açar
+     * (bkz. ProcessMatchJob::retryUntil). Üstelik tarama turunun kendisi de Riot isteği
+     * harcar → turu atlamak kotayı doğrudan tüketiciye bırakır, kuyruk daha hızlı erir.
+     */
+    public function queueCeiling(): int
+    {
+        return max(0, (int) AdminSetting::getValue('worker_queue_ceiling', config('elwgraphs.worker.queue_ceiling', 1000)));
+    }
+
+    /** Kuyruk tavanı aşıldı mı — CollectMatches turu buna bakıp atlar. */
+    public function queueSaturated(): bool
+    {
+        $ceiling = $this->queueCeiling();
+
+        return $ceiling > 0 && DB::table('jobs')->count() >= $ceiling;
+    }
+
     /** Kullanıcı Riot isteğinden sonra worker'ın yol verdiği saniye (0 = worker öncelikli). */
     public function userYieldSeconds(): int
     {
@@ -149,6 +171,7 @@ class WorkerControlService
             'matchBudget'   => $this->matchBudget(),
             'playersPerRun' => $this->playersPerRun(),
             'userYield'     => $this->userYieldSeconds(),
+            'queueCeiling'  => $this->queueCeiling(),
             // Meta gösterim penceresi (kaç patch birleşik). PatchService::keptPatches ile aynı kaynak.
             'metaKeepPatches' => (int) AdminSetting::getValue('meta_keep_patches', config('elwgraphs.meta.keep_patches', 2)),
             // Slider "Yeni Şampiyon" seçimi (boş = kapalı, slider tamamen dinamik).

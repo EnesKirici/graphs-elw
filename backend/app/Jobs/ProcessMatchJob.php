@@ -22,12 +22,29 @@ class ProcessMatchJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
-     * Rate limit release'leri deneme sayar → bol hak; GERÇEK hatalar yine
-     * 3 istisnada düşer (maxExceptions). Yoksa bütçe dolunca kuyruğun kalanı
-     * 3'er milisaniyelik denemeyle failed_jobs'a akıyordu (maç kaybı).
+     * Deneme SAYISI değil, ZAMAN sınırı (retryUntil).
+     *
+     * Laravel her `release()`'i bir deneme sayar. Bu işte release'lerin çoğu hata değil
+     * BEKLEME sinyalidir (429 cooldown / geçersiz key / kullanıcıya yol verme). Sabit
+     * $tries = 15 ile, yoğun saatlerde iş tek bir gerçek hata almadan yalnızca "bekle"
+     * diye diye hakkını tüketip failed_jobs'a düşüyordu: 2026-07-30/31 penceresinde
+     * 5.156 maç böyle KALICI kaybedildi (kuyrukta o an 8.3K iş attempts=10-11'deydi).
+     *
+     * retryUntil ile bekleme sinyalleri bedava — iş süre dolana kadar sabırla döner.
+     * GERÇEK hatalar yine hızlıca düşer ($maxExceptions = 3) → sonsuz döngü yok.
+     * Not: retryUntil dolduğunda Laravel worker'ın --tries değerine geri düşer.
      */
-    public $tries = 15;
     public $maxExceptions = 3;
+
+    /**
+     * Pencere neden 3 gün: kuyruk tavanı (WorkerControlService::queueCeiling) sayesinde
+     * normalde bekleme birkaç saati geçmez; geniş pay, birikmiş kuyruğun eridiği
+     * dönemde işlerin zaman aşımından ölmemesi için.
+     */
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addDays(3);
+    }
 
     public function __construct(
         public string $matchId,

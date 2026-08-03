@@ -54,6 +54,7 @@ export default function WorkerPage() {
   const [matchBudget, setMatchBudget] = useState(40);
   const [players, setPlayers] = useState(15);
   const [userYield, setUserYield] = useState(8);
+  const [queueCeiling, setQueueCeiling] = useState(1000);
   const [tiers, setTiers] = useState([]);
   const [since, setSince] = useState("2026-07-16");
   const [metaKeep, setMetaKeep] = useState(2); // meta gösterim penceresi (kaç patch birleşik)
@@ -73,6 +74,7 @@ export default function WorkerPage() {
         setMatchBudget(s.matchBudget ?? 40);
         setPlayers(s.playersPerRun ?? 15);
         setUserYield(s.userYield ?? 8);
+        setQueueCeiling(s.queueCeiling ?? 1000);
         setTiers(s.tiers || []);
         setSince(s.collectSince || "2026-07-16");
         setMetaKeep(s.metaKeepPatches ?? 2);
@@ -123,6 +125,7 @@ export default function WorkerPage() {
       await putAdmin("/settings/worker_match_budget", { value: Number(matchBudget) });
       await putAdmin("/settings/worker_players", { value: Number(players) });
       await putAdmin("/settings/worker_user_yield", { value: Number(userYield) });
+      await putAdmin("/settings/worker_queue_ceiling", { value: Number(queueCeiling) });
       await putAdmin("/settings/worker_tiers", { value: tiers });
       await putAdmin("/settings/worker_collect_since", { value: since });
       await putAdmin("/settings/meta_keep_patches", { value: Number(metaKeep) });
@@ -157,6 +160,8 @@ export default function WorkerPage() {
   const rate = status?.rate || {};
   const poolByTier = status?.poolByTier || {};
   const onCooldown = rate.cooldownUntil > 0;
+  // Tavan doluyken matches:collect turu atlar (backpressure) — panelde belli olsun.
+  const queueFull = !!status?.queueCeiling && (status?.queueDepth ?? 0) >= status.queueCeiling;
 
   return (
     <>
@@ -308,11 +313,12 @@ export default function WorkerPage() {
             ama <b className="text-gray-300">canlı site yavaşlar</b> (aynı Riot key paylaşılıyor). Dev key
             sınırı tavan; prod key gelince serbest bırakabilirsin.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { label: "Tur başına maç", val: matchBudget, set: setMatchBudget, min: 1, max: 300, hint: "Her turda toplanacak maks maç. Yüksek = hızlı ama dev key'i çok yer." },
               { label: "Tur başına oyuncu", val: players, set: setPlayers, min: 1, max: 200, hint: "Her turda taranacak oyuncu — bütçeyi doldurmak için." },
               { label: "Kullanıcıya yol ver (sn)", val: userYield, set: setUserYield, min: 0, max: 60, hint: "0 = worker öncelikli (site yavaşlar) · 8+ = site öncelikli. Kullanıcı Riot'a istek atınca worker bu kadar bekler." },
+              { label: "Kuyruk tavanı", val: queueCeiling, set: setQueueCeiling, min: 0, max: 100000, hint: "Bekleyen iş bu sayıyı aşarsa toplama turu atlanır (0 = sınırsız). Kuyruk dolusunu daha da doldurmak hız kazandırmaz; kota işlemeye kalsın." },
             ].map((f) => (
               <div key={f.label}>
                 <label className="text-xs text-gray-400 mb-1 block">{f.label}</label>
@@ -384,7 +390,20 @@ export default function WorkerPage() {
       {/* Durum kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <StatTile label="Havuz" value={status?.poolSize ?? 0} hint="taranan oyuncu havuzu" tone="azure" icon={ICON_USERS} />
-        <StatTile label="Kuyruk" value={status?.queueDepth ?? 0} hint="işlenmeyi bekleyen maç" icon={ICON_QUEUE} />
+        {/* Tavan dolduysa toplama duruyor demektir — kartta görünsün. */}
+        <StatTile
+          label="Kuyruk"
+          value={status?.queueDepth ?? 0}
+          hint={
+            status?.queueCeiling
+              ? queueFull
+                ? `tavan doldu (${status.queueCeiling}) — toplama duraklatıldı`
+                : `işlenmeyi bekleyen maç · tavan ${status.queueCeiling}`
+              : "işlenmeyi bekleyen maç"
+          }
+          tone={queueFull ? "gold" : undefined}
+          icon={ICON_QUEUE}
+        />
         <StatTile label="Bugün İşlenen" value={status?.processedToday ?? 0} hint={`toplam ${status?.processedTotal ?? 0}`} tone="mint" icon={ICON_ACTIVITY} />
         <StatTile
           label="Rate Limit"
