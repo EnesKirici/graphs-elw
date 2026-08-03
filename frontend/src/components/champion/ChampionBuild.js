@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { pickRealRunePage, groupRealItems, itemIcon, profileIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
 import { gradeCls } from "@/components/champion/gradeStyle";
+import ChampionTrend from "@/components/champion/ChampionTrend";
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", SUPPORT: "Support" };
 const ROLE_SHARE_LABEL = {
@@ -142,6 +143,10 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           </div>
         )}
       </div>
+
+      {/* Son 30 günün gidişatı — anlık orana bakmak "yükseliyor mu düşüyor mu" sorusunu
+          cevaplamıyordu. Veri yoksa (yeni şampiyon / seri kısa) bileşen hiç render olmaz. */}
+      <ChampionTrend trend={build?.trend} />
 
       {/*
         DÜZEN NOTU: eskiden 3-6-3 sütun vardı ve sağ sütun (sihirdar + başlangıç + çizme +

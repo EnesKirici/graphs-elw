@@ -10,6 +10,7 @@ use App\Models\ChampionTopPlayer;
 use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Şampiyon build sayfası GERÇEK verisi — worker'ın maç maç biriktirdiği
@@ -280,10 +281,67 @@ class ChampionBuildService
             'byPosition' => $byPosition,
             'spellMap'   => $this->spellMapForPairs($byPosition),
             'topPlayers' => $this->topPlayers($championId),
+            'trend'      => $this->dailyTrend($championId),
         ];
     }
 
+    /**
+     * Son N günün günlük serisi: kazanma / seçim / yasaklanma oranı.
+     *
+     * Kaynak champion_daily_stats (sayaç tablosu) — ham maç taraması YOK, sorgu
+     * yalnız ~30 satır okur. Veri olmayan günler seride yer ALMAZ; grafik eksik
+     * günü çizmez (sıfır çizmek "o gün hiç oynanmadı" gibi yanlış okunurdu).
+     *
+     * @return array<array{day:string, games:int, winRate:float, pickRate:float, banRate:float}>
+     */
+    private function dailyTrend(string $championId, int $days = 30): array
+    {
+        $since = now()->subDays($days)->toDateString();
+
+        $totals = DB::table('stat_days')
+            ->where('day', '>=', $since)
+            ->pluck('matches', 'day');
+
+        if ($totals->isEmpty()) {
+            return [];
+        }
+
+        $rows = DB::table('champion_daily_stats')
+            ->where('champion_id', $championId)
+            ->where('position', 'ALL')
+            ->where('day', '>=', $since)
+            ->orderBy('day')
+            ->get(['day', 'games', 'wins', 'bans']);
+
+        $out = [];
+        foreach ($rows as $r) {
+            $day = (string) $r->day;
+            $total = (int) ($totals[$day] ?? 0);
+            if ($total < self::TREND_MIN_DAY_MATCHES) {
+                continue; // o gün çok az maç işlenmiş → oran gürültüden ibaret olur
+            }
+            $g = (int) $r->games;
+            $out[] = [
+                'day'      => $day,
+                'games'    => $g,
+                'winRate'  => $g > 0 ? round($r->wins / $g * 100, 1) : 0.0,
+                'pickRate' => round($g / $total * 100, 1),
+                'banRate'  => round($r->bans / $total * 100, 1),
+            ];
+        }
+
+        return $out;
+    }
+
     /** Rakip başına en az bu kadar maç yoksa matchup listeye girmez (gürültü). */
+    /**
+     * Trend grafiğinde bir günün çizilmesi için o gün işlenmiş olması gereken en az
+     * maç sayısı. Worker'ın az çalıştığı bir günde 20 maçtan çıkan "%80 seçim oranı"
+     * gerçek bir sıçrama değil, örneklem gürültüsüdür — grafik yalancı zirveler
+     * göstermesin diye o günler atlanır.
+     */
+    private const TREND_MIN_DAY_MATCHES = 100;
+
     private const MATCHUP_MIN_GAMES = 10;
     /** Matchup sıralaması güven sabiti: sapmayı games/(games+K) ile ağırlıklar
      *  (az maçlı büyük sapmayı nötre çeker → istatistiksel olarak doğru sıra). */

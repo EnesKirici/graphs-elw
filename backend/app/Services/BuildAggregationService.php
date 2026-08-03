@@ -8,6 +8,7 @@ use App\Models\ChampionStat;
 use App\Models\ChampionTopPlayer;
 use App\Models\StatPatch;
 use App\Services\RiotApi\DataDragonService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -353,7 +354,114 @@ class BuildAggregationService
                 ->increment('bans');
         }
 
+        // 5) Günlük trend sayaçları — "son 30 gün" grafiğinin kaynağı.
+        $this->bumpDaily($info, $keyToId, $banned);
+
         return true;
+    }
+
+    /**
+     * Maçı günlük sayaçlara ekler (champion_daily_stats + stat_days).
+     *
+     * Maç başına yalnız İKİ sorgu: bir tanesi günün toplam maç sayacı, diğeri tüm
+     * şampiyon/pozisyon satırları için tek toplu upsert. Katılımcı başına ayrı
+     * firstOrCreate+increment yapılsaydı maç başına ~40 sorgu olurdu.
+     */
+    private function bumpDaily(array $info, array $keyToId, array $banned): void
+    {
+        $created = (int) ($info['gameCreation'] ?? 0);
+        if ($created <= 0) {
+            return; // tarihsiz maç → günlük seriye yazılamaz
+        }
+        $day = Carbon::createFromTimestampMs($created)->toDateString();
+        $now = now()->toDateTimeString();
+
+        // Seçim/yasaklanma oranının paydası
+        DB::statement(
+            'INSERT INTO stat_days (day, matches, created_at, updated_at) VALUES (?,1,?,?)'
+            . ' ON DUPLICATE KEY UPDATE matches = matches + 1, updated_at = VALUES(updated_at)',
+            [$day, $now, $now]
+        );
+
+        $rows = $this->dailyAcc($info, $keyToId, $banned);
+        if (! $rows) {
+            return;
+        }
+
+        $ph = [];
+        $bind = [];
+        foreach ($rows as [$champ, $pos, $g, $w, $b]) {
+            $ph[] = '(?,?,?,?,?,?,?,?)';
+            array_push($bind, $day, $champ, $pos, $g, $w, $b, $now, $now);
+        }
+
+        DB::statement(
+            'INSERT INTO champion_daily_stats (day, champion_id, position, games, wins, bans, created_at, updated_at) VALUES '
+            . implode(',', $ph)
+            . ' ON DUPLICATE KEY UPDATE games = games + VALUES(games), wins = wins + VALUES(wins),'
+            . ' bans = bans + VALUES(bans), updated_at = VALUES(updated_at)',
+            $bind
+        );
+    }
+
+    /**
+     * Bir maçın günlük sayaç satırlarını ÜRETİR (yazmaz) — geriye dönük doldurma için.
+     * Banları maç içinde tekilleştirir (iki takım aynı şampiyonu banlarsa banRate şişerdi).
+     *
+     * @return array<array{0:string,1:string,2:int,3:int,4:int}> [championId, position, games, wins, bans]
+     */
+    public function dailyRowsFor(array $info): array
+    {
+        $keyToId = $this->keyMap();
+
+        $banned = [];
+        foreach ($info['teams'] ?? [] as $team) {
+            foreach ($team['bans'] ?? [] as $ban) {
+                $cid = $keyToId[(int) ($ban['championId'] ?? -1)] ?? null;
+                if ($cid) {
+                    $banned[$cid] = true;
+                }
+            }
+        }
+
+        return $this->dailyAcc($info, $keyToId, $banned);
+    }
+
+    /** Katılımcı + ban listesini [champ, pos, games, wins, bans] satırlarına indirger. */
+    private function dailyAcc(array $info, array $keyToId, array $banned): array
+    {
+        $acc = [];
+        foreach ($info['participants'] ?? [] as $p) {
+            $champId = $keyToId[(int) ($p['championId'] ?? 0)] ?? ($p['championName'] ?? null);
+            if (! $champId) {
+                continue;
+            }
+            $win = empty($p['win']) ? 0 : 1;
+            $pos = $p['teamPosition'] ?: 'ALL';
+
+            $acc["{$champId}|ALL"] ??= [0, 0, 0];
+            $acc["{$champId}|ALL"][0]++;
+            $acc["{$champId}|ALL"][1] += $win;
+
+            if ($pos !== 'ALL') {
+                $acc["{$champId}|{$pos}"] ??= [0, 0, 0];
+                $acc["{$champId}|{$pos}"][0]++;
+                $acc["{$champId}|{$pos}"][1] += $win;
+            }
+        }
+        // Yasaklamalar şampiyon düzeyinde (rolsüz) → yalnız ALL satırına
+        foreach (array_keys($banned) as $cid) {
+            $acc["{$cid}|ALL"] ??= [0, 0, 0];
+            $acc["{$cid}|ALL"][2]++;
+        }
+
+        $out = [];
+        foreach ($acc as $k => [$g, $w, $b]) {
+            [$champ, $pos] = explode('|', $k, 2);
+            $out[] = [$champ, $pos, $g, $w, $b];
+        }
+
+        return $out;
     }
 
     /** Bir participant'tan build anahtarlarını çıkar: [[category, key], ...] */
