@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { champIcon } from "@/lib/buildData";
-import { DD_CDN } from "@/lib/ddragon";
+import { DD_ASSETS, DD_CDN } from "@/lib/ddragon";
 import { scoreColor } from "@/components/summoner/pro/scoreColor";
 
 /*
@@ -38,9 +38,22 @@ const ROLE_ICON = {
 };
 
 // Dikey karakter görseli (loading art, 308x560) — kare ikondan çok daha "canlı" bir kart verir.
-// DD_CDN kullanılır: /dd aynası büyük görselleri bilerek içermez.
-const loadingArt = (id) => `${DD_CDN}/cdn/img/champion/loading/${id}_0.jpg`;
+// DD_ASSETS = kendi aynamız: Riot CDN'inden bu görsel 0.6-1.2sn geliyordu ve şeritlerde
+// 20 tane var; aynadan same-origin gelince sayfa açılışı saniyeler kısalıyor.
+const loadingArt = (id) => `${DD_ASSETS}/cdn/img/champion/loading/${id}_0.jpg`;
 const hideOnError = (e) => { e.currentTarget.style.visibility = "hidden"; };
+
+/*
+  Ayna henüz o şampiyonu indirmediyse (yeni şampiyon / assets:sync sonrası ilk tur)
+  Riot CDN'ine düş — görsel kaybolmasın. Tek seferlik: fallback'in kendisi de
+  başarısız olursa kart görselsiz kalır ama düzen bozulmaz.
+*/
+const artFallback = (id) => (e) => {
+  const el = e.currentTarget;
+  if (el.dataset.fellBack) { el.style.visibility = "hidden"; return; }
+  el.dataset.fellBack = "1";
+  el.src = `${DD_CDN}/cdn/img/champion/loading/${id}_0.jpg`;
+};
 
 const STRIP = 5; // şeritte her yönde kaç kart
 
@@ -247,7 +260,7 @@ function StripCard({ m }) {
           alt={m.name}
           loading="lazy"
           className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
-          onError={hideOnError}
+          onError={artFallback(m.id)}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-transparent" />
         <span className="absolute bottom-1.5 inset-x-0 px-1.5 text-center text-[11px] font-semibold text-white/95 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">

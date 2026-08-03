@@ -13,8 +13,13 @@ use Illuminate\Support\Facades\Http;
  * Sitede sık kullanılan küçük ikonları (item, şampiyon karesi, yetenek, passive,
  * sihirdar büyüsü, rün, stat shard) frontend/public/dd altına indirir; site bunları
  * DDRAGON_ASSETS_URL ile kendi domain'inden servis eder (TR kullanıcıya dış CDN'den
- * belirgin hızlı). Splash/centered/loading/profileicon BİLEREK dışarıda — büyükler
- * ddragon'da kalır.
+ * belirgin hızlı).
+ *
+ * 2026-08-03: şampiyon SPLASH ve LOADING görselleri de aynaya alındı. Önce "büyükler
+ * ddragon'da kalsın" diye dışarıdaydılar; ölçüm bunun pahalı olduğunu gösterdi
+ * (Riot'tan tek loading art 0.6-1.2sn, aynadan küçük ikon 0.16sn — counter sayfası
+ * 20 tane çekiyor). ~35 MB yer, buna karşılık sayfa açılışında saniyeler.
+ * profileicon hâlâ dışarıda (binlerce dosya, seyrek kullanım).
  *
  * Idempotent: var olan dosyaları atlar → saatlik cron'da yeni patch çıktığında
  * ayna kendiliğinden dolar. URL yapısı ddragon ile birebir aynıdır
@@ -61,6 +66,13 @@ class SyncDataDragonAssets extends Command
 
         foreach ($championFull as $champ) {
             $paths[] = "cdn/{$version}/img/champion/{$champ['image']['full']}";
+            // Dikey karakter görseli (counter şeritleri) + splash (sayfa arka planı).
+            // Bunlar önce "büyük görsel" diye ayna dışında bırakılmıştı, ama ölçtük:
+            // Riot CDN'inden tek loading art 0.6-1.2sn (bizim aynadan küçük ikon 0.16sn)
+            // ve counter sayfası bunlardan 20 tane çekiyordu — sayfanın asıl yavaşlama
+            // sebebi buydu. Sürüm-bağımsız path (cdn/img/...), toplam ~35 MB.
+            $paths[] = "cdn/img/champion/loading/{$champ['id']}_0.jpg";
+            $paths[] = "cdn/img/champion/splash/{$champ['id']}_0.jpg";
             if (! empty($champ['passive']['image']['full'])) {
                 $paths[] = "cdn/{$version}/img/passive/{$champ['passive']['image']['full']}";
             }
