@@ -326,13 +326,7 @@ class ChampionBuildService
             ->get();
 
         // Rakip adları (DDragon) — id görüntü için, name etiket için.
-        $names = [];
-        try {
-            foreach ($this->ddragon->getChampions() as $c) {
-                $names[$c['id']] = $c['name'] ?? $c['id'];
-            }
-        } catch (\Throwable) {
-        }
+        $names = $this->championNames();
 
         $mu = [];
         foreach ($rows->groupBy('opponent_id') as $opp => $rws) {
@@ -414,6 +408,32 @@ class ChampionBuildService
     }
 
     /** Bu şampiyonu en çok oynayan gerçek oyuncular (isim bilinenler). */
+    /**
+     * DDragon şampiyon adları (id => görünen ad), istek başına TEK kez.
+     *
+     * Eskiden aggregateMatchups her çağrıldığında 171 şampiyonluk liste baştan
+     * kuruluyordu. Bot lane çaprazı gelince bu çağrı sayısı pozisyon başına ikiye
+     * çıktı (aynı koridor + çapraz) ve counters ucu ~0.6sn'ye yükseldi (normal
+     * şampiyon ucu 0.18sn). Memoize edilince tek yükleme yetiyor.
+     */
+    private ?array $championNames = null;
+
+    private function championNames(): array
+    {
+        if ($this->championNames !== null) {
+            return $this->championNames;
+        }
+        $this->championNames = [];
+        try {
+            foreach ($this->ddragon->getChampions() as $c) {
+                $this->championNames[$c['id']] = $c['name'] ?? $c['id'];
+            }
+        } catch (\Throwable) {
+        }
+
+        return $this->championNames;
+    }
+
     private function topPlayers(string $championId, int $limit = 6): array
     {
         $rows = ChampionTopPlayer::where('champion_id', $championId)

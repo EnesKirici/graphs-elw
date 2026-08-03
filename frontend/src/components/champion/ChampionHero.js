@@ -54,8 +54,12 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
         </Link>
       </div>
 
-      {/* Kimlik — ikon + isim + rozetler */}
-      <div className="pt-16 md:pt-24 pb-4 flex items-end gap-5">
+      {/* Kimlik — ikon + isim + rozetler.
+          Üst boşluk bilerek ölçülü: splash'in görünmesi için biraz pay bırakılır ama
+          eskiden (pt-16/pt-24) içerik ekranın çok altına itiliyordu ve ilk ekranda
+          neredeyse yalnız arka plan vardı. Sitenin diğer sayfalarında bu kadar büyük
+          bir üst boşluk yok — burası tek istisnaydı. */}
+      <div className="pt-6 md:pt-10 pb-4 flex items-end gap-5">
         {/* İkon çerçevesi dereceyi taşır: rol sıralamasındaki tier tek bakışta okunur. */}
         <div className="relative shrink-0">
           <img

@@ -162,35 +162,49 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             {runePage ? (
               <>
                 {/* Rün sayfası seçici — site dilindeki ALT-ÇİZGİ tab yapısı
-                    (Genel/Detay/Counter ile aynı), kutu-buton değil. */}
+                    (Genel/Detay/Counter ile aynı). flex-1 ile kartın TAM genişliğine
+                    eşit bölünür; sola yapışıp sağda boşluk bırakmaz. */}
                 {keystoneOptions.length > 1 && (
-                  <div className="flex items-center gap-1 border-b border-edge/50 mb-5 -mt-1 overflow-x-auto">
+                  <div className="flex items-stretch border-b border-edge/50 mb-6 -mt-1">
                     {keystoneOptions.map((k, i) => (
                       <button key={k.key} onClick={() => setPageIdx(i)}
-                        className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors cursor-pointer whitespace-nowrap ${
-                          i === safeIdx ? "border-blue-400 text-white" : "border-transparent text-gray-400 hover:text-gray-200"}`}
+                        className={`flex-1 flex items-center justify-center gap-2 px-2 py-3 text-xs font-semibold border-b-2 -mb-px transition-all duration-200 cursor-pointer whitespace-nowrap ${
+                          i === safeIdx
+                            ? "border-blue-400 text-white bg-blue-500/[0.06]"
+                            : "border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/[0.03]"}`}
                         title={`${i + 1}. seçenek`}>
-                        <img src={runeIconById(runesData, Number(k.key))} alt="" width={24} height={24}
-                          className={`rounded-full ${i === safeIdx ? "" : "opacity-70"}`} onError={hideOnError} />
+                        <img src={runeIconById(runesData, Number(k.key))} alt="" width={26} height={26}
+                          className={`rounded-full transition-transform duration-200 ${i === safeIdx ? "scale-105" : "opacity-60"}`}
+                          onError={hideOnError} />
                         <span className="text-gray-500 font-normal">{k.pickRate}%</span>
                         <span className={`font-bold ${wrCls(k.winRate)}`}>{k.winRate}%</span>
                       </button>
                     ))}
                   </div>
                 )}
-                <div className="flex gap-8 justify-center">
-                  <RuneTree tree={runePage.primary} selected={runePage.selected} pctOf={runePage.pctOf} />
-                  <div className="border-l border-edge/40 pl-8 flex flex-col items-center gap-4">
+
+                {/*
+                  ÜÇ EŞİT SÜTUN. Önce "birincil ağaç | (ikincil ağaç + parçalar alt alta)"
+                  şeklinde iki sütundu: ikincil ağaç keystone satırı olmadığı için kısa
+                  kalıyor, sağda ve altta büyük boşluk oluşuyordu. Parçaları üçüncü sütuna
+                  almak yatay alanı doldurup dikey boşluğu kapatıyor.
+                */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-3">
+                  <div className="flex justify-center">
+                    <RuneTree tree={runePage.primary} selected={runePage.selected} pctOf={runePage.pctOf} />
+                  </div>
+                  <div className="flex justify-center md:border-x border-edge/40 md:px-2">
                     <RuneTree tree={runePage.secondary} selected={runePage.selected} pctOf={runePage.pctOf} skipKeystone />
-                    <div className="flex flex-col items-center gap-2.5 pt-4 mt-1 border-t border-edge/40">
-                      {SHARD_ROWS.map((row, ri) => (
-                        <div key={ri} className="flex items-center gap-2.5">
-                          {row.map((sh, ci) => (
-                            <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={24} title={sh.name} />
-                          ))}
-                        </div>
-                      ))}
-                    </div>
+                  </div>
+                  <div className="flex flex-col items-center gap-3">
+                    <span className="text-sm font-semibold text-gray-300 mb-1.5">İstatistik Parçaları</span>
+                    {SHARD_ROWS.map((row, ri) => (
+                      <div key={ri} className="flex items-center gap-3">
+                        {row.map((sh, ci) => (
+                          <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={30} title={sh.name} />
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </>
@@ -259,11 +273,20 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 )}
                 {items.boots.length > 0 && (
                   <div className={starters.length ? "pt-3 border-t border-edge/40" : ""}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] text-gray-400 font-medium">Çizme</span>
-                      <span className={`text-[10px] font-bold ${wrCls(items.boots[0].winRate)}`}>{items.boots[0].winRate}% WR</span>
+                    <span className="text-[11px] text-gray-400 font-medium block mb-2">Çizme Tercihleri</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {items.boots.map((b, i) => (
+                        <div key={i} className="flex items-center gap-2 rounded-md bg-edge/25 border border-edge/40 px-2 py-1.5"
+                          title={`%${b.pickRate} seçim · %${b.winRate} kazanma`}>
+                          <img src={b.icon} alt="" width={30} height={30}
+                            className="rounded-md border border-edge shrink-0" onError={hideOnError} />
+                          <div className="min-w-0">
+                            <div className={`text-xs font-bold leading-none ${wrCls(b.winRate)}`}>{b.winRate}%</div>
+                            <div className="text-[10px] text-gray-500 mt-1 leading-none">{b.pickRate}%</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <ItemRow items={items.boots} />
                   </div>
                 )}
                 {!starters.length && !items.boots.length && <ComingSoon>Başlangıç verisi henüz yok.</ComingSoon>}
@@ -368,23 +391,27 @@ function ItemPrimary({ it, version }) {
   );
 }
 
-/* Aynı slottaki alternatifler — kompakt satır. */
+/*
+  Aynı slottaki alternatifler. Önce 24px ikon + 9px yazıyla neredeyse görünmüyorlardı;
+  alternatif de bir KARAR (ör. rakip komposuna göre 3. eşya değişir), okunacak kadar
+  büyük olmalı — ama asıl tercihle karışmayacak kadar da sade.
+*/
 function ItemAlt({ it, version }) {
   return (
     <div
-      className="flex items-center gap-1.5 rounded-md bg-edge/20 border border-edge/30 px-1.5 py-1"
-      title={`${it.games} maç · %${it.pickRate} seçim`}
+      className="flex items-center gap-2 rounded-md bg-edge/25 border border-edge/40 px-2 py-1.5 transition-colors hover:bg-edge/40"
+      title={`${it.games} maç · %${it.pickRate} seçim · %${it.winRate} kazanma`}
     >
       <img
         src={itemIcon(version, it.key)}
         alt=""
-        width={24}
-        height={24}
-        className="rounded border border-edge shrink-0"
+        width={32}
+        height={32}
+        className="rounded-md border border-edge shrink-0"
         onError={hideOnError}
       />
-      <span className={`text-[11px] font-bold ${wrCls(it.winRate)}`}>{it.winRate}%</span>
-      <span className="text-[9px] text-gray-600 ml-auto tabular-nums">{it.pickRate}%</span>
+      <span className={`text-xs font-bold ${wrCls(it.winRate)}`}>{it.winRate}%</span>
+      <span className="text-[10px] text-gray-500 ml-auto tabular-nums">{it.pickRate}%</span>
     </div>
   );
 }
@@ -539,8 +566,12 @@ function RuneDot({ src, on, size = 28, title, pct, withLabel = false }) {
   const img = (
     <img src={src} alt={title || ""} title={pct != null ? `${title} · ${pct}%` : title || ""}
       width={size} height={size} onError={hideOnError}
-      className={`rounded-full transition ${on ? "" : "grayscale opacity-25"}`}
-      style={on ? { boxShadow: "0 0 0 2px rgba(96,165,250,.85)" } : undefined} />
+      // Seçili rün hafifçe büyür + halka/parıltı alır; seçilmeyen üzerine gelince
+      // biraz canlanır (tamamen ölü durmasın, ama dikkati de dağıtmasın).
+      className={`rounded-full transition-all duration-200 ${
+        on ? "hover:scale-110" : "grayscale opacity-25 hover:opacity-50"
+      }`}
+      style={on ? { boxShadow: "0 0 0 2px rgba(96,165,250,.85), 0 0 14px -2px rgba(96,165,250,.55)" } : undefined} />
   );
   if (!withLabel) return img;
   return (

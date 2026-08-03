@@ -166,7 +166,10 @@ export function groupRealItems(items = [], version) {
   const rest = rows.filter((r) => !BOOT_IDS.has(r.id) && r.completed !== false);
 
   return {
-    boots: boots.slice(0, 1),
+    // Çizme TERCİHLERİ: tek seçenek göstermek "alternatif yokmuş" izlenimi veriyordu;
+    // oysa çizme seçimi maça göre değişen gerçek bir karar (hız / dayanıklılık / sihir
+    // direnci). Tam build'de yine tek çizme yeterli — orası bir örnek dizilim.
+    boots: boots.slice(0, 4),
     core: rest.slice(0, 3),
     full: [...boots.slice(0, 1), ...rest.slice(0, 5)],
     situational: rest.slice(5, 9),
