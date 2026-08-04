@@ -18,9 +18,12 @@ import { profileIcon } from "@/lib/buildData";
   - Örnek veri uyarısı GERÇEK tooltip'te: `title` özniteliği tarayıcıya bağlı,
     geç çıkıyor ve stilsiz — kullanıcı görmedi bile.
 
-  ⚠ USTALIK PUANI ve LİG DERECESİ ÖRNEK VERİDİR (dev anahtar kotası). İsimden
-  türeyen sabit hash ile üretilir ki her yenilemede değişmesin. Gerçeğe geçerken
-  mockMastery/mockRank ve ipucu metinleri silinir.
+  ⚠ İKİ TABLO DA ŞU AN TAMAMEN ÖRNEK VERİ SAYILIR. Ustalık puanı ve lig derecesi
+  zaten üretiliyor (dev anahtar kotası); ama SIRALAMANIN KENDİSİ de gerçeği
+  yansıtmıyor: oyuncu havuzu yalnız bizim taradığımız maçlardan geliyor, TR'nin
+  tamamı taranmadı. Bu yüzden ipuçlarında "oyuncular gerçek" demiyoruz — kısmen
+  gerçek veriyi "gerçek sıralama" diye sunmak, tümüyle sahte veri sunmaktan daha
+  yanıltıcı olurdu. Gerçeğe geçerken mockMastery/mockRank + ipuçları silinir.
 */
 
 const MEDAL = ["text-amber-300", "text-slate-300", "text-orange-400"];
@@ -53,12 +56,9 @@ function mockMastery(name, games) {
   return Math.round(((games || 1) * 60000 * spread) / 1000) * 1000;
 }
 
-/** 3.247.000 → "3,2M" · 845.000 → "845B" (Türkçe: B = bin). */
-function fmtMastery(n) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")}M`;
-  if (n >= 1000) return `${Math.round(n / 1000)}B`;
-  return String(n);
-}
+/* Puan TAM yazılır (5.412.000), kısaltılmaz: "5,4M" hem yuvarlıyor hem
+   sıralamayı okunmaz kılıyordu (5,4M ile 5,4M arasında hangisi önde belli olmuyor). */
+const fmtMastery = (n) => n.toLocaleString("tr-TR");
 
 /** Örnek lig verisi: havuz Emerald+ olduğu için taban Emerald, tavan Challenger. */
 function mockRank(name, games, winRate) {
@@ -216,9 +216,9 @@ export default function ChampionTopPlayers({ players, version, championName }) {
           right="Ustalık puanı"
           tip={
             <>
-              Oyuncular ve sıralama gerçek maç verisinden gelir.{" "}
-              <b className="text-amber-300">Ustalık puanları örnek veridir</b> — Riot ustalık ucu prod anahtarla
-              bağlanınca gerçek değerlerle değişecek.
+              <b className="text-amber-300">Bu tablo şu an tamamen örnek veridir.</b> Ustalık puanları üretilmiştir;
+              üstelik oyuncu listesi de yalnız taradığımız maçlardan geldiği için TR&apos;nin gerçek ustalık
+              sıralaması değildir. Prod anahtarla gerçek veriye bağlanacak.
             </>
           }
         />
@@ -239,7 +239,7 @@ export default function ChampionTopPlayers({ players, version, championName }) {
                   <PlayerCell p={p} version={version} />
                   <TierCell ladder={p.ladder} />
                   <td className="py-2.5 pr-4 text-right">
-                    <span className="text-sm font-bold text-violet-300 tabular-nums" title={p.mastery.toLocaleString("tr-TR")}>
+                    <span className="text-sm font-bold text-violet-300 tabular-nums whitespace-nowrap">
                       {fmtMastery(p.mastery)}
                     </span>
                   </td>
@@ -257,9 +257,9 @@ export default function ChampionTopPlayers({ players, version, championName }) {
           right={`${championName} ile`}
           tip={
             <>
-              Oyuncular, maç sayıları ve kazanma oranları gerçektir.{" "}
-              <b className="text-amber-300">Lig dereceleri örnek veridir</b> — Riot league ucu prod anahtarla
-              bağlanınca gerçek değerlerle değişecek.
+              <b className="text-amber-300">Bu tablo şu an tamamen örnek veridir.</b> Lig dereceleri ve LP
+              üretilmiştir; oyuncu listesi de yalnız taradığımız maçlardan geldiği için TR sıralamasını
+              temsil etmez. Prod anahtarla gerçek veriye bağlanacak.
             </>
           }
         />
@@ -281,8 +281,8 @@ export default function ChampionTopPlayers({ players, version, championName }) {
                   <RankCell i={i} />
                   <PlayerCell p={p} version={version} />
                   <TierCell ladder={p.ladder} />
-                  <td className="py-2.5 px-2 text-right text-xs text-gray-300 tabular-nums">{p.ladder.lp}</td>
-                  <td className="py-2.5 px-2 text-right text-xs text-gray-300 tabular-nums">{p.games}</td>
+                  <td className="py-2.5 px-2 text-right text-sm text-gray-200 tabular-nums">{p.ladder.lp}</td>
+                  <td className="py-2.5 px-2 text-right text-sm text-gray-200 tabular-nums">{p.games}</td>
                   <td className={`py-2.5 pr-4 pl-2 text-right text-sm font-bold tabular-nums ${wrCls(p.winRate)}`}>
                     {p.winRate}%
                   </td>

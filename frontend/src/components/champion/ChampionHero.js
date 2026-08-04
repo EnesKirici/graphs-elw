@@ -89,8 +89,13 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
               {champ.name}
               {headingSuffix && <span className="text-gray-300"> {headingSuffix}</span>}
             </h1>
-            {/* Açık splash'lerde (ör. Kai'Sa) soluk gri okunmuyordu → daha güçlü gölge. */}
-            <p className="text-gray-200 italic text-sm md:text-base drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
+            {/* Açık splash'lerde (ör. Kai'Sa) soluk gri okunmuyordu → daha güçlü gölge.
+                "md:text-base" YOK: bu projede --color-base (bg-base/text-base) sayfa
+                zemin rengi için tanımlı — Tailwind'in yerleşik "base" boyut adıyla
+                çakışıyor, "text-base" boyut değil DOĞRUDAN o zemin rengini uyguluyor
+                (2026-08-04: Shyvana'da unvan yazısı bu yüzden görünmez oldu). Boyut için
+                keyfi değer (text-[1rem]) kullanılmalı. */}
+            <p className="text-white italic text-sm md:text-[1rem] drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
               {subtitle || champ.title}
             </p>
           </div>
