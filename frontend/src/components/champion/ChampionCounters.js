@@ -134,13 +134,27 @@ export default function ChampionCounters({ champName, champImage, champId, count
         guide={guide}
       />
 
-      {/* 3) Genel oynanış rehberi (elle yazılır, admin panelinden). */}
-      {guide?.play && (
-        <div className="glass rounded-xl px-4 sm:px-6 py-4">
-          <p className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: COL_GOOD }}>
-            {champName} nasıl oynanır?
-          </p>
-          <p className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-line">{guide.play}</p>
+      {/*
+        3) Rehber metinleri — kıyas panelinin SOL/SAĞ dilini sürdürür:
+           solda sayfanın şampiyonu, sağda seçili rakip. Eskiden eşleşme notu
+           kıyas panelinin İÇİNDE, genel metin ise apayrı bir kartta duruyordu;
+           ikisi aynı soruyu ("nasıl oynanır") yanıtladığı hâlde sayfanın iki
+           ayrı yerine dağılmıştı (kullanıcı "kötü yerleştirmişsin" dedi).
+           Yan yana koyunca "ben nasıl oynarım / ona karşı nasıl oynarım"
+           karşılaştırması doğrudan okunuyor.
+      */}
+      {(guide?.play || (picked && guide?.vs?.[picked.id])) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {guide?.play && (
+            <GuideCard title={`${champName} nasıl oynanır?`} color={COL_GOOD} text={guide.play} />
+          )}
+          {picked && guide?.vs?.[picked.id] && (
+            <GuideCard
+              title={`${picked.name} karşısında nasıl oynanır?`}
+              color={COL_BAD}
+              text={guide.vs[picked.id]}
+            />
+          )}
         </div>
       )}
 
@@ -297,7 +311,7 @@ function StripCard({ m, picked, onPick }) {
       onClick={() => onPick?.(m.id)}
       aria-pressed={picked}
       title={`${m.name} — ${m.games} maç · kıyas için seç`}
-      className={`group relative flex-1 min-w-[92px] max-w-[150px] shrink-0 rounded-lg overflow-hidden border bg-black text-left cursor-pointer transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-[var(--m)] hover:shadow-[0_10px_28px_-10px_var(--m)] ${
+      className={`group relative flex flex-col flex-1 min-w-[92px] max-w-[150px] shrink-0 rounded-lg overflow-hidden border bg-black text-left cursor-pointer transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-[var(--m)] hover:shadow-[0_10px_28px_-10px_var(--m)] ${
         picked ? "border-[var(--m)] -translate-y-1 shadow-[0_8px_24px_-10px_var(--m)]" : "border-edge/60"
       }`}
       style={{ "--m": col }}
@@ -310,18 +324,21 @@ function StripCard({ m, picked, onPick }) {
 
       {/* Yükseklik loading art'ın dikey oranına (308x560) yakın tutulur — yatay bir
           kutuya sıkıştırılırsa karakterin yüzü kırpılıyor. */}
-      <div className="relative h-[186px] overflow-hidden bg-black/40">
+      <div className="relative h-[186px] overflow-hidden bg-black">
         <img
           src={loadingArt(m.id)}
-          alt={m.name}
+          alt={`${m.name} — ${m.name} counter eşleşmesi`}
           loading="lazy"
           className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.12]"
           onError={artFallback(m.id)}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-transparent" />
 
-        {/* İsim, alttan gelen şeride yer açmak için yukarı kayar */}
-        <span className="absolute bottom-1.5 inset-x-0 px-1.5 text-center text-[11px] font-semibold text-white/95 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-transform duration-300 ease-out group-hover:-translate-y-[52px]">
+        {/* İsim hover'da SÖNER — çünkü aynı isim aşağıdan gelen şeridin başlığında
+            zaten var. Eskiden sabit -52px yukarı kaydırılıyordu; şerit yüksekliği
+            satır sayısına göre değiştiği için (3 ya da 4 satır) isim şeridin
+            kenarlığının ÜSTÜNE biniyordu (kullanıcı bildirdi). */}
+        <span className="absolute bottom-1.5 inset-x-0 px-1.5 text-center text-[11px] font-semibold text-white/95 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-opacity duration-200 group-hover:opacity-0">
           {m.name}
         </span>
 
@@ -330,50 +347,67 @@ function StripCard({ m, picked, onPick }) {
 
           ESKİDEN: kartı TAMAMEN kaplayan siyah panel fade-in oluyordu — şampiyon
           görseli kayboluyor, "kart arkaya dönüyor" hissi veriyordu (kullanıcı bu
-          davranışın kaldırılmasını istedi). ŞİMDİ: alttan yukarı kayan ince şerit.
-          Görsel görünür kalır, bilgi de kaybolmaz.
+          davranışın kaldırılmasını istedi). ŞİMDİ: alttan yukarı kayan şerit,
+          BAŞLIĞINDA şampiyon adıyla. Görsel görünür kalır, bilgi de kaybolmaz.
+
+          Zemin ALT BÖLÜMLE AYNI (bg-black): eskiden şerit bg-black/88, alt bölüm
+          düz siyahtı → aralarında görünür bir dikiş çizgisi oluşuyor ve tam
+          kazanma oranının üstünden geçiyordu (kullanıcı bunu işaretledi).
         */}
         {m.stats && (
           <div
-            className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out bg-black/88 backdrop-blur-[2px] border-t px-1.5 py-1.5 space-y-0.5"
+            className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out bg-black border-t px-1.5 pt-1 pb-1.5"
             style={{ borderColor: col }}
           >
-            <div className="flex items-baseline justify-between gap-1">
-              <span className="text-[8px] text-gray-500 uppercase tracking-wide">KDA</span>
-              <span className="text-[10px] font-bold text-gray-100 tabular-nums">
-                {m.stats.kda.k}/{m.stats.kda.d}/{m.stats.kda.a}
-              </span>
+            <p className="text-[11px] font-semibold text-white text-center truncate mb-1">{m.name}</p>
+            <div className="space-y-0.5">
+              <StatLine k="KDA" v={`${m.stats.kda.k}/${m.stats.kda.d}/${m.stats.kda.a}`} />
+              <StatLine k="KP" v={`%${m.stats.kp}`} />
+              <StatLine k="Hasar" v={`${(m.stats.dmg / 1000).toFixed(1)}k`} />
+              {m.lane15 && (
+                <StatLine
+                  k="15. dk"
+                  v={`${m.lane15.gd15 >= 0 ? "+" : ""}${m.lane15.gd15}`}
+                  cls={m.lane15.gd15 >= 0 ? "text-blue-300" : "text-red-400"}
+                />
+              )}
             </div>
-            <div className="flex items-baseline justify-between gap-1">
-              <span className="text-[8px] text-gray-500 uppercase tracking-wide">KP</span>
-              <span className="text-[10px] font-bold text-gray-100 tabular-nums">%{m.stats.kp}</span>
-            </div>
-            <div className="flex items-baseline justify-between gap-1">
-              <span className="text-[8px] text-gray-500 uppercase tracking-wide">Hasar</span>
-              <span className="text-[10px] font-bold text-gray-100 tabular-nums">{(m.stats.dmg / 1000).toFixed(1)}k</span>
-            </div>
-            {m.lane15 && (
-              <div className="flex items-baseline justify-between gap-1">
-                <span className="text-[8px] text-gray-500 uppercase tracking-wide">15. dk</span>
-                <span className={`text-[10px] font-bold tabular-nums ${m.lane15.gd15 >= 0 ? "text-blue-300" : "text-red-400"}`}>
-                  {m.lane15.gd15 >= 0 ? "+" : ""}{m.lane15.gd15}
-                </span>
-              </div>
-            )}
           </div>
         )}
       </div>
 
       {/* Maç sayısı 9px/gray-500'de okunmuyordu (kullanıcı bildirdi) — örneklem
-          büyüklüğü oranın ne kadar güvenilir olduğunu söyleyen ASIL bilgi, dipnot değil. */}
-      <div className="px-1.5 py-1.5 text-center">
+          büyüklüğü oranın ne kadar güvenilir olduğunu söyleyen ASIL bilgi, dipnot değil.
+          flex-1 + justify-center: kartlar eşit boya gerildiği için (items-stretch) rozeti
+          olmayan kartın altında koca bir boşluk kalıyordu; içerik artık ortalanıyor. */}
+      <div className="flex-1 flex flex-col justify-center px-1.5 py-1.5 text-center bg-black">
         <div className="text-sm font-bold tabular-nums leading-none" style={{ color: col }}>%{m.winRate}</div>
         <div className="text-[11px] font-medium text-gray-300 tabular-nums mt-1">{m.games} maç</div>
         {lane && (
-          <div className={`mt-1 text-[10px] font-semibold rounded px-1 py-0.5 border ${lane.cls}`}>{lane.text}</div>
+          <div className={`mt-1 mx-auto text-[10px] font-semibold rounded px-1 py-0.5 border ${lane.cls}`}>{lane.text}</div>
         )}
       </div>
     </button>
+  );
+}
+
+/* Elle yazılmış rehber metni kartı (nasıl oynanır / X karşısında nasıl oynanır). */
+function GuideCard({ title, color, text }) {
+  return (
+    <div className="glass rounded-xl px-4 sm:px-6 py-4 h-full">
+      <p className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color }}>{title}</p>
+      <p className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-line">{text}</p>
+    </div>
+  );
+}
+
+/* Hover şeridindeki tek satır: solda etiket, sağda değer. */
+function StatLine({ k, v, cls = "text-gray-100" }) {
+  return (
+    <div className="flex items-baseline justify-between gap-1">
+      <span className="text-[8px] text-gray-500 uppercase tracking-wide">{k}</span>
+      <span className={`text-[10px] font-bold tabular-nums ${cls}`}>{v}</span>
+    </div>
   );
 }
 

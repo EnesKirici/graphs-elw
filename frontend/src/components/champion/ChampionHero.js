@@ -62,9 +62,12 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
       <div className="pt-6 md:pt-10 pb-4 flex items-end gap-5 flex-wrap">
         {/* İkon çerçevesi dereceyi taşır: rol sıralamasındaki tier tek bakışta okunur. */}
         <div className="relative shrink-0">
+          {/* alt yalnız isim DEĞİL: Google Görseller alt metnini bağlam olarak
+              okuyor ve aynı ikon sitede onlarca yerde geçiyor — sayfanın konusunu
+              içeren alt, "locke ct" gibi aramalarda görselin eşleşme şansını artırır. */}
           <img
             src={champ.image}
-            alt={champ.name}
+            alt={activeCrumb ? `${champ.name} ${activeCrumb} — ${champ.name} şampiyon ikonu` : `${champ.name} şampiyon ikonu`}
             width={104}
             height={104}
             className="rounded-2xl border-2 shadow-2xl"

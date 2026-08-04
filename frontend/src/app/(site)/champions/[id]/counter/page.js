@@ -102,8 +102,14 @@ export async function generateMetadata({ params }) {
       description,
       url: `https://elwgraphs.com/champions/${id}/counter`,
       type: "article",
-      images: champ.splash ? [{ url: champ.splash, alt: name }] : undefined,
+      images: champ.splash ? [{ url: champ.splash, alt: `${name} counter rehberi` }] : undefined,
     },
+    // Görselin arama/paylaşım sonuçlarında ÇIKMASI için og:image tek başına yetmiyor;
+    // Twitter/X ve bazı toplayıcılar ayrı kart tipi istiyor. summary_large_image =
+    // küçük köşe ikonu değil, geniş görsel.
+    twitter: champ.splash
+      ? { card: "summary_large_image", title, description, images: [champ.splash] }
+      : undefined,
   };
 }
 
@@ -192,6 +198,32 @@ export default async function ChampionCounterPage({ params }) {
     allAliases.length ? `${allAliases.join(" / ")} olarak da aranır` : null,
   ].filter(Boolean);
 
+  /*
+    SAYFANIN BİRİNCİL GÖRSELİ — "locke ct" gibi bir aramada sonucun yanında
+    şampiyonun görselinin çıkabilmesi için. og:image sosyal paylaşım içindir;
+    arama motoru sayfanın ana görselini `primaryImageOfPage` ile ÖĞRENİR.
+    ImageObject ayrıca Google Görseller'de bağlamı (caption) taşır.
+    Not: bu YALNIZCA uygunluk sağlar — görselin gösterilip gösterilmeyeceğine
+    Google karar verir, garanti yoktur.
+  */
+  const pageLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `https://elwgraphs.com/champions/${id}/counter`,
+    name: `${champ.name} Counter`,
+    description: seoText || undefined,
+    inLanguage: "tr-TR",
+    primaryImageOfPage: {
+      "@type": "ImageObject",
+      contentUrl: champ.splash,
+      url: champ.splash,
+      caption: `${champ.name} counter — ${posLong ? `${posLong} ` : ""}eşleşme rehberi`,
+      representativeOfPage: true,
+    },
+    about: { "@type": "Thing", name: champ.name, image: champ.image },
+    isPartOf: { "@type": "WebSite", name: "ElwGraphs", url: "https://elwgraphs.com" },
+  };
+
   // Arama kırıntısı: Home › Şampiyonlar › Kai'Sa › Counter
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -206,6 +238,7 @@ export default async function ChampionCounterPage({ params }) {
 
   return (
     <div className="dpm-scope soft-scope min-h-screen relative overflow-hidden">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       {faq.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(faq)) }} />
