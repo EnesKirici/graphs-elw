@@ -621,7 +621,8 @@ class ChampionBuildService
         return $this->championNames;
     }
 
-    private function topPlayers(string $championId, int $limit = 6): array
+    /** Limit 10: sayfada iki ayrı sıralama var (ustalık / ladder), ilk 10 gösteriliyor. */
+    private function topPlayers(string $championId, int $limit = 10): array
     {
         $rows = ChampionTopPlayer::where('champion_id', $championId)
             ->whereNotNull('game_name')
