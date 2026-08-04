@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { gradeCls, gradeColor } from "@/components/champion/gradeStyle";
+import { gradeColor } from "@/components/champion/gradeStyle";
 
 // Riot sınıf tag'i → TR. Pozisyon → TR ("Bot" YOK: BOTTOM = ADC).
 const TAG_TR = { Fighter: "Dövüşçü", Tank: "Tank", Mage: "Büyücü", Assassin: "Suikastçi", Marksman: "Nişancı", Support: "Destek" };
@@ -72,8 +72,8 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
           />
           {grade && (
             <span
-              className={`absolute -bottom-2 -right-2 min-w-[26px] h-[26px] px-1 flex items-center justify-center rounded-lg bg-base/95 border text-sm font-extrabold leading-none ${gradeCls(grade)}`}
-              style={{ borderColor: gCol }}
+              className="absolute -bottom-2 -right-2 min-w-[26px] h-[26px] px-1 flex items-center justify-center rounded-lg bg-base/95 border text-sm font-extrabold leading-none"
+              style={{ borderColor: gCol, color: gCol }}
               title={`Rol sıralamasındaki derece: ${grade}`}
             >
               {grade}

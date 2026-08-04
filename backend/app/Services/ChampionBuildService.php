@@ -54,8 +54,8 @@ class ChampionBuildService
     public function getChampionBuild(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        // v7: trend serisi 3 günlük kayan pencereye geçti (tek günün ham oranı yerine).
-        $key = 'champion:build:v7:' . $championId . ':' . implode(',', $patches);
+        // v8: trend serisi koridor bazlı (rol seçimiyle birlikte değişir).
+        $key = 'champion:build:v8:' . $championId . ':' . implode(',', $patches);
 
         // TTL 10dk DEĞİL 2sa: bu veriyi besleyen stats:rebuild günde 3 kez koşuyor,
         // yani 10 dakikalık tazelik hiçbir zaman yeni bilgi getirmiyordu — sadece her
@@ -213,6 +213,9 @@ class ChampionBuildService
         $buildRows = ChampionBuild::where('champion_id', $championId)
             ->whereIn('patch', $patches)->get();
 
+        // 30 günlük seriler: 'ALL' + oynanan her koridor (tek sorgu).
+        $trends = $this->dailyTrends($championId);
+
         $byPosition = [];
         foreach ($shown as $p) {
             $pos = $p['position'];
@@ -278,6 +281,13 @@ class ChampionBuildService
             // Sapma = o rakibe karşı WR − şampiyonun bu roldeki genel WR'si.
             $cats['matchups'] = $this->matchupsFor($championId, $patches, $pos, (float) $p['winRate']);
 
+            // Seçili koridorun kendi 30 günlük serisi (yoksa anahtar hiç konmaz →
+            // frontend "bu rolde trend için yeterli maç yok" der, ALL'a düşmez:
+            // rol seçiliyken tüm rollerin ortalamasını göstermek yanlış olurdu).
+            if (isset($trends[$pos])) {
+                $cats['trend'] = $trends[$pos];
+            }
+
             $byPosition[$pos] = $cats;
         }
 
@@ -289,7 +299,7 @@ class ChampionBuildService
             'byPosition' => $byPosition,
             'spellMap'   => $this->spellMapForPairs($byPosition),
             'topPlayers' => $this->topPlayers($championId),
-            'trend'      => $this->dailyTrend($championId),
+            'trend'      => $trends['ALL'] ?? [],
         ];
     }
 
@@ -309,9 +319,15 @@ class ChampionBuildService
      * Gün ekseni stat_days'ten kurulur, şampiyon satırından değil: şampiyonun hiç
      * oynanmadığı bir gün pencereden düşerse seçim oranı yapay olarak yükselirdi.
      *
-     * @return array<array{day:string, games:int, winRate:float, pickRate:float, banRate:float}>
+     * KORİDOR BAŞINA seri döner ('ALL' + oynanan her pozisyon). Tek seri yeterli
+     * değildi: kullanıcı rolü değiştirince üstteki şerit MIDDLE'a göre "%46.8"
+     * derken grafik tüm rollerin toplamıyla "%44.9" diyordu — aynı kartta iki
+     * farklı kazanma oranı. Ban oranı ROLDEN BAĞIMSIZ (yasaklama seçim ekranında,
+     * rol belli değilken yapılır) → her seride 'ALL' satırından gelir.
+     *
+     * @return array<string, array<array{day:string, games:int, winRate:float, pickRate:float, banRate:float}>>
      */
-    private function dailyTrend(string $championId, int $days = 30): array
+    private function dailyTrends(string $championId, int $days = 30): array
     {
         $since = now()->subDays($days)->toDateString();
 
@@ -326,22 +342,45 @@ class ChampionBuildService
             return [];
         }
 
+        // Tek sorgu, tüm pozisyonlar (pozisyon başına ayrı sorgu atmaya değmez).
         $rows = DB::table('champion_daily_stats')
             ->where('champion_id', $championId)
-            ->where('position', 'ALL')
             ->where('day', '>=', $since)
-            ->get(['day', 'games', 'wins', 'bans'])
-            ->keyBy(fn ($r) => (string) $r->day);
+            ->get(['day', 'position', 'games', 'wins', 'bans']);
 
+        $byPos = [];
+        $bans = [];
+        foreach ($rows as $r) {
+            $day = (string) $r->day;
+            $byPos[(string) $r->position][$day] = $r;
+            if ($r->position === 'ALL') {
+                $bans[$day] = (int) $r->bans;
+            }
+        }
+
+        $out = [];
+        foreach ($byPos as $pos => $days_) {
+            $series = $this->trendSeries($totals, $days_, $bans);
+            if (count($series) >= 3) {
+                $out[$pos] = $series;
+            }
+        }
+
+        return $out;
+    }
+
+    /** Bir pozisyonun günlük satırlarını kayan pencereyle seriye çevirir. */
+    private function trendSeries($totals, array $daysRows, array $bans): array
+    {
         $series = [];
         foreach ($totals as $day => $total) {
-            $r = $rows[(string) $day] ?? null;
+            $r = $daysRows[(string) $day] ?? null;
             $series[] = [
                 'day'   => (string) $day,
                 'total' => (int) $total,
                 'games' => $r ? (int) $r->games : 0,
                 'wins'  => $r ? (int) $r->wins : 0,
-                'bans'  => $r ? (int) $r->bans : 0,
+                'bans'  => $bans[(string) $day] ?? 0,
             ];
         }
 

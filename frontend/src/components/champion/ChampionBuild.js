@@ -4,7 +4,7 @@ import { Fragment, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { pickRealRunePage, groupRealItems, itemIcon, profileIcon, runeIcon, runeIconById, shardIcon, TREE_TR, SHARD_ROWS } from "@/lib/buildData";
-import { gradeCls } from "@/components/champion/gradeStyle";
+import { gradeColor } from "@/components/champion/gradeStyle";
 import ChampionTrend from "@/components/champion/ChampionTrend";
 
 const ROLE_LABELS = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", SUPPORT: "Support" };
@@ -25,6 +25,8 @@ const wrCls = (wr) => (wr >= 52 ? "text-blue-300" : wr >= 49 ? "text-gray-200" :
 // Derece renkleri gradeStyle.js'te (tek kaynak) — şampiyon ikonu çerçevesi de aynısını kullanır.
 const SPELL_IDX = { Q: 0, W: 1, E: 2, R: 3 };
 const TL_MIN_SAMPLE = 20;
+/* Backend'in trend eşiği (TREND_MIN_WINDOW_GAMES) — kullanıcıya sebebi söylemek için. */
+const TREND_MIN_DAILY = 7;
 
 function Panel({ children, className = "" }) {
   return (
@@ -113,28 +115,31 @@ export default function ChampionBuild({ champion, version, runesData = [], build
 
   return (
     <div className="space-y-4">
-      {/* Üst özet kartı: derece + statlar (eşit bölünmüş) + rol/patch — TEK kart */}
+      {/* Üst özet kartı: rol seçici + derece/statlar + trend — TEK kart */}
       <div className="glass rounded-xl overflow-hidden">
-        <StatStrip pos={posInfo} roleLabel={ROLE_LABELS[role] || role} />
         {/*
-          Bağlam satırı — bilerek İNCE. Rol seçici YALNIZ birden fazla rolde çıkar:
-          tek rollü şampiyonda (ör. Samira %99 ADC) o buton yeni bilgi taşımıyor —
-          rol zaten hero rozetinde ve stat şeridinin etiketinde yazıyor — ama koca
-          bir satır harcıyordu.
+          ROL SEÇİCİ EN ÜSTTE. Önce stat şeridi ile trend grafiklerinin ARASINDA ince
+          bir satırdı: hem gözden kaçıyor hem de altındaki grafiklerin başlığıymış gibi
+          duruyordu. Oysa seçim kartın TAMAMINI (şerit + grafikler + rünler + eşyalar)
+          değiştiriyor — o yüzden kartın başlığı olmalı. Yalnız birden fazla rolde
+          çıkar; tek rollü şampiyonda (ör. Samira %99 ADC) satır hiç açılmaz.
         */}
-        {/* Rol seçici YALNIZ birden fazla rolde; tek rollü şampiyonda satır hiç açılmaz.
-            Kapsam bilgisi (Emerald+ / Patch) buradan ALINDI — kendi başına bir şerit gibi
-            durup ayrı bir kart izlenimi veriyordu; artık sayfa sonunda dipnot. */}
         {positions.length > 1 && (
-          <div className="border-t border-edge/40 px-4 py-1.5 flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1">
+          <div className="px-4 py-2.5 border-b border-edge/40 flex items-center gap-3 flex-wrap">
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider">Koridor</span>
+            <div className="flex items-center gap-1.5">
               {positions.map((p) => (
                 <button key={p.position} onClick={() => selectRole(p.position)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
-                    role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-hover"}`}>
-                  <img src={ROLE_ICON[p.position]} alt="" width={14} height={14} className={role === p.position ? "" : "opacity-70"} />
+                  title={`${p.games.toLocaleString("tr-TR")} maç · %${p.winRate} kazanma`}
+                  className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg border text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                    role === p.position
+                      ? "bg-blue-500/15 border-blue-400/40 text-white"
+                      : "bg-edge/20 border-edge/40 text-gray-400 hover:text-gray-200 hover:border-edge"}`}>
+                  <img src={ROLE_ICON[p.position]} alt="" width={18} height={18} className={role === p.position ? "" : "opacity-60"} />
                   {ROLE_LABELS[p.position] || p.position}
-                  <span className="text-[10px] text-gray-500">{p.share}%</span>
+                  <span className={`text-[10px] font-normal ${role === p.position ? "text-blue-300" : "text-gray-600"}`}>
+                    {p.share}%
+                  </span>
                 </button>
               ))}
             </div>
@@ -146,12 +151,24 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           </div>
         )}
 
+        <StatStrip pos={posInfo} roleLabel={ROLE_LABELS[role] || role} />
+
         {/*
           Son 30 günün gidişatı AYNI KARTIN İÇİNDE: üstteki şerit "şu an %46.9",
           buradaki eğriler "nasıl buraya geldi" — aynı üç sayının zaman hâli oldukları
-          için ayrı kartlara bölmek bilgiyi koparıyordu. Veri yoksa hiç render olmaz.
+          için ayrı kartlara bölmek bilgiyi koparıyordu.
+          Seri SEÇİLİ KORİDORA ait; o rolde yeterli günlük maç yoksa tüm rollerin
+          ortalamasına düşmek yerine dürüst bir not basılır (şerit MIDDLE derken
+          grafiğin ALL göstermesi aynı kartta iki farklı kazanma oranı demekti).
         */}
-        <ChampionTrend trend={build?.trend} />
+        {cats.trend?.length >= 3 || (positions.length === 1 && build?.trend?.length >= 3) ? (
+          <ChampionTrend trend={cats.trend?.length ? cats.trend : build.trend} />
+        ) : (
+          <p className="border-t border-edge/40 px-4 py-3 text-[11px] text-gray-600">
+            {ROLE_LABELS[role] || role} koridorunda günlük trend için yeterli maç yok —
+            eğriler ancak günde en az {TREND_MIN_DAILY} maç birikince çizilir.
+          </p>
+        )}
       </div>
 
       {/*
@@ -476,36 +493,64 @@ function ItemAlt({ it, version }) {
 /*
   Şampiyonun en çok oynayan oyuncuları (champion_top_players). Profil sayfalarına
   iç link verir — hem kullanıcı için gezinme hem site içi bağlantı değeri.
+
+  Serbest ızgara yerine SÜTUN BAŞLIKLI TABLO: sıra/maç/kazanma farklı hizalarda
+  yüzen sayılar olarak duruyordu, hangi sayının ne olduğu belli değildi. İlk üç
+  sıra madalya rengiyle ayrılır (liste bir sıralama, tablo bunu göstermeli).
 */
+const MEDAL = ["text-amber-300", "text-gray-300", "text-orange-400"];
+
 function TopPlayers({ players, version }) {
   if (!players?.length) {
     return <ComingSoon>Bu şampiyon için henüz yeterli oyuncu verisi toplanmadı.</ComingSoon>;
   }
+  const half = Math.ceil(players.length / 2);
+  const cols = players.length > 5 ? [players.slice(0, half), players.slice(half)] : [players];
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-0.5">
-      {players.map((p, i) => (
-        <Link
-          key={`${p.name}-${p.tag}`}
-          href={`/summoner/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag || "")}`}
-          className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-hover transition-colors"
-          title={`${p.name}#${p.tag} — ${p.games} maç`}
-        >
-          <span className="text-[10px] font-bold text-gray-600 w-3 text-center shrink-0">{i + 1}</span>
-          {p.profileIconId != null ? (
-            <img src={profileIcon(version, p.profileIconId)} alt="" width={26} height={26}
-              className="rounded-md border border-edge shrink-0" onError={hideOnError} />
-          ) : (
-            <span className="w-[26px] h-[26px] rounded-md bg-edge/50 border border-edge shrink-0" />
-          )}
-          <span className="text-xs text-gray-200 truncate flex-1 min-w-0">{p.name}</span>
-          {p.tier && (
-            <span className="text-[10px] text-gray-500 shrink-0 hidden sm:inline">
-              {p.tier.charAt(0) + p.tier.slice(1).toLowerCase()}{p.rank ? ` ${p.rank}` : ""}
-            </span>
-          )}
-          <span className="text-[10px] text-gray-500 tabular-nums shrink-0">{p.games}</span>
-          <span className={`text-xs font-bold tabular-nums w-11 text-right shrink-0 ${wrCls(p.winRate)}`}>{p.winRate}%</span>
-        </Link>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-1">
+      {cols.map((col, ci) => (
+        <table key={ci} className="w-full text-xs">
+          <thead>
+            <tr className="text-[10px] text-gray-600 uppercase tracking-wider">
+              <th className="font-medium text-left pb-1.5 w-8">#</th>
+              <th className="font-medium text-left pb-1.5">Oyuncu</th>
+              <th className="font-medium text-right pb-1.5 hidden sm:table-cell">Derece</th>
+              <th className="font-medium text-right pb-1.5 w-12">Maç</th>
+              <th className="font-medium text-right pb-1.5 w-14">Kazanma</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-edge/30">
+            {col.map((p, i) => {
+              const rank = ci * half + i;
+              return (
+                <tr key={`${p.name}-${p.tag}`} className="group hover:bg-hover transition-colors">
+                  <td className={`py-1.5 font-bold tabular-nums ${MEDAL[rank] || "text-gray-600"}`}>{rank + 1}</td>
+                  <td className="py-1.5">
+                    <Link
+                      href={`/summoner/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag || "")}`}
+                      className="flex items-center gap-2 min-w-0"
+                      title={`${p.name}#${p.tag}`}
+                    >
+                      {p.profileIconId != null ? (
+                        <img src={profileIcon(version, p.profileIconId)} alt="" width={24} height={24}
+                          className="rounded-md border border-edge shrink-0" onError={hideOnError} />
+                      ) : (
+                        <span className="w-6 h-6 rounded-md bg-edge/50 border border-edge shrink-0" />
+                      )}
+                      <span className="text-gray-200 truncate group-hover:text-white transition-colors">{p.name}</span>
+                    </Link>
+                  </td>
+                  <td className="py-1.5 text-right text-[10px] text-gray-500 hidden sm:table-cell">
+                    {p.tier ? `${p.tier.charAt(0)}${p.tier.slice(1).toLowerCase()}${p.rank ? ` ${p.rank}` : ""}` : "—"}
+                  </td>
+                  <td className="py-1.5 text-right text-gray-400 tabular-nums">{p.games}</td>
+                  <td className={`py-1.5 text-right font-bold tabular-nums ${wrCls(p.winRate)}`}>{p.winRate}%</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       ))}
     </div>
   );
@@ -527,7 +572,7 @@ function StatStrip({ pos, roleLabel }) {
   return (
     <div className="px-4 md:px-6 py-3.5 flex items-stretch">
       <div className="flex items-center gap-3 pr-4 md:pr-6 shrink-0">
-        <span className={`text-4xl md:text-5xl font-extrabold leading-none ${gradeCls(g)}`}>{g || "—"}</span>
+        <span className="text-4xl md:text-5xl font-extrabold leading-none" style={{ color: gradeColor(g) || "#6b7280" }}>{g || "—"}</span>
         <span className="text-[10px] text-gray-500 uppercase tracking-wider">derece</span>
       </div>
       <StripStat value={pos.rank ? `${pos.rank}/${pos.total}` : "—"} label={`${roleLabel} sırası`} />
