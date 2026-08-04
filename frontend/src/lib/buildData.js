@@ -61,6 +61,18 @@ const BOOT_IDS = new Set([
   773006, 773009, 773020, 773047, 773111, 773117, 773158,
 ]);
 
+/*
+  DESTEK EŞYASI zinciri: Dünya Atlası → Kadim Pusula → Dünyaların Ganimeti, sonra
+  dört bitiş seçeneğinden biri (Düşgetiren / Zaz'Zak / Gündönümü Kızağı / Kan Şarkısı).
+  Çizme gibi KENDİ kategorisi: destek oynayan herkes birini alır, o yüzden efsanevi
+  eşya sıralamasının içinde "1. eşya %33" diye görünmesi bilgi taşımıyordu — asıl
+  soru "hangi bitişi seçmişler". Ayrı bölümde oranlarıyla gösterilir.
+*/
+const SUPPORT_ITEM_IDS = new Set([
+  3865, 3866, 3867, // atlas → pusula → ganimet (ara aşamalar)
+  3869, 3870, 3871, 3876, 3877, // dört bitiş + eski varyant
+]);
+
 /** Rün id'sinin ikon yolunu ağaçlardan bulur (keystone seçenek çipleri için). */
 export function runeIconById(runesData, id) {
   for (const tree of runesData || []) {
@@ -184,17 +196,23 @@ export function groupRealItems(items = [], version, names = {}) {
     completed: it.completed,
   }));
   const boots = rows.filter((r) => BOOT_IDS.has(r.id));
+  const support = rows.filter((r) => SUPPORT_ITEM_IDS.has(r.id));
   // Bileşen/iksir gibi bitmemiş eşyalar build önerisine girmez (backend 'completed'
   // işaretler; işaret yoksa — eski önbellek — eleme yapılmaz ki sayfa boş kalmasın).
-  const rest = rows.filter((r) => !BOOT_IDS.has(r.id) && r.completed !== false);
+  const rest = rows.filter((r) => !BOOT_IDS.has(r.id) && !SUPPORT_ITEM_IDS.has(r.id) && r.completed !== false);
+
+  // Örnek dizilim envanteri 6 slot: çizme + (varsa destek eşyası) + kalanlar.
+  const head = [...boots.slice(0, 1), ...support.slice(0, 1)];
 
   return {
     // Çizme TERCİHLERİ: tek seçenek göstermek "alternatif yokmuş" izlenimi veriyordu;
     // oysa çizme seçimi maça göre değişen gerçek bir karar (hız / dayanıklılık / sihir
     // direnci). Tam build'de yine tek çizme yeterli — orası bir örnek dizilim.
     boots: boots.slice(0, 4),
+    // Destek eşyası bitişleri (yalnız destek oynayanlarda dolu olur).
+    support: support.slice(0, 4),
     core: rest.slice(0, 3),
-    full: [...boots.slice(0, 1), ...rest.slice(0, 5)],
+    full: [...head, ...rest.slice(0, Math.max(6 - head.length, 3))],
     situational: rest.slice(5, 9),
   };
 }

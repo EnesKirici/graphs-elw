@@ -77,8 +77,8 @@ class ChampionBuildService
     public function getChampionCounters(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        // v4: bot lane çapraz eşleşmeleri (crossCounters/crossStrong) eklendi.
-        $key = 'champion:counters:v4:' . $championId . ':' . implode(',', $patches);
+        // v5: her eşleşmeye rakip tarafının sayıları (opp) eklendi — kafa-kafaya kıyas tablosu.
+        $key = 'champion:counters:v5:' . $championId . ':' . implode(',', $patches);
 
         // TTL için gerekçe: yukarıdaki getChampionBuild ile aynı (stats:rebuild günde 3).
         // Counter hesabı daha ağır (pozisyon başına aynı-koridor + çapraz eşleşme).
@@ -474,6 +474,21 @@ class ChampionBuildService
         // Rakip adları (DDragon) — id görüntü için, name etiket için.
         $names = $this->championNames();
 
+        /*
+          KARŞI TARAFIN satırları — kafa-kafaya kıyas tablosu için (counter sayfası).
+          Şema her eşleşmeyi İKİ yönlü saklar (A-vs-B ve B-vs-A ayrı satır), bu yüzden
+          rakibin KDA/KP/hasarı gerçek veridir; aynadan türetilemez (yalnız @15 farkları
+          simetriktir). Rakip başına ayrı sorgu N+1 olurdu → hepsi TEK sorguda çekilip
+          champion_id'ye göre gruplanır.
+        */
+        $oppIds = $rows->pluck('opponent_id')->unique()->all();
+        $mirror = $oppIds ? ChampionMatchup::whereIn('champion_id', $oppIds)
+            ->whereIn('patch', $patches)
+            ->where('position', $oppPos ?? $pos)
+            ->where('opponent_id', $championId)
+            ->where('opponent_position', $pos)
+            ->get()->groupBy('champion_id') : collect();
+
         $mu = [];
         foreach ($rows->groupBy('opponent_id') as $opp => $rws) {
             $g = (int) $rws->sum('games');
@@ -485,25 +500,11 @@ class ChampionBuildService
 
             // Head-to-head detay: KDA/hasar/KP (payda n_stats, WR'nin games'inden ayrı —
             // prune'lu maçlarda ham detay yok). @15 koridor farkı (payda n15) — Faz B doldurur.
-            $n = (int) $rws->sum('n_stats');
-            $stats = $n > 0 ? [
-                'n'   => $n,
-                'kda' => [
-                    'k' => round($rws->sum('sum_kills') / $n, 1),
-                    'd' => round($rws->sum('sum_deaths') / $n, 1),
-                    'a' => round($rws->sum('sum_assists') / $n, 1),
-                ],
-                'kp'  => (int) round($rws->sum('sum_kp') / $n),
-                'dmg' => (int) round($rws->sum('sum_dmg') / $n),
-            ] : null;
+            $stats = $this->matchupStats($rws);
+            $lane15 = $this->matchupLane15($rws);
 
-            $n15 = (int) $rws->sum('n15');
-            $lane15 = $n15 > 0 ? [
-                'n'     => $n15,
-                'gd15'  => (int) round($rws->sum('sum_gd15') / $n15),
-                'csd15' => round($rws->sum('sum_csd15') / $n15, 1),
-                'xpd15' => (int) round($rws->sum('sum_xpd15') / $n15),
-            ] : null;
+            // Rakibin AYNI eşleşmedeki kendi sayıları (kıyas tablosunun sağ sütunu).
+            $oRws = $mirror[$opp] ?? null;
 
             $mu[] = [
                 'id'      => $opp,
@@ -513,6 +514,12 @@ class ChampionBuildService
                 'delta'   => round($wr - $posWinRate, 1),
                 'stats'   => $stats,   // {n, kda:{k,d,a}, kp, dmg} | null
                 'lane15'  => $lane15,  // {n, gd15, csd15, xpd15} | null (Faz B)
+                // Kafa-kafaya kıyas için rakip tarafı. winRate hesaplanmaz — tanım gereği
+                // 100 - bizimki (aynı maç kümesi); alan şişirilmesin diye gönderilmez.
+                'opp'     => $oRws ? [
+                    'stats'  => $this->matchupStats($oRws),
+                    'lane15' => $this->matchupLane15($oRws),
+                ] : null,
                 // Güven-ağırlıklı sapma — YALNIZ sıralama için (görüntülenen delta gerçek kalır).
                 '_conf'   => ($wr - $posWinRate) * $g / ($g + self::MATCHUP_CONF_K),
             ];
@@ -526,6 +533,50 @@ class ChampionBuildService
         unset($m);
 
         return $mu;
+    }
+
+    /**
+     * Matchup satır kümesinden KDA/KP/hasar ortalaması. Payda n_stats — games'ten AYRI,
+     * çünkü prune edilmiş maçlarda ham detay yok (WR sayılır, KDA sayılmaz).
+     * @param \Illuminate\Support\Collection<int, ChampionMatchup> $rws
+     */
+    private function matchupStats($rws): ?array
+    {
+        $n = (int) $rws->sum('n_stats');
+        if ($n <= 0) {
+            return null;
+        }
+
+        return [
+            'n'   => $n,
+            'kda' => [
+                'k' => round($rws->sum('sum_kills') / $n, 1),
+                'd' => round($rws->sum('sum_deaths') / $n, 1),
+                'a' => round($rws->sum('sum_assists') / $n, 1),
+            ],
+            'kp'  => (int) round($rws->sum('sum_kp') / $n),
+            'dmg' => (int) round($rws->sum('sum_dmg') / $n),
+        ];
+    }
+
+    /**
+     * 15. dakika koridor farkları (gold/cs/xp) — İŞARETLİ, negatif olabilir.
+     * Payda n15; timeline saklanmadığı için eski maçlar boş kalır (ileriye dönük dolar).
+     * @param \Illuminate\Support\Collection<int, ChampionMatchup> $rws
+     */
+    private function matchupLane15($rws): ?array
+    {
+        $n15 = (int) $rws->sum('n15');
+        if ($n15 <= 0) {
+            return null;
+        }
+
+        return [
+            'n'     => $n15,
+            'gd15'  => (int) round($rws->sum('sum_gd15') / $n15),
+            'csd15' => round($rws->sum('sum_csd15') / $n15, 1),
+            'xpd15' => (int) round($rws->sum('sum_xpd15') / $n15),
+        ];
     }
 
     /** Yanıttaki spell_pair'lerde geçen büyü id'leri için ad + görsel URL map'i. */

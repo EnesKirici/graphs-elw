@@ -44,8 +44,43 @@ function Section({ title, extra, children, className = "", bodyClassName = "" })
   );
 }
 
+/*
+  "Şu karardan hangisi?" grubu — çizme ve destek eşyası aynı kalıpta: her ikisi de
+  herkesin aldığı, ama hangisini aldığı maça göre değişen tekil bir seçim.
+  Eşya ADI yazılı: bu kutular ikon yığını değil, karşılaştırma listesi.
+*/
+function ItemChoiceGroup({ title, items, names = {}, divider }) {
+  return (
+    <div className={divider ? "pt-3 border-t border-edge/40" : ""}>
+      <span className="text-[11px] text-gray-400 font-medium block mb-2">{title}</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {items.map((it, i) => {
+          const name = it.name || names[String(it.id)];
+          return (
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded-lg bg-edge/20 border border-edge/40 px-2.5 py-2"
+              title={`${name ? name + " — " : ""}%${it.pickRate} seçim · %${it.winRate} kazanma`}
+            >
+              <img src={it.icon} alt={name || ""} width={34} height={34}
+                className="rounded-md border border-edge shrink-0" onError={hideOnError} />
+              <div className="min-w-0 flex-1">
+                {name && <div className="text-[10px] text-gray-300 leading-tight truncate">{name}</div>}
+                <div className="flex items-baseline gap-1.5 mt-0.5">
+                  <span className={`text-sm font-bold leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</span>
+                  <span className="text-[10px] text-gray-400 leading-none">{it.pickRate}%</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ComingSoon({ children }) {
-  return <p className="text-[11px] text-gray-600 leading-relaxed py-2">{children}</p>;
+  return <p className="text-[11px] text-gray-400 leading-relaxed py-2">{children}</p>;
 }
 
 /*
@@ -128,7 +163,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         {cats.trend?.length >= 3 || (positions.length === 1 && build?.trend?.length >= 3) ? (
           <ChampionTrend trend={cats.trend?.length ? cats.trend : build.trend} allTrend={build?.trend} />
         ) : (
-          <p className="border-t border-edge/40 px-4 py-3 text-[11px] text-gray-600">
+          <p className="border-t border-edge/40 px-4 py-3 text-[11px] text-gray-400">
             {ROLE_LABELS[role] || role} koridorunda günlük trend için yeterli maç yok —
             eğriler ancak günde en az {TREND_MIN_DAILY} maç birikince çizilir.
           </p>
@@ -156,7 +191,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             title="Rünler"
             extra={
             activeKeystone && (
-              <span className="text-[10px] text-gray-600">
+              <span className="text-[10px] text-gray-400">
                 {safeIdx === 0 ? "En popüler" : `${safeIdx + 1}. seçenek`} · {activeKeystone.pickRate}% pick · <b className={wrCls(activeKeystone.winRate)}>{activeKeystone.winRate}% WR</b>
               </span>
             )
@@ -212,7 +247,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                         belli değildi ve sütunun yarısı boştu. */}
                     {SHARD_ROWS.map((row, ri) => (
                       <div key={ri} className="w-full flex flex-col items-center gap-1">
-                        <span className="text-[10px] text-gray-600 uppercase tracking-wider">{SHARD_ROW_TR[ri]}</span>
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">{SHARD_ROW_TR[ri]}</span>
                         <div className="flex items-center gap-3">
                           {row.map((sh, ci) => (
                             <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={34} title={sh.name} />
@@ -234,7 +269,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           {/* Sihirdar büyüleri RÜNLERLE aynı sütunda: oyunda da ikisi aynı ekranda
               seçilir. Ayrıca sağ sütun soldan çok daha uzundu; bu bölüm sola geçince
               iki sütun neredeyse aynı boyda bitiyor ve geniş alanda çiftler sıkışmıyor. */}
-          <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
+          <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-400">WR · Seçim</span>}>
             {spellPairs.length ? (
               <div
                 className="grid gap-2"
@@ -271,7 +306,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           soldaki rün sütunuyla aynı çerçevede.
         */}
         <div className="lg:col-span-4 divide-y divide-edge/40 border-t lg:border-t-0 border-edge/40">
-            <Section title="Yetenek Sırası" extra={<span className="text-[10px] text-gray-600">Seçim · WR</span>}>
+            <Section title="Yetenek Sırası" extra={<span className="text-[10px] text-gray-400">Seçim · WR</span>}>
               {skillOrders.length ? (
                 <div className="space-y-3">
                   {skillOrders.slice(0, 2).map((o, idx) => (
@@ -286,7 +321,12 @@ export default function ChampionBuild({ champion, version, runesData = [], build
               )}
             </Section>
 
-            <Section title="Başlangıç & Çizme" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
+            {/* Başlık role göre: destek oynanan koridorda çizme yerine destek eşyası
+                asıl karardır, ikisi de varsa ikisi de listelenir. */}
+            <Section
+              title={items.support.length ? "Başlangıç & Destek Eşyası" : "Başlangıç & Çizme"}
+              extra={<span className="text-[10px] text-gray-400">WR · Seçim</span>}
+            >
               <div className="space-y-3">
                 {starters.length > 0 && (
                   <div className="space-y-2">
@@ -295,25 +335,28 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                     ))}
                   </div>
                 )}
-                {items.boots.length > 0 && (
-                  <div className={starters.length ? "pt-3 border-t border-edge/40" : ""}>
-                    <span className="text-[11px] text-gray-400 font-medium block mb-2">Çizme Tercihleri</span>
-                    <div className="grid grid-cols-2 gap-2">
-                      {items.boots.map((b, i) => (
-                        <div key={i} className="flex items-center gap-2 rounded-lg bg-edge/20 border border-edge/40 px-2.5 py-2"
-                          title={`%${b.pickRate} seçim · %${b.winRate} kazanma`}>
-                          <img src={b.icon} alt="" width={34} height={34}
-                            className="rounded-md border border-edge shrink-0" onError={hideOnError} />
-                          <div className="min-w-0">
-                            <div className={`text-sm font-bold leading-none ${wrCls(b.winRate)}`}>{b.winRate}%</div>
-                            <div className="text-[10px] text-gray-500 mt-1 leading-none">{b.pickRate}% seçim</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                {/* DESTEK EŞYASI — destek oynayan herkes zincirin sonunda dört bitişten
+                    birini seçer; asıl soru "hangisini". Efsanevi eşya sırasında
+                    "1. eşya %33" diye görünmesi bu kararı gizliyordu. */}
+                {items.support.length > 0 && (
+                  <ItemChoiceGroup
+                    title="Destek Eşyası"
+                    items={items.support}
+                    names={itemNames}
+                    divider={starters.length > 0}
+                  />
                 )}
-                {!starters.length && !items.boots.length && <ComingSoon>Başlangıç verisi henüz yok.</ComingSoon>}
+                {items.boots.length > 0 && (
+                  <ItemChoiceGroup
+                    title="Çizme Tercihleri"
+                    items={items.boots}
+                    names={itemNames}
+                    divider={starters.length > 0 || items.support.length > 0}
+                  />
+                )}
+                {!starters.length && !items.boots.length && !items.support.length && (
+                  <ComingSoon>Başlangıç verisi henüz yok.</ComingSoon>
+                )}
               </div>
             </Section>
         </div>
@@ -329,7 +372,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
       <Panel>
         <Section
           title="Eşya Sırası"
-          extra={<span className="text-[10px] text-gray-600">Tamamlanma sırasına göre · WR · seçim · maç</span>}
+          extra={<span className="text-[10px] text-gray-400">Tamamlanma sırasına göre · WR · seçim · maç</span>}
         >
           {itemSlots.length > 0 ? (
             <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
@@ -374,7 +417,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           aralarındaki ilişki ("şu 6'lı çıkıyor, şunlar duruma göre eklenir")
           okunmuyordu. Her eşya kendi kutusunda, ADIYLA birlikte.
         */}
-        <Section title="Tam Build" extra={<span className="text-[10px] text-gray-600">Seçim oranına göre · WR</span>}>
+        <Section title="Tam Build" extra={<span className="text-[10px] text-gray-400">Seçim oranına göre · WR</span>}>
           <div className="space-y-4">
             <div>
               <span className="text-[11px] text-gray-400 font-medium block mb-2">En Sık Tamamlanan</span>
@@ -388,7 +431,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
               <div className="pt-3 border-t border-edge/40">
                 <span className="text-[11px] text-gray-400 font-medium block mb-2">
                   Duruma Göre
-                  <span className="text-gray-600 font-normal ml-1.5">— maça göre çekirdek build'in yerine girer</span>
+                  <span className="text-gray-400 font-normal ml-1.5">— maça göre çekirdek build'in yerine girer</span>
                 </span>
                 <ItemCardRow items={items.situational} />
               </div>
@@ -402,7 +445,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
 
       {/* Kapsam bilgisi — üstte kendi başına bir şerit gibi durup ayrı kart izlenimi
           veriyordu; dipnot olarak burası doğru yeri. */}
-      <p className="text-[11px] text-gray-600 text-center pt-1">
+      <p className="text-[11px] text-gray-400 text-center pt-1">
         Tüm veriler Emerald+ dereceli maçlardan derlenir · Patch {(build.patches || []).join(" + ")}
       </p>
     </div>
@@ -431,7 +474,7 @@ function ItemPrimary({ it, version, names = {} }) {
       <div className="text-[10px] text-gray-500 mt-1.5 leading-none">
         {it.pickRate}% seçim
       </div>
-      <div className="text-[10px] text-gray-600 mt-1 leading-none tabular-nums">{(it.games ?? 0).toLocaleString("tr-TR")} maç</div>
+      <div className="text-[10px] text-gray-400 mt-1 leading-none tabular-nums">{(it.games ?? 0).toLocaleString("tr-TR")} maç</div>
     </div>
   );
 }
@@ -507,7 +550,7 @@ function SkillOrderRow({ o, champion, big }) {
                 className={`rounded-lg border ${big ? "border-blue-500/50" : "border-edge opacity-80"}`} onError={hideOnError} />
               <span className="absolute -bottom-1.5 -right-1.5 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-1 text-blue-300">{L}</span>
             </div>
-            {i < arr.length - 1 && <span className="text-gray-600 text-sm">›</span>}
+            {i < arr.length - 1 && <span className="text-gray-400 text-sm">›</span>}
           </Fragment>
         ))}
       </div>
@@ -634,7 +677,7 @@ function RuneDot({ src, on, size = 28, title, pct, withLabel = false }) {
   return (
     <div className="flex flex-col items-center" style={{ width: size + 6 }}>
       {img}
-      <span className={`text-[10px] mt-0.5 leading-none ${on ? "text-blue-300 font-semibold" : "text-gray-600"}`}>
+      <span className={`text-[10px] mt-0.5 leading-none ${on ? "text-blue-300 font-semibold" : "text-gray-400"}`}>
         {pct != null ? `${pct}%` : " "}
       </span>
     </div>

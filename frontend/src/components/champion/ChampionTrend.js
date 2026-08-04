@@ -98,7 +98,7 @@ function TrendChart({ trend, field, label, color, allRoles }) {
       <div className="flex items-center justify-between mb-2.5">
         <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">{label}</h3>
         <span
-          className="text-[10px] text-gray-600"
+          className="text-[10px] text-gray-400"
           title={
             allRoles
               ? "Her nokta son 3 günün toplamından hesaplanır. Yasaklama seçim ekranında yapılır — koridordan bağımsızdır, rol değiştirince değişmez."
@@ -123,7 +123,7 @@ function TrendChart({ trend, field, label, color, allRoles }) {
 
       <div className="relative">
         {/* Y ekseni etiketleri — hangi aralığa bakıldığı hep görünür olsun */}
-        <div className="absolute inset-y-0 left-0 flex flex-col justify-between text-[9px] text-gray-600 tabular-nums pointer-events-none">
+        <div className="absolute inset-y-0 left-0 flex flex-col justify-between text-[9px] text-gray-400 tabular-nums pointer-events-none">
           <span>%{Math.round(hi * 10) / 10}</span>
           <span>%{Math.round(lo * 10) / 10}</span>
         </div>
@@ -208,7 +208,7 @@ function TrendChart({ trend, field, label, color, allRoles }) {
         </div>
       </div>
 
-      <div className="flex justify-between text-[9px] text-gray-600 mt-1 ml-8">
+      <div className="flex justify-between text-[9px] text-gray-400 mt-1 ml-8">
         <span>{fmtDay(trend[0].day)}</span>
         <span>{fmtDay(trend[n - 1].day)}</span>
       </div>

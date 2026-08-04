@@ -5,6 +5,7 @@ import Link from "next/link";
 import { champIcon } from "@/lib/buildData";
 import { DD_ASSETS, DD_CDN } from "@/lib/ddragon";
 import { scoreColor } from "@/components/summoner/pro/scoreColor";
+import MatchupCompare from "@/components/champion/MatchupCompare";
 
 /*
   Counter sayfası — TEK okuma katmanı: splash şeritleri.
@@ -57,9 +58,12 @@ const artFallback = (id) => (e) => {
 
 const STRIP = 5; // şeritte her yönde kaç kart
 
-export default function ChampionCounters({ champName, champImage, champId, counters, version, duos }) {
+export default function ChampionCounters({ champName, champImage, champId, counters, version, duos, guide }) {
   const positions = counters?.positions || [];
   const [role, setRole] = useState(counters?.primaryPosition || positions[0]?.position);
+  // Kıyas tablosunda gösterilen eşleşme. null = "varsayılanı kullan" (en zorlu rakip):
+  // rol değişince seçim otomatik sıfırlansın diye id yerine null tutuluyor.
+  const [pickedId, setPickedId] = useState(null);
   const data = counters?.byPosition?.[role];
 
   if (!positions.length || !data) {
@@ -68,7 +72,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
         <p className="text-sm text-gray-200 font-medium">Henüz yeterli matchup verisi yok</p>
         <p className="text-xs text-gray-500 mt-2 leading-relaxed max-w-md mx-auto">
           {champName} için karşı koridor eşleşmeleri (rakip başına en az 10 maç) birikince
-          buradaki counter listeleri otomatik dolacak. <span className="text-gray-600">Düşük örneklem — veriler toplanma aşamasında.</span>
+          buradaki counter listeleri otomatik dolacak. <span className="text-gray-400">Düşük örneklem — veriler toplanma aşamasında.</span>
         </p>
       </div>
     );
@@ -79,6 +83,14 @@ export default function ChampionCounters({ champName, champImage, champId, count
   const stripGood = (data.strongInto || []).slice(0, STRIP);
   const stripBad = (data.counters || []).slice(0, STRIP).reverse();
 
+  // Kıyas tablosunun konusu. Varsayılan = EN ZORLU rakip: sayfaya "X counter" diye
+  // gelen ziyaretçinin ilk sorusu "beni kim yeniyor" — tablo o soruyla açılsın.
+  const stripAll = [...stripGood, ...stripBad];
+  const picked = stripAll.find((x) => x.id === pickedId)
+    || (data.counters || [])[0]
+    || stripAll[0]
+    || null;
+
   return (
     <div className="space-y-4">
       {/* Rol filtresi */}
@@ -87,7 +99,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
           {positions.map((p) => (
             <button
               key={p.position}
-              onClick={() => setRole(p.position)}
+              onClick={() => { setRole(p.position); setPickedId(null); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
               }`}
@@ -99,12 +111,41 @@ export default function ChampionCounters({ champName, champImage, champId, count
         </div>
       )}
 
-      {/* 1) Splash şeridi — tek bakışta özet */}
+      {/* 1) Splash şeridi — tek bakışta özet. Kart TIKLANINCA altındaki kıyas
+             tablosunu değiştirir (başka sayfaya GİTMEZ). */}
       {(stripGood.length > 0 || stripBad.length > 0) && (
-        <MatchupStrip good={stripGood} bad={stripBad} champName={champName} />
+        <MatchupStrip
+          good={stripGood}
+          bad={stripBad}
+          champName={champName}
+          pickedId={picked?.id}
+          onPick={setPickedId}
+        />
       )}
 
-      {/* 2) Alt koridor 2v2: karşı SUPPORT etkisi + aynı takım sinerjisi.
+      {/* 2) Seçili eşleşmenin kafa-kafaya kıyası — şeridin "ne kadar" sorusunun
+             ardından "neden" sorusunu yanıtlar. */}
+      <MatchupCompare
+        champId={champId}
+        champName={champName}
+        champImage={champImage}
+        m={picked}
+        version={version}
+        guide={guide}
+        patches={counters.patches}
+      />
+
+      {/* 3) Genel oynanış rehberi (elle yazılır, admin panelinden). */}
+      {guide?.play && (
+        <div className="glass rounded-xl px-4 sm:px-6 py-4">
+          <p className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: COL_GOOD }}>
+            {champName} nasıl oynanır?
+          </p>
+          <p className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-line">{guide.play}</p>
+        </div>
+      )}
+
+      {/* 4) Alt koridor 2v2: karşı SUPPORT etkisi + aynı takım sinerjisi.
              Aynı koridor düellosu (ADC↔ADC) hikâyenin yarısı; bir Nautilus/Blitzcrank
              eşleşmesi karşı ADC kadar belirleyici olabiliyor. */}
       <BotLaneSection
@@ -114,19 +155,13 @@ export default function ChampionCounters({ champName, champImage, champId, count
         champName={champName}
         version={version}
       />
-
-      <p className="text-[11px] text-gray-500 leading-relaxed">
-        Yüzdeler {champName} tarafının o eşleşmedeki kazanma oranıdır (kalanı rakibin). Rakip başına en az 10 maç.
-        Sıralama yalnız orana değil maç sayısına da göre ağırlıklandırılır — az örneklemli uç oranlar listeyi yanıltmaz.
-        Karta gelince o eşleşmenin KDA / katılım / hasar detayı açılır. Emerald+ · Patch {(counters.patches || []).join(" + ")}.
-      </p>
     </div>
   );
 }
 
 /* Yatay splash şeridi: sol uç en rahat (mavi) → sağ uç en zorlu (kırmızı). */
 function MatchupStrip({
-  good, bad, champName, heading, subtitle, footer,
+  good, bad, champName, heading, subtitle, footer, pickedId, onPick,
   goodLabel = "Rahat eşleşmeler", badLabel = "Zorlu rakipler",
 }) {
   return (
@@ -154,11 +189,11 @@ function MatchupStrip({
           </div>
 
           <div className="flex items-stretch gap-2 px-4 py-4 overflow-x-auto">
-            {good.map((m) => <StripCard key={`g-${m.id}`} m={m} />)}
+            {good.map((m) => <StripCard key={`g-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} />)}
             {good.length > 0 && bad.length > 0 && (
               <div className="shrink-0 self-stretch w-px bg-edge/60 mx-1.5" aria-hidden />
             )}
-            {bad.map((m) => <StripCard key={`b-${m.id}`} m={m} />)}
+            {bad.map((m) => <StripCard key={`b-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} />)}
           </div>
         </>
       )}
@@ -192,7 +227,7 @@ function BotLaneSection({ data, duos, role, champName, version }) {
     <div className="border-t border-edge/40 px-4 py-3.5">
       <p className="text-[11px] font-bold uppercase tracking-wide mb-2.5" style={{ color: COL_GOOD }}>
         {champName} Best Duos
-        <span className="font-normal normal-case tracking-normal text-gray-600"> — aynı takımdaki en iyi {mateLabel} eşleri</span>
+        <span className="font-normal normal-case tracking-normal text-gray-400"> — aynı takımdaki en iyi {mateLabel} eşleri</span>
       </p>
       <div className="flex gap-2 overflow-x-auto">
         {duoList.map((d) => <DuoCard key={d.champion} d={d} version={version} />)}
@@ -234,7 +269,7 @@ function DuoCard({ d, version }) {
       <div className="min-w-0">
         <div className="text-[11px] font-medium text-gray-200 truncate max-w-[100px]">{d.name}</div>
         <div className="text-[10px] tabular-nums" style={{ color: col }}>
-          %{d.adjWr} <span className="text-gray-600">· {d.games} maç</span>
+          %{d.adjWr} <span className="text-gray-400">· {d.games} maç</span>
         </div>
       </div>
     </Link>
@@ -242,19 +277,30 @@ function DuoCard({ d, version }) {
 }
 
 /* Tek kart: dikey karakter görseli + kazanma oranı + maç sayısı (+ koridor etiketi). */
-function StripCard({ m }) {
+function StripCard({ m, picked, onPick }) {
   const col = wrColor(m.winRate);
   const lane = laneTag(m);
 
   return (
-    <Link
-      href={`/champions/${m.id}/counter`}
-      title={`${m.name} — ${m.games} maç`}
-      /*
-        HOVER: kart yukarı kalkar + çerçeve eşleşme renginde parlar. Renk inline
-        değişken üzerinden veriliyor çünkü her kartta farklı (Tailwind sınıfı üretilemez).
-      */
-      className="group relative flex-1 min-w-[92px] max-w-[150px] shrink-0 rounded-lg overflow-hidden border border-edge/60 transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-[var(--m)] hover:shadow-[0_10px_28px_-10px_var(--m)]"
+    /*
+      LINK DEĞİL, DÜĞME. Eskiden karta tıklayınca rakibin counter sayfasına gidiliyordu;
+      tıklama anında sayfa geçişi başlarken kart hem yukarı kalkıyor hem saydamlaşıyor,
+      altındaki splash görseli sızıyordu ve bozuk duruyordu (kullanıcı bildirdi).
+      Artık tıklama SAYFADA KALIR: alttaki kıyas tablosunun konusunu seçer. Rakibin
+      sayfasına giden iç link kıyas tablosunun başlığında duruyor (SEO kaybı yok).
+
+      bg-black: kartın kendi yüzeyi OPAK olmalı. Panel `.glass` ve kullanıcı "saydam
+      kartlar" tercihini açtığında %52'ye kadar iniyor — yarı saydam bir kart yüzeyi
+      arkasındaki splash'i geçiriyordu.
+    */
+    <button
+      type="button"
+      onClick={() => onPick?.(m.id)}
+      aria-pressed={picked}
+      title={`${m.name} — ${m.games} maç · kıyas için seç`}
+      className={`group relative flex-1 min-w-[92px] max-w-[150px] shrink-0 rounded-lg overflow-hidden border bg-black text-left cursor-pointer transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-[var(--m)] hover:shadow-[0_10px_28px_-10px_var(--m)] ${
+        picked ? "border-[var(--m)] -translate-y-1 shadow-[0_8px_24px_-10px_var(--m)]" : "border-edge/60"
+      }`}
       style={{ "--m": col }}
     >
       {/* Üstte durumu tek bakışta veren renk şeridi — hover'da kalınlaşır */}
@@ -321,14 +367,14 @@ function StripCard({ m }) {
 
       {/* Maç sayısı 9px/gray-500'de okunmuyordu (kullanıcı bildirdi) — örneklem
           büyüklüğü oranın ne kadar güvenilir olduğunu söyleyen ASIL bilgi, dipnot değil. */}
-      <div className="px-1.5 py-1.5 text-center bg-black/35">
+      <div className="px-1.5 py-1.5 text-center">
         <div className="text-sm font-bold tabular-nums leading-none" style={{ color: col }}>%{m.winRate}</div>
         <div className="text-[11px] font-medium text-gray-300 tabular-nums mt-1">{m.games} maç</div>
         {lane && (
           <div className={`mt-1 text-[10px] font-semibold rounded px-1 py-0.5 border ${lane.cls}`}>{lane.text}</div>
         )}
       </div>
-    </Link>
+    </button>
   );
 }
 

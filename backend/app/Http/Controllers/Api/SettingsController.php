@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
+use App\Services\ChampionGuideService;
 use App\Services\MetaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -67,7 +68,7 @@ class SettingsController extends Controller
             'meta_insufficient_mode', 'labels_config', 'meta_keep_patches', 'slider_new_champion',
             'worker_enabled', 'worker_tiers', 'worker_collect_since', 'worker_scan_mode',
             'worker_match_budget', 'worker_players', 'worker_user_yield', 'worker_queue_ceiling',
-            'seo_overrides',
+            'seo_overrides', ChampionGuideService::SETTING_KEY,
         ];
 
         if (!in_array($key, $allowed)) {
@@ -103,6 +104,15 @@ class SettingsController extends Controller
         } elseif ($key === 'seo_overrides') {
             // Tüm alanlar silinerek varsayılana dönülebilsin diye boş obje de geçerli
             $request->validate(['value' => 'present|array']);
+        } elseif ($key === ChampionGuideService::SETTING_KEY) {
+            // { "Shyvana": { play: "...", vs: { "Talon": "..." } } } — tüm rehber silinebilsin
+            // diye boş obje geçerli. Uzunluk sınırı: sayfada okunacak metin, roman değil.
+            $request->validate([
+                'value'         => 'present|array',
+                'value.*.play'  => 'nullable|string|max:4000',
+                'value.*.vs'    => 'nullable|array',
+                'value.*.vs.*'  => 'nullable|string|max:4000',
+            ]);
         } elseif ($key === 'worker_tiers') {
             $available = config('elwgraphs.worker.tiers_available', []);
             $request->validate(['value' => 'present|array']);
@@ -116,6 +126,11 @@ class SettingsController extends Controller
         // Meta modu/penceresi/yeni-şampiyon değişince ana sayfa dashboard cache'ini tazele.
         if (in_array($key, ['meta_insufficient_mode', 'meta_keep_patches', 'slider_new_champion'], true)) {
             Cache::forget(MetaService::DASHBOARD_STATS_CACHE_KEY);
+        }
+
+        // Rehber metni değişince counter sayfası bayat metin göstermesin.
+        if ($key === ChampionGuideService::SETTING_KEY) {
+            app(ChampionGuideService::class)->forget();
         }
 
         return response()->json([

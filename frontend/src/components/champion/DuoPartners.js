@@ -31,7 +31,7 @@ function Row({ d, version }) {
         className="rounded-md border border-edge"
       />
       <span className="text-sm text-gray-200 flex-1 truncate">{d.champion}</span>
-      <span className="text-[10px] text-gray-600 tabular-nums">{d.games} maç</span>
+      <span className="text-[10px] text-gray-400 tabular-nums">{d.games} maç</span>
       <span
         className={`text-xs font-bold tabular-nums w-[46px] text-right ${wrColor(d.adjWr)}`}
         title={`Gözlenen WR %${pct(d.winRate).replace("%", "")} · ayarlı (örneklem-duyarlı)`}
@@ -54,7 +54,7 @@ export default function DuoPartners({ duos, version }) {
     <div className="glass rounded-xl overflow-hidden">
       <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">En İyi Duo Partnerleri</h3>
-        <span className="text-[10px] text-gray-600">ayarlı WR</span>
+        <span className="text-[10px] text-gray-400">ayarlı WR</span>
       </div>
       <div className="divide-y divide-edge/30">
         {sections.map((sec) => (

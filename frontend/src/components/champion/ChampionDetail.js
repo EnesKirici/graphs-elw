@@ -22,7 +22,7 @@ export default function ChampionDetail({ champ, version, duos, isClassic = false
           <div className="glass rounded-xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-200">İpuçları</h3>
-              <span className="text-[10px] text-gray-600 italic">Riot verisi — güncel olmayabilir</span>
+              <span className="text-[10px] text-gray-400 italic">Riot verisi — güncel olmayabilir</span>
             </div>
             <div className="p-4 space-y-4">
               {champ.allytips?.length > 0 && (
@@ -74,7 +74,7 @@ export default function ChampionDetail({ champ, version, duos, isClassic = false
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-gray-100">{champ.passive.name}</p>
-                  <span className="text-[9px] text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">Pasif</span>
+                  <span className="text-[9px] text-gray-400 bg-gray-800 px-1.5 py-0.5 rounded">Pasif</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: champ.passive.description }} />
               </div>

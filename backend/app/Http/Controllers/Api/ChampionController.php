@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\ChampionBuildService;
+use App\Services\ChampionGuideService;
 use App\Services\ChampionStatsService;
 use App\Services\RiotApi\DataDragonService;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +15,7 @@ class ChampionController extends Controller
         private DataDragonService $ddragon,
         private ChampionStatsService $stats,
         private ChampionBuildService $build,
+        private ChampionGuideService $guides,
     ) {}
 
     /**
@@ -150,6 +152,9 @@ class ChampionController extends Controller
             // ADC+Support sinerjisi (aynı takım) — çapraz eşleşmenin (karşı takım)
             // tamamlayıcısı: "kiminle güçlü" ve "kime karşı zorlanır" yan yana okunur.
             'duos' => $this->stats->getBestPartners($id),
+            // Elle yazılan rehber metinleri (nasıl oynanır + eşleşmeye özel notlar).
+            // Sayılar "ne oluyor"u söyler, bu metinler "ne yapmalısın"ı — veriden çıkmaz.
+            'guide' => $this->guides->forChampion($id),
         ]);
     }
 

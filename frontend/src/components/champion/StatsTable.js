@@ -91,7 +91,7 @@ export default function StatsTable({ stats }) {
               key={l}
               onClick={() => setLevel(l)}
               className={`text-[10px] px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                level === l ? "bg-blue-500/20 text-blue-400" : "text-gray-600 hover:text-gray-400"
+                level === l ? "bg-blue-500/20 text-blue-400" : "text-gray-400 hover:text-gray-400"
               }`}
             >
               Lv.{l}

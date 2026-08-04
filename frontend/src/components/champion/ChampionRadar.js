@@ -47,7 +47,7 @@ export default function ChampionRadar({ info, source }) {
         <h3 className="text-sm font-semibold text-gray-200">Şampiyon Profili</h3>
         {source === "client" && (
           <span
-            className="text-[10px] text-gray-600 italic"
+            className="text-[10px] text-gray-400 italic"
             title="Riot bu şampiyon için saldırı/savunma/büyü/zorluk değerlerini yayınlamıyor; değerler oyun istemcisindeki şampiyon seçim barlarından (hasar / dayanıklılık / zorluk) türetildi."
           >
             oyun istemcisi verisi

@@ -34,7 +34,7 @@ export default function RoleSelector({ positions, role, onRole, lowSample }) {
           >
             <img src={ROLE_ICON[p.position]} alt="" width={18} height={18} className={role === p.position ? "" : "opacity-60"} />
             {ROLE_LABELS[p.position] || p.position}
-            <span className={`text-[10px] font-normal ${role === p.position ? "text-blue-300" : "text-gray-600"}`}>
+            <span className={`text-[10px] font-normal ${role === p.position ? "text-blue-300" : "text-gray-400"}`}>
               {p.share}%
             </span>
           </button>

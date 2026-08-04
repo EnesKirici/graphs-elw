@@ -15,7 +15,7 @@ const POS_CHIP = "text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/15 te
   Yalnız BİRİNCİL sınıf gösterilir (Riot'un ikincil tag'i kafa karıştırıyordu:
   MissFortune "Büyücü" gibi). activeCrumb → breadcrumb'a ek kırıntı (ör. "Counter").
 */
-export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, subtitle, grade, summary }) {
+export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, subtitle, grade, summary, extraChips }) {
   // Yetenekler: pasif + Q/W/E/R. DDragon spells sırası zaten Q,W,E,R.
   const keys = ["Q", "W", "E", "R"];
   const abilities = [
@@ -111,6 +111,13 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
                 <span key={pos} className={POS_CHIP}>{POS_TR[pos] || pos}{rate != null && ` ${rate}%`}</span>
               );
             })}
+            {/* Sayfaya özel ek bağlam (ör. counter sayfasında patch + takma adlar).
+                Çip olarak basılır çünkü H1'in YANINA italik metin sıkıştırmak
+                hizasız duruyordu (kullanıcı bildirdi): başlık 5xl, metin sm →
+                aynı satırda ortak bir taban çizgisi tutturamıyorlar. */}
+            {extraChips?.map((c) => (
+              <span key={c} className={CLASS_CHIP}>{c}</span>
+            ))}
           </div>
 
           {/* Yetenekler — tanıtım amaçlı (P/Q/W/E/R). Detay tab'ındaki tam açıklamanın
