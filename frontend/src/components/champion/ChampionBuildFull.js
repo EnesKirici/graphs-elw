@@ -53,12 +53,17 @@ function wilsonLower(winRate, games) {
   return Math.max(0, (center - margin) / denom);
 }
 
-/** Listeden istatistiksel olarak en güvenilir yüksek oranı verir (yoksa null). */
-function bestOf(list) {
+/**
+ * Listeden istatistiksel olarak en güvenilir yüksek oranı verir (yoksa null).
+ * `taken`: daha önce seçilmiş anahtarlar — aynı eşya iki slotta önerilemez.
+ * (İlk sürüm bunu gözetmiyordu ve Akshan'da 2. ve 3. eşya olarak aynı Ebedi
+ * Kılıç çıkıyordu; efsanevi eşyalar tekildir, o dizilim oyunda kurulamaz.)
+ */
+function bestOf(list, taken) {
   const rows = list || [];
   const total = rows.reduce((s, r) => s + (r.games || 0), 0);
   const min = Math.max(MIN_GAMES_FLOOR, Math.round(total * MIN_SHARE));
-  const ok = rows.filter((r) => (r.games ?? 0) >= min);
+  const ok = rows.filter((r) => (r.games ?? 0) >= min && !(taken && taken.has(String(r.key))));
   if (!ok.length) return null;
   return ok.reduce((a, b) => (wilsonLower(b.winRate, b.games) > wilsonLower(a.winRate, a.games) ? b : a));
 }
@@ -146,14 +151,27 @@ export default function ChampionBuildFull({ champion, version, runesData = [], b
     : [];
   const fullItems = cats.item_full || [];
 
-  // Önerilen build — her karar için güven ağırlıklı en iyi seçenek.
-  const best = useMemo(() => ({
-    keystone: bestOf(keystones),
-    spell: bestOf(spellPairs),
-    skill: bestOf(skillOrders),
-    starter: bestOf(starters),
-    slots: slots.map(({ n, list }) => ({ n, pick: bestOf(list) })).filter((s) => s.pick),
-  }), [keystones, spellPairs, skillOrders, starters, slots]);
+  // Önerilen build — her karar için güven alt sınırı en yüksek seçenek.
+  // Eşya yolu SIRAYLA ilerler ve seçilenler `taken`'a düşer: aynı efsanevi eşya
+  // iki farklı slotta önerilemez, o dizilim oyunda kurulamaz.
+  const best = useMemo(() => {
+    const taken = new Set();
+    const picked = [];
+    for (const { n, list } of slots) {
+      const pick = bestOf(list, taken);
+      if (pick) {
+        taken.add(String(pick.key));
+        picked.push({ n, pick });
+      }
+    }
+    return {
+      keystone: bestOf(keystones),
+      spell: bestOf(spellPairs),
+      skill: bestOf(skillOrders),
+      starter: bestOf(starters),
+      slots: picked,
+    };
+  }, [keystones, spellPairs, skillOrders, starters, slots]);
 
   const bestWR = useMemo(() => {
     const picks = [best.keystone, best.spell, best.skill, best.starter, ...best.slots.map((s) => s.pick)].filter(Boolean);
