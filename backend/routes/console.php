@@ -75,17 +75,25 @@ Schedule::command('matches:collect')->everyMinute()->when($workerOn)->withoutOve
 // Eski maçların timeline istatistikleri (skill_order/starter/item_slot) — bütçeli backfill;
 // stok bitince turlar "bekleyen yok" ile anında biter (maliyetsiz).
 Schedule::command('timelines:backfill')->everyTenMinutes()->when($workerOn)->withoutOverlapping(15);
-// Kuyruğu işle; boşsa anında çıkar. worker_enabled'dan BAĞIMSIZ.
+// KUYRUK İŞÇİLERİ — İKİ AYRI SÜREÇ, TEK İŞÇİDE İKİ KUYRUK DEĞİL.
+// worker_enabled'dan BAĞIMSIZ; boş kuyrukta anında çıkarlar (maliyetsiz).
 //
-// KUYRUK SIRASI ÖNEMLİ: profiles ÖNCE, default sonra. Laravel listedeki kuyrukları
-// sırayla boşaltır, yani KULLANICI bekleten iş (soğuk profil build'i) arka plan maç
-// yığınının önüne geçer. Tek kuyrukken (2026-08-04) 21.144 maç işinin arkasında 1.390
-// profil işi bekliyordu — üstelik build kendini round+1 ile yeniden kuyruğa attığı
-// için her tur yığının ARKASINA düşüyordu: 15 dk'lık "season:building" koruması
-// dolup yeni ziyaret yeni zincir başlatıyor, tek profil için 158 mükerrer iş
-// birikiyordu. Ayrı kuyrukta round'lar saniyeler içinde döner → mükerrer oluşmaz.
+// Neden ayrıldı: profil build'i (KULLANICI bekletir) ile maç işleme (arka plan)
+// tek kuyrukta FIFO'ydu; build 21.144 maç işinin arkasına düşüyor, kendini round+1
+// ile yeniden kuyruğa attığı için her tur yine EN ARKAYA gidiyordu. 15 dk'lık
+// "season:building" koruması dolunca sonraki ziyaret yeni zincir başlatıyordu →
+// tek puuid için 158 mükerrer iş (2026-08-04: 1.390 iş / 374 hedef).
 //
-// max-time=480 (8 dk) → kilit 15 dk: sürecin gerçek ömrünün üstünde ama çökme
-// bedeli 24 saat değil çeyrek saat.
-Schedule::command('queue:work --queue=profiles,default --stop-when-empty --max-time=480 --tries=3')
+// Ama TEK işçiye `--queue=profiles,default` vermek de YANLIŞ: Laravel listeyi
+// öncelik sırası sayar, default'a ancak profiles TAMAMEN boşalınca geçer. Build
+// kendini yenilediği için profiles hiç boşalmıyor → bu sefer maç işleme aç kaldı
+// (aynı gün ölçüldü: profiles'ta sürekli ~190 hazır iş, default'ta 20.157 iş bekliyor).
+// İki ayrı süreç = iki ayrı kilit, hiçbiri diğerini aç bırakmaz. Riot kotasını
+// paylaşırlar; build zaten BUDGET_RESERVE + shouldYield ile canlıya yol veriyor.
+//
+// max-time < kilit süresi olmalı: süreç kilidini bırakmadan ölürse (deploy/kill)
+// bedel kilit süresi kadardır.
+Schedule::command('queue:work --queue=profiles --stop-when-empty --max-time=280 --tries=3')
+    ->everyMinute()->withoutOverlapping(10);
+Schedule::command('queue:work --queue=default --stop-when-empty --max-time=480 --tries=3')
     ->everyMinute()->withoutOverlapping(15);
