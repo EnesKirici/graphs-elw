@@ -15,7 +15,7 @@ const POS_CHIP = "text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/15 te
   Yalnız BİRİNCİL sınıf gösterilir (Riot'un ikincil tag'i kafa karıştırıyordu:
   MissFortune "Büyücü" gibi). activeCrumb → breadcrumb'a ek kırıntı (ör. "Counter").
 */
-export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, subtitle, grade }) {
+export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, subtitle, grade, summary }) {
   // Yetenekler: pasif + Q/W/E/R. DDragon spells sırası zaten Q,W,E,R.
   const keys = ["Q", "W", "E", "R"];
   const abilities = [
@@ -59,7 +59,7 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
           eskiden (pt-16/pt-24) içerik ekranın çok altına itiliyordu ve ilk ekranda
           neredeyse yalnız arka plan vardı. Sitenin diğer sayfalarında bu kadar büyük
           bir üst boşluk yok — burası tek istisnaydı. */}
-      <div className="pt-6 md:pt-10 pb-4 flex items-end gap-5">
+      <div className="pt-6 md:pt-10 pb-4 flex items-end gap-5 flex-wrap">
         {/* İkon çerçevesi dereceyi taşır: rol sıralamasındaki tier tek bakışta okunur. */}
         <div className="relative shrink-0">
           <img
@@ -129,6 +129,19 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
             </div>
           )}
         </div>
+
+        {/*
+          Veriden üretilen özet — hero'nun sağındaki boş splash alanında.
+          Önce içeriğin üstünde tam satır kaplıyordu; oysa burası hem H1'e komşu
+          (arama motoru için sayfanın konusu hemen başlığın yanında) hem de zaten
+          boş duran alanı dolduruyor. Mobilde alt satıra düşer, gizlenmez —
+          CSS ile saklanan metin mobile-first indekslemede zayıf sayılır.
+        */}
+        {summary && (
+          <p className="w-full lg:w-auto lg:flex-1 lg:min-w-[280px] lg:max-w-xl lg:ml-auto mb-1 text-[11px] md:text-xs leading-relaxed text-gray-200/95 rounded-lg border border-white/10 bg-black/40 backdrop-blur-sm px-3.5 py-2.5">
+            {summary}
+          </p>
+        )}
       </div>
     </div>
   );

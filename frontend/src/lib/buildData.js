@@ -45,9 +45,20 @@ export const SHARD_ROWS = [
 ];
 
 // Ayakkabı item id'leri (temel + gelişmiş) — item_full sayaçlarından ayrıştırma için.
+/*
+  Çizme id'leri — DDragon'da "Boots" etiketli her şey. Liste elle tutuluyor çünkü
+  backend item sayaçlarını etiketsiz (yalın id) gönderiyor.
+  3008 (Açgözlü) ve 3168 (Ebedi Yol) EKSİKTİ: ikisi de çizme yükseltmesi olduğu
+  hâlde "Tam Build"de efsanevi eşya gibi listeleniyorlardı. Yeni yama çizme
+  yükseltmesi eklerse buraya da eklenmeli (DDragon item.json → tags: Boots).
+*/
 const BOOT_IDS = new Set([
-  1001, 3005, 3006, 3009, 3010, 3013, 3020, 3047, 3111, 3117, 3158,
+  1001, 1111, 2422, 771001,
+  3005, 3006, 3008, 3009, 3010, 3013, 3020, 3047, 3111, 3117, 3158, 3168,
   3170, 3171, 3172, 3173, 3174, 3175, 3176,
+  // Mod/varyant kopyaları (Arena vb.) — aynı çizmelerin farklı id'leri
+  223005, 223006, 223008, 223009, 223020, 223047, 223111, 223158,
+  773006, 773009, 773020, 773047, 773111, 773117, 773158,
 ]);
 
 /** Rün id'sinin ikon yolunu ağaçlardan bulur (keystone seçenek çipleri için). */

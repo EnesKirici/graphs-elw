@@ -132,8 +132,9 @@ export default async function ChampionDetailPage({ params }) {
       <ChampionBg splash={champ.splash} />
 
       <div className="relative z-10">
-        {/* grade: birincil rolün tier'i — ikon çerçevesinde gösterilir */}
-        <ChampionHero champ={champ} id={id} grade={data?.build?.positions?.[0]?.grade} />
+        {/* grade: birincil rolün tier'i — ikon çerçevesinde gösterilir.
+            summary: veriden üretilen özet, hero'nun sağındaki boş alanda. */}
+        <ChampionHero champ={champ} id={id} grade={data?.build?.positions?.[0]?.grade} summary={seoSummary} />
         {/* Suspense: ChampionView useSearchParams kullanır (?tab= kalıcılığı) */}
         <Suspense fallback={null}>
           <ChampionView
@@ -143,7 +144,6 @@ export default async function ChampionDetailPage({ params }) {
             runesData={runesData}
             build={data.build}
             duos={data.duos}
-            seoSummary={seoSummary}
           />
         </Suspense>
       </div>

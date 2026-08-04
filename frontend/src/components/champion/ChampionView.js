@@ -18,7 +18,7 @@ const TABS = [
   { key: "detail", label: "Detay" },
 ];
 
-export default function ChampionView({ id, champ, version, runesData, build, duos, seoSummary }) {
+export default function ChampionView({ id, champ, version, runesData, build, duos }) {
   const params = useSearchParams();
   const fromUrl = params.get("tab");
 
@@ -62,9 +62,8 @@ export default function ChampionView({ id, champ, version, runesData, build, duo
         {/* Genel — tam build (yalnız normal şampiyonlarda) */}
         {!isClassic && (
           <div className={tab === "genel" ? "" : "hidden"}>
-            {seoSummary && (
-              <p className="text-xs text-gray-400 leading-relaxed mb-5 max-w-3xl">{seoSummary}</p>
-            )}
+            {/* Veriden üretilen özet metni ChampionHero'ya taşındı (hero'nun sağındaki
+                boş alan) — burada içeriğin üstünde tam satır kaplıyordu. */}
             <ChampionBuild champion={champ} version={version} runesData={runesData} build={build} />
           </div>
         )}

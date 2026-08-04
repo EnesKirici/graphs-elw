@@ -12,6 +12,16 @@ const STATS = [
 export default function ChampionRadar({ info }) {
   const [hovIdx, setHovIdx] = useState(null);
 
+  /*
+    Riot bu değerleri (saldırı/savunma/büyü/zorluk, 0-10) elle atıyor ve bazı
+    şampiyonlarda hiç doldurmamış — DDragon 16.15'te Akshan, Rell, Seraphine ve
+    Vex'te dördü de 0. O durumda radar dört sıfırla nokta gibi çizilip "Şampiyon
+    Profili" kartı bomboş duruyordu. Veri yoksa kart hiç açılmaz; sıfır göstermek
+    "bu şampiyonun saldırısı yok" demek olurdu.
+  */
+  const total = STATS.reduce((s, st) => s + (Number(info?.[st.key]) || 0), 0);
+  if (!total) return null;
+
   const cx = 120, cy = 120, R = 80;
   const count = STATS.length;
   const angles = STATS.map((_, i) => (Math.PI * 2 * i) / count - Math.PI / 2);

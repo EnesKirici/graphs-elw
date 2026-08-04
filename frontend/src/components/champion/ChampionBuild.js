@@ -31,14 +31,14 @@ function Panel({ children, className = "" }) {
   );
 }
 
-function Section({ title, extra, children }) {
+function Section({ title, extra, children, className = "", bodyClassName = "" }) {
   return (
-    <div className="p-4">
+    <div className={`p-4 ${className}`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">{title}</h3>
         {extra}
       </div>
-      {children}
+      <div className={bodyClassName}>{children}</div>
     </div>
   );
 }
@@ -142,22 +142,35 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             )}
           </div>
         )}
-      </div>
 
-      {/* Son 30 günün gidişatı — anlık orana bakmak "yükseliyor mu düşüyor mu" sorusunu
-          cevaplamıyordu. Veri yoksa (yeni şampiyon / seri kısa) bileşen hiç render olmaz. */}
-      <ChampionTrend trend={build?.trend} />
+        {/*
+          Son 30 günün gidişatı AYNI KARTIN İÇİNDE: üstteki şerit "şu an %46.9",
+          buradaki eğriler "nasıl buraya geldi" — aynı üç sayının zaman hâli oldukları
+          için ayrı kartlara bölmek bilgiyi koparıyordu. Veri yoksa hiç render olmaz.
+        */}
+        <ChampionTrend trend={build?.trend} />
+      </div>
 
       {/*
         DÜZEN NOTU: eskiden 3-6-3 sütun vardı ve sağ sütun (sihirdar + başlangıç + çizme +
         1-5. item + tam build + duruma göre) tıka basa doluyken sol sütun neredeyse boştu;
         sayfanın alt yarısı da bomboş kalıyordu. Artık içerik YATAY bölümlere açıldı:
         her panel genişliğini içeriğine göre alıyor, item sırası tam genişlikte nefes alıyor.
+
+        İKİ SÜTUN AMA TEK KART: rünler ve sağdaki üç bölüm ayrı kartlarken sütunların
+        yüksekliği tutmuyordu — kısa olanın altında sayfa arka planı görünen bir DELİK
+        kalıyordu ("her kart ayrı ayrı duruyor"). Tek çerçeve + dikey ayraç ile sütunlar
+        birbirine kilitlenir; artan alan kartın İÇİNDE nefes payına dönüşür.
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <Panel>
+        <div className="grid grid-cols-1 lg:grid-cols-12">
         {/* SOL — Rünler (sayfanın ana içeriği, en geniş alan) */}
-        <Panel className="lg:col-span-8">
-          <Section title="Rünler" extra={
+        <div className="lg:col-span-8 lg:border-r border-edge/40 flex flex-col">
+          <Section
+            className="flex-1 flex flex-col"
+            bodyClassName="flex-1 flex flex-col"
+            title="Rünler"
+            extra={
             activeKeystone && (
               <span className="text-[10px] text-gray-600">
                 {safeIdx === 0 ? "En popüler" : `${safeIdx + 1}. seçenek`} · {activeKeystone.pickRate}% pick · <b className={wrCls(activeKeystone.winRate)}>{activeKeystone.winRate}% WR</b>
@@ -165,7 +178,10 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             )
           }>
             {runePage ? (
-              <>
+              /* flex-1: sütun sağdaki üç bölüm kadar uzadığında artan alanı AĞAÇLAR
+                 alsın — tab satırı yukarıda sabit kalsın (her şeyi birlikte
+                 ortalayınca başlığın altında kocaman bir boşluk açılıyordu). */
+              <div className="flex-1 flex flex-col">
                 {/* Rün sayfası seçici — site dilindeki ALT-ÇİZGİ tab yapısı
                     (Genel/Detay/Counter ile aynı). flex-1 ile kartın TAM genişliğine
                     eşit bölünür; sola yapışıp sağda boşluk bırakmaz. */}
@@ -194,7 +210,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                   kalıyor, sağda ve altta büyük boşluk oluşuyordu. Parçaları üçüncü sütuna
                   almak yatay alanı doldurup dikey boşluğu kapatıyor.
                 */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-3">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-3 content-center">
                   <div className="flex justify-center">
                     <RuneTree tree={runePage.primary} selected={runePage.selected} pctOf={runePage.pctOf} />
                   </div>
@@ -212,21 +228,19 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                     ))}
                   </div>
                 </div>
-              </>
+              </div>
             ) : (
               <ComingSoon>Bu koridor için rün verisi henüz birikmedi.</ComingSoon>
             )}
           </Section>
-
-        </Panel>
+        </div>
 
         {/*
-          SAĞ — TEK panel, üç bölüm. Önce ayrı kartlardaydılar ama her biri az içerikli
-          olduğu için (2 sihirdar çifti, 2 yetenek sırası) kart başına düşen boşluk
-          içerikten fazlaydı. Panel'in divide-y'ı bölümleri zaten ayırıyor; tek çerçeve
-          hem daha derli toplu hem soldaki rün paneliyle yükseklik dengesi kuruyor.
+          SAĞ — üç bölüm, aralarında yatay ayraç. Ayrı kartlardayken her biri az
+          içerikli olduğu için (2 sihirdar çifti, 2 yetenek sırası) kart başına düşen
+          boşluk içerikten fazlaydı; artık soldaki rün sütunuyla aynı çerçevede.
         */}
-        <Panel className="lg:col-span-4">
+        <div className="lg:col-span-4 divide-y divide-edge/40 border-t lg:border-t-0 border-edge/40">
             <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
               {spellPairs.length ? (
                 <div className="grid grid-cols-2 gap-2">
@@ -297,8 +311,9 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 {!starters.length && !items.boots.length && <ComingSoon>Başlangıç verisi henüz yok.</ComingSoon>}
               </div>
             </Section>
-        </Panel>
-      </div>
+        </div>
+        </div>
+      </Panel>
 
       {/*
         EŞYA SIRASI — build bir LİSTE değil bir YOL; sütunlar ok'larla bağlanıp
@@ -345,31 +360,38 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             </div>
           )}
         </Section>
-      </Panel>
 
-      {/* En iyi oyuncular + tam build + duruma göre */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        <Panel className="lg:col-span-5">
-          <Section title={`En İyi ${champion.name} Oyuncuları`} extra={<span className="text-[10px] text-gray-600">Maç · WR</span>}>
-            <TopPlayers players={build?.topPlayers} version={version} />
-          </Section>
-        </Panel>
-
-        <Panel className="lg:col-span-7">
-          <Section title="Tam Build" extra={<span className="text-[10px] text-gray-600">En sık tamamlanan</span>}>
-            <div className="space-y-4">
-              <ItemRow items={items.full} />
-              {items.situational.length > 0 && (
-                <div className="pt-3 border-t border-edge/40">
-                  <span className="text-[11px] text-gray-400 font-medium block mb-1.5">Duruma Göre</span>
-                  <ItemRow items={items.situational} size={28} />
-                </div>
-              )}
+        {/* Tam build AYNI panelde: "hangi sırayla" ile "sonuçta ne çıkıyor" aynı
+            sorunun iki yarısı. Ayrı kartta dururken yanındaki oyuncu listesinden
+            çok kısa kalıp sağında geniş bir boşluk bırakıyordu. */}
+        <Section title="Tam Build" extra={<span className="text-[10px] text-gray-600">Seçim oranına göre</span>}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <span className="text-[11px] text-gray-400 font-medium block mb-2">En Sık Tamamlanan</span>
+              <ItemRow items={items.full} size={40} />
               {!items.full.length && <ComingSoon>Item verisi henüz birikmedi.</ComingSoon>}
             </div>
-          </Section>
-        </Panel>
-      </div>
+            {items.situational.length > 0 && (
+              <div className="sm:border-l border-edge/40 sm:pl-4">
+                <span className="text-[11px] text-gray-400 font-medium block mb-2">Duruma Göre</span>
+                <ItemRow items={items.situational} size={40} />
+              </div>
+            )}
+          </div>
+        </Section>
+      </Panel>
+
+      {/* OTP tablosu TAM GENİŞLİK, çok sütunlu: dar bir sütunda alt alta dizilince
+          6 satırlık liste yanındaki karttan çok daha uzun kalıyordu. Yatayda üçe
+          bölününce hem kart dolu görünür hem isimler kısalmadan sığar. */}
+      <Panel>
+        <Section
+          title={`En İyi ${champion.name} Oyuncuları`}
+          extra={<span className="text-[10px] text-gray-600">Bu şampiyonu en çok oynayanlar · Maç · WR</span>}
+        >
+          <TopPlayers players={build?.topPlayers} version={version} />
+        </Section>
+      </Panel>
 
       {/* Kapsam bilgisi — üstte kendi başına bir şerit gibi durup ayrı kart izlenimi
           veriyordu; dipnot olarak burası doğru yeri. */}
@@ -436,7 +458,7 @@ function TopPlayers({ players, version }) {
     return <ComingSoon>Bu şampiyon için henüz yeterli oyuncu verisi toplanmadı.</ComingSoon>;
   }
   return (
-    <div className="space-y-1.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-0.5">
       {players.map((p, i) => (
         <Link
           key={`${p.name}-${p.tag}`}

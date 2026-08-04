@@ -54,7 +54,8 @@ class ChampionBuildService
     public function getChampionBuild(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        $key = 'champion:build:v6:' . $championId . ':' . implode(',', $patches);
+        // v7: trend serisi 3 günlük kayan pencereye geçti (tek günün ham oranı yerine).
+        $key = 'champion:build:v7:' . $championId . ':' . implode(',', $patches);
 
         // TTL 10dk DEĞİL 2sa: bu veriyi besleyen stats:rebuild günde 3 kez koşuyor,
         // yani 10 dakikalık tazelik hiçbir zaman yeni bilgi getirmiyordu — sadece her
@@ -237,9 +238,16 @@ class ChampionBuildService
                     ];
                     if ($category === 'item_full' && $itemMap) {
                         $it = $itemMap[(string) $k] ?? null;
-                        $row['completed'] = $it !== null
-                            && empty($it['into'])
-                            && (int) ($it['depth'] ?? 1) >= 2;
+                        $depth = (int) ($it['depth'] ?? 1);
+                        $row['completed'] = $it !== null && empty($it['into']) && $depth >= 2;
+                        // SAF BİLEŞEN (Uzun Kılıç, B.F. Kılıcı, Doran…) listeye hiç girmesin.
+                        // Liste 15 satırla sınırlı; bileşenler yarısını kaplayınca ADC'lerde
+                        // çizmeler dışarıda kalıyor ve "Çizme Tercihleri" boş görünüyordu
+                        // (Samira'da tam olarak bu oluyordu). depth>=2 olan temel çizme
+                        // (Savaşçı Çizmeleri gibi) elenmez — o gerçek bir tercihtir.
+                        if ($it !== null && $depth < 2) {
+                            continue;
+                        }
                     }
                     $list[] = $row;
                 }
@@ -286,11 +294,20 @@ class ChampionBuildService
     }
 
     /**
-     * Son N günün günlük serisi: kazanma / seçim / yasaklanma oranı.
+     * Son N günün serisi: kazanma / seçim / yasaklanma oranı.
      *
      * Kaynak champion_daily_stats (sayaç tablosu) — ham maç taraması YOK, sorgu
-     * yalnız ~30 satır okur. Veri olmayan günler seride yer ALMAZ; grafik eksik
-     * günü çizmez (sıfır çizmek "o gün hiç oynanmadı" gibi yanlış okunurdu).
+     * yalnız ~30 satır okur.
+     *
+     * NEDEN KAYAN PENCERE: tek günün ham oranı az oynanan şampiyonda anlamsız.
+     * Akshan (seçim oranı %1.2) bir günde 9 maç oynanıp 7'sini kazanınca grafik
+     * "%77.8 kazanma, +33 puan" diyordu — oysa şampiyonun gerçek oranı %46.9.
+     * Bu bir trend değil, zar atışıydı. Artık her nokta SON 3 GÜNÜN TOPLAMINDAN
+     * hesaplanır (oranların ortalaması değil, toplamların oranı — böylece az maçlı
+     * gün pencerede kendiliğinden az ağırlık alır).
+     *
+     * Gün ekseni stat_days'ten kurulur, şampiyon satırından değil: şampiyonun hiç
+     * oynanmadığı bir gün pencereden düşerse seçim oranı yapay olarak yükselirdi.
      *
      * @return array<array{day:string, games:int, winRate:float, pickRate:float, banRate:float}>
      */
@@ -298,8 +315,11 @@ class ChampionBuildService
     {
         $since = now()->subDays($days)->toDateString();
 
+        // Worker'ın az çalıştığı günler paydayı bozar → gün ekseninden tamamen çıkar.
         $totals = DB::table('stat_days')
             ->where('day', '>=', $since)
+            ->where('matches', '>=', self::TREND_MIN_DAY_MATCHES)
+            ->orderBy('day')
             ->pluck('matches', 'day');
 
         if ($totals->isEmpty()) {
@@ -310,38 +330,58 @@ class ChampionBuildService
             ->where('champion_id', $championId)
             ->where('position', 'ALL')
             ->where('day', '>=', $since)
-            ->orderBy('day')
-            ->get(['day', 'games', 'wins', 'bans']);
+            ->get(['day', 'games', 'wins', 'bans'])
+            ->keyBy(fn ($r) => (string) $r->day);
+
+        $series = [];
+        foreach ($totals as $day => $total) {
+            $r = $rows[(string) $day] ?? null;
+            $series[] = [
+                'day'   => (string) $day,
+                'total' => (int) $total,
+                'games' => $r ? (int) $r->games : 0,
+                'wins'  => $r ? (int) $r->wins : 0,
+                'bans'  => $r ? (int) $r->bans : 0,
+            ];
+        }
 
         $out = [];
-        foreach ($rows as $r) {
-            $day = (string) $r->day;
-            $total = (int) ($totals[$day] ?? 0);
-            if ($total < self::TREND_MIN_DAY_MATCHES) {
-                continue; // o gün çok az maç işlenmiş → oran gürültüden ibaret olur
+        $n = count($series);
+        for ($i = self::TREND_WINDOW - 1; $i < $n; $i++) {
+            $g = $w = $b = $t = 0;
+            for ($j = $i - (self::TREND_WINDOW - 1); $j <= $i; $j++) {
+                $g += $series[$j]['games'];
+                $w += $series[$j]['wins'];
+                $b += $series[$j]['bans'];
+                $t += $series[$j]['total'];
             }
-            $g = (int) $r->games;
+            if ($t <= 0 || $g < self::TREND_MIN_WINDOW_GAMES) {
+                continue; // pencerede bile yeterli maç yok → oran hâlâ gürültü
+            }
             $out[] = [
-                'day'      => $day,
+                'day'      => $series[$i]['day'],
                 'games'    => $g,
-                'winRate'  => $g > 0 ? round($r->wins / $g * 100, 1) : 0.0,
-                'pickRate' => round($g / $total * 100, 1),
-                'banRate'  => round($r->bans / $total * 100, 1),
+                'winRate'  => round($w / $g * 100, 1),
+                'pickRate' => round($g / $t * 100, 1),
+                'banRate'  => round($b / $t * 100, 1),
             ];
         }
 
         return $out;
     }
 
-    /** Rakip başına en az bu kadar maç yoksa matchup listeye girmez (gürültü). */
     /**
-     * Trend grafiğinde bir günün çizilmesi için o gün işlenmiş olması gereken en az
-     * maç sayısı. Worker'ın az çalıştığı bir günde 20 maçtan çıkan "%80 seçim oranı"
-     * gerçek bir sıçrama değil, örneklem gürültüsüdür — grafik yalancı zirveler
-     * göstermesin diye o günler atlanır.
+     * Trend serisinde bir günün eksene girmesi için o gün işlenmiş olması gereken
+     * en az maç sayısı. Worker'ın az çalıştığı bir günde 20 maçtan çıkan
+     * "%80 seçim oranı" gerçek bir sıçrama değil, örneklem gürültüsüdür.
      */
     private const TREND_MIN_DAY_MATCHES = 100;
+    /** Kayan pencere genişliği (gün) — tek günün zar atışını yumuşatır. */
+    private const TREND_WINDOW = 3;
+    /** Pencerede bu kadar şampiyon maçı yoksa nokta hiç çizilmez. */
+    private const TREND_MIN_WINDOW_GAMES = 20;
 
+    /** Rakip başına en az bu kadar maç yoksa matchup listeye girmez (gürültü). */
     private const MATCHUP_MIN_GAMES = 10;
     /** Matchup sıralaması güven sabiti: sapmayı games/(games+K) ile ağırlıklar
      *  (az maçlı büyük sapmayı nötre çeker → istatistiksel olarak doğru sıra). */
