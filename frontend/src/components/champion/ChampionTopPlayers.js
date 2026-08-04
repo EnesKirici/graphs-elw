@@ -199,9 +199,9 @@ export default function ChampionTopPlayers({ players, version, championName }) {
                 <th className="font-medium text-left pb-2 pl-3 w-8">#</th>
                 <th className="font-medium text-left pb-2">Oyuncu</th>
                 <th className="font-medium text-left pb-2 w-32 hidden sm:table-cell">Derece</th>
-                <th className="font-medium text-right pb-2 w-14">LP</th>
-                <th className="font-medium text-right pb-2 w-14">Maç</th>
-                <th className="font-medium text-right pb-2 pr-3 w-16">Kazanma</th>
+                <th className="font-medium text-right pb-2 px-2 w-16">LP</th>
+                <th className="font-medium text-right pb-2 px-2 w-16">Maç</th>
+                <th className="font-medium text-right pb-2 pl-2 pr-3 w-[72px]">Kazanma</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-edge/20">
@@ -231,9 +231,9 @@ export default function ChampionTopPlayers({ players, version, championName }) {
                       </span>
                     </div>
                   </td>
-                  <td className="py-2.5 text-right text-xs text-gray-400 tabular-nums">{p.ladder.lp}</td>
-                  <td className="py-2.5 text-right text-xs text-gray-400 tabular-nums">{p.games}</td>
-                  <td className={`py-2.5 pr-3 text-right text-sm font-bold tabular-nums ${wrCls(p.winRate)}`}>
+                  <td className="py-2.5 px-2 text-right text-xs text-gray-400 tabular-nums">{p.ladder.lp}</td>
+                  <td className="py-2.5 px-2 text-right text-xs text-gray-400 tabular-nums">{p.games}</td>
+                  <td className={`py-2.5 pl-2 pr-3 text-right text-sm font-bold tabular-nums ${wrCls(p.winRate)}`}>
                     {p.winRate}%
                   </td>
                 </tr>
