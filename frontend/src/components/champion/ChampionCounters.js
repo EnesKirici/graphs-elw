@@ -140,12 +140,15 @@ function MatchupStrip({
 
       {(good.length > 0 || bad.length > 0) && (
         <>
-          <div className={`flex items-center justify-between gap-3 px-5 py-3 border-b border-edge/50 ${heading ? "border-t border-edge/30" : ""}`}>
-            <span className="text-[11px] font-bold tracking-wide uppercase" style={{ color: COL_GOOD }}>
+          {/* Şeridin iki ucunu adlandıran başlıklar. 11px'ken şeridin kendisinin yanında
+              kayboluyordu (kullanıcı bildirdi); bunlar okuma yönünü veren etiketler,
+              dipnot değil → gövde metninden büyük. */}
+          <div className={`flex items-center justify-between gap-3 px-5 py-3.5 border-b border-edge/50 ${heading ? "border-t border-edge/30" : ""}`}>
+            <span className="text-sm md:text-base font-bold tracking-wide uppercase" style={{ color: COL_GOOD }}>
               {goodLabel}
             </span>
-            <span className="text-[10px] text-gray-600 hidden sm:block">{champName} kazanma oranı</span>
-            <span className="text-[11px] font-bold tracking-wide uppercase" style={{ color: COL_BAD }}>
+            <span className="text-[11px] text-gray-500 hidden sm:block">{champName} kazanma oranı</span>
+            <span className="text-sm md:text-base font-bold tracking-wide uppercase" style={{ color: COL_BAD }}>
               {badLabel}
             </span>
           </div>
@@ -247,10 +250,18 @@ function StripCard({ m }) {
     <Link
       href={`/champions/${m.id}/counter`}
       title={`${m.name} — ${m.games} maç`}
-      className="group relative flex-1 min-w-[92px] max-w-[150px] shrink-0 rounded-lg overflow-hidden border border-edge/60 hover:border-white/25 transition-all duration-200 hover:-translate-y-0.5"
+      /*
+        HOVER: kart yukarı kalkar + çerçeve eşleşme renginde parlar. Renk inline
+        değişken üzerinden veriliyor çünkü her kartta farklı (Tailwind sınıfı üretilemez).
+      */
+      className="group relative flex-1 min-w-[92px] max-w-[150px] shrink-0 rounded-lg overflow-hidden border border-edge/60 transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-[var(--m)] hover:shadow-[0_10px_28px_-10px_var(--m)]"
+      style={{ "--m": col }}
     >
-      {/* Üstte durumu tek bakışta veren renk şeridi */}
-      <div className="absolute top-0 left-0 right-0 h-[3px] z-10" style={{ backgroundColor: col }} />
+      {/* Üstte durumu tek bakışta veren renk şeridi — hover'da kalınlaşır */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[3px] z-20 transition-all duration-300 group-hover:h-[5px]"
+        style={{ backgroundColor: col }}
+      />
 
       {/* Yükseklik loading art'ın dikey oranına (308x560) yakın tutulur — yatay bir
           kutuya sıkıştırılırsa karakterin yüzü kırpılıyor. */}
@@ -259,53 +270,62 @@ function StripCard({ m }) {
           src={loadingArt(m.id)}
           alt={m.name}
           loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
+          className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.12]"
           onError={artFallback(m.id)}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-transparent" />
-        <span className="absolute bottom-1.5 inset-x-0 px-1.5 text-center text-[11px] font-semibold text-white/95 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+
+        {/* İsim, alttan gelen şeride yer açmak için yukarı kayar */}
+        <span className="absolute bottom-1.5 inset-x-0 px-1.5 text-center text-[11px] font-semibold text-white/95 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-transform duration-300 ease-out group-hover:-translate-y-[52px]">
           {m.name}
         </span>
 
         {/*
-          Head-to-head detayı (KDA / katılım / hasar / @15) HOVER'da açılır.
-          Önce sayfanın altında ayrı iki barlı listede duruyordu ama aynı eşleşmeleri
-          ikinci kez göstermek sayfayı hem uzatıyor hem karıştırıyordu — bilgi burada,
-          bağlamının içinde duruyor.
+          Head-to-head detayı (KDA / katılım / hasar / @15).
+
+          ESKİDEN: kartı TAMAMEN kaplayan siyah panel fade-in oluyordu — şampiyon
+          görseli kayboluyor, "kart arkaya dönüyor" hissi veriyordu (kullanıcı bu
+          davranışın kaldırılmasını istedi). ŞİMDİ: alttan yukarı kayan ince şerit.
+          Görsel görünür kalır, bilgi de kaybolmaz.
         */}
         {m.stats && (
-          <div className="absolute inset-0 bg-black/92 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1.5 px-1.5 text-center">
-            <div>
-              <div className="text-[9px] text-gray-500 uppercase tracking-wide leading-none">KDA</div>
-              <div className="text-[11px] font-bold text-gray-100 tabular-nums mt-1">
+          <div
+            className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out bg-black/88 backdrop-blur-[2px] border-t px-1.5 py-1.5 space-y-0.5"
+            style={{ borderColor: col }}
+          >
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="text-[8px] text-gray-500 uppercase tracking-wide">KDA</span>
+              <span className="text-[10px] font-bold text-gray-100 tabular-nums">
                 {m.stats.kda.k}/{m.stats.kda.d}/{m.stats.kda.a}
-              </div>
+              </span>
             </div>
-            <div>
-              <div className="text-[9px] text-gray-500 uppercase tracking-wide leading-none">Katılım</div>
-              <div className="text-[11px] font-bold text-gray-100 tabular-nums mt-1">%{m.stats.kp}</div>
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="text-[8px] text-gray-500 uppercase tracking-wide">KP</span>
+              <span className="text-[10px] font-bold text-gray-100 tabular-nums">%{m.stats.kp}</span>
             </div>
-            <div>
-              <div className="text-[9px] text-gray-500 uppercase tracking-wide leading-none">Hasar</div>
-              <div className="text-[11px] font-bold text-gray-100 tabular-nums mt-1">{(m.stats.dmg / 1000).toFixed(1)}k</div>
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="text-[8px] text-gray-500 uppercase tracking-wide">Hasar</span>
+              <span className="text-[10px] font-bold text-gray-100 tabular-nums">{(m.stats.dmg / 1000).toFixed(1)}k</span>
             </div>
             {m.lane15 && (
-              <div>
-                <div className="text-[9px] text-gray-500 uppercase tracking-wide leading-none">15. dk</div>
-                <div className={`text-[11px] font-bold tabular-nums mt-1 ${m.lane15.gd15 >= 0 ? "text-blue-300" : "text-red-400"}`}>
+              <div className="flex items-baseline justify-between gap-1">
+                <span className="text-[8px] text-gray-500 uppercase tracking-wide">15. dk</span>
+                <span className={`text-[10px] font-bold tabular-nums ${m.lane15.gd15 >= 0 ? "text-blue-300" : "text-red-400"}`}>
                   {m.lane15.gd15 >= 0 ? "+" : ""}{m.lane15.gd15}
-                </div>
+                </span>
               </div>
             )}
           </div>
         )}
       </div>
 
+      {/* Maç sayısı 9px/gray-500'de okunmuyordu (kullanıcı bildirdi) — örneklem
+          büyüklüğü oranın ne kadar güvenilir olduğunu söyleyen ASIL bilgi, dipnot değil. */}
       <div className="px-1.5 py-1.5 text-center bg-black/35">
         <div className="text-sm font-bold tabular-nums leading-none" style={{ color: col }}>%{m.winRate}</div>
-        <div className="text-[9px] text-gray-500 tabular-nums mt-1">{m.games} maç</div>
+        <div className="text-[11px] font-medium text-gray-300 tabular-nums mt-1">{m.games} maç</div>
         {lane && (
-          <div className={`mt-1 text-[9px] font-medium rounded px-1 py-0.5 ${lane.cls}`}>{lane.text}</div>
+          <div className={`mt-1 text-[10px] font-semibold rounded px-1 py-0.5 border ${lane.cls}`}>{lane.text}</div>
         )}
       </div>
     </Link>
@@ -322,13 +342,15 @@ function laneTag(m) {
   const n = m.lane15?.n ?? 0;
   if (n >= 5) {
     const gd = m.lane15.gd15;
-    if (gd >= 150) return { text: "koridor önde", cls: "bg-blue-500/15 text-blue-300" };
-    if (gd <= -150) return { text: "koridor geride", cls: "bg-red-500/15 text-red-300" };
+    if (gd >= 150) return { text: "koridor önde", cls: "bg-blue-500/20 text-blue-200 border-blue-400/30" };
+    if (gd <= -150) return { text: "koridor geride", cls: "bg-red-500/20 text-red-200 border-red-400/30" };
     // "Dengeli" bilgi taşımıyor ve neredeyse her kartta çıkıp şeridi gürültüye
     // boğuyordu → etiket basılmaz, kart temiz kalır.
     return null;
   }
-  if (m.games < 20) return { text: "az veri", cls: "bg-white/5 text-gray-500" };
+  // "az veri" bir UYARI: bu orana temkinli yaklaş demek. bg-white/5 + gray-500 ile
+  // neredeyse görünmezdi (kullanıcı bildirdi) → soluk amber, uyarı gibi okunsun.
+  if (m.games < 20) return { text: "az veri", cls: "bg-amber-400/15 text-amber-200/90 border-amber-400/25" };
   return null;
 }
 

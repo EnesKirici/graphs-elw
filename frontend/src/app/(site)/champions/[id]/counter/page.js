@@ -211,12 +211,17 @@ export default async function ChampionCounterPage({ params }) {
       <ChampionBg splash={champ.splash} />
 
       <div className="relative z-10">
+        {/* seoText hero'nun SAĞINDAKİ boş splash alanına verilir (ChampionHero summary).
+            Önce tab'ların altında tam satır kaplıyordu; oraya taşınınca hem H1'e komşu
+            oluyor (arama motoru için sayfanın konusu başlığın hemen yanında) hem de
+            zaten boş duran alan doluyor, içerik yukarı geliyor. */}
         <ChampionHero
           champ={champ}
           id={id}
           activeCrumb="Counter"
           headingSuffix="Counter"
           subtitle={heroSubtitle || undefined}
+          summary={seoText || undefined}
         />
 
         {/* Alt-çizgi tab — ana sayfayla AYNI (Genel/Detay link, Counter aktif) */}
@@ -229,9 +234,6 @@ export default async function ChampionCounterPage({ params }) {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-6">
-          {seoText && (
-            <p className="text-xs text-gray-400 leading-relaxed mb-5 max-w-3xl">{seoText}</p>
-          )}
           <ChampionCounters
             champName={champ.name}
             champImage={champ.image}
