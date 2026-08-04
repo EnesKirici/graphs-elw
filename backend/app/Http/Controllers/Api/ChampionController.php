@@ -64,6 +64,7 @@ class ChampionController extends Controller
 
         $version = $this->ddragon->getCurrentVersion();
         $positionMap = $this->ddragon->getChampionPositions();
+        $championProfile = $this->ddragon->championProfile($champion);
 
         return response()->json([
             'version'  => $version,
@@ -77,7 +78,11 @@ class ChampionController extends Controller
                 'lore'      => $champion['lore'],
                 'tags'      => $champion['tags'],
                 'positions' => $positionMap[$champion['id']] ?? [],
-                'info'      => $champion['info'],     // attack, defense, magic, difficulty
+                // attack/defense/magic/difficulty (0-10). Riot bazı şampiyonlarda bunu
+                // hiç doldurmuyor → o zaman oyun istemcisi verisinden türetilir ve
+                // infoSource='client' döner (arayüz kaynağı açıkça yazar).
+                'info'       => $championProfile['values'],
+                'infoSource' => $championProfile['source'],
                 'image'   => $this->ddragon->championIconUrl($champion['id']),
                 'splash'  => $this->ddragon->splashArtUrl($champion['id']),
                 'spells'  => collect($champion['spells'])->map(fn($s) => [

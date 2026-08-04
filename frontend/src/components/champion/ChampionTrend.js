@@ -56,8 +56,6 @@ function TrendChart({ trend, field, label, color }) {
   const n = vals.length;
   const min = Math.min(...vals);
   const max = Math.max(...vals);
-  const last = vals[n - 1];
-  const delta = Math.round((last - vals[0]) * 10) / 10;
 
   // Ölçek payı: düz seride (min===max) sıfıra bölmemek için taban pay bırakılır.
   const pad = (max - min) * 0.2 || Math.max(max * 0.1, 1);
@@ -84,6 +82,9 @@ function TrendChart({ trend, field, label, color }) {
   const active = hov != null ? hov : n - 1;
   const shownVal = vals[active];
   const point = trend[active];
+  // Değişim SEÇİLİ noktaya göre: hover'da değer değişip delta sabit kalınca
+  // ("%60 ▼2.3 puan") iki sayı birbiriyle çelişiyordu.
+  const delta = Math.round((shownVal - vals[0]) * 10) / 10;
 
   return (
     <div className="p-4">
@@ -100,7 +101,7 @@ function TrendChart({ trend, field, label, color }) {
         </span>
         <span
           className={`text-[11px] tabular-nums ${delta > 0 ? "text-blue-300" : delta < 0 ? "text-red-400" : "text-gray-500"}`}
-          title="Serinin ilk gününe göre değişim"
+          title={`Serinin ilk gününe (${fmtDay(trend[0].day)}) göre değişim`}
         >
           {delta > 0 ? "▲" : delta < 0 ? "▼" : "—"} {Math.abs(delta)} puan
         </span>
@@ -150,18 +151,26 @@ function TrendChart({ trend, field, label, color }) {
                 vectorEffect="non-scaling-stroke"
               />
             )}
-            {/* Vurgu noktası: hover yoksa "şu an neredeyiz", hover varsa seçili gün */}
-            <circle
-              cx={px(active)}
-              cy={py(shownVal)}
-              r={hov != null ? "2.6" : "1.6"}
-              fill={color}
-              stroke="#0a0e14"
-              strokeWidth={hov != null ? "1" : "0"}
-              vectorEffect="non-scaling-stroke"
-              style={{ transition: "r 120ms" }}
-            />
           </svg>
+
+          {/*
+            Vurgu noktası SVG'de DEĞİL, HTML olarak çiziliyor: viewBox 100x42 ama
+            kutu ~345x62 ve preserveAspectRatio="none" olduğu için x ekseni y'den
+            ~2.3 kat fazla geriliyor — SVG içindeki <circle> ekranda ELİPS çıkıyordu
+            (vectorEffect yalnız çizgi kalınlığına etki eder, dolguya değil).
+          */}
+          <span
+            className="absolute rounded-full pointer-events-none transition-all duration-150"
+            style={{
+              left: `${(active / (n - 1)) * 100}%`,
+              top: `${(py(shownVal) / H) * 100}%`,
+              width: hov != null ? 9 : 6,
+              height: hov != null ? 9 : 6,
+              transform: "translate(-50%, -50%)",
+              background: color,
+              boxShadow: hov != null ? "0 0 0 2px #0a0e14" : "none",
+            }}
+          />
 
           {/* Kutu grafiğin İÇİNDE, imlecin karşı tarafında durur: yukarı taşırınca
               kartın başlık satırını örtüyordu, aşağı taşırınca kartın dışına çıkıyordu. */}

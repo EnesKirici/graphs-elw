@@ -13,7 +13,7 @@ export default function ChampionDetail({ champ, version, duos, isClassic = false
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* Sol kolon — Radar + Base Stats + Duo + İpuçları */}
       <div className="lg:col-span-4 space-y-4">
-        <ChampionRadar info={champ.info} />
+        <ChampionRadar info={champ.info} source={champ.infoSource} />
         <StatsTable stats={champ.stats} />
         {/* Duo sinerjisi maç verisinden gelir → Classic varyantta yok, gizle */}
         {!isClassic && <DuoPartners duos={duos} version={version} />}

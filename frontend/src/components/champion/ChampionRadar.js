@@ -9,15 +9,16 @@ const STATS = [
   { key: "difficulty",  label: "Zorluk",    color: "#f59e0b" },
 ];
 
-export default function ChampionRadar({ info }) {
+export default function ChampionRadar({ info, source }) {
   const [hovIdx, setHovIdx] = useState(null);
 
   /*
     Riot bu değerleri (saldırı/savunma/büyü/zorluk, 0-10) elle atıyor ve bazı
-    şampiyonlarda hiç doldurmamış — DDragon 16.15'te Akshan, Rell, Seraphine ve
-    Vex'te dördü de 0. O durumda radar dört sıfırla nokta gibi çizilip "Şampiyon
-    Profili" kartı bomboş duruyordu. Veri yoksa kart hiç açılmaz; sıfır göstermek
-    "bu şampiyonun saldırısı yok" demek olurdu.
+    şampiyonlarda hiç doldurmamış — DDragon'da Akshan, Rell, Seraphine ve Vex'te
+    dördü de 0 (Akshan için çıktığı 11.16'dan beri böyle). Backend o durumda
+    değerleri oyun istemcisinin verisinden türetiyor ve source='client' diyor;
+    türetilemezse kart hiç açılmaz — dört sıfırlık radar "bu şampiyonun saldırısı
+    yok" gibi okunurdu.
   */
   const total = STATS.reduce((s, st) => s + (Number(info?.[st.key]) || 0), 0);
   if (!total) return null;
@@ -42,8 +43,16 @@ export default function ChampionRadar({ info }) {
 
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-edge/50">
+      <div className="px-5 py-3.5 border-b border-edge/50 flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-gray-200">Şampiyon Profili</h3>
+        {source === "client" && (
+          <span
+            className="text-[10px] text-gray-600 italic"
+            title="Riot bu şampiyon için saldırı/savunma/büyü/zorluk değerlerini yayınlamıyor; değerler oyun istemcisindeki şampiyon seçim barlarından (hasar / dayanıklılık / zorluk) türetildi."
+          >
+            oyun istemcisi verisi
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col items-center px-4 pt-4 pb-3">

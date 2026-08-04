@@ -17,6 +17,9 @@ const ROLE_ICON = {
   BOTTOM: "/roles/bot.svg", UTILITY: "/roles/support.svg", SUPPORT: "/roles/support.svg",
 };
 
+/* İstatistik parçası satırlarının anlamı (DDragon bunları isimlendirmiyor). */
+const SHARD_ROW_TR = ["Saldırı", "Esnek", "Savunma"];
+
 const hideOnError = (e) => { e.currentTarget.style.visibility = "hidden"; };
 const wrCls = (wr) => (wr >= 52 ? "text-blue-300" : wr >= 49 ? "text-gray-200" : "text-red-400");
 // Derece renkleri gradeStyle.js'te (tek kaynak) — şampiyon ikonu çerçevesi de aynısını kullanır.
@@ -165,7 +168,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
       <Panel>
         <div className="grid grid-cols-1 lg:grid-cols-12">
         {/* SOL — Rünler (sayfanın ana içeriği, en geniş alan) */}
-        <div className="lg:col-span-8 lg:border-r border-edge/40 flex flex-col">
+        <div className="lg:col-span-8 lg:border-r border-edge/40 flex flex-col divide-y divide-edge/40">
           <Section
             className="flex-1 flex flex-col"
             bodyClassName="flex-1 flex flex-col"
@@ -210,20 +213,33 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                   kalıyor, sağda ve altta büyük boşluk oluşuyordu. Parçaları üçüncü sütuna
                   almak yatay alanı doldurup dikey boşluğu kapatıyor.
                 */}
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-3 content-center">
+                {/* content-center: artan alan varsa ağaç bloğu ortalanır. Satır
+                    aralarına yaymak (justify-between) denendi — sütun çok uzun olunca
+                    rünler birbirinden kopup seyrek duruyordu; sihirdar büyülerini bu
+                    sütuna alınca zaten iki taraf aynı boya geldi. */}
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-3 mt-1 content-center">
                   <div className="flex justify-center">
                     <RuneTree tree={runePage.primary} selected={runePage.selected} pctOf={runePage.pctOf} />
                   </div>
                   <div className="flex justify-center md:border-x border-edge/40 md:px-2">
                     <RuneTree tree={runePage.secondary} selected={runePage.selected} pctOf={runePage.pctOf} skipKeystone />
                   </div>
-                  <div className="flex flex-col items-center gap-3">
-                    <span className="text-sm font-semibold text-gray-300 mb-1.5">İstatistik Parçaları</span>
+                  <div className="flex flex-col items-center gap-4">
+                    <span className="text-sm font-semibold text-gray-300">İstatistik Parçaları</span>
+                    {/* Satır etiketleri (Saldırı/Esnek/Savunma) ve seçilenin ADI eklendi:
+                        daha önce üç sıra isimsiz ikon vardı, hangi satırın ne olduğu
+                        belli değildi ve sütunun yarısı boştu. */}
                     {SHARD_ROWS.map((row, ri) => (
-                      <div key={ri} className="flex items-center gap-3">
-                        {row.map((sh, ci) => (
-                          <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={30} title={sh.name} />
-                        ))}
+                      <div key={ri} className="w-full flex flex-col items-center gap-1">
+                        <span className="text-[10px] text-gray-600 uppercase tracking-wider">{SHARD_ROW_TR[ri]}</span>
+                        <div className="flex items-center gap-3">
+                          {row.map((sh, ci) => (
+                            <RuneDot key={ci} src={shardIcon(sh.icon)} on={runePage.shardSel[ri] === ci} size={34} title={sh.name} />
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-blue-300/80 text-center leading-tight">
+                          {row[runePage.shardSel[ri]]?.name}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -233,39 +249,47 @@ export default function ChampionBuild({ champion, version, runesData = [], build
               <ComingSoon>Bu koridor için rün verisi henüz birikmedi.</ComingSoon>
             )}
           </Section>
+
+          {/* Sihirdar büyüleri RÜNLERLE aynı sütunda: oyunda da ikisi aynı ekranda
+              seçilir. Ayrıca sağ sütun soldan çok daha uzundu; bu bölüm sola geçince
+              iki sütun neredeyse aynı boyda bitiyor ve geniş alanda çiftler sıkışmıyor. */}
+          <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
+            {spellPairs.length ? (
+              <div
+                className="grid gap-2"
+                style={{ gridTemplateColumns: `repeat(${Math.min(spellPairs.length, 4)}, minmax(0, 1fr))` }}
+              >
+                {spellPairs.slice(0, 4).map((sp) => {
+                  const icons = String(sp.key).split("-").map((sid) => build?.spellMap?.[sid]).filter(Boolean);
+                  if (!icons.length) return null;
+                  return (
+                    <div key={sp.key} className="rounded-lg bg-edge/20 border border-edge/40 p-2.5 flex items-center justify-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        {icons.map((s, i) => (
+                          <img key={i} src={s.image} alt={s.name} title={s.name}
+                            width={38} height={38} className="rounded-lg border border-edge" onError={hideOnError} />
+                        ))}
+                      </div>
+                      <div>
+                        <div className={`text-sm font-bold leading-none ${wrCls(sp.winRate)}`}>{sp.winRate}%</div>
+                        <div className="text-[10px] text-gray-500 mt-1 leading-none">{sp.pickRate}% seçim</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <ComingSoon>Büyü verisi henüz yok.</ComingSoon>
+            )}
+          </Section>
         </div>
 
         {/*
-          SAĞ — üç bölüm, aralarında yatay ayraç. Ayrı kartlardayken her biri az
-          içerikli olduğu için (2 sihirdar çifti, 2 yetenek sırası) kart başına düşen
-          boşluk içerikten fazlaydı; artık soldaki rün sütunuyla aynı çerçevede.
+          SAĞ — yetenek sırası + başlangıç/çizme. Ayrı kartlardayken her biri az
+          içerikli olduğu için kart başına düşen boşluk içerikten fazlaydı; artık
+          soldaki rün sütunuyla aynı çerçevede.
         */}
         <div className="lg:col-span-4 divide-y divide-edge/40 border-t lg:border-t-0 border-edge/40">
-            <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
-              {spellPairs.length ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {spellPairs.slice(0, 4).map((sp) => {
-                    const icons = String(sp.key).split("-").map((sid) => build?.spellMap?.[sid]).filter(Boolean);
-                    if (!icons.length) return null;
-                    return (
-                      <div key={sp.key} className="rounded-lg bg-edge/30 border border-edge/50 p-2.5 text-center">
-                        <div className="flex items-center justify-center gap-1.5 mb-2">
-                          {icons.map((s, i) => (
-                            <img key={i} src={s.image} alt={s.name} title={s.name}
-                              width={36} height={36} className="rounded-lg border border-edge" onError={hideOnError} />
-                          ))}
-                        </div>
-                        <div className={`text-sm font-bold leading-none ${wrCls(sp.winRate)}`}>{sp.winRate}%</div>
-                        <div className="text-[10px] text-gray-500 mt-1">{sp.pickRate}% seçim</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <ComingSoon>Büyü verisi henüz yok.</ComingSoon>
-              )}
-            </Section>
-
             <Section title="Yetenek Sırası" extra={<span className="text-[10px] text-gray-600">Seçim · WR</span>}>
               {skillOrders.length ? (
                 <div className="space-y-3">
@@ -293,15 +317,15 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                 {items.boots.length > 0 && (
                   <div className={starters.length ? "pt-3 border-t border-edge/40" : ""}>
                     <span className="text-[11px] text-gray-400 font-medium block mb-2">Çizme Tercihleri</span>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-2">
                       {items.boots.map((b, i) => (
-                        <div key={i} className="flex items-center gap-2 rounded-md bg-edge/25 border border-edge/40 px-2 py-1.5"
+                        <div key={i} className="flex items-center gap-2 rounded-lg bg-edge/20 border border-edge/40 px-2.5 py-2"
                           title={`%${b.pickRate} seçim · %${b.winRate} kazanma`}>
-                          <img src={b.icon} alt="" width={30} height={30}
+                          <img src={b.icon} alt="" width={34} height={34}
                             className="rounded-md border border-edge shrink-0" onError={hideOnError} />
                           <div className="min-w-0">
-                            <div className={`text-xs font-bold leading-none ${wrCls(b.winRate)}`}>{b.winRate}%</div>
-                            <div className="text-[10px] text-gray-500 mt-1 leading-none">{b.pickRate}%</div>
+                            <div className={`text-sm font-bold leading-none ${wrCls(b.winRate)}`}>{b.winRate}%</div>
+                            <div className="text-[10px] text-gray-500 mt-1 leading-none">{b.pickRate}% seçim</div>
                           </div>
                         </div>
                       ))}
@@ -515,16 +539,20 @@ function StatStrip({ pos, roleLabel }) {
   );
 }
 
-/* Yetenek sırası satırı (Q>W>E gerçek yetenek görselleriyle). */
+/*
+  Yetenek sırası satırı (Q>W>E gerçek yetenek görselleriyle).
+  Satır tam genişliğe yayılır ve ikonlar büyüktür: dar bir kümede sola yapışınca
+  sütunun sağ yarısı boş kalıyordu.
+*/
 function SkillOrderRow({ o, champion, big }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between gap-3 rounded-lg bg-edge/20 border border-edge/40 px-3 py-2">
+      <div className="flex items-center gap-2.5">
         {String(o.key).split(">").map((L, i, arr) => (
           <Fragment key={i}>
             <div className="relative">
               <img src={champion.spells?.[SPELL_IDX[L]]?.image} alt={L}
-                width={big ? 40 : 32} height={big ? 40 : 32}
+                width={big ? 46 : 38} height={big ? 46 : 38}
                 className={`rounded-lg border ${big ? "border-blue-500/50" : "border-edge opacity-80"}`} onError={hideOnError} />
               <span className="absolute -bottom-1.5 -right-1.5 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-1 text-blue-300">{L}</span>
             </div>
@@ -532,26 +560,33 @@ function SkillOrderRow({ o, champion, big }) {
           </Fragment>
         ))}
       </div>
-      <span className="text-xs text-gray-400 ml-auto">{o.pickRate}%</span>
-      <span className={`text-sm font-bold ${wrCls(o.winRate)}`}>{o.winRate}%</span>
+      <div className="text-right shrink-0">
+        <div className={`text-sm font-bold leading-none ${wrCls(o.winRate)}`}>{o.winRate}%</div>
+        <div className="text-[10px] text-gray-500 mt-1 leading-none">{o.pickRate}% seçim</div>
+      </div>
     </div>
   );
 }
 
-/* Başlangıç eşya satırı (aynı eşyadan çok alınmışsa ×N). */
+/* Başlangıç eşya satırı (aynı eşyadan çok alınmışsa ×N) — yetenek sırası
+   satırlarıyla aynı kutu dili, tam genişlikte. */
 function StarterRow({ s, version }) {
   const counts = {};
   String(s.key).split("-").forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
   return (
-    <div className="flex items-center gap-2">
-      {Object.entries(counts).map(([id, n]) => (
-        <div key={id} className="relative">
-          <img src={itemIcon(version, id)} alt="" width={32} height={32} className="rounded-md border border-edge" onError={hideOnError} />
-          {n > 1 && <span className="absolute -bottom-1 -right-1 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-0.5 text-gray-300">×{n}</span>}
-        </div>
-      ))}
-      <span className="text-xs text-gray-400 ml-auto">{s.pickRate}%</span>
-      <span className={`text-xs font-bold ${wrCls(s.winRate)}`}>{s.winRate}%</span>
+    <div className="flex items-center justify-between gap-3 rounded-lg bg-edge/20 border border-edge/40 px-3 py-2">
+      <div className="flex items-center gap-2">
+        {Object.entries(counts).map(([id, n]) => (
+          <div key={id} className="relative">
+            <img src={itemIcon(version, id)} alt="" width={40} height={40} className="rounded-md border border-edge" onError={hideOnError} />
+            {n > 1 && <span className="absolute -bottom-1 -right-1 text-[9px] font-bold bg-[#0a0e14] border border-edge rounded px-0.5 text-gray-300">×{n}</span>}
+          </div>
+        ))}
+      </div>
+      <div className="text-right shrink-0">
+        <div className={`text-sm font-bold leading-none ${wrCls(s.winRate)}`}>{s.winRate}%</div>
+        <div className="text-[10px] text-gray-500 mt-1 leading-none">{s.pickRate}% seçim</div>
+      </div>
     </div>
   );
 }
@@ -573,11 +608,20 @@ function ItemRow({ items, size = 36 }) {
 function RuneTree({ tree, selected, pctOf, skipKeystone }) {
   if (!tree) return null;
   const slots = skipKeystone ? tree.slots.slice(1) : tree.slots;
+  // Seçilen keystone'un adı — ağacın altında yazılı olmasa ziyaretçi ikondan
+  // hangi ana rünün önerildiğini çıkaramıyordu.
+  const keyName = !skipKeystone
+    ? tree.slots?.[0]?.runes?.find((r) => selected.has(r.id))?.name
+    : null;
+
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex items-center gap-2 mb-1.5">
-        <img src={runeIcon(tree.icon)} alt="" width={22} height={22} onError={hideOnError} />
-        <span className="text-sm font-semibold text-gray-300">{TREE_TR[tree.key] || tree.key}</span>
+    <div className="w-full flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-1 mb-1">
+        <div className="flex items-center gap-2">
+          <img src={runeIcon(tree.icon)} alt="" width={24} height={24} onError={hideOnError} />
+          <span className="text-sm font-semibold text-gray-300">{TREE_TR[tree.key] || tree.key}</span>
+        </div>
+        {keyName && <span className="text-[10px] text-blue-300/80">{keyName}</span>}
       </div>
       {slots.map((slot, i) => {
         const isKeystoneRow = !skipKeystone && i === 0;
@@ -585,7 +629,7 @@ function RuneTree({ tree, selected, pctOf, skipKeystone }) {
           <div key={i} className="flex items-start justify-center gap-2.5">
             {slot.runes.map((r) => (
               <RuneDot key={r.id} src={runeIcon(r.icon)} on={selected.has(r.id)}
-                size={isKeystoneRow ? 44 : 33} title={r.name}
+                size={isKeystoneRow ? 52 : 38} title={r.name}
                 pct={pctOf ? pctOf[r.id] : undefined} withLabel={!!pctOf} />
             ))}
           </div>

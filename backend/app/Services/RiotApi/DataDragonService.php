@@ -179,6 +179,89 @@ class DataDragonService
     }
 
     /**
+     * Radar için şampiyon profili: saldırı / savunma / büyü / zorluk (0-10).
+     *
+     * DDragon'un `info` alanını Riot elle dolduruyor ve BAZI şampiyonlarda hiç
+     * doldurmamış — 16.15'te Akshan, Rell, Seraphine ve Vex'te dördü de 0
+     * (Akshan 11.16'dan beri böyle, yani eski sürüme düşmek çare değil).
+     * O durumda değerler OYUN İSTEMCİSİNDEN türetilir: CommunityDragon, Riot'un
+     * istemci veri dosyalarını (rcp-be-lol-game-data) aynen yayınlar; şampiyon
+     * seçim ekranındaki hasar/dayanıklılık barları oradaki `playstyleInfo` (0-3).
+     * 0-3 → 0-9'a ölçeklenir. Kaba bir çeviri ama bomboş radar göstermekten iyi;
+     * kaynak `source` ile döndürülür ki arayüz bunu açıkça yazabilsin.
+     *
+     * @return array{values: array, source: string}
+     */
+    public function championProfile(array $champion): array
+    {
+        $info = $champion['info'] ?? [];
+        $sum = (int) ($info['attack'] ?? 0) + (int) ($info['defense'] ?? 0)
+             + (int) ($info['magic'] ?? 0) + (int) ($info['difficulty'] ?? 0);
+
+        if ($sum > 0) {
+            return ['values' => $info, 'source' => 'ddragon'];
+        }
+
+        $derived = $this->clientPlaystyle((int) ($champion['key'] ?? 0));
+
+        return $derived
+            ? ['values' => $derived, 'source' => 'client']
+            : ['values' => $info, 'source' => 'ddragon'];
+    }
+
+    /** CommunityDragon playstyleInfo → DDragon info şeması. Başarısızlıkta null. */
+    private function clientPlaystyle(int $key): ?array
+    {
+        if ($key <= 0) {
+            return null;
+        }
+
+        // 7 gün: bu değerler yamalar arası neredeyse hiç değişmiyor. Başarısız
+        // denemede 1 saatlik "deneme" bayrağı konur ki CDN çökünce her istek
+        // 5 saniye beklemesin.
+        $cacheKey = "cdragon:playstyle:{$key}";
+        $cached = Cache::get($cacheKey);
+        if ($cached !== null) {
+            return $cached ?: null;
+        }
+
+        try {
+            $res = Http::timeout(5)->connectTimeout(3)->get(
+                "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champions/{$key}.json"
+            );
+            if (! $res->successful()) {
+                Cache::put($cacheKey, false, 3600);
+                return null;
+            }
+
+            $play = $res->json('playstyleInfo') ?? [];
+            $tac  = $res->json('tacticalInfo') ?? [];
+            $dmg  = (int) ($play['damage'] ?? 0) * 3;
+            $type = (string) ($tac['damageType'] ?? '');
+
+            $values = [
+                // Karma hasarda ikisine de yarım pay: tek eksene yığmak yanıltırdı.
+                'attack'     => $type === 'kMagic' ? 0 : ($type === 'kMixed' ? (int) round($dmg / 2) : $dmg),
+                'defense'    => (int) ($play['durability'] ?? 0) * 3,
+                'magic'      => $type === 'kPhysical' ? 0 : ($type === 'kMixed' ? (int) round($dmg / 2) : $dmg),
+                'difficulty' => (int) ($tac['difficulty'] ?? 0) * 3,
+            ];
+
+            if (array_sum($values) === 0) {
+                Cache::put($cacheKey, false, 3600);
+                return null;
+            }
+
+            Cache::put($cacheKey, $values, 604800);
+            return $values;
+        } catch (\Throwable $e) {
+            Cache::put($cacheKey, false, 3600);
+            Log::warning('communitydragon playstyle alınamadı', ['key' => $key, 'err' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
      * Tüm item verilerini getir.
      */
     public function getItems(): array
