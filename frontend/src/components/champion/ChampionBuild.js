@@ -506,6 +506,9 @@ function TopPlayers({ players, version }) {
   }
   const half = Math.ceil(players.length / 2);
   const cols = players.length > 5 ? [players.slice(0, half), players.slice(half)] : [players];
+  // Derece sütunu ancak DOLU olduğunda açılır: champion_top_players'da tier çoğu
+  // oyuncuda boş ve baştan sona "—" dizilen bir sütun yalnız yer kaplıyordu.
+  const hasTier = players.some((p) => p.tier);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-1">
@@ -515,9 +518,9 @@ function TopPlayers({ players, version }) {
             <tr className="text-[10px] text-gray-600 uppercase tracking-wider">
               <th className="font-medium text-left pb-1.5 w-8">#</th>
               <th className="font-medium text-left pb-1.5">Oyuncu</th>
-              <th className="font-medium text-right pb-1.5 hidden sm:table-cell">Derece</th>
-              <th className="font-medium text-right pb-1.5 w-12">Maç</th>
-              <th className="font-medium text-right pb-1.5 w-14">Kazanma</th>
+              {hasTier && <th className="font-medium text-right pb-1.5 hidden sm:table-cell">Derece</th>}
+              <th className="font-medium text-right pb-1.5 w-16">Maç</th>
+              <th className="font-medium text-right pb-1.5 w-20">Kazanma</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-edge/30">
@@ -541,9 +544,11 @@ function TopPlayers({ players, version }) {
                       <span className="text-gray-200 truncate group-hover:text-white transition-colors">{p.name}</span>
                     </Link>
                   </td>
-                  <td className="py-1.5 text-right text-[10px] text-gray-500 hidden sm:table-cell">
-                    {p.tier ? `${p.tier.charAt(0)}${p.tier.slice(1).toLowerCase()}${p.rank ? ` ${p.rank}` : ""}` : "—"}
-                  </td>
+                  {hasTier && (
+                    <td className="py-1.5 text-right text-[10px] text-gray-500 hidden sm:table-cell">
+                      {p.tier ? `${p.tier.charAt(0)}${p.tier.slice(1).toLowerCase()}${p.rank ? ` ${p.rank}` : ""}` : "—"}
+                    </td>
+                  )}
                   <td className="py-1.5 text-right text-gray-400 tabular-nums">{p.games}</td>
                   <td className={`py-1.5 text-right font-bold tabular-nums ${wrCls(p.winRate)}`}>{p.winRate}%</td>
                 </tr>
