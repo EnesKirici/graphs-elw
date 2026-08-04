@@ -176,10 +176,19 @@ function Side({ name, id, image, version, wr, align, link }) {
   hangi tarafın önde olduğu tek bakışta okunur.
 */
 function CompareRow({ r }) {
-  // Baskınlık −1..+1. Pozitif = SOL (sayfanın şampiyonu) önde.
+  /*
+    Baskınlık −1..+1. Pozitif = SOL (sayfanın şampiyonu) önde.
+
+    GAIN neden var: ham göreli fark (a−b)/(a+b) gerçek maç verisinde çok küçük
+    çıkıyor — katılım %38'e karşı %43 yalnızca 0.06 eder, yani barın %3'ü; ekranda
+    fark GÖRÜNMÜYORDU. 3 ile çarpıp kırpınca "tam bar" = %33 göreli fark oluyor;
+    bu metriklerde %33'lük bir açık zaten ezici üstünlük demek. Sıralama ve işaret
+    değişmez, yalnız ölçek okunur hâle gelir.
+  */
+  const GAIN = 3;
   const off = r.full
-    ? clamp(r.a / r.full, -1, 1)                                   // simetrik metrik: fark / eşik
-    : (r.a + r.b === 0 ? 0 : (r.a - r.b) / (r.a + r.b));           // normal metrik: göreli üstünlük
+    ? clamp(r.a / r.full, -1, 1)                                          // simetrik metrik: fark / eşik
+    : (r.a + r.b === 0 ? 0 : clamp(((r.a - r.b) / (r.a + r.b)) * GAIN, -1, 1));
 
   const pct = Math.abs(off) * 50;      // izin verilen en uzun bar = yarım genişlik
   const col = off === 0 ? NEUTRAL : off > 0 ? COL_GOOD : COL_BAD;
