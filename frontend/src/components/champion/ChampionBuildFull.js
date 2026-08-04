@@ -16,29 +16,51 @@ import RoleSelector, { ROLE_LABELS } from "@/components/champion/RoleSelector";
   değildir (Akshan'da 1. eşya Kraken %47 seçim / %42.9 WR iken, Kibir %6.9 seçim /
   %54.5 WR). Tek listede sıralamak bu farkı gizliyordu.
 
-  ADJWR (güven ağırlıklı kazanma oranı):
-      adj = 50 + (wr − 50) × games / (games + K)
-  Az maçlı uç değerleri %50'ye çeker. 8 maçta %75 kazanan bir eşya ham sıralamada
-  başa geçer ama bu zar atışıdır; 300 maçta %53 kazanan gerçek bir üstünlüktür.
-  K = 25: "yaklaşık 25 maç sonra veriye tam güven" demek. Aynı mantık site genelinde
-  matchup sıralamasında da kullanılıyor (MATCHUP_CONF_K).
+  SIRALAMA ÖLÇÜTÜ — Wilson alt güven sınırı (%95, tek taraflı).
+  "Kaç maçta kazandı" ile "kaç maç oynandı" birlikte değerlendirilir: 9 maçta
+  %77.8 kazanan bir eşyanın gerçek oranı %45 de olabilir %95 de; 150 maçta %47.3
+  kazananınki dar bir bantta oturur. Alt sınır bu belirsizliği cezalandırır.
+
+  Basit "adj = 50 + (wr−50)·g/(g+K)" formülü DENENDİ ve iki yerde yanlış davrandı:
+  (a) 9 maçlık %77.8'i başa aldı, (b) iki seçenek de %50'nin altındayken AZ maçlı
+  olanı "daha iyi" gösterdi (çünkü shrinkage onu %50'ye daha çok çekiyordu —
+  Akshan'da 71 maçlık Elektrik Ver, 395 maçlık Saldırıya Devam'ın önüne geçmişti).
+  Wilson alt sınırı iki yönde de doğru davranır.
+
+  Ayrıca ÖRNEKLEM TABANI var: bir seçenek o slottaki toplam maçın en az %10'unu
+  görmemişse öneriye hiç girmez. İstatistik ne derse desin, 9 maç bir build
+  tavsiyesi için yeterli veri değildir.
 */
 
 const SPELL_IDX = { Q: 0, W: 1, E: 2, R: 3 };
-const CONF_K = 25;
-const MIN_GAMES = 8; // bunun altındaki seçenek "öneri" olamaz (tek maçlık %100'ler)
+const WILSON_Z = 1.96;
+const MIN_SHARE = 0.10;  // slot toplamının en az %10'u
+const MIN_GAMES_FLOOR = 12; // ...ama her hâlükârda bu kadar maç
 const TL_MIN_SAMPLE = 20;
 
 const hideOnError = (e) => { e.currentTarget.style.visibility = "hidden"; };
 const wrCls = (wr) => (wr >= 52 ? "text-blue-300" : wr >= 49 ? "text-gray-200" : "text-red-400");
 
-const adjWR = (r) => 50 + ((r.winRate ?? 50) - 50) * ((r.games ?? 0) / ((r.games ?? 0) + CONF_K));
+/** Kazanma oranının %95 alt güven sınırı (0-1). n küçükse sonuç sert düşer. */
+function wilsonLower(winRate, games) {
+  const n = games ?? 0;
+  if (n <= 0) return 0;
+  const p = Math.min(Math.max((winRate ?? 0) / 100, 0), 1);
+  const z2 = WILSON_Z * WILSON_Z;
+  const denom = 1 + z2 / n;
+  const center = p + z2 / (2 * n);
+  const margin = WILSON_Z * Math.sqrt((p * (1 - p) + z2 / (4 * n)) / n);
+  return Math.max(0, (center - margin) / denom);
+}
 
-/** Listeden güven ağırlıklı en iyi seçeneği verir (yeterli örneklem yoksa null). */
+/** Listeden istatistiksel olarak en güvenilir yüksek oranı verir (yoksa null). */
 function bestOf(list) {
-  const ok = (list || []).filter((r) => (r.games ?? 0) >= MIN_GAMES);
+  const rows = list || [];
+  const total = rows.reduce((s, r) => s + (r.games || 0), 0);
+  const min = Math.max(MIN_GAMES_FLOOR, Math.round(total * MIN_SHARE));
+  const ok = rows.filter((r) => (r.games ?? 0) >= min);
   if (!ok.length) return null;
-  return ok.reduce((a, b) => (adjWR(b) > adjWR(a) ? b : a));
+  return ok.reduce((a, b) => (wilsonLower(b.winRate, b.games) > wilsonLower(a.winRate, a.games) ? b : a));
 }
 
 function Panel({ title, extra, children, className = "" }) {
@@ -184,9 +206,10 @@ export default function ChampionBuildFull({ champion, version, runesData = [], b
         >
           <div className="space-y-4">
             <p className="text-[11px] text-gray-500 leading-relaxed">
-              Bu dizilim <b className="text-gray-300">popülerliğe değil kazanma oranına</b> göre seçildi; az maçlı uç
-              değerlerin başa geçmemesi için örneklem ağırlığı uygulanır (en az {MIN_GAMES} maç şartı + güven katsayısı).
-              Bu yüzden aşağıdaki &quot;en çok tercih edilen&quot; listesinden farklı olabilir.
+              Bu dizilim <b className="text-gray-300">popülerliğe değil kazanma oranına</b> göre seçildi. Az maçlı
+              seçenekler elenir (o slottaki maçların en az %10&apos;u), kalanlar arasında ham oran değil{" "}
+              <b className="text-gray-300">güven alt sınırı</b> sıralanır — 9 maçta %78 kazanan bir eşya, 150 maçta
+              %53 kazanandan daha güvenilir değildir. Bu yüzden aşağıdaki &quot;en popüler&quot; seçimden farklı olabilir.
             </p>
 
             {/* Eşya yolu */}
