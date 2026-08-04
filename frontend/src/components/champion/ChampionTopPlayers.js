@@ -4,127 +4,199 @@ import Link from "next/link";
 import { profileIcon } from "@/lib/buildData";
 
 /*
-  Şampiyonun en çok oynayan oyuncuları — bir SIRALAMA tablosu.
+  Şampiyonun en iyi oyuncuları — İKİ AYRI SIRALAMA.
 
-  Serbest ızgara denendi ve kötüydü: sıra/maç/kazanma farklı hizalarda yüzen
-  sayılardı, hangisinin ne olduğu belli değildi. Burası bir liderlik tablosu, o
-  yüzden sütun başlıkları, madalyalı ilk üç sıra ve tek satırda okunabilen bir
-  düzen var.
+  Tek liste "en iyi" sorusuna tek cevap veriyordu, oysa iki farklı cevabı var:
+  bir oyuncu şampiyonu en çok oynayan olabilir (ustalık), bir başkası ligde en
+  yükseğe çıkmış olabilir (ladder). İkisini aynı tabloda sıralamak birini
+  gizliyordu; artık yan yana iki panel, her biri kendi ölçütüyle sıralı.
 
-  USTALIK PUANI ŞU AN ÖRNEK VERİDİR. Gerçeği Riot'un champion-mastery ucundan
-  oyuncu başına 1 istekle gelir; dev anahtarın kotası zaten dar olduğu için
-  (prod anahtar bekleniyor) şimdilik oynanan maçtan TÜRETİLİYOR ve tablo
-  görünür biçimde "örnek veri" diyor — sahte sayıyı gerçekmiş gibi göstermek
-  ziyaretçiyi yanıltırdı. Gerçek veriye geçince mockMastery + not silinir.
+  ⚠ USTALIK ve LİG DERECESİ ŞU AN ÖRNEK VERİDİR. Gerçeği Riot'un
+  champion-mastery ve league uçlarından oyuncu başına 1'er istekle gelir; dev
+  anahtarın kotası dar olduğu için (prod anahtar bekleniyor) şimdilik oynanan
+  maçtan DETERMİNİSTİK türetiliyor ve paneller bunu görünür biçimde yazıyor —
+  sahte sayıyı gerçekmiş gibi sunmak ziyaretçiyi yanıltırdı.
+  Gerçeğe geçerken: mockMastery/mockRank + uyarı satırları silinir.
 */
 
 const MEDAL = ["text-amber-300", "text-gray-300", "text-orange-400"];
 
-// Ustalık seviyesi eşikleri (oyunun kendi eşikleri): 1-3 arası düşük, 4+ ciddi oyuncu.
-const MASTERY_LEVEL = (pts) => (pts >= 500000 ? 10 : pts >= 200000 ? 9 : pts >= 100000 ? 8 : pts >= 50000 ? 7 : pts >= 21600 ? 6 : 5);
+const TIERS = [
+  { key: "CHALLENGER", label: "Challenger", color: "text-yellow-300", min: 1200 },
+  { key: "GRANDMASTER", label: "Grandmaster", color: "text-red-400", min: 900 },
+  { key: "MASTER", label: "Master", color: "text-purple-400", min: 600 },
+  { key: "DIAMOND", label: "Diamond", color: "text-sky-300", min: 400 },
+  { key: "EMERALD", label: "Emerald", color: "text-emerald-300", min: 0 },
+];
 
-/*
-  Deterministik yer tutucu: aynı oyuncu her sayfa yenilemesinde aynı sayıyı görsün
-  (Math.random olsaydı her istekte değişir, "veri oynak" izlenimi verirdi).
-  Maç başına ~1.500 puan gerçekçi bir orandır; isimden türeyen sapma listeyi
-  tekdüze olmaktan çıkarır.
-*/
-function mockMastery(name, games) {
+const DIVISIONS = ["I", "II", "III", "IV"];
+
+/** Aynı oyuncu her yenilemede aynı sayıyı görsün diye isimden türeyen sabit hash. */
+function hash(name) {
   let h = 0;
-  for (let i = 0; i < String(name).length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  const spread = 0.6 + ((h % 1000) / 1000) * 1.8; // 0.6x - 2.4x
+  for (let i = 0; i < String(name).length; i++) h = (h * 31 + String(name).charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function mockMastery(name, games) {
+  const spread = 0.6 + ((hash(name) % 1000) / 1000) * 1.8; // 0.6x - 2.4x
   return Math.round(((games || 1) * 1500 * spread) / 100) * 100;
 }
 
-const fmtPts = (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : String(n));
+const MASTERY_LEVEL = (pts) =>
+  pts >= 500000 ? 10 : pts >= 200000 ? 9 : pts >= 100000 ? 8 : pts >= 50000 ? 7 : pts >= 21600 ? 6 : 5;
 
-export default function ChampionTopPlayers({ players, version }) {
+/** Örnek lig verisi: Emerald+ havuzu olduğu için taban Emerald, tavan Challenger. */
+function mockRank(name, games, winRate) {
+  const h = hash(name + "|rank");
+  // Maç sayısı ve kazanma oranı yüksek olan biraz daha yukarıda çıksın (tutarlı görünsün)
+  const base = (games || 1) * 4 + (winRate - 50) * 8 + (h % 600);
+  const lp = Math.max(0, Math.round(base));
+  const tier = TIERS.find((t) => lp >= t.min) || TIERS[TIERS.length - 1];
+  const division = tier.min >= 600 ? null : DIVISIONS[h % 4];
+  // Master+ için LP doğrudan; alt tierlerde 0-100 aralığına indir
+  const shownLp = tier.min >= 600 ? lp : lp % 100;
+  return { tier, division, lp: shownLp, sort: lp };
+}
+
+const fmtPts = (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : String(n));
+const wrCls = (wr) => (wr >= 52 ? "text-blue-300" : wr >= 49 ? "text-gray-200" : "text-red-400");
+
+function PlayerAvatar({ p, version, size = 34 }) {
+  return p.profileIconId != null ? (
+    <img
+      src={profileIcon(version, p.profileIconId)}
+      alt=""
+      width={size}
+      height={size}
+      className="rounded-lg border border-edge shrink-0"
+      onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+    />
+  ) : (
+    <span className="rounded-lg bg-edge/50 border border-edge shrink-0" style={{ width: size, height: size }} />
+  );
+}
+
+/** Ortak satır iskeleti: sıra + avatar + isim + sağda ölçüte özel blok. */
+function Row({ p, i, version, right, sub }) {
+  return (
+    <Link
+      href={`/summoner/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag || "")}`}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-hover transition-colors group"
+      title={`${p.name}#${p.tag}`}
+    >
+      <span className={`w-5 text-center text-sm font-extrabold tabular-nums shrink-0 ${MEDAL[i] || "text-gray-600"}`}>
+        {i + 1}
+      </span>
+      <PlayerAvatar p={p} version={version} />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm text-gray-200 truncate group-hover:text-white transition-colors">{p.name}</div>
+        <div className="text-[10px] text-gray-500 mt-0.5">{sub}</div>
+      </div>
+      {right}
+    </Link>
+  );
+}
+
+export default function ChampionTopPlayers({ players, version, championName }) {
   if (!players?.length) {
     return (
-      <p className="text-[11px] text-gray-600 leading-relaxed py-2">
-        Bu şampiyon için henüz yeterli oyuncu verisi toplanmadı.
-      </p>
+      <div className="glass rounded-xl p-6 text-center">
+        <p className="text-[11px] text-gray-600">Bu şampiyon için henüz yeterli oyuncu verisi toplanmadı.</p>
+      </div>
     );
   }
 
-  const rows = players.map((p, i) => ({
+  const rows = players.map((p) => ({
     ...p,
-    rank: i + 1,
     mastery: mockMastery(p.name, p.games),
+    ladder: mockRank(p.name, p.games, p.winRate),
   }));
-  const half = Math.ceil(rows.length / 2);
-  const cols = rows.length > 5 ? [rows.slice(0, half), rows.slice(half)] : [rows];
-  const hasTier = rows.some((p) => p.tier);
+
+  const byMastery = [...rows].sort((a, b) => b.mastery - a.mastery).slice(0, 8);
+  const byLadder = [...rows].sort((a, b) => b.ladder.sort - a.ladder.sort).slice(0, 8);
 
   return (
-    <div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8">
-        {cols.map((col, ci) => (
-          <table key={ci} className="w-full text-xs">
-            <thead>
-              <tr className="text-[10px] text-gray-600 uppercase tracking-wider border-b border-edge/40">
-                <th className="font-medium text-left pb-2 w-7">#</th>
-                <th className="font-medium text-left pb-2">Oyuncu</th>
-                {hasTier && <th className="font-medium text-right pb-2 hidden md:table-cell">Derece</th>}
-                <th className="font-medium text-right pb-2 w-20">Ustalık</th>
-                <th className="font-medium text-right pb-2 w-12">Maç</th>
-                <th className="font-medium text-right pb-2 w-16">Kazanma</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-edge/25">
-              {col.map((p) => (
-                <tr key={`${p.name}-${p.tag}`} className="group hover:bg-hover transition-colors">
-                  <td className={`py-2 font-bold tabular-nums ${MEDAL[p.rank - 1] || "text-gray-600"}`}>{p.rank}</td>
-                  <td className="py-2">
-                    <Link
-                      href={`/summoner/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag || "")}`}
-                      className="flex items-center gap-2 min-w-0"
-                      title={`${p.name}#${p.tag}`}
-                    >
-                      {p.profileIconId != null ? (
-                        <img src={profileIcon(version, p.profileIconId)} alt="" width={26} height={26}
-                          className="rounded-md border border-edge shrink-0"
-                          onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
-                      ) : (
-                        <span className="w-[26px] h-[26px] rounded-md bg-edge/50 border border-edge shrink-0" />
-                      )}
-                      <span className="text-gray-200 truncate group-hover:text-white transition-colors">{p.name}</span>
-                    </Link>
-                  </td>
-                  {hasTier && (
-                    <td className="py-2 text-right text-[10px] text-gray-500 hidden md:table-cell">
-                      {p.tier ? `${p.tier.charAt(0)}${p.tier.slice(1).toLowerCase()}${p.rank ? ` ${p.rank}` : ""}` : "—"}
-                    </td>
-                  )}
-                  <td className="py-2 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span className="text-[9px] font-bold text-violet-300/90 bg-violet-500/10 border border-violet-400/20 rounded px-1 leading-[14px]">
-                        {MASTERY_LEVEL(p.mastery)}
-                      </span>
-                      <span className="text-gray-300 tabular-nums">{fmtPts(p.mastery)}</span>
-                    </div>
-                  </td>
-                  <td className="py-2 text-right text-gray-400 tabular-nums">{p.games}</td>
-                  <td
-                    className={`py-2 text-right font-bold tabular-nums ${
-                      p.winRate >= 52 ? "text-blue-300" : p.winRate >= 49 ? "text-gray-200" : "text-red-400"
-                    }`}
-                  >
-                    {p.winRate}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ))}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* USTALIK — şampiyonu en çok işleyenler */}
+      <div className="glass rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-edge/40 flex items-center justify-between gap-3">
+          <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Ustalık Sıralaması</h3>
+          <span className="text-[10px] text-gray-600">Ustalık puanı · maç</span>
+        </div>
+        <div className="p-2 divide-y divide-edge/20">
+          {byMastery.map((p, i) => (
+            <Row
+              key={`m-${p.name}-${p.tag}`}
+              p={p}
+              i={i}
+              version={version}
+              sub={`${p.games} maç · %${p.winRate} kazanma`}
+              right={
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <img
+                    src={`/masteries/level${Math.min(MASTERY_LEVEL(p.mastery), 10)}.webp`}
+                    alt=""
+                    width={28}
+                    height={28}
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-violet-300 tabular-nums leading-none">{fmtPts(p.mastery)}</div>
+                    <div className="text-[10px] text-gray-600 mt-1 leading-none">seviye {MASTERY_LEVEL(p.mastery)}</div>
+                  </div>
+                </div>
+              }
+            />
+          ))}
+        </div>
+        <p className="px-4 py-2.5 border-t border-edge/30 text-[10px] text-gray-600">
+          Maç sayıları gerçek · <span className="text-amber-400/80">ustalık puanları örnek veri</span>
+        </p>
       </div>
 
-      {/* Sahte sayıyı gerçekmiş gibi göstermemek için görünür uyarı. */}
-      <p className="text-[10px] text-gray-600 mt-3 pt-2.5 border-t border-edge/30">
-        Sıralama ve maç sayıları gerçek veridir.{" "}
-        <span className="text-amber-400/80">Ustalık puanları şimdilik örnek veridir</span> — Riot ustalık ucu
-        prod anahtarla bağlanınca gerçek değerlerle değişecek.
-      </p>
+      {/* LADDER — aynı havuzun ligdeki en yüksekleri */}
+      <div className="glass rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-edge/40 flex items-center justify-between gap-3">
+          <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">TR Sıralaması</h3>
+          <span className="text-[10px] text-gray-600">Lig derecesi · LP</span>
+        </div>
+        <div className="p-2 divide-y divide-edge/20">
+          {byLadder.map((p, i) => (
+            <Row
+              key={`l-${p.name}-${p.tag}`}
+              p={p}
+              i={i}
+              version={version}
+              sub={`${championName || "Bu şampiyon"} ile ${p.games} maç`}
+              right={
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <img
+                    src={`/ranks/badges/${p.ladder.tier.key.toLowerCase()}.webp`}
+                    alt=""
+                    width={30}
+                    height={30}
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  <div className="text-right">
+                    <div className={`text-xs font-bold leading-none ${p.ladder.tier.color}`}>
+                      {p.ladder.tier.label}
+                      {p.ladder.division ? ` ${p.ladder.division}` : ""}
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-1 leading-none tabular-nums">{p.ladder.lp} LP</div>
+                  </div>
+                  <span className={`text-xs font-bold tabular-nums w-11 text-right ${wrCls(p.winRate)}`}>
+                    {p.winRate}%
+                  </span>
+                </div>
+              }
+            />
+          ))}
+        </div>
+        <p className="px-4 py-2.5 border-t border-edge/30 text-[10px] text-gray-600">
+          Oyuncular gerçek · <span className="text-amber-400/80">lig dereceleri örnek veri</span>
+        </p>
+      </div>
     </div>
   );
 }

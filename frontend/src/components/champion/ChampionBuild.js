@@ -424,17 +424,8 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         </Section>
       </Panel>
 
-      {/* OTP tablosu TAM GENİŞLİK, çok sütunlu: dar bir sütunda alt alta dizilince
-          6 satırlık liste yanındaki karttan çok daha uzun kalıyordu. Yatayda üçe
-          bölününce hem kart dolu görünür hem isimler kısalmadan sığar. */}
-      <Panel>
-        <Section
-          title={`En İyi ${champion.name} Oyuncuları`}
-          extra={<span className="text-[10px] text-gray-600">Bu şampiyonu en çok oynayanlar · Maç · WR</span>}
-        >
-          <ChampionTopPlayers players={build?.topPlayers} version={version} />
-        </Section>
-      </Panel>
+      {/* En iyi oyuncular — iki ayrı sıralama (ustalık / ladder), kendi kartlarında */}
+      <ChampionTopPlayers players={build?.topPlayers} version={version} championName={champion.name} />
 
       {/* Kapsam bilgisi — üstte kendi başına bir şerit gibi durup ayrı kart izlenimi
           veriyordu; dipnot olarak burası doğru yeri. */}
