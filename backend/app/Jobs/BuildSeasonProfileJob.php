@@ -52,6 +52,13 @@ class BuildSeasonProfileJob implements ShouldQueue
         int $prevHave = -1,
     ) {
         $this->prevHave = $prevHave;
+
+        // AYRI KUYRUK: bu iş bir KULLANICIYI bekletir (profil sayfasında "hesaplanıyor"
+        // şeridi), ProcessMatchJob ise arka plan istatistiği. Aynı kuyrukta FIFO olduğu
+        // için build, o anki maç yığınının (2026-08-04'te 21.144 iş) arkasına düşüyordu
+        // ve her round yeniden en arkaya gidiyordu → profil pratikte hiç tamamlanmıyordu.
+        // Scheduler `--queue=profiles,default` ile önce burayı boşaltır.
+        $this->onQueue('profiles');
     }
 
     public function handle(MatchService $match, WorkerControlService $worker): void

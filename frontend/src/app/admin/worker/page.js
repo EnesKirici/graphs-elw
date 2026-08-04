@@ -162,6 +162,11 @@ export default function WorkerPage() {
   const onCooldown = rate.cooldownUntil > 0;
   // Tavan doluyken matches:collect turu atlar (backpressure) — panelde belli olsun.
   const queueFull = !!status?.queueCeiling && (status?.queueDepth ?? 0) >= status.queueCeiling;
+  // İŞÇİ ÖLDÜ Mü? Kuyrukta iş varken uzun süredir hiçbir maç işlenmiyorsa bir şey
+  // takılmıştır (2026-08-04'te queue:work'ün 24 saatlik kilidi buydu ve panelde
+  // hiçbir belirti vermiyordu). 20 dk eşiği: sağlıklı işçi dakikada bir turluyor.
+  const idleMin = status?.idleMinutes;
+  const workerStalled = (status?.queueDepth ?? 0) > 0 && idleMin != null && idleMin >= 20;
 
   return (
     <>
@@ -404,7 +409,18 @@ export default function WorkerPage() {
           tone={queueFull ? "gold" : undefined}
           icon={ICON_QUEUE}
         />
-        <StatTile label="Bugün İşlenen" value={status?.processedToday ?? 0} hint={`toplam ${status?.processedTotal ?? 0}`} tone="mint" icon={ICON_ACTIVITY} />
+        {/* Kuyruk doluyken işleme durduysa kart kırmızıya döner — sessiz arıza olmasın. */}
+        <StatTile
+          label="Bugün İşlenen"
+          value={status?.processedToday ?? 0}
+          hint={
+            workerStalled
+              ? `${idleMin} dk'dır işlem yok — işçi durmuş olabilir`
+              : `toplam ${status?.processedTotal ?? 0}`
+          }
+          tone={workerStalled ? "rose" : "mint"}
+          icon={ICON_ACTIVITY}
+        />
         <StatTile
           label="Rate Limit"
           value={onCooldown ? `${rate.cooldownUntil}s bekle` : "Normal"}

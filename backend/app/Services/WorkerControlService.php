@@ -164,6 +164,7 @@ class WorkerControlService
     {
         $todayStart = Carbon::today();
         $pool = $this->poolStats();
+        $lastProcessed = ProcessedMatch::max('processed_at');
 
         return [
             'enabled'       => $this->isEnabled(),
@@ -182,6 +183,15 @@ class WorkerControlService
             'poolSize'      => $pool['size'],
             'poolByTier'    => $pool['byTier'],
             'queueDepth'    => (int) DB::table('jobs')->count(),
+            // KUYRUK CANLILIK SİNYALİ. 2026-08-04: queue:work'ün withoutOverlapping
+            // kilidi (varsayılan 24 sa) takılınca kuyruk günlerce durdu ama panel
+            // "ÇALIŞIYOR" yazmaya devam etti — arıza HİÇBİR yerde görünmüyordu.
+            // Bu alan son işlemenin üstünden kaç dakika geçtiğini verir; kuyruk
+            // doluyken bu sayı büyüyorsa işçi ölmüş demektir.
+            'lastProcessedAt'  => $lastProcessed,
+            'idleMinutes'      => $lastProcessed
+                ? (int) Carbon::parse($lastProcessed)->diffInMinutes(Carbon::now())
+                : null,
             'processedTotal' => ProcessedMatch::count(),
             'processedToday' => ProcessedMatch::where('processed_at', '>=', $todayStart)->count(),
             'matchesTotal'  => MatchRecord::count(),
