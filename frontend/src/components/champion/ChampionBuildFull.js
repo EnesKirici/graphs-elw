@@ -157,11 +157,14 @@ export default function ChampionBuildFull({ champion, version, runesData = [], b
   const best = useMemo(() => {
     const taken = new Set();
     const picked = [];
-    for (const { n, list } of slots) {
+    for (const { list } of slots) {
       const pick = bestOf(list, taken);
       if (pick) {
         taken.add(String(pick.key));
-        picked.push({ n, pick });
+        // Adım numarası SIRALI verilir, gözlemlenen slot numarası değil: bir slotta
+        // eşiği geçen (ve henüz alınmamış) aday kalmayabiliyor ve yol "3 → 5" diye
+        // atlıyordu. Burası bir ÖNERİLEN YOL — adımları kesintisiz olmalı.
+        picked.push({ n: picked.length + 1, pick });
       }
     }
     return {
