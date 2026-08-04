@@ -22,10 +22,16 @@ import { useRef, useState } from "react";
   sütunları döndürür.
 */
 
+/*
+  banRate'in KENDİ serisi var (allTrend): yasaklama seçim ekranında, kimin hangi
+  koridoru oynayacağı belli değilken yapılır — rolü yoktur. Rol serisiyle çizilince
+  Mid'de 16 günlük, Top'ta 6 günlük pencere çıkıyor ve son noktalar farklı güne
+  denk gelip "ban oranı role göre değişiyor" izlenimi veriyordu (kullanıcı sordu).
+*/
 const CHARTS = [
   { field: "winRate", label: "Kazanma Oranı", color: "#60a5fa" },
   { field: "pickRate", label: "Seçim Oranı", color: "#a78bfa" },
-  { field: "banRate", label: "Yasaklanma Oranı", color: "#f87171" },
+  { field: "banRate", label: "Yasaklanma Oranı", color: "#f87171", allRoles: true },
 ];
 
 const AYLAR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
@@ -35,20 +41,21 @@ function fmtDay(iso) {
   return `${Number(d)} ${AYLAR[Number(m) - 1] || ""}`;
 }
 
-export default function ChampionTrend({ trend }) {
+export default function ChampionTrend({ trend, allTrend }) {
   // 3 günden kısa seri "trend" değildir — çizmek yanıltır.
   if (!trend || trend.length < 3) return null;
 
   return (
     <div className="border-t border-edge/40 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-edge/40">
-      {CHARTS.map((c) => (
-        <TrendChart key={c.field} trend={trend} {...c} />
-      ))}
+      {CHARTS.map((c) => {
+        const series = c.allRoles && allTrend?.length >= 3 ? allTrend : trend;
+        return <TrendChart key={c.field} trend={series} {...c} />;
+      })}
     </div>
   );
 }
 
-function TrendChart({ trend, field, label, color }) {
+function TrendChart({ trend, field, label, color, allRoles }) {
   const svgRef = useRef(null);
   const [hov, setHov] = useState(null);
 
@@ -90,8 +97,15 @@ function TrendChart({ trend, field, label, color }) {
     <div className="p-4">
       <div className="flex items-center justify-between mb-2.5">
         <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">{label}</h3>
-        <span className="text-[10px] text-gray-600" title="Her nokta son 3 günün toplamından hesaplanır">
-          son {n} gün · 3g ort.
+        <span
+          className="text-[10px] text-gray-600"
+          title={
+            allRoles
+              ? "Her nokta son 3 günün toplamından hesaplanır. Yasaklama seçim ekranında yapılır — koridordan bağımsızdır, rol değiştirince değişmez."
+              : "Her nokta son 3 günün toplamından hesaplanır"
+          }
+        >
+          son {n} gün · 3g ort.{allRoles ? " · tüm roller" : ""}
         </span>
       </div>
 

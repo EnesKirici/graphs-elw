@@ -5,16 +5,22 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CHAMP_TABBAR_WRAP, CHAMP_TABBAR_INNER, CHAMP_TAB, CHAMP_TAB_ACTIVE, CHAMP_TAB_INACTIVE } from "@/components/champion/championTabStyles";
 import ChampionBuild from "@/components/champion/ChampionBuild";
+import ChampionBuildFull from "@/components/champion/ChampionBuildFull";
 import ChampionDetail from "@/components/champion/ChampionDetail";
 
 /*
-  Şampiyon sayfası tab yöneticisi: Genel (tam build) · Detay + Counter (ayrı route).
-  (Rünler/Eşyalar ayrı tab denendi ama verimiz az → Genel'i boşaltıyordu; geri alındı,
-  hepsi Genel'de. Veri zenginleşince tekrar bölünebilir.)
+  Şampiyon sayfası tab yöneticisi: Genel (özet build) · Build (tam liste) · Detay
+  + Counter (ayrı route).
+  Genel bilerek yalnız çoğunluğu gösterir; "tümünü gör" isteyen Build sekmesine
+  geçer (uzun kuyruk orada, her satırda maç sayısıyla).
   İçerikler mount kalır (hidden) → sekme değişince state korunur. Aktif sekme ?tab= ile URL'de.
+
+  ROL SEÇİMİ BURADA: Genel ve Build aynı koridoru göstermeli. İki component kendi
+  state'ini tutsaydı Top'u seçip Build'e geçen kullanıcı karşısında Mid bulurdu.
 */
 const TABS = [
   { key: "genel", label: "Genel" },
+  { key: "build", label: "Build" },
   { key: "detail", label: "Detay" },
 ];
 
@@ -22,7 +28,7 @@ export default function ChampionView({ id, champ, version, runesData, build, duo
   const params = useSearchParams();
   const fromUrl = params.get("tab");
 
-  // Classic (Jade) varyantı: dereceli veri yok → yalnız Detay tab'ı, Genel/Counter kapalı.
+  // Classic (Jade) varyantı: dereceli veri yok → yalnız Detay tab'ı, Genel/Build/Counter kapalı.
   const isClassic = !!champ.isClassic;
   const tabs = isClassic ? [{ key: "detail", label: "Detay" }] : TABS;
 
@@ -30,12 +36,29 @@ export default function ChampionView({ id, champ, version, runesData, build, duo
     isClassic ? "detail" : (TABS.some((t) => t.key === fromUrl) ? fromUrl : "genel")
   );
 
+  const positions = build?.positions || [];
+  const urlRole = params.get("role");
+  const [role, setRole] = useState(
+    positions.some((p) => p.position === urlRole) ? urlRole : positions[0]?.position
+  );
+
+  const writeUrl = (nextTab, nextRole) => {
+    const url = new URL(window.location.href);
+    if (nextTab === "genel") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", nextTab);
+    if (nextRole === positions[0]?.position || !nextRole) url.searchParams.delete("role");
+    else url.searchParams.set("role", nextRole);
+    window.history.replaceState(null, "", url);
+  };
+
   const select = (key) => {
     setTab(key);
-    const url = new URL(window.location.href);
-    if (key === "genel") url.searchParams.delete("tab");
-    else url.searchParams.set("tab", key);
-    window.history.replaceState(null, "", url);
+    writeUrl(key, role);
+  };
+
+  const selectRole = (p) => {
+    setRole(p);
+    writeUrl(tab, p);
   };
 
   return (
@@ -59,13 +82,33 @@ export default function ChampionView({ id, champ, version, runesData, build, duo
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Genel — tam build (yalnız normal şampiyonlarda) */}
+        {/* Genel — özet build (yalnız normal şampiyonlarda) */}
         {!isClassic && (
-          <div className={tab === "genel" ? "" : "hidden"}>
-            {/* Veriden üretilen özet metni ChampionHero'ya taşındı (hero'nun sağındaki
-                boş alan) — burada içeriğin üstünde tam satır kaplıyordu. */}
-            <ChampionBuild champion={champ} version={version} runesData={runesData} build={build} />
-          </div>
+          <>
+            <div className={tab === "genel" ? "" : "hidden"}>
+              <ChampionBuild
+                champion={champ}
+                version={version}
+                runesData={runesData}
+                build={build}
+                role={role}
+                onRole={selectRole}
+                onSeeAll={() => select("build")}
+              />
+            </div>
+
+            {/* Build — tam liste */}
+            <div className={tab === "build" ? "" : "hidden"}>
+              <ChampionBuildFull
+                champion={champ}
+                version={version}
+                runesData={runesData}
+                build={build}
+                role={role}
+                onRole={selectRole}
+              />
+            </div>
+          </>
         )}
 
         {/* Detay */}

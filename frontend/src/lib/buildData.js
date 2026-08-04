@@ -72,6 +72,17 @@ export function runeIconById(runesData, id) {
   return null;
 }
 
+/** Rün adı + ait olduğu ağaç — sayaçlar yalnız id taşıdığı için tablolarda gerekli. */
+export function runeInfoById(runesData, id) {
+  for (const tree of runesData || []) {
+    for (const slot of tree.slots || []) {
+      const r = slot.runes.find((x) => x.id === id);
+      if (r) return { name: r.name, tree: TREE_TR[tree.key] || tree.key };
+    }
+  }
+  return null;
+}
+
 /*
   Gerçek rün sayfası: keystones/minors = backend sayaçları [{key, games, pickRate, ...}].
   pageIdx: hangi keystone seçeneği (0 = en popüler, 1-2 = alternatifler; dpm.lol tarzı).
@@ -162,10 +173,11 @@ export function pickRealRunePage(runesData, keystones = [], minors = [], shards 
   boots (en popüler ayakkabı), core (ayakkabı hariç ilk 3), full (ayakkabı + 5),
   situational (sonraki 4). Hepsi {id, icon, games, winRate} listeleri.
 */
-export function groupRealItems(items = [], version) {
+export function groupRealItems(items = [], version, names = {}) {
   const rows = items.map((it) => ({
     id: Number(it.key),
     icon: itemIcon(version, it.key),
+    name: names[String(it.key)] || null,
     games: it.games,
     winRate: it.winRate,
     pickRate: it.pickRate,

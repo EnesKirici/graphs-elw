@@ -34,10 +34,13 @@ class ChampionBuildService
         'rune_minor_k' => 120, // keystone-koşullu minörler ("KEYSTONE:PERK") — asıl kaynak
         'shard'        => 9,   // fallback
         'shard_k'      => 36,  // keystone-koşullu shard'lar
-        'spell_pair'   => 2,
-        'item_full'    => 15,
-        'skill_order'  => 3,   // "Q>E>W" max önceliği
-        'starter'      => 4,   // başlangıç kombinasyonları ("1055-2003")
+        // Genel sekmesi ilk 1-2'sini gösterir; kalanı "Build" sekmesindeki tam liste
+        // için gerekli (kullanıcı "genelde sadece çoğunluğu gösteririz, tümü ayrı
+        // sekmede olsun" dedi) — o yüzden sayaçlar Genel'in ihtiyacından geniş.
+        'spell_pair'   => 6,
+        'item_full'    => 20,
+        'skill_order'  => 5,   // "Q>E>W" max önceliği
+        'starter'      => 6,   // başlangıç kombinasyonları ("1055-2003")
         'item_slot1'   => 8,   // satın alma sırasına göre N. bitmiş eşya alternatifleri
         'item_slot2'   => 8,
         'item_slot3'   => 8,
@@ -54,8 +57,8 @@ class ChampionBuildService
     public function getChampionBuild(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        // v8: trend serisi koridor bazlı (rol seçimiyle birlikte değişir).
-        $key = 'champion:build:v8:' . $championId . ':' . implode(',', $patches);
+        // v9: eşya ad map'i + Build sekmesi için genişletilmiş alternatif sayıları.
+        $key = 'champion:build:v9:' . $championId . ':' . implode(',', $patches);
 
         // TTL 10dk DEĞİL 2sa: bu veriyi besleyen stats:rebuild günde 3 kez koşuyor,
         // yani 10 dakikalık tazelik hiçbir zaman yeni bilgi getirmiyordu — sadece her
@@ -298,6 +301,7 @@ class ChampionBuildService
             'positions'  => $shown,
             'byPosition' => $byPosition,
             'spellMap'   => $this->spellMapForPairs($byPosition),
+            'itemNames'  => $this->itemNamesFor($byPosition),
             'topPlayers' => $this->topPlayers($championId),
             'trend'      => $trends['ALL'] ?? [],
         ];
@@ -544,6 +548,47 @@ class ChampionBuildService
         foreach (array_keys($ids) as $id) {
             if (isset($map[$id])) {
                 $out[$id] = $map[$id]; // ['name' => ..., 'image' => ...]
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Yanıtta geçen TÜM eşya id'leri için ad map'i (id => "Ebedi Kılıç").
+     *
+     * İkon tek başına yetmiyordu: "2. eşya %64" diyen bir kart, hangi eşya olduğunu
+     * bilmeyen ziyaretçiye hiçbir şey anlatmıyor (kullanıcı "2. eşya olarak ebedi mi
+     * alınmış?" diye sormuştu — ikondan çıkaramamıştı). Yalnız kullanılan id'ler
+     * gönderilir, tüm item.json değil.
+     */
+    private function itemNamesFor(array $byPosition): array
+    {
+        $ids = [];
+        foreach ($byPosition as $cats) {
+            foreach (['item_full', 'starter', 'item_slot1', 'item_slot2', 'item_slot3', 'item_slot4', 'item_slot5'] as $cat) {
+                foreach ($cats[$cat] ?? [] as $row) {
+                    // starter kombinasyonu "1055-2003" biçiminde
+                    foreach (explode('-', (string) $row['key']) as $id) {
+                        $ids[(string) (int) $id] = true;
+                    }
+                }
+            }
+        }
+        if (! $ids) {
+            return [];
+        }
+
+        try {
+            $items = $this->ddragon->getItems();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $out = [];
+        foreach (array_keys($ids) as $id) {
+            if (isset($items[$id]['name'])) {
+                $out[$id] = $items[$id]['name'];
             }
         }
 
