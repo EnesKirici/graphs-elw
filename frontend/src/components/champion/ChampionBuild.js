@@ -505,12 +505,21 @@ function ItemAlt({ it, version, names = {} }) {
   );
 }
 
-/* Üst özet barındaki tek istatistik hücresi — EŞİT genişlik (flex-1) + ayraç. */
+/*
+  Üst özet barındaki tek istatistik hücresi.
+
+  DAR EKRAN: `whitespace-nowrap` etiket + `flex-1` hücre dar ekranda felakete
+  yol açıyordu — beş hücre ~80px'e sıkışınca hem sayılar ("26/138" ve "51.3%")
+  hem etiketler ("kazanma oranı" + "seçim oranı") üst üste biniyordu (kullanıcı
+  bildirdi). Artık etiket sarabiliyor ve hücreler dar ekranda ızgaraya düşüyor.
+  Dikey ayraç yalnız TEK SATIR olduğunda (lg) çizilir; ızgarada her satırın ilk
+  hücresinde sarkan bir çizgi bırakıyordu.
+*/
 function StripStat({ value, label, valueCls = "text-gray-100" }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center border-l border-edge/40 px-2 min-w-0">
-      <span className={`text-lg md:text-xl font-bold leading-none ${valueCls}`}>{value}</span>
-      <span className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">{label}</span>
+    <div className="lg:flex-1 flex flex-col items-center justify-center lg:border-l border-edge/40 px-1.5 lg:px-2 min-w-0">
+      <span className={`text-[17px] lg:text-xl font-bold leading-none tabular-nums ${valueCls}`}>{value}</span>
+      <span className="text-[10px] text-gray-500 mt-1.5 text-center leading-tight">{label}</span>
     </div>
   );
 }
@@ -519,16 +528,20 @@ function StatStrip({ pos, roleLabel }) {
   if (!pos) return null;
   const g = pos.grade;
   return (
-    <div className="px-4 md:px-6 py-3.5 flex items-stretch">
-      <div className="flex items-center gap-3 pr-4 md:pr-6 shrink-0">
+    <div className="px-4 md:px-6 py-3.5 flex flex-col sm:flex-row sm:items-stretch gap-3 sm:gap-0">
+      {/* Derece — dar ekranda kendi satırında, geniş ekranda solda */}
+      <div className="flex items-center gap-3 sm:pr-4 md:pr-6 shrink-0">
         <span className="text-4xl md:text-5xl font-extrabold leading-none" style={{ color: gradeColor(g) || "#6b7280" }}>{g || "—"}</span>
         <span className="text-[10px] text-gray-500 uppercase tracking-wider">derece</span>
       </div>
-      <StripStat value={pos.rank ? `${pos.rank}/${pos.total}` : "—"} label={`${roleLabel} sırası`} />
-      <StripStat value={`${pos.winRate}%`} label="kazanma oranı" valueCls={wrCls(pos.winRate)} />
-      <StripStat value={pos.pickRate != null ? `${pos.pickRate}%` : "—"} label="seçim oranı" />
-      <StripStat value={pos.banRate != null ? `${pos.banRate}%` : "—"} label="yasaklanma oranı" />
-      <StripStat value={(pos.games ?? 0).toLocaleString("tr-TR")} label="oyunlar" />
+      {/* Beş istatistik: <lg ızgara (3'lü), lg+ tek satır */}
+      <div className="grid grid-cols-3 gap-x-2 gap-y-3.5 lg:flex lg:flex-1 lg:gap-0">
+        <StripStat value={pos.rank ? `${pos.rank}/${pos.total}` : "—"} label={`${roleLabel} sırası`} />
+        <StripStat value={`${pos.winRate}%`} label="kazanma oranı" valueCls={wrCls(pos.winRate)} />
+        <StripStat value={pos.pickRate != null ? `${pos.pickRate}%` : "—"} label="seçim oranı" />
+        <StripStat value={pos.banRate != null ? `${pos.banRate}%` : "—"} label="yasaklanma oranı" />
+        <StripStat value={(pos.games ?? 0).toLocaleString("tr-TR")} label="oyunlar" />
+      </div>
     </div>
   );
 }

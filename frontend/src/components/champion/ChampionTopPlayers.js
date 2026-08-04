@@ -223,7 +223,10 @@ export default function ChampionTopPlayers({ players, version, championName }) {
             </>
           }
         />
-        <div className="px-1 pb-1">
+        {/* overflow-x-auto: hucrelerdeki whitespace-nowrap iceriik (LP, ustalik puani)
+            tabloya bir asgari genislik dayatiyor; 360px ekranda tablo kartin disina
+            tasiyordu. Tasma artik tablonun KENDI kaydirmasi oluyor, sayfanin degil. */}
+        <div className="px-1 pb-1 overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr>
@@ -265,7 +268,10 @@ export default function ChampionTopPlayers({ players, version, championName }) {
             </>
           }
         />
-        <div className="px-1 pb-1">
+        {/* overflow-x-auto: hucrelerdeki whitespace-nowrap iceriik (LP, ustalik puani)
+            tabloya bir asgari genislik dayatiyor; 360px ekranda tablo kartin disina
+            tasiyordu. Tasma artik tablonun KENDI kaydirmasi oluyor, sayfanin degil. */}
+        <div className="px-1 pb-1 overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr>
