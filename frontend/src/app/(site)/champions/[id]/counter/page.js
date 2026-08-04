@@ -182,13 +182,14 @@ export default async function ChampionCounterPage({ params }) {
   const seoText = buildCounterSeo(champ.name, alias, counters);
   const faq = buildCounterFaq({ name: champ.name, alias, counters, id });
 
-  // H1 altındaki satır: takma adı GÖRÜNÜR kılar ("ww ct" sorgusunun eşleşmesi için)
-  // ve rol/patch bağlamını verir.
-  const heroSubtitle = [
-    allAliases.length ? `${allAliases.join(" / ")} olarak da aranır` : null,
+  // Takma ad + rol + patch ÇİP olarak basılır (H1'in yanına italik metin değil).
+  // Takma adın GÖRÜNÜR olması şart: sorguların çoğu kısaltmayla geliyor ("ww ct").
+  // Eskiden tek satır italik metindi ve 5xl başlığın yanında hizasız duruyordu.
+  const heroChips = [
     posLong || null,
     patch ? `Patch ${patch}` : null,
-  ].filter(Boolean).join(" · ");
+    allAliases.length ? `${allAliases.join(" / ")} olarak da aranır` : null,
+  ].filter(Boolean);
 
   // Arama kırıntısı: Home › Şampiyonlar › Kai'Sa › Counter
   const breadcrumbLd = {
@@ -211,17 +212,18 @@ export default async function ChampionCounterPage({ params }) {
       <ChampionBg splash={champ.splash} />
 
       <div className="relative z-10">
-        {/* seoText hero'nun SAĞINDAKİ boş splash alanına verilir (ChampionHero summary).
-            Önce tab'ların altında tam satır kaplıyordu; oraya taşınınca hem H1'e komşu
-            oluyor (arama motoru için sayfanın konusu başlığın hemen yanında) hem de
-            zaten boş duran alan doluyor, içerik yukarı geliyor. */}
+        {/* Hero SADE tutulur: ikon + H1 + unvan + çipler.
+            seoText bir ara hero'nun sağındaki boş alana konmuştu; kullanıcı "kimse
+            okumaz, hizası bozuk" dedi ve haklıydı — orada başlıkla yarışıyor, göz
+            asıl içeriğe (şerit) gitmeden önce bir metin duvarına çarpıyordu. Metin
+            sayfanın DİBİNE, SSS'in yanına alındı: arama motoru yine okur, ziyaretçi
+            önce veriyi görür. */}
         <ChampionHero
           champ={champ}
           id={id}
           activeCrumb="Counter"
           headingSuffix="Counter"
-          subtitle={heroSubtitle || undefined}
-          summary={seoText || undefined}
+          extraChips={heroChips}
         />
 
         {/* Alt-çizgi tab — ana sayfayla AYNI (Genel/Detay link, Counter aktif) */}
@@ -241,8 +243,28 @@ export default async function ChampionCounterPage({ params }) {
             counters={counters}
             version={data.version}
             duos={data.duos}
+            guide={data.guide}
           />
           <CounterFaq faq={faq} />
+
+          {/* Özet + yöntem — sayfanın DİBİ.
+              İki ayrı yerde duruyordu (hero'nun sağında ve şeridin altında); ikisi de
+              göz akışını kesiyordu ve kullanıcı ikisini de "kimse okumaz, kötü duruyor"
+              diye işaretledi. Tek bir blokta, SSS'in ardında toplandı: içeriği arayan
+              okur, aramayan takılmaz. Metin SİLİNMEDİ — sayfanın benzersiz SEO gövdesi
+              burası (ince içerik cezasından koruyan kısım). */}
+          <section className="glass rounded-xl px-5 sm:px-6 py-5 mt-4">
+            <h2 className="text-sm font-semibold text-gray-200 mb-2">Bu sayfadaki veriler</h2>
+            {seoText && <p className="text-xs text-gray-400 leading-relaxed">{seoText}</p>}
+            <p className="text-[11px] text-gray-500 leading-relaxed mt-3">
+              Yüzdeler {champ.name} tarafının o eşleşmedeki kazanma oranıdır (kalanı rakibin).
+              Rakip başına en az 10 maç. Sıralama yalnız orana değil maç sayısına da göre
+              ağırlıklandırılır — az örneklemli uç oranlar listeyi yanıltmaz. Karta gelince
+              eşleşmenin KDA / katılım / hasar özeti açılır; karta tıklayınca altındaki
+              kafa-kafaya kıyas tablosu o eşleşmeye geçer.
+              Emerald+ · Patch {(counters?.patches || []).join(" + ")}.
+            </p>
+          </section>
         </div>
       </div>
     </div>

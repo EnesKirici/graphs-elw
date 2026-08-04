@@ -132,7 +132,6 @@ export default function ChampionCounters({ champName, champImage, champId, count
         m={picked}
         version={version}
         guide={guide}
-        patches={counters.patches}
       />
 
       {/* 3) Genel oynanış rehberi (elle yazılır, admin panelinden). */}

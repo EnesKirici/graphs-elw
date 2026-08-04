@@ -57,7 +57,7 @@ function buildRows(m) {
   return rows.filter((r) => r.a != null && r.b != null);
 }
 
-export default function MatchupCompare({ champId, champName, champImage, m, version, guide, patches }) {
+export default function MatchupCompare({ champId, champName, champImage, m, version, guide }) {
   if (!m) return null;
 
   const rows = buildRows(m);
@@ -149,12 +149,13 @@ function CompareRow({ r }) {
   const max = Math.max(Math.abs(r.a), Math.abs(r.b)) || 1;
   const wA = (Math.abs(r.a) / max) * 100;
   const wB = (Math.abs(r.b) / max) * 100;
-  // "İyi" taraf: mirrored metriklerde işaret belirler (pozitif fark = önde),
-  // diğerlerinde büyük olan. Eşitlikte iki taraf da nötr kalır.
-  const aBetter = r.mirrored ? r.a > r.b : r.a > r.b;
+  // Listedeki her metrikte BÜYÜK olan iyidir — @15 farklarında da öyle, çünkü
+  // değer işaretli (+408 önde, -408 geride). Eşitlikte iki taraf da nötr gri.
   const equal = r.a === r.b;
-  const colA = equal ? "rgb(107,114,128)" : aBetter ? COL_GOOD : COL_BAD;
-  const colB = equal ? "rgb(107,114,128)" : aBetter ? COL_BAD : COL_GOOD;
+  const aBetter = r.a > r.b;
+  const NEUTRAL = "rgb(107,114,128)";
+  const colA = equal ? NEUTRAL : aBetter ? COL_GOOD : COL_BAD;
+  const colB = equal ? NEUTRAL : aBetter ? COL_BAD : COL_GOOD;
 
   return (
     <div>
