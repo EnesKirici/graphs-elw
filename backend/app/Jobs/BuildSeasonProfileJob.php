@@ -34,10 +34,16 @@ class BuildSeasonProfileJob implements ShouldQueue
 
     /** Tur başına en fazla çekilecek eksik maç. */
     private const CHUNK = 20;
-    /** Dev key 2dk penceresinde bu kadar kullanılmışsa build o turda bekler. Yüksek
-     *  tutuldu: boşta bütçe çürümesin (eşzamanlı ziyaretçi nadir); asıl canlı-koruma
-     *  shouldYield — kullanıcı gezinince build zaten anında durur. ~20 pay bir profile yeter. */
-    private const BUDGET_RESERVE = 80;
+    /** Dev key 2dk penceresinde bu kadar kullanılmışsa build o turda bekler.
+     *
+     *  2026-08-04'te 80'den 45'e ÇEKİLDİ. 80 değeri, build'lerin maç kuyruğunda
+     *  aç kaldığı (yani pratikte hiç koşmadığı) dönemde ayarlanmıştı — "boşta bütçe
+     *  çürümesin" mantığı geçerliydi. Build'ler ayrı kuyruğa alınıp gerçekten
+     *  koşmaya başlayınca 80, kotanın %80'ini build'e verip ProcessMatchJob'a %20
+     *  bırakır oldu: maç işleme 625/saat'ten 250/saat'e düştü, cooldown sürekli aktif
+     *  kaldı. 45 = build'e kotanın ~yarısı, geri kalanı maç işleme + canlı siteye.
+     *  Asıl canlı-koruma yine shouldYield (kullanıcı gezinince build anında durur). */
+    private const BUDGET_RESERVE = 45;
     /** Sonsuz döngü koruması — yield turları da sayar. */
     private const MAX_ROUNDS = 400;
 
@@ -79,9 +85,13 @@ class BuildSeasonProfileJob implements ShouldQueue
         // Site kullanıcısı aktifse (son ~8sn Riot isteği), cooldown varsa, ya da dev key
         // 2dk bütçesi eşiği (55) aştıysa → BU TURDA KURMA; kısa süre sonra tekrar dene.
         // Aynı state (round+1, prevHave KORUNUR) → yield stall SAYILMAZ, canlıya pay kalır.
+        // Gecikme 10 → 30 sn (2026-08-04): bu dal HİÇ iş yapmadan işi yeniden kuyruğa
+        // atar, yani meşgul bekleme. Ayrı `profiles` kuyruğunda ~370 zincir varken 10 sn
+        // saniyede ~37 boş iş yazımı demekti — işçiyi ve DB'yi boşuna döndürüyordu.
+        // 30 sn aynı korumayı üçte bir churn ile sağlar; bütçe zaten 2 dk'lık pencerede.
         if ($this->round < self::MAX_ROUNDS
             && ($worker->shouldYield() || RiotApiService::appUsed() >= self::BUDGET_RESERVE)) {
-            self::dispatch($this->puuid, $this->round + 1, $this->prevHave)->delay(10);
+            self::dispatch($this->puuid, $this->round + 1, $this->prevHave)->delay(30);
 
             return;
         }
