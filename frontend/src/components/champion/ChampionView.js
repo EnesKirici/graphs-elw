@@ -5,22 +5,19 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CHAMP_TABBAR_WRAP, CHAMP_TABBAR_INNER, CHAMP_TAB, CHAMP_TAB_ACTIVE, CHAMP_TAB_INACTIVE } from "@/components/champion/championTabStyles";
 import ChampionBuild from "@/components/champion/ChampionBuild";
-import ChampionBuildFull from "@/components/champion/ChampionBuildFull";
 import ChampionDetail from "@/components/champion/ChampionDetail";
 
 /*
-  Şampiyon sayfası tab yöneticisi: Genel (özet build) · Build (tam liste) · Detay
-  + Counter (ayrı route).
-  Genel bilerek yalnız çoğunluğu gösterir; "tümünü gör" isteyen Build sekmesine
-  geçer (uzun kuyruk orada, her satırda maç sayısıyla).
+  Şampiyon sayfası tab yöneticisi: Genel (tam build) · Detay + Counter (ayrı route).
+  (Ayrı bir "Build" sekmesi denendi — tüm alternatifleri tablo tablo listeliyordu —
+  ama Genel zaten build sayfası olduğu için ikisi birbirini tekrar ediyordu; geri
+  alındı. Veri zenginleşince tekrar bölünebilir.)
   İçerikler mount kalır (hidden) → sekme değişince state korunur. Aktif sekme ?tab= ile URL'de.
 
-  ROL SEÇİMİ BURADA: Genel ve Build aynı koridoru göstermeli. İki component kendi
-  state'ini tutsaydı Top'u seçip Build'e geçen kullanıcı karşısında Mid bulurdu.
+  ROL SEÇİMİ BURADA: sekmeler arası korunsun diye (RoleSelector ortak bileşen).
 */
 const TABS = [
   { key: "genel", label: "Genel" },
-  { key: "build", label: "Build" },
   { key: "detail", label: "Detay" },
 ];
 
@@ -84,8 +81,7 @@ export default function ChampionView({ id, champ, version, runesData, build, duo
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Genel — özet build (yalnız normal şampiyonlarda) */}
         {!isClassic && (
-          <>
-            <div className={tab === "genel" ? "" : "hidden"}>
+          <div className={tab === "genel" ? "" : "hidden"}>
               <ChampionBuild
                 champion={champ}
                 version={version}
@@ -93,22 +89,8 @@ export default function ChampionView({ id, champ, version, runesData, build, duo
                 build={build}
                 role={role}
                 onRole={selectRole}
-                onSeeAll={() => select("build")}
-              />
-            </div>
-
-            {/* Build — tam liste */}
-            <div className={tab === "build" ? "" : "hidden"}>
-              <ChampionBuildFull
-                champion={champ}
-                version={version}
-                runesData={runesData}
-                build={build}
-                role={role}
-                onRole={selectRole}
-              />
-            </div>
-          </>
+            />
+          </div>
         )}
 
         {/* Detay */}

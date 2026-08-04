@@ -6,10 +6,16 @@ import Link from "next/link";
 import { RankRow, pctTR } from "./primitives";
 
 export default function RankColumns({ popular = [], topWinRate = [], topBanned = [] }) {
+  /*
+    "Tümünü Gör" ÜÇÜ DE /champions'a gidiyordu — yani şampiyon ızgarasına, alfabetik.
+    Kullanıcı "en yüksek kazanma oranı"na tıklayıp o sıralamanın devamını göremiyordu.
+    Artık tier-list'in sıralanabilir tablosuna, o sütun sıralı hâlde açılıyor
+    (TierTable ?sort= parametresini okur).
+  */
   const cols = [
-    { key: "pop", title: "Popüler Şampiyonlar", icon: "★", color: "#4f8cff", data: popular, valueKey: "pickRate" },
-    { key: "wr", title: "En Yüksek Win Rate", icon: "↗", color: "var(--win)", data: topWinRate, valueKey: "adjWr" },
-    { key: "ban", title: "En Çok Banlanan", icon: "⊘", color: "var(--loss)", data: topBanned, valueKey: "banRate" },
+    { key: "pop", title: "Popüler Şampiyonlar", icon: "★", color: "#4f8cff", data: popular, valueKey: "pickRate", href: "/tier-list?sort=pick" },
+    { key: "wr", title: "En Yüksek Win Rate", icon: "↗", color: "var(--win)", data: topWinRate, valueKey: "adjWr", href: "/tier-list?sort=wr" },
+    { key: "ban", title: "En Çok Banlanan", icon: "⊘", color: "var(--loss)", data: topBanned, valueKey: "banRate", href: "/tier-list?sort=ban" },
   ];
 
   return (
@@ -35,7 +41,7 @@ export default function RankColumns({ popular = [], topWinRate = [], topBanned =
                 href={`/champions/${c.id}`}
               />
             ))}
-            <Link href="/champions" className="see-all" style={{ color: col.color }}>Tümünü Gör →</Link>
+            <Link href={col.href} className="see-all" style={{ color: col.color }}>Tümünü Gör →</Link>
           </div>
         ))}
       </div>

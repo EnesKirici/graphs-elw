@@ -22,9 +22,20 @@ export default function TierList({ data }) {
   const [openTiers, setOpenTiers] = useState(TIER_OPEN_DEFAULT);
   // Boş dizi = filtre yok → BÜTÜN dereceler görünür. Sayfa hep böyle açılır.
   const [tierFilter, setTierFilter] = useState([]);
+  // Dışarıdan gelen sıralama isteği (?sort=wr|pick|ban) — ana sayfadaki
+  // "En Yüksek Win Rate → Tümünü Gör" gibi bağlantılar buraya düşer.
+  const [urlSort, setUrlSort] = useState(null);
 
   // Görünüm tercihi kalıcı — okuma mount sonrası (sunucu/istemci ilk render aynı kalsın).
+  // URL'deki ?sort= kayıtlı tercihi EZER: kullanıcı belirli bir sıralamayı görmek
+  // için tıkladıysa, daha önce "board" seçmiş olması onu engellememeli.
   useEffect(() => {
+    const sort = new URLSearchParams(window.location.search).get("sort");
+    if (sort && ["wr", "pick", "ban", "games", "tier"].includes(sort)) {
+      setUrlSort(sort);
+      setView("table");
+      return;
+    }
     try {
       const saved = localStorage.getItem(VIEW_KEY);
       if (saved === "board" || saved === "table") setView(saved);
@@ -136,7 +147,7 @@ export default function TierList({ data }) {
           </p>
         )
       ) : (
-        <TierTable champs={tableRows} role={role} />
+        <TierTable champs={tableRows} role={role} initialSort={urlSort} />
       )}
     </div>
   );

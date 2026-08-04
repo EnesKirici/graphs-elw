@@ -34,13 +34,12 @@ class ChampionBuildService
         'rune_minor_k' => 120, // keystone-koşullu minörler ("KEYSTONE:PERK") — asıl kaynak
         'shard'        => 9,   // fallback
         'shard_k'      => 36,  // keystone-koşullu shard'lar
-        // Genel sekmesi ilk 1-2'sini gösterir; kalanı "Build" sekmesindeki tam liste
-        // için gerekli (kullanıcı "genelde sadece çoğunluğu gösteririz, tümü ayrı
-        // sekmede olsun" dedi) — o yüzden sayaçlar Genel'in ihtiyacından geniş.
-        'spell_pair'   => 6,
-        'item_full'    => 20,
-        'skill_order'  => 5,   // "Q>E>W" max önceliği
-        'starter'      => 6,   // başlangıç kombinasyonları ("1055-2003")
+        // Sayfanın gösterdiği kadar: ayrı bir "tam liste" sekmesi için geniş
+        // tutulmuştu, o sekme geri alındı → gereksiz veri taşınmasın.
+        'spell_pair'   => 4,
+        'item_full'    => 15,
+        'skill_order'  => 3,   // "Q>E>W" max önceliği
+        'starter'      => 4,   // başlangıç kombinasyonları ("1055-2003")
         'item_slot1'   => 8,   // satın alma sırasına göre N. bitmiş eşya alternatifleri
         'item_slot2'   => 8,
         'item_slot3'   => 8,
@@ -57,8 +56,8 @@ class ChampionBuildService
     public function getChampionBuild(string $championId): array
     {
         $patches = $this->patch->keptPatches();
-        // v9: eşya ad map'i + Build sekmesi için genişletilmiş alternatif sayıları.
-        $key = 'champion:build:v9:' . $championId . ':' . implode(',', $patches);
+        // v10: alternatif sayıları sayfanın gösterdiği kadara indi (Build sekmesi geri alındı).
+        $key = 'champion:build:v10:' . $championId . ':' . implode(',', $patches);
 
         // TTL 10dk DEĞİL 2sa: bu veriyi besleyen stats:rebuild günde 3 kez koşuyor,
         // yani 10 dakikalık tazelik hiçbir zaman yeni bilgi getirmiyordu — sadece her

@@ -44,25 +44,6 @@ function Section({ title, extra, children, className = "", bodyClassName = "" })
   );
 }
 
-/*
-  "Tümünü gör" — Genel sekmesi bilerek yalnız çoğunluğu gösteriyor (slot başına 3
-  eşya, 2 sihirdar çifti). Uzun kuyruğu merak edeni Build sekmesine götürür.
-*/
-function SeeAll({ onClick, children = "Tümünü gör" }) {
-  if (!onClick) return null;
-  return (
-    <button
-      onClick={onClick}
-      className="text-[10px] text-blue-300/80 hover:text-blue-200 transition-colors cursor-pointer flex items-center gap-1"
-    >
-      {children}
-      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-      </svg>
-    </button>
-  );
-}
-
 function ComingSoon({ children }) {
   return <p className="text-[11px] text-gray-600 leading-relaxed py-2">{children}</p>;
 }
@@ -72,7 +53,7 @@ function ComingSoon({ children }) {
   build = backend /champions/{id} yanıtındaki `build`. Yalnız gerçekten oynanan
   koridorlar rol seçiminde çıkar. Veri yoksa dürüst boş durum; sahte veri YOK.
 */
-export default function ChampionBuild({ champion, version, runesData = [], build, role, onRole, onSeeAll }) {
+export default function ChampionBuild({ champion, version, runesData = [], build, role, onRole }) {
   const positions = build?.positions || [];
   const [pageIdx, setPageIdx] = useState(0);
 
@@ -174,14 +155,11 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             bodyClassName="flex-1 flex flex-col"
             title="Rünler"
             extra={
-            <div className="flex items-center gap-3">
-              {activeKeystone && (
-                <span className="text-[10px] text-gray-600 hidden sm:inline">
-                  {safeIdx === 0 ? "En popüler" : `${safeIdx + 1}. seçenek`} · {activeKeystone.pickRate}% pick · <b className={wrCls(activeKeystone.winRate)}>{activeKeystone.winRate}% WR</b>
-                </span>
-              )}
-              <SeeAll onClick={onSeeAll} />
-            </div>
+            activeKeystone && (
+              <span className="text-[10px] text-gray-600">
+                {safeIdx === 0 ? "En popüler" : `${safeIdx + 1}. seçenek`} · {activeKeystone.pickRate}% pick · <b className={wrCls(activeKeystone.winRate)}>{activeKeystone.winRate}% WR</b>
+              </span>
+            )
           }>
             {runePage ? (
               /* flex-1: sütun sağdaki üç bölüm kadar uzadığında artan alanı AĞAÇLAR
@@ -256,7 +234,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           {/* Sihirdar büyüleri RÜNLERLE aynı sütunda: oyunda da ikisi aynı ekranda
               seçilir. Ayrıca sağ sütun soldan çok daha uzundu; bu bölüm sola geçince
               iki sütun neredeyse aynı boyda bitiyor ve geniş alanda çiftler sıkışmıyor. */}
-          <Section title="Sihirdar Büyüleri" extra={<SeeAll onClick={onSeeAll} />}>
+          <Section title="Sihirdar Büyüleri" extra={<span className="text-[10px] text-gray-600">WR · Seçim</span>}>
             {spellPairs.length ? (
               <div
                 className="grid gap-2"
@@ -293,7 +271,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
           soldaki rün sütunuyla aynı çerçevede.
         */}
         <div className="lg:col-span-4 divide-y divide-edge/40 border-t lg:border-t-0 border-edge/40">
-            <Section title="Yetenek Sırası" extra={<SeeAll onClick={onSeeAll} />}>
+            <Section title="Yetenek Sırası" extra={<span className="text-[10px] text-gray-600">Seçim · WR</span>}>
               {skillOrders.length ? (
                 <div className="space-y-3">
                   {skillOrders.slice(0, 2).map((o, idx) => (
@@ -351,12 +329,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
       <Panel>
         <Section
           title="Eşya Sırası"
-          extra={
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] text-gray-600 hidden sm:inline">Tamamlanma sırasına göre · WR · seçim · maç</span>
-              <SeeAll onClick={onSeeAll} />
-            </div>
-          }
+          extra={<span className="text-[10px] text-gray-600">Tamamlanma sırasına göre · WR · seçim · maç</span>}
         >
           {itemSlots.length > 0 ? (
             <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">

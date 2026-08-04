@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { TIER_META, TIER_RANK, ROLE_ICON, ROLE_LABEL, wrTone, banTone, laneDistribution } from "@/lib/tierData";
 
@@ -46,8 +46,14 @@ function SortHeader({ col, label, shortLabel, sort, onSort, align = "right", cla
   );
 }
 
-export default function TierTable({ champs, role }) {
-  const [sort, setSort] = useState({ col: null, dir: "good" });
+export default function TierTable({ champs, role, initialSort = null }) {
+  // initialSort: ana sayfadan gelen ?sort=wr|pick|ban isteği. Kullanıcı başlığa
+  // tıklayınca kendi seçimi geçerli olur; buradaki yalnız açılış sırasıdır.
+  const [sort, setSort] = useState({ col: initialSort, dir: "good" });
+
+  useEffect(() => {
+    if (initialSort) setSort({ col: initialSort, dir: "good" });
+  }, [initialSort]);
 
   function toggleSort(col) {
     setSort((s) => {
