@@ -178,11 +178,11 @@ function MatchupStrip({
               kayboluyordu (kullanıcı bildirdi); bunlar okuma yönünü veren etiketler,
               dipnot değil → gövde metninden büyük. */}
           <div className={`flex items-center justify-between gap-3 px-5 py-3.5 border-b border-edge/50 ${heading ? "border-t border-edge/30" : ""}`}>
-            <span className="text-sm md:text-base font-bold tracking-wide uppercase" style={{ color: COL_GOOD }}>
+            <span className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_GOOD }}>
               {goodLabel}
             </span>
             <span className="text-[11px] text-gray-500 hidden sm:block">{champName} kazanma oranı</span>
-            <span className="text-sm md:text-base font-bold tracking-wide uppercase" style={{ color: COL_BAD }}>
+            <span className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_BAD }}>
               {badLabel}
             </span>
           </div>

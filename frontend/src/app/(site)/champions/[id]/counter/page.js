@@ -185,8 +185,9 @@ export default async function ChampionCounterPage({ params }) {
   // Takma ad + rol + patch ÇİP olarak basılır (H1'in yanına italik metin değil).
   // Takma adın GÖRÜNÜR olması şart: sorguların çoğu kısaltmayla geliyor ("ww ct").
   // Eskiden tek satır italik metindi ve 5xl başlığın yanında hizasız duruyordu.
+  // posLong BİLEREK YOK: hero zaten şampiyonun oynadığı koridorları çip olarak
+  // basıyor, buraya bir de "Orman" eklemek aynı çipi iki kez gösteriyordu.
   const heroChips = [
-    posLong || null,
     patch ? `Patch ${patch}` : null,
     allAliases.length ? `${allAliases.join(" / ")} olarak da aranır` : null,
   ].filter(Boolean);

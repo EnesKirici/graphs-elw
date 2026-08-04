@@ -129,7 +129,10 @@ function Side({ name, id, image, version, wr, align, link }) {
         style={{ borderColor: col }}
       />
       <div className="min-w-0">
-        <div className="text-sm sm:text-base font-bold text-gray-100 truncate">{name}</div>
+        {/* text-base KULLANMA: bu projede --color-base (sayfa zemini) tanımlı ve
+            Tailwind'in "base" boyut adıyla çakışıyor → boyut değil RENK uyguluyor,
+            yazı zeminle aynı olup kayboluyor. Boyut için keyfi değer şart. */}
+        <div className="text-sm sm:text-[1rem] font-bold text-gray-100 truncate">{name}</div>
         <div className="text-sm font-bold tabular-nums" style={{ color: col }}>%{wr}</div>
       </div>
     </div>

@@ -111,8 +111,18 @@ class BuildAggregationService
 
         // pozisyon × takım → [champId, gold, cs, xp]
         $byPos = [];
-        foreach ($matchData['info']['participants'] as $p) {
-            $pid = (string) ($p['participantId'] ?? 0);
+        foreach ($matchData['info']['participants'] as $i => $p) {
+            /*
+              participantId SAKLANAN maç kopyasında YOK (match trim'i düşürüyor) →
+              eski hâli `(string) ($p['participantId'] ?? 0)` ile herkese "0" veriyordu,
+              $f15 anahtarları ise 1..10 → on katılımcının ONU da atlanıyor, @15 hiç
+              yazılmıyordu. 2026-08-04 ölçümü: 59.174 maç timeline_done=true, ama
+              champion_matchups'ta n15>0 olan satır SIFIR.
+              Yukarıdaki build döngüsü aynı sorunu zaten `?? ($i + 1)` ile çözüyordu;
+              burası atlanmış. Riot participants dizisi participantId sırasında (1..10)
+              gelir, yani indeks+1 doğru karşılıktır.
+            */
+            $pid = (int) ($p['participantId'] ?? 0) ?: ($i + 1);
             $pos = $p['teamPosition'] ?? '';
             $champId = $keyToId[(int) ($p['championId'] ?? 0)] ?? ($p['championName'] ?? null);
             if (! $pos || ! $champId || empty($f15[$pid])) {
