@@ -120,6 +120,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
           champName={champName}
           pickedId={picked?.id}
           onPick={setPickedId}
+          baseline={data.baseline}
         />
       )}
 
@@ -132,6 +133,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
         m={picked}
         version={version}
         guide={guide}
+        baseline={data.baseline}
       />
 
       {/*
@@ -174,7 +176,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
 
 /* Yatay splash şeridi: sol uç en rahat (mavi) → sağ uç en zorlu (kırmızı). */
 function MatchupStrip({
-  good, bad, champName, heading, subtitle, footer, pickedId, onPick,
+  good, bad, champName, heading, subtitle, footer, pickedId, onPick, baseline,
   goodLabel = "Rahat eşleşmeler", badLabel = "Zorlu rakipler",
 }) {
   return (
@@ -202,11 +204,11 @@ function MatchupStrip({
           </div>
 
           <div className="flex items-stretch gap-2 px-4 py-4 overflow-x-auto">
-            {good.map((m) => <StripCard key={`g-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} />)}
+            {good.map((m) => <StripCard key={`g-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} baseline={baseline} />)}
             {good.length > 0 && bad.length > 0 && (
               <div className="shrink-0 self-stretch w-px bg-edge/60 mx-1.5" aria-hidden />
             )}
-            {bad.map((m) => <StripCard key={`b-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} />)}
+            {bad.map((m) => <StripCard key={`b-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} baseline={baseline} />)}
           </div>
         </>
       )}
@@ -258,6 +260,7 @@ function BotLaneSection({ data, duos, role, champName, version }) {
       goodLabel={`Rahat karşı ${oppLabel}`}
       badLabel={`Zorlu karşı ${oppLabel}`}
       footer={footer}
+      baseline={data?.crossBaseline}
     />
   );
 }
@@ -290,9 +293,9 @@ function DuoCard({ d, version }) {
 }
 
 /* Tek kart: dikey karakter görseli + kazanma oranı + maç sayısı (+ koridor etiketi). */
-function StripCard({ m, picked, onPick }) {
+function StripCard({ m, picked, onPick, baseline }) {
   const col = wrColor(m.winRate);
-  const lane = laneTag(m);
+  const lane = laneTag(m, baseline);
 
   return (
     /*
@@ -412,17 +415,28 @@ function StatLine({ k, v, cls = "text-gray-100" }) {
 }
 
 /*
-  Koridor etiketi. @15 verisi (gold farkı) varsa onu gösterir — koridor fazının kimin
-  lehine geçtiği, kazanma oranından bağımsız bir bilgidir. Veri yoksa ve örneklem
-  düşükse dürüst bir "az veri" uyarısı verilir; ikisi de yoksa etiket basılmaz
-  (uydurma rozet yok). @15 ileriye dönük dolduğu için başlangıçta çoğu kartta boştur.
+  Koridor etiketi. @15 gold farkını, şampiyonun KENDİ ortalamasına göre okur.
+
+  Eskiden mutlak eşikti (±150) ve bu bir eşleşme etiketi değil ŞAMPİYON etiketi
+  oluyordu: Yuumi'nin tüm rakiplerine karşı ortalaması −514 olduğu için Yuumi'nin
+  neredeyse her kartında "koridor geride" yazıyordu; Pyke'ın ortalaması +286 olduğu
+  için onda hiç çıkmıyordu (2026-08-05 ölçümü). Rakibin bununla ilgisi yok.
+
+  Şimdi eşik SAPMAYA uygulanıyor → etiket "bu rakip bana normalden zor/kolay geliyor"
+  demek oluyor. Sözcükler de ona göre: "önde/geride" değil "rahat/zor" — Yuumi
+  Rell karşısında normalinin 240 gold önünde ama hâlâ mutlak olarak geride.
+
+  Veri yoksa ve örneklem düşükse dürüst bir "az veri" uyarısı verilir; ikisi de
+  yoksa etiket basılmaz (uydurma rozet yok).
 */
-function laneTag(m) {
+function laneTag(m, baseline) {
   const n = m.lane15?.n ?? 0;
   if (n >= 5) {
-    const gd = m.lane15.gd15;
-    if (gd >= 150) return { text: "koridor önde", cls: "bg-blue-500/20 text-blue-200 border-blue-400/30" };
-    if (gd <= -150) return { text: "koridor geride", cls: "bg-red-500/20 text-red-200 border-red-400/30" };
+    const norm = baseline?.lane15?.gd15;
+    // Normal bilinmiyorsa mutlak değere düş (eski davranış) — etiket hiç olmamasından iyi.
+    const rel = norm == null ? m.lane15.gd15 : m.lane15.gd15 - norm;
+    if (rel >= 150) return { text: "koridor rahat", cls: "bg-blue-500/20 text-blue-200 border-blue-400/30" };
+    if (rel <= -150) return { text: "koridor zor", cls: "bg-red-500/20 text-red-200 border-red-400/30" };
     // "Dengeli" bilgi taşımıyor ve neredeyse her kartta çıkıp şeridi gürültüye
     // boğuyordu → etiket basılmaz, kart temiz kalır.
     return null;

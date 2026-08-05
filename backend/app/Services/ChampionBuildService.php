@@ -78,7 +78,9 @@ class ChampionBuildService
     {
         $patches = $this->patch->keptPatches();
         // v5: her eşleşmeye rakip tarafının sayıları (opp) eklendi — kafa-kafaya kıyas tablosu.
-        $key = 'champion:counters:v5:' . $championId . ':' . implode(',', $patches);
+        // v6: iki tarafın da KENDİ ortalaması (baseline / opp.base) — sınıf farkını değil
+        //     eşleşmeyi ölçmek için; bkz. aggregateMatchups içindeki gerekçe.
+        $key = 'champion:counters:v6:' . $championId . ':' . implode(',', $patches);
 
         // TTL için gerekçe: yukarıdaki getChampionBuild ile aynı (stats:rebuild günde 3).
         // Counter hesabı daha ağır (pozisyon başına aynı-koridor + çapraz eşleşme).
@@ -124,6 +126,9 @@ class ChampionBuildService
                     'opponents'  => count($mu),
                     'counters'   => $weak,   // şampiyonu yenenler (en zorlu önce)
                     'strongInto' => $strong, // şampiyonun ezdiği (en ezici önce)
+                    // Sayfanın şampiyonunun bu koridordaki KENDİ ortalaması. Tüm
+                    // eşleşmelerde aynı olduğu için eşleşme başına DEĞİL, burada bir kez.
+                    'baseline'   => $this->championBaseline($championId, $patches, $p['position']),
                 ];
 
                 // Çapraz koridor (yalnız alt koridor): ADC için karşı SUPPORT'lar,
@@ -132,6 +137,9 @@ class ChampionBuildService
                     $cm = $this->aggregateMatchups($championId, $patches, $p['position'], (float) $p['winRate'], $cp);
                     if ($cm) {
                         $entry['crossPosition'] = $cp;
+                        // Çapraz eşleşmenin paydası AYRI: ADC'nin "karşı destek" ortalaması,
+                        // ADC-vs-ADC ortalamasıyla aynı şey değil.
+                        $entry['crossBaseline'] = $this->championBaseline($championId, $patches, $p['position'], $cp);
                         $entry['crossStrong'] = array_values(array_filter($cm, fn ($m) => $m['delta'] > 0));
                         $entry['crossCounters'] = array_values(array_filter(array_reverse($cm), fn ($m) => $m['delta'] < 0));
                     }
@@ -489,6 +497,33 @@ class ChampionBuildService
             ->where('opponent_position', $pos)
             ->get()->groupBy('champion_id') : collect();
 
+        /*
+          RAKİPLERİN KENDİ NORMALİ — adil kıyasın paydası (2026-08-05).
+
+          Mutlak sayıları yan yana koymak şampiyon SINIFINI ölçüyordu, eşleşmeyi değil:
+          Yuumi'nin @15 gold farkı TÜM rakiplerine karşı ortalama −514, Pyke'ın +286.
+          Yuumi hangi rakiple oynarsa oynasın "geride" çıkıyordu — çünkü Yuumi minyon
+          almıyor, rakibin bununla ilgisi yok. Ölçülen örnek: Yuumi-vs-Rell gd15 = −274,
+          yani Yuumi kendi normalinden 240 gold ÖNDE; panel ise satırı Rell lehine
+          tam kırmızı çiziyordu.
+
+          Çözüm: her tarafı KENDİ ortalamasıyla kıyasla. Bu, elimizdeki satırlardan
+          bedava çıkıyor (rakibin tüm eşleşmelerinin toplamı). Satırları çekmek yerine
+          SQL'de topluyoruz: rakip başına ~150 satır × ~40 rakip = 6K satır belleğe
+          alınacaktı, tek gruplu sorgu bunu rakip başına 1 satıra indiriyor.
+        */
+        $oppBase = $oppIds ? ChampionMatchup::whereIn('champion_id', $oppIds)
+            ->whereIn('patch', $patches)
+            ->where('position', $oppPos ?? $pos)
+            ->where('opponent_position', $pos)
+            ->groupBy('champion_id')
+            ->selectRaw(
+                'champion_id, SUM(n_stats) n_stats, SUM(sum_kills) sum_kills, SUM(sum_deaths) sum_deaths,'
+                . ' SUM(sum_assists) sum_assists, SUM(sum_kp) sum_kp, SUM(sum_dmg) sum_dmg,'
+                . ' SUM(n15) n15, SUM(sum_gd15) sum_gd15, SUM(sum_csd15) sum_csd15, SUM(sum_xpd15) sum_xpd15'
+            )
+            ->get()->keyBy('champion_id') : collect();
+
         $mu = [];
         foreach ($rows->groupBy('opponent_id') as $opp => $rws) {
             $g = (int) $rws->sum('games');
@@ -505,6 +540,9 @@ class ChampionBuildService
 
             // Rakibin AYNI eşleşmedeki kendi sayıları (kıyas tablosunun sağ sütunu).
             $oRws = $mirror[$opp] ?? null;
+            // Rakibin TÜM eşleşmelerdeki ortalaması (kıyasın paydası). Gruplu sorgudan
+            // tek satır geliyor; matchupStats/matchupLane15 koleksiyon beklediği için sarılır.
+            $oBase = isset($oppBase[$opp]) ? collect([$oppBase[$opp]]) : null;
 
             $mu[] = [
                 'id'      => $opp,
@@ -519,6 +557,11 @@ class ChampionBuildService
                 'opp'     => $oRws ? [
                     'stats'  => $this->matchupStats($oRws),
                     'lane15' => $this->matchupLane15($oRws),
+                    // Rakibin kendi normali — frontend sapmayı bununla hesaplar.
+                    'base'   => $oBase ? [
+                        'stats'  => $this->matchupStats($oBase),
+                        'lane15' => $this->matchupLane15($oBase),
+                    ] : null,
                 ] : null,
                 // Güven-ağırlıklı sapma — YALNIZ sıralama için (görüntülenen delta gerçek kalır).
                 '_conf'   => ($wr - $posWinRate) * $g / ($g + self::MATCHUP_CONF_K),
@@ -533,6 +576,37 @@ class ChampionBuildService
         unset($m);
 
         return $mu;
+    }
+
+    /**
+     * ŞAMPİYONUN KENDİ NORMALİ: bir koridorda TÜM rakiplerine karşı ortalaması.
+     *
+     * Kıyas tablosunun ve "koridor" etiketinin paydası. Mutlak sayı bir şampiyonun
+     * ne yaptığını değil ne OLDUĞUNU ölçer (Yuumi gd15 ort. −514, Pyke +286); sapma
+     * ise eşleşmeye özgüdür. Rakip tarafının karşılığı aggregateMatchups içindeki
+     * $oppBase; burası sayfanın öznesi için aynı hesabı yapar.
+     *
+     * @param string|null $oppPos null = aynı koridor düellosu; 'UTILITY' vb. = bot çaprazı.
+     */
+    private function championBaseline(string $championId, array $patches, string $pos, ?string $oppPos = null): array
+    {
+        $agg = ChampionMatchup::where('champion_id', $championId)
+            ->whereIn('patch', $patches)
+            ->where('position', $pos)
+            ->where('opponent_position', $oppPos ?? $pos)
+            ->selectRaw(
+                'SUM(n_stats) n_stats, SUM(sum_kills) sum_kills, SUM(sum_deaths) sum_deaths,'
+                . ' SUM(sum_assists) sum_assists, SUM(sum_kp) sum_kp, SUM(sum_dmg) sum_dmg,'
+                . ' SUM(n15) n15, SUM(sum_gd15) sum_gd15, SUM(sum_csd15) sum_csd15, SUM(sum_xpd15) sum_xpd15'
+            )
+            ->first();
+
+        $one = collect([$agg]);
+
+        return [
+            'stats'  => $this->matchupStats($one),
+            'lane15' => $this->matchupLane15($one),
+        ];
     }
 
     /**

@@ -37,28 +37,41 @@ const kdaRatio = (k) => (k ? +(((k.k ?? 0) + (k.a ?? 0)) / Math.max(k.d ?? 0, 0.
   yerine baskınlık = fark / full, yani "tam bar" sayılan eşik. Eşikler koridor
   fazında BÜYÜK sayılan farklara göre seçildi: 1000 gold / 1200 tecrübe / 20 minyon
   (bu kadar fark koridoru kazanmış saymak için fazlasıyla yeter).
+
+  `ba` / `bb` = iki tarafın KENDİ ortalaması (backend baseline / opp.base). Bar bunlara
+  göre çizilir; gerekçe aşağıda CompareRow'da.
 */
-function buildRows(m) {
+function buildRows(m, baseline) {
   const us = m.stats;
   const them = m.opp?.stats;
   const l = m.lane15;
   const ol = m.opp?.lane15;
+  const bs = baseline?.stats;          // bizim normalimiz
+  const bl = baseline?.lane15;
+  const os = m.opp?.base?.stats;       // rakibin normali
+  const olb = m.opp?.base?.lane15;
 
   const rows = [
     {
       label: "KDA",
       a: kdaRatio(us?.kda),
       b: kdaRatio(them?.kda),
+      ba: kdaRatio(bs?.kda),
+      bb: kdaRatio(os?.kda),
       fmt: (v) => v.toFixed(2),
       sub: us?.kda && them?.kda
         ? `${us.kda.k}/${us.kda.d}/${us.kda.a} — ${them.kda.k}/${them.kda.d}/${them.kda.a}`
         : null,
     },
-    { label: "Katılım", a: us?.kp, b: them?.kp, fmt: (v) => `%${v}` },
-    { label: "Şampiyon hasarı", a: us?.dmg, b: them?.dmg, fmt: (v) => `${(v / 1000).toFixed(1)}k` },
-    { label: "Gold farkı @15", a: l?.gd15, b: ol?.gd15, full: 1000, fmt: sgn },
-    { label: "Tecrübe farkı @15", a: l?.xpd15, b: ol?.xpd15, full: 1200, fmt: sgn },
-    { label: "Minyon farkı @15", a: l?.csd15, b: ol?.csd15, full: 20, fmt: sgn },
+    { label: "Katılım", a: us?.kp, b: them?.kp, ba: bs?.kp, bb: os?.kp, fmt: (v) => `%${v}` },
+    {
+      label: "Şampiyon hasarı",
+      a: us?.dmg, b: them?.dmg, ba: bs?.dmg, bb: os?.dmg,
+      fmt: (v) => `${(v / 1000).toFixed(1)}k`,
+    },
+    { label: "Gold farkı @15", a: l?.gd15, b: ol?.gd15, ba: bl?.gd15, bb: olb?.gd15, full: 1000, fmt: sgn },
+    { label: "Tecrübe farkı @15", a: l?.xpd15, b: ol?.xpd15, ba: bl?.xpd15, bb: olb?.xpd15, full: 1200, fmt: sgn },
+    { label: "Minyon farkı @15", a: l?.csd15, b: ol?.csd15, ba: bl?.csd15, bb: olb?.csd15, full: 20, fmt: sgn },
   ];
 
   // İki tarafı da olmayan satır BASILMAZ — tek taraflı kıyas yanıltıcı olur.
@@ -68,13 +81,15 @@ function buildRows(m) {
 const sgn = (v) => (v > 0 ? `+${v}` : `${v}`);
 const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 
-export default function MatchupCompare({ champId, champName, champImage, m, version }) {
+export default function MatchupCompare({ champId, champName, champImage, m, version, baseline }) {
   if (!m) return null;
 
-  const rows = buildRows(m);
+  const rows = buildRows(m, baseline);
   const oppWr = +(100 - m.winRate).toFixed(1);
   const nStats = m.stats?.n ?? 0;
   const n15 = m.lane15?.n ?? 0;
+  // Barların anlamı: en az bir satırda iki tarafın da normali biliniyorsa "sapma" modundayız.
+  const relative = rows.some((r) => r.ba != null && r.bb != null);
 
   return (
     <div className="glass rounded-xl overflow-hidden relative">
@@ -123,6 +138,18 @@ export default function MatchupCompare({ champId, champName, champImage, m, vers
 
         {rows.length > 0 ? (
           <div className="px-4 sm:px-8 py-5 space-y-4">
+            {/*
+              Barın ne ölçtüğünü SÖYLEMEK zorundayız: büyük sayı ile barın yönü
+              çelişebiliyor (Yuumi −274 gold geride ama kendi normalinin 240 önünde).
+              Açıklama olmadan bu "hata" gibi okunur.
+            */}
+            {relative && (
+              <p className="text-center text-[11px] text-gray-500 leading-relaxed -mt-1 mb-1">
+                Barlar mutlak sayıyı değil, her şampiyonun{" "}
+                <span className="text-gray-300">kendi ortalamasından sapmasını</span> gösterir —
+                minyon almayan bir destekle tanklayan bir destek aynı cetvelle ölçülemez.
+              </p>
+            )}
             {rows.map((r) => <CompareRow key={r.label} r={r} />)}
           </div>
         ) : (
@@ -175,20 +202,51 @@ function Side({ name, id, image, version, wr, align, link }) {
   Bar merkezden başlar, baskın tarafa uzar. Kaybeden tarafın sayısı gri kalır —
   hangi tarafın önde olduğu tek bakışta okunur.
 */
+/*
+  Bir tarafın KENDİ normalinden sapması, −1..+1 ölçeğinde.
+
+  İşaretli (@15) metriklerde sapma bir FARK'tır (gold/cs), "tam bar" eşiği `full`.
+  Pozitif ölçekli metriklerde (KDA/hasar/katılım) sapma bir ORAN'dır: 0 = normali,
+  +0.2 = normalinin %20 üstü.
+*/
+function deviation(v, base, full) {
+  if (base == null) return null;                 // normal bilinmiyor → sapma hesaplanamaz
+  if (full) return (v - base) / full;
+  return base === 0 ? 0 : v / base - 1;
+}
+
 function CompareRow({ r }) {
   /*
     Baskınlık −1..+1. Pozitif = SOL (sayfanın şampiyonu) önde.
 
-    GAIN neden var: ham göreli fark (a−b)/(a+b) gerçek maç verisinde çok küçük
-    çıkıyor — katılım %38'e karşı %43 yalnızca 0.06 eder, yani barın %3'ü; ekranda
-    fark GÖRÜNMÜYORDU. 3 ile çarpıp kırpınca "tam bar" = %33 göreli fark oluyor;
-    bu metriklerde %33'lük bir açık zaten ezici üstünlük demek. Sıralama ve işaret
-    değişmez, yalnız ölçek okunur hâle gelir.
+    NEDEN SAPMA, MUTLAK DEĞİL (2026-08-05): mutlak sayı büyük ölçüde şampiyonun
+    SINIFINI ölçüyor, eşleşmeyi değil. Yuumi minyon almaz ve kendini rakibe iliştirir;
+    @15 gold farkı TÜM rakiplerine karşı ortalama −514'tür. Rell tanklar, ortalaması
+    −154. Bu ikisini aynı cetvele koyunca Yuumi her rakibe karşı "geride" çıkıyordu —
+    rakibin bununla ilgisi yok. Ölçülen örnek: Yuumi-vs-Rell gd15 = −274, yani Yuumi
+    kendi normalinden 240 gold ÖNDE; eski bar bunu Rell lehine tam kırmızı çiziyordu.
+
+    Sapma yoksa (yeni şampiyon, az veri) eski mutlak davranışa düşülür — bar hiç
+    olmamasından iyidir, yalnız açıklaması "normaline göre" olmaz.
+
+    GAIN: ham göreli fark gerçek veride çok küçük çıkıyor (katılım %38'e karşı %43 =
+    barın %3'ü, ekranda GÖRÜNMÜYORDU). Oran metriklerinde 3 ile çarpılır → "tam bar"
+    = %33 göreli fark, ki bu zaten ezici üstünlük. @15'te sapmalar zaten `full`
+    ölçeğinde olduğu için ek kazanç uygulanmaz.
   */
   const GAIN = 3;
-  const off = r.full
-    ? clamp(r.a / r.full, -1, 1)                                          // simetrik metrik: fark / eşik
-    : (r.a + r.b === 0 ? 0 : clamp(((r.a - r.b) / (r.a + r.b)) * GAIN, -1, 1));
+  const da = deviation(r.a, r.ba, r.full);
+  const db = deviation(r.b, r.bb, r.full);
+  const relative = da != null && db != null;
+
+  let off;
+  if (relative) {
+    off = clamp((da - db) * (r.full ? 1 : GAIN), -1, 1);
+  } else if (r.full) {
+    off = clamp(r.a / r.full, -1, 1);                                     // simetrik metrik: fark / eşik
+  } else {
+    off = r.a + r.b === 0 ? 0 : clamp(((r.a - r.b) / (r.a + r.b)) * GAIN, -1, 1);
+  }
 
   const pct = Math.abs(off) * 50;      // izin verilen en uzun bar = yarım genişlik
   const col = off === 0 ? NEUTRAL : off > 0 ? COL_GOOD : COL_BAD;
@@ -198,10 +256,11 @@ function CompareRow({ r }) {
       <p className="text-center text-xs sm:text-[13px] text-gray-300 font-medium mb-1.5">{r.label}</p>
       <div className="flex items-center gap-3 sm:gap-4">
         <span
-          className="w-16 sm:w-20 text-right text-base sm:text-lg font-bold tabular-nums shrink-0"
+          className="w-16 sm:w-20 text-right shrink-0"
           style={{ color: off > 0 ? COL_GOOD : NEUTRAL }}
         >
-          {r.fmt(r.a)}
+          <span className="block text-base sm:text-lg font-bold tabular-nums">{r.fmt(r.a)}</span>
+          <NormNote dev={da} full={r.full} base={r.ba} value={r.a} fmt={r.fmt} />
         </span>
 
         <div className="relative flex-1 h-2.5 rounded-full bg-white/[0.07] overflow-hidden">
@@ -218,13 +277,38 @@ function CompareRow({ r }) {
         </div>
 
         <span
-          className="w-16 sm:w-20 text-left text-base sm:text-lg font-bold tabular-nums shrink-0"
+          className="w-16 sm:w-20 text-left shrink-0"
           style={{ color: off < 0 ? COL_BAD : NEUTRAL }}
         >
-          {r.fmt(r.b)}
+          <span className="block text-base sm:text-lg font-bold tabular-nums">{r.fmt(r.b)}</span>
+          <NormNote dev={db} full={r.full} base={r.bb} value={r.b} fmt={r.fmt} />
         </span>
       </div>
       {r.sub && <p className="text-center text-[10px] text-gray-500 tabular-nums mt-1">{r.sub}</p>}
     </div>
+  );
+}
+
+/*
+  Sayının altındaki küçük not: "normaline göre +240".
+
+  Büyük sayı KONKRE olanı (gerçekte ne oldu), bu not ise barın NEDEN o yöne gittiğini
+  söyler. İkisi çelişebilir ve çelişmesi doğrudur: Yuumi −274 gold geride ama kendi
+  ortalamasının 240 gold önünde. Not olmadan bar "yanlış" görünürdü.
+*/
+function NormNote({ dev, full, base, value, fmt }) {
+  if (dev == null || base == null) return null;
+
+  // Sapma metriğin kendi biriminde okunur: @15'te ham fark, oranlarda yüzde.
+  const text = full ? sgn(Math.round(value - base)) : `%${sgn(Math.round(dev * 100))}`;
+  const dead = Math.abs(dev) < (full ? 0.03 : 0.02);
+
+  return (
+    <span
+      className={`block text-[9px] leading-tight tabular-nums mt-0.5 ${dead ? "text-gray-600" : "text-gray-400"}`}
+      title={`Kendi ortalaması: ${fmt(base)} — bu eşleşmede ${text}`}
+    >
+      norm. {text}
+    </span>
   );
 }
