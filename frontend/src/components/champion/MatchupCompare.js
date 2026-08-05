@@ -49,11 +49,30 @@ const kdaRatio = (k) => (k ? +(((k.k ?? 0) + (k.a ?? 0)) / Math.max(k.d ?? 0, 0.
   yerine baskınlık = fark / full, yani "tam bar" sayılan eşik. Eşikler koridor
   fazında BÜYÜK sayılan farklara göre seçildi: 1000 gold / 1200 tecrübe / 20 minyon.
 */
-function buildRows(m) {
+function buildRows(m, role) {
   const us = m.stats;
   const them = m.opp?.stats;
   const l = m.lane15;
   const ol = m.opp?.lane15;
+
+  /*
+    HANGİ SATIRLAR — kullanıcı kararı (2026-08-05):
+
+    "Biz o anki durumuna odaklanacağız: eziliyor mu, ezilmiyor mu? Koridorda
+    zorlanırım, farmda geri kalırım, adam beni öldürür, gold'da XP'de geriye
+    düşerim — demek ki bu karakter beni ezebiliyor. Dk15'e kadar zaten yaşanılan
+    yaşanır."
+
+    Bu tanıma göre ELENENLER: emilen hasar, müttefiğe/kendine iyileştirme, CC
+    süresi. Hepsi şampiyonun NE OLDUĞUNU anlatır (tank mı, enchanter mı, engage
+    mi) — eşleşmeyi kimin kazandığını değil. Rell'in 27k hasar emmesi Yuumi'ye
+    karşı da, Lulu'ya karşı da aynıdır; counter sinyali taşımaz.
+
+    KALANLAR koridor baskısını ölçer: ölüm (KDA içinde), gold@15, tecrübe@15,
+    minyon@15. Hasar ve katılım ikincil ama bırakıldı — koridoru kazanan taraf
+    daha çok gold alıp daha çok vurur, yani aynı hikâyenin devamıdır.
+  */
+  const farmYapar = role !== "UTILITY" && role !== "SUPPORT";
 
   const rows = [
     {
@@ -67,49 +86,26 @@ function buildRows(m) {
     },
     { label: "Katılım", a: us?.kp, b: them?.kp, fmt: (v) => `%${v}` },
     { label: "Şampiyon hasarı", a: us?.dmg, b: them?.dmg, fmt: k },
-    /*
-      Emilen hasar TARAFSIZ çizilir (mavi/kırmızı DEĞİL) — yön bilgi taşır, renk hüküm
-      vermez. "Çok emmek iyidir" bu metrikte tanımsız: Swain'in işi öne geçip hasar
-      yemek, Yuumi'nin işi hiç yememek. Birini "önde" ilan etmek yanlış olur.
-    */
-    { label: "Emilen hasar", a: us?.taken, b: them?.taken, neutral: true, fmt: k },
-    /*
-      İYİLEŞTİRME İKİYE AYRILDI — ölçümle bulundu (1.200 maç, maç başına ortalama):
-        Swain  totalHeal 12.817 · müttefiğe 6      → hepsi KENDİNE
-        Yuumi  totalHeal  9.933 · müttefiğe 8.467  → üstüne 8.525 kalkan
-        Aatrox totalHeal 16.591 · müttefiğe 0      → hepsi KENDİNE
-      `challenges.effectiveHealAndShielding` yalnız MÜTTEFİĞE olanı sayıyor; tek satırda
-      gösterilince Swain "0.0k" görünüyordu ve iki şampiyon kıyaslanamıyordu.
-    */
-    { label: "Müttefiğe iyileştirme + kalkan", a: us?.hs, b: them?.hs, fmt: k },
-    { label: "Kendine iyileştirme", a: us?.healSelf, b: them?.healSelf, fmt: k },
-    /*
-      CC TEK SATIR. Bir ara "CC süresi" + "Sabitleme" diye ikiye ayrılmıştı; kullanıcı
-      birleştirilmesini istedi. Bilgi kaybı var ama kabul edildi: `timeCCingOthers`
-      yavaşlatmayı da sayar, sersemletme/kök ayrı sayılmaz.
-      Yavaşlatmanın sayıldığı KANITLI: Yuumi'nin sabitlemesi 0.0 olduğu hâlde CC
-      süresi 20 sn — o 20 saniyenin tamamı Q yavaşlatmasından geliyor.
-    */
-    { label: "CC süresi", a: us?.cc, b: them?.cc, fmt: (v) => `${v} sn` },
     { label: "Gold farkı @15", a: l?.gd15, b: ol?.gd15, full: 1000, fmt: sgn },
     { label: "Tecrübe farkı @15", a: l?.xpd15, b: ol?.xpd15, full: 1200, fmt: sgn },
-    { label: "Minyon farkı @15", a: l?.csd15, b: ol?.csd15, full: 20, fmt: sgn },
-  ];
+    // Minyon farkı YALNIZ farm yapan rollerde: destek minyon almaz, o satır
+    // desteklerde her rakibe karşı aynı çıkıyor ve counter hakkında bilgi vermiyor.
+    farmYapar ? { label: "Minyon farkı @15", a: l?.csd15, b: ol?.csd15, full: 20, fmt: sgn } : null,
+  ].filter(Boolean);
 
   // İki tarafı da olmayan satır BASILMAZ — tek taraflı kıyas yanıltıcı olur.
-  // İkisi de SIFIR olan satır da basılmaz (iki büyücünün "Sabitleme 0"ı gürültü);
-  // işaretli @15 satırları muaf — orada 0 "denk" demektir.
-  return rows.filter((r) => r.a != null && r.b != null && (r.full || r.a !== 0 || r.b !== 0));
+  return rows.filter((r) => r.a != null && r.b != null);
 }
 
 const k = (v) => `${(v / 1000).toFixed(1)}k`;
+
 const sgn = (v) => (v > 0 ? `+${v}` : `${v}`);
 const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 
-export default function MatchupCompare({ champId, champName, champImage, m, version }) {
+export default function MatchupCompare({ champId, champName, champImage, m, version, role }) {
   if (!m) return null;
 
-  const rows = buildRows(m);
+  const rows = buildRows(m, role);
   const oppWr = +(100 - m.winRate).toFixed(1);
   const nStats = m.stats?.n ?? 0;
   const n15 = m.lane15?.n ?? 0;

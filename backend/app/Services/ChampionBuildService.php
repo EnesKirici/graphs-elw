@@ -82,13 +82,14 @@ class ChampionBuildService
         //     eşleşmeyi ölçmek için; bkz. aggregateMatchups içindeki gerekçe.
         // v7: rol metrikleri (emilen hasar / şifa+kalkan / CC) — tanklamak ve iyileştirmek
         //     hiçbir eksende görünmüyordu.
+        // v10: sıralama güven sabiti 40 -> 100 (az örneklemli uç oranlar ilk beşi işgal ediyordu).
         // v9: pozisyon başına derece/sıra/seçim/yasaklanma + overview — counter ve detay
         //     sayfalarının hero'su artık aynı özet şeridi gösteriyor (Genel'le tek standart).
         // v8: kendine iyileştirme + sabitleme sayısı. "effectiveHealAndShielding" ÖLÇÜLDÜ:
         //     yalnız müttefiğe olanı sayıyor → Swain/Aatrox'un kendini ayakta tutması
         //     ekranda 0.0k görünüyordu. timeCCingOthers de yavaşlatmayı sayıyor,
         //     sert CC ayrı alan (enemyChampionImmobilizations).
-        $key = 'champion:counters:v9:' . $championId . ':' . implode(',', $patches);
+        $key = 'champion:counters:v10:' . $championId . ':' . implode(',', $patches);
 
         // TTL için gerekçe: yukarıdaki getChampionBuild ile aynı (stats:rebuild günde 3).
         // Counter hesabı daha ağır (pozisyon başına aynı-koridor + çapraz eşleşme).
@@ -462,7 +463,15 @@ class ChampionBuildService
     private const MATCHUP_MIN_GAMES = 10;
     /** Matchup sıralaması güven sabiti: sapmayı games/(games+K) ile ağırlıklar
      *  (az maçlı büyük sapmayı nötre çeker → istatistiksel olarak doğru sıra). */
-    private const MATCHUP_CONF_K = 40;
+    /*
+      40 -> 100 (2026-08-05). Ölçüm: Yuumi/UTILITY şeridinde 12 maçlık LeBlanc
+      (%25) ve 14 maçlık Shen (%28.6) ilk beşe giriyor, 157 maçlık Leona (%45.2)
+      ve 211 maçlık Nautilus (%44.5) dışarıda kalıyordu — kullanıcı "Leona da
+      zorlardı ama görünmüyor" dedi. K büyüdükçe az örneklemli uç oranlar daha
+      sert bastırılır: K=100'de LeBlanc altıncıya düşüyor, ilk beş gerçekten
+      karşılaşılan rakiplerle doluyor. Görüntülenen delta DEĞİŞMEZ, yalnız sıralama.
+    */
+    private const MATCHUP_CONF_K = 100;
 
     /**
      * Pozisyon için matchup listeleri: good (en yüksek sapma) / bad (en düşük).

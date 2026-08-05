@@ -59,7 +59,7 @@ const artFallback = (id) => (e) => {
 
 const STRIP = 5; // şeritte her yönde kaç kart
 
-export default function ChampionCounters({ champName, champImage, champId, counters, version, duos, guide, variant = "v1" }) {
+export default function ChampionCounters({ champName, champImage, champId, counters, version, duos, guide }) {
   const positions = counters?.positions || [];
   const [role, setRole] = useState(counters?.primaryPosition || positions[0]?.position);
   // Kıyas tablosunda gösterilen eşleşme. null = "varsayılanı kullan" (en zorlu rakip):
@@ -83,7 +83,6 @@ export default function ChampionCounters({ champName, champImage, champId, count
     (yoksa ray SSS bölümünün üstünde asılı kalırdı) + ekran 1440px+ (konteyner
     max-w-7xl = 1280px; ray için iki yanda pay gerekiyor).
   */
-  const [v2Face, setV2Face] = useState("rakip");
   const stripRef = useRef(null);
   const panelRef = useRef(null);
   const [rail, setRail] = useState({ show: false, left: 0 });
@@ -154,8 +153,6 @@ export default function ChampionCounters({ champName, champImage, champId, count
 
   const stripAll = [...stripGood, ...stripBad];
 
-  // v2 listesi: 10 kartlık şeritten farklı olarak TÜM eşleşmeler, en rahattan en zora.
-  const v2List = [...(data.strongInto || []), ...[...(data.counters || [])].reverse()];
 
   const picked = stripAll.find((x) => x.id === pickedId)
     || (data.counters || [])[0]
@@ -182,72 +179,6 @@ export default function ChampionCounters({ champName, champImage, champId, count
         </div>
       )}
 
-      {variant === "v2" ? (
-        /*
-          DENEME DÜZENİ (?v2=1) — solda eşleşme LİSTESİ, sağda kıyas.
-
-          Varsayılan düzenin sorunu: şerit yalnız 10 eşleşme gösteriyor ve kıyas
-          paneli hep onun ALTINDA kalıyor, aşağı inince seçici gözden kayboluyor
-          (sol ray tam da bunun yamasıydı). İki sütunda liste sağdaki panelin
-          yanında durur, yamaya gerek kalmaz ve 10 değil TÜM eşleşmeler sığar.
-
-          NOT: sol sütun `sticky` DEĞİL — sayfanın ortak sarmalayıcısında
-          overflow gizli, sticky orada çalışmıyor (bkz. sol ray gerekçesi).
-          Liste kendi içinde kaydırılıyor (max-h + overflow-y-auto).
-        */
-        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4 items-start">
-          <div className="glass rounded-xl overflow-hidden">
-            {duoList.length > 0 && (
-              <div className="px-3 pt-3 pb-2.5 border-b border-edge/30">
-                <div className="inline-flex rounded-lg border border-edge/70 bg-black/40 p-0.5">
-                  <StripTab active={v2Face === "rakip"} color={COL_BAD} onClick={() => setV2Face("rakip")}>
-                    Rakipler
-                  </StripTab>
-                  <StripTab active={v2Face === "uyum"} color={COL_GOOD} onClick={() => setV2Face("uyum")}>
-                    Uyumlular
-                  </StripTab>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-edge/40">
-              <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: v2Face === "uyum" ? COL_GOOD : COL_BAD }}>
-                {v2Face === "uyum" ? `En iyi ${role === "BOTTOM" ? "support" : "ADC"} eşleri` : "Tüm eşleşmeler"}
-              </span>
-              <span className="text-[10px] text-gray-500">
-                {v2Face === "uyum" ? "aynı takımda" : `${champName} kazanma oranı`}
-              </span>
-            </div>
-
-            <div className="max-h-[68vh] overflow-y-auto divide-y divide-edge/25">
-              {v2Face === "uyum"
-                ? duoList.map((d) => <ListRow key={d.champion} id={d.champion} name={d.name} wr={d.adjWr} games={d.games} version={version} href={`/champions/${d.champion}`} />)
-                : v2List.map((m) => (
-                    <ListRow
-                      key={m.id}
-                      id={m.id}
-                      name={m.name}
-                      wr={m.winRate}
-                      games={m.games}
-                      version={version}
-                      tag={laneTag(m, data.baseline)}
-                      picked={m.id === picked?.id}
-                      onPick={() => { trackEvent("counter_kiyasi_secildi", { rakip: m.id, rol: role }); setPickedId(m.id); }}
-                    />
-                  ))}
-            </div>
-          </div>
-
-          <MatchupCompare
-            champId={champId}
-            champName={champName}
-            champImage={champImage}
-            m={picked}
-            version={version}
-          />
-        </div>
-      ) : (
-      <>
       {/* 1) Splash şeridi — tek bakışta özet. Kart TIKLANINCA altındaki kıyas
              tablosunu değiştirir (başka sayfaya GİTMEZ). */}
       <div ref={stripRef}>
@@ -263,8 +194,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
             if (id) trackEvent("counter_kiyasi_secildi", { rakip: id, rol: role });
             setPickedId(id);
           }}
-          baseline={data.baseline}
-          duos={duoList}
+                   duos={duoList}
           mateLabel={role === "BOTTOM" ? "support" : "ADC"}
           version={version}
         />
@@ -301,9 +231,6 @@ export default function ChampionCounters({ champName, champImage, champId, count
           guide={guide}
         />
       </div>
-
-      </>
-      )}
 
       {/*
         3) Rehber metinleri — kıyas panelinin SOL/SAĞ dilini sürdürür:
@@ -345,7 +272,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
   grid hücresinde durur (absolute konumlandırma değil) → dönerken zıplama olmaz.
 */
 function MatchupStrip({
-  good, bad, champName, pickedId, onPick, baseline, duos = [], mateLabel = "eş", version,
+  good, bad, champName, pickedId, onPick, duos = [], mateLabel = "eş", version,
 }) {
   const [face, setFace] = useState("rakip");
   const hasDuos = duos.length > 0;
@@ -402,11 +329,11 @@ function MatchupStrip({
             </div>
 
             <div className="flex items-stretch gap-2 px-4 py-4 overflow-x-auto">
-              {good.map((m) => <StripCard key={`g-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} baseline={baseline} />)}
+              {good.map((m) => <StripCard key={`g-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} />)}
               {good.length > 0 && bad.length > 0 && (
                 <div className="shrink-0 self-stretch w-px bg-edge/60 mx-1.5" aria-hidden />
               )}
-              {bad.map((m) => <StripCard key={`b-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} baseline={baseline} />)}
+              {bad.map((m) => <StripCard key={`b-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} />)}
             </div>
           </div>
 
@@ -429,52 +356,6 @@ function MatchupStrip({
         </div>
       </div>
     </div>
-  );
-}
-
-/*
-  v2 düzeninin sol sütunundaki tek satır. Şerit kartının dikey karşılığı:
-  ikon + ad + oran + maç sayısı, solda durum rengiyle bir şerit. Rakip satırı
-  TIKLANABİLİR (sağdaki kıyası değiştirir), uyumlu satırı ise o şampiyonun
-  sayfasına gider — ikisi farklı eylem olduğu için biri button, diğeri link.
-*/
-function ListRow({ id, name, wr, games, version, tag, picked, onPick, href }) {
-  const col = wrColor(wr);
-
-  const govde = (
-    <>
-      <span className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: col }} />
-      <img
-        src={champIcon(version, id)}
-        alt={name}
-        width={34}
-        height={34}
-        className="rounded-md border border-edge/60 shrink-0"
-        onError={hideOnError}
-      />
-      <span className="flex-1 min-w-0">
-        <span className="block text-xs font-semibold text-gray-100 truncate">{name}</span>
-        <span className="block text-[10px] text-gray-500 tabular-nums">
-          {games} maç
-          {tag && <span className={`ml-1.5 rounded px-1 py-px border text-[9px] font-semibold ${tag.cls}`}>{tag.text}</span>}
-        </span>
-      </span>
-      <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: col }}>%{wr}</span>
-    </>
-  );
-
-  const cls = `relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2 text-left transition-colors ${
-    picked ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
-  }`;
-
-  if (href) {
-    return <Link href={href} className={cls} title={`${name} — %${wr} · ${games} maç`}>{govde}</Link>;
-  }
-
-  return (
-    <button type="button" onClick={onPick} aria-pressed={picked} className={`${cls} cursor-pointer`} title={`${name} — %${wr} · ${games} maç · kıyas için seç`}>
-      {govde}
-    </button>
   );
 }
 
@@ -567,9 +448,9 @@ function DuoStripCard({ d, version }) {
 }
 
 /* Tek kart: dikey karakter görseli + kazanma oranı + maç sayısı (+ koridor etiketi). */
-function StripCard({ m, picked, onPick, baseline }) {
+function StripCard({ m, picked, onPick }) {
   const col = wrColor(m.winRate);
-  const lane = laneTag(m, baseline);
+  const lane = laneTag(m);
 
   return (
     /*
@@ -689,32 +570,19 @@ function StatLine({ k, v, cls = "text-gray-100" }) {
 }
 
 /*
-  Koridor etiketi. @15 gold farkını, şampiyonun KENDİ ortalamasına göre okur.
+  Kart etiketi — artık YALNIZ "az veri" uyarısı.
 
-  Eskiden mutlak eşikti (±150) ve bu bir eşleşme etiketi değil ŞAMPİYON etiketi
-  oluyordu: Yuumi'nin tüm rakiplerine karşı ortalaması −514 olduğu için Yuumi'nin
-  neredeyse her kartında "koridor geride" yazıyordu; Pyke'ın ortalaması +286 olduğu
-  için onda hiç çıkmıyordu (2026-08-05 ölçümü). Rakibin bununla ilgisi yok.
+  Eskiden burada "koridor rahat / koridor zor" da vardı ve kartın kendi kazanma
+  oranıyla ÇELİŞİYORDU: Rell kartı %37.3 (Yuumi'nin en zorlu rakibi) yazarken
+  altında "koridor rahat" çıkıyordu — çünkü etiket @15 gold farkını Yuumi'nin
+  KENDİ ortalamasına göre okuyordu. Kullanıcı bunu bildirdi.
 
-  Şimdi eşik SAPMAYA uygulanıyor → etiket "bu rakip bana normalden zor/kolay geliyor"
-  demek oluyor. Sözcükler de ona göre: "önde/geride" değil "rahat/zor" — Yuumi
-  Rell karşısında normalinin 240 gold önünde ama hâlâ mutlak olarak geride.
-
-  Veri yoksa ve örneklem düşükse dürüst bir "az veri" uyarısı verilir; ikisi de
-  yoksa etiket basılmaz (uydurma rozet yok).
+  Mutlağa çevirmek de çözmüyor: Yuumi her rakibe karşı gold'da geride, o zaman
+  etiket tüm kartlarda aynı çıkıyor ve hiçbir şey söylemiyor (ilk şikâyet buydu).
+  Yani bu etiket destek rollerinde iki yönde de bilgi taşımıyor → kaldırıldı.
+  Kartta zaten kazanma oranı + renk var; üçüncü, arada çelişen bir sinyal gürültü.
 */
-function laneTag(m, baseline) {
-  const n = m.lane15?.n ?? 0;
-  if (n >= 5) {
-    const norm = baseline?.lane15?.gd15;
-    // Normal bilinmiyorsa mutlak değere düş (eski davranış) — etiket hiç olmamasından iyi.
-    const rel = norm == null ? m.lane15.gd15 : m.lane15.gd15 - norm;
-    if (rel >= 150) return { text: "koridor rahat", cls: "bg-blue-500/20 text-blue-200 border-blue-400/30" };
-    if (rel <= -150) return { text: "koridor zor", cls: "bg-red-500/20 text-red-200 border-red-400/30" };
-    // "Dengeli" bilgi taşımıyor ve neredeyse her kartta çıkıp şeridi gürültüye
-    // boğuyordu → etiket basılmaz, kart temiz kalır.
-    return null;
-  }
+function laneTag(m) {
   // "az veri" bir UYARI: bu orana temkinli yaklaş demek. bg-white/5 + gray-500 ile
   // neredeyse görünmezdi (kullanıcı bildirdi) → soluk amber, uyarı gibi okunsun.
   if (m.games < 20) return { text: "az veri", cls: "bg-amber-400/15 text-amber-200/90 border-amber-400/25" };

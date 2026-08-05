@@ -141,16 +141,8 @@ function buildCounterSeo(name, alias, counters) {
   return text;
 }
 
-export default async function ChampionCounterPage({ params, searchParams }) {
+export default async function ChampionCounterPage({ params }) {
   const { id } = await params;
-
-  /*
-    DENEME DÜZENİ — ?v2=1 ile açılır, varsayılan düzen olduğu gibi kalır.
-    Kullanıcı iki sütunlu bir alternatif istedi (solda eşleşme listesi, sağda kıyas)
-    ama önce URL'den denemek istiyor. Tek prop; iki düzen aynı veriyi kullanıyor.
-  */
-  const sp = await searchParams;
-  const variant = sp?.v2 !== undefined && sp?.v2 !== "0" ? "v2" : "v1";
 
   const data = await fetchApi(`/champions/${id}/counters`).catch(() => null);
   if (!data?.champion) notFound();
@@ -289,7 +281,6 @@ export default async function ChampionCounterPage({ params, searchParams }) {
             version={data.version}
             duos={data.duos}
             guide={data.guide}
-            variant={variant}
           />
           <CounterFaq faq={faq} />
 
