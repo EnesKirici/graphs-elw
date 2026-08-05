@@ -95,7 +95,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
       if (!strip || !panel) return;
       const s = strip.getBoundingClientRect();
       const p = panel.getBoundingClientRect();
-      const show = s.bottom < 8 && p.bottom > 240 && window.innerWidth >= 1440;
+      const show = s.bottom < 8 && p.bottom > 340 && window.innerWidth >= 1440;
       const left = Math.round(p.left - 64);
       // Her scroll olayında setState ETME — yalnız değer değişince.
       if (show !== railSon.current.show || Math.abs(left - railSon.current.left) > 1) {
@@ -293,14 +293,21 @@ function MatchupStrip({
 
       {/* perspective dışta, döndürme içte — iç kutu 3B uzayda çevrilir */}
       <div className="[perspective:1600px]">
+        {/*
+          grid-cols-1 ŞART. Çıplak `grid` otomatik sütun kullanır ve sütun İÇERİĞE
+          göre büyür: 52 kartlık uyumlular şeridi kutuyu 5224px'e çıkarıyordu
+          (ölçüldü: clientWidth === scrollWidth === 5224) → `overflow-x-auto` hiç
+          devreye girmiyor, başlık x=−3659'a kaçıyordu. grid-cols-1 =
+          `repeat(1, minmax(0,1fr))`; minmax(0,…) içeriğin sütunu şişirmesini keser.
+        */}
         <div
-          className={`grid transition-transform duration-500 ease-out [transform-style:preserve-3d] ${
+          className={`grid grid-cols-1 transition-transform duration-500 ease-out [transform-style:preserve-3d] ${
             flipped ? "[transform:rotateY(180deg)]" : ""
           }`}
         >
           {/* ÖN YÜZ — rakipler */}
           <div
-            className={`col-start-1 row-start-1 [backface-visibility:hidden] ${flipped ? "invisible" : ""}`}
+            className={`col-start-1 row-start-1 min-w-0 [backface-visibility:hidden] ${flipped ? "invisible" : ""}`}
             aria-hidden={flipped}
           >
             <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-edge/50">
@@ -324,7 +331,7 @@ function MatchupStrip({
 
           {/* ARKA YÜZ — sinerji. Rakiplik DEĞİL: aynı takımdaki eş. */}
           <div
-            className={`col-start-1 row-start-1 [backface-visibility:hidden] [transform:rotateY(180deg)] ${flipped ? "" : "invisible"}`}
+            className={`col-start-1 row-start-1 min-w-0 [backface-visibility:hidden] [transform:rotateY(180deg)] ${flipped ? "" : "invisible"}`}
             aria-hidden={!flipped}
           >
             <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-edge/50">
