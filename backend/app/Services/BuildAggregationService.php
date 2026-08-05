@@ -159,12 +159,13 @@ class BuildAggregationService
             'patch' => $patch, 'champion_id' => $champ, 'position' => $pos,
             'opponent_id' => $opp, 'opponent_position' => $pos,
         ];
-        ChampionMatchup::firstOrCreate($keyCols, ['games' => 0, 'wins' => 0]);
-        ChampionMatchup::where($keyCols)->update([
-            'n15'       => DB::raw('n15 + 1'),
-            'sum_gd15'  => DB::raw('sum_gd15 + (' . (int) $gd . ')'),
-            'sum_csd15' => DB::raw('sum_csd15 + (' . (int) $csd . ')'),
-            'sum_xpd15' => DB::raw('sum_xpd15 + (' . (int) $xpd . ')'),
+        // gd15/csd15/xpd15 İŞARETLİ toplanır (sütunlar signed): koridorda geri kalan
+        // şampiyonda negatif birikir, mutlak değere çevrilmemeli.
+        $this->bumpCounters('champion_matchups', $keyCols, [
+            'n15'       => 1,
+            'sum_gd15'  => (int) $gd,
+            'sum_csd15' => (int) $csd,
+            'sum_xpd15' => (int) $xpd,
         ]);
     }
 
@@ -316,10 +317,10 @@ class BuildAggregationService
         $info = $matchData['info'];
         $keyToId = $this->keyMap();
 
-        // Patch toplam maç sayacı (pick/ban rate paydası)
-        StatPatch::query()->where('patch', $patch)->exists()
-            ? StatPatch::where('patch', $patch)->increment('total_games')
-            : StatPatch::create(['patch' => $patch, 'total_games' => 1]);
+        // Patch toplam maç sayacı (pick/ban rate paydası).
+        // "exists ? increment : create" da aynı yarışı taşıyordu: iki iş aynı anda
+        // "yok" görüp ikisi de create çağırabilirdi (patch PRIMARY KEY → çakışma).
+        $this->bumpCounters('stat_patches', ['patch' => $patch], ['total_games' => 1]);
 
         foreach ($info['participants'] as $p) {
             $key = (int) ($p['championId'] ?? 0);
@@ -353,24 +354,23 @@ class BuildAggregationService
                 'patch' => $mPatch, 'champion_id' => $champ, 'position' => $pos,
                 'opponent_id' => $opp, 'opponent_position' => $oppPos,
             ];
-            ChampionMatchup::firstOrCreate($keyCols, ['games' => 0, 'wins' => 0]);
-            // Tek update: games/wins (WR paydası) + KDA/hasar (n_stats ayrı payda)
+            // Tek atomik yazma: games/wins (WR paydası) + KDA/hasar (n_stats ayrı payda)
             // + rol metrikleri (n_role ayrı payda — eski maçlarda backfill dolduruyor).
-            ChampionMatchup::where($keyCols)->update([
-                'games'           => DB::raw('games + 1'),
-                'wins'            => DB::raw('wins + ' . ($win ? 1 : 0)),
-                'n_stats'         => DB::raw('n_stats + 1'),
-                'sum_kills'       => DB::raw('sum_kills + ' . (int) $k),
-                'sum_deaths'      => DB::raw('sum_deaths + ' . (int) $d),
-                'sum_assists'     => DB::raw('sum_assists + ' . (int) $as),
-                'sum_kp'          => DB::raw('sum_kp + ' . (int) $kp),
-                'sum_dmg'         => DB::raw('sum_dmg + ' . (int) $dmg),
-                'n_role'          => DB::raw('n_role + 1'),
-                'sum_taken'       => DB::raw('sum_taken + ' . (int) $taken),
-                'sum_heal_shield' => DB::raw('sum_heal_shield + ' . (int) $hs),
-                'sum_cc'          => DB::raw('sum_cc + ' . (int) $cc),
-                'sum_heal_self'   => DB::raw('sum_heal_self + ' . (int) $healSelf),
-                'sum_immob'       => DB::raw('sum_immob + ' . (int) $immob),
+            $this->bumpCounters('champion_matchups', $keyCols, [
+                'games'           => 1,
+                'wins'            => $win ? 1 : 0,
+                'n_stats'         => 1,
+                'sum_kills'       => (int) $k,
+                'sum_deaths'      => (int) $d,
+                'sum_assists'     => (int) $as,
+                'sum_kp'          => (int) $kp,
+                'sum_dmg'         => (int) $dmg,
+                'n_role'          => 1,
+                'sum_taken'       => (int) $taken,
+                'sum_heal_shield' => (int) $hs,
+                'sum_cc'          => (int) $cc,
+                'sum_heal_self'   => (int) $healSelf,
+                'sum_immob'       => (int) $immob,
             ]);
         }
 
@@ -586,28 +586,86 @@ class BuildAggregationService
         return $out;
     }
 
+    /**
+     * Sayaç satırını ATOMİK artırır: satır yoksa oluşturur, varsa üstüne ekler.
+     *
+     * `firstOrCreate` + `increment` ikilisinin yerine geçer. O desen "önce bak,
+     * yoksa ekle" olduğu için İKİ paralel worker aynı satırı aynı anda eklemeye
+     * kalktığında biri unique-index çakışması alıyordu. Laravel çakışmayı yakalayıp
+     * satırı geri okumayı deniyor, bulamazsa hatayı yeniden fırlatıyor — ve bu
+     * ProcessMatchJob'ı komple düşürüyordu, yani yalnız çakışan satır değil O MAÇIN
+     * TÜM verisi kayboluyordu. 2026-08-05'te bir günde 72 iş böyle öldü; sayı
+     * 4 Ağustos'ta 6'ydı, ikinci `queue:work` süreci (profiles + default) eklenince
+     * fırladı — iki paralel yazıcı = yarışa giren iki taraf.
+     *
+     * Tek ifadede INSERT ... ON DUPLICATE KEY UPDATE yarışı imkânsız kılar: araya
+     * okuma girmez, çakışma hata değil güncelleme olur. Yan fayda satır başına
+     * 2-3 sorgu yerine 1 — maç başına onlarca satır yazıldığı için kayda değer.
+     *
+     * ŞART: tablonun ilgili sütunlarında UNIQUE index olmalı, yoksa "çakışma"
+     * hiç oluşmaz ve her çağrı yeni satır ekler. Dört tabloda da doğrulandı.
+     *
+     * @param  array  $keys        satırı belirleyen sütunlar (unique index ile aynı)
+     * @param  array  $increments  üstüne eklenecek sayaçlar (sütun => eklenecek değer)
+     * @param  array  $insertOnly  yalnız İLK eklemede yazılan, sonra dokunulmayan alanlar
+     * @param  array  $overwrite   her yazımda üzerine yazılan alanlar (ör. güncel oyuncu adı)
+     */
+    private function bumpCounters(
+        string $table,
+        array $keys,
+        array $increments,
+        array $insertOnly = [],
+        array $overwrite = [],
+    ): void {
+        $now = Carbon::now();
+
+        $insertCols = array_merge(array_keys($keys), array_keys($insertOnly), array_keys($overwrite), array_keys($increments));
+        $insertVals = array_merge(array_values($keys), array_values($insertOnly), array_values($overwrite), array_values($increments));
+
+        $colList = implode(', ', array_map(fn ($c) => "`{$c}`", array_merge($insertCols, ['created_at', 'updated_at'])));
+        $placeholders = implode(', ', array_fill(0, count($insertCols) + 2, '?'));
+
+        // Artışta VALUES(sütun) yerine değeri İKİNCİ kez bağlıyoruz: VALUES()
+        // MySQL 8.0.20'de kullanımdan kalktı, MariaDB'de duruyor — bu biçim ikisinde de çalışır.
+        $setParts = array_map(fn ($c) => "`{$c}` = `{$c}` + ?", array_keys($increments));
+        foreach (array_keys($overwrite) as $c) {
+            $setParts[] = "`{$c}` = ?";
+        }
+        $setList = implode(', ', $setParts);
+
+        $bindings = array_merge(
+            $insertVals,
+            [$now, $now],
+            array_values($increments),
+            array_values($overwrite),
+            [$now],
+        );
+
+        DB::statement(
+            "INSERT INTO `{$table}` ({$colList}) VALUES ({$placeholders}) "
+            . "ON DUPLICATE KEY UPDATE {$setList}, `updated_at` = ?",
+            $bindings,
+        );
+    }
+
     private function bumpStat(string $patch, string $champId, int $key, string $pos, bool $win): void
     {
-        $row = ChampionStat::firstOrCreate(
+        $this->bumpCounters(
+            'champion_stats',
             ['patch' => $patch, 'champion_id' => $champId, 'position' => $pos],
-            ['champion_key' => $key, 'games' => 0, 'wins' => 0, 'bans' => 0],
+            ['games' => 1, 'wins' => $win ? 1 : 0],
+            // champion_key sayaç DEĞİL sabit kimlik: ilk eklemede yazılır, sonra dokunulmaz.
+            ['champion_key' => $key],
         );
-        $row->increment('games');
-        if ($win) {
-            $row->increment('wins');
-        }
     }
 
     private function bumpBuild(string $patch, string $champId, string $pos, string $category, string $key, bool $win): void
     {
-        $row = ChampionBuild::firstOrCreate(
+        $this->bumpCounters(
+            'champion_builds',
             ['patch' => $patch, 'champion_id' => $champId, 'position' => $pos, 'category' => $category, 'item_key' => $key],
-            ['games' => 0, 'wins' => 0],
+            ['games' => 1, 'wins' => $win ? 1 : 0],
         );
-        $row->increment('games');
-        if ($win) {
-            $row->increment('wins');
-        }
     }
 
     private function bumpTopPlayer(string $region, string $champId, array $p, bool $win): void
@@ -616,19 +674,20 @@ class BuildAggregationService
         if (! $puuid) {
             return;
         }
-        $row = ChampionTopPlayer::firstOrCreate(
-            ['region' => $region, 'champion_id' => $champId, 'puuid' => $puuid],
-            ['games' => 0, 'wins' => 0],
-        );
-        $row->increment('games');
-        if ($win) {
-            $row->increment('wins');
-        }
-        // Maç-v5'te oyuncu adı var → güncel tut (tier/rank crawler'dan gelir)
+        // Maç-v5'te oyuncu adı var → güncel tut (tier/rank crawler'dan gelir).
+        // Ad her yazımda tazelenir: oyuncu Riot ID'sini değiştirebiliyor.
         $name = $p['riotIdGameName'] ?? null;
-        if ($name && $row->game_name !== $name) {
-            $row->update(['game_name' => $name, 'tag_line' => $p['riotIdTagline'] ?? null]);
-        }
+        $overwrite = $name
+            ? ['game_name' => $name, 'tag_line' => $p['riotIdTagline'] ?? null]
+            : [];
+
+        $this->bumpCounters(
+            'champion_top_players',
+            ['region' => $region, 'champion_id' => $champId, 'puuid' => $puuid],
+            ['games' => 1, 'wins' => $win ? 1 : 0],
+            [],
+            $overwrite,
+        );
     }
 
     /** @return array<int,string> */
