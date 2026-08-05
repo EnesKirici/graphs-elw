@@ -186,10 +186,23 @@ class RiotApiService
         $rateInfo = Cache::get('riot:rate_info', []);
         $cooldown = Cache::get('riot:rate_limit_cooldown');
 
+        // Worker kota payı — bar'da "worker nerede durdu" çizgisi ve panelde
+        // "frenlenen" sayacı buradan beslenir. Yönetici barın 50'de yavaşlamasını
+        // Riot limiti sanıyordu; ikisi ayrı sayaç, ayrı sebep.
+        $worker = app(\App\Services\WorkerControlService::class);
+
         return [
             'requests'     => Cache::get('riot:stats:request', 0),
             'rateLimited'  => Cache::get('riot:stats:rate_limited', 0),
             'blocked'      => Cache::get('riot:stats:blocked', 0),
+            // Riot bizi limitlemedi; BİZ worker'ı kendi payında tuttuk.
+            'quotaHeld'    => Cache::get('riot:stats:quota_held', 0),
+            'workerQuota'  => [
+                'share'       => $worker->quotaSharePercent(),
+                'slots'       => $worker->quotaSlotsPerWindow(),
+                'used'        => $worker->quotaUsedThisWindow(),
+                'windowLimit' => $worker::QUOTA_WINDOW_LIMIT,
+            ],
             'appLimit'     => $rateInfo['limit'] ?? null,
             'appCount'     => $rateInfo['count'] ?? null,
             'cooldownUntil'=> $cooldown ? max(0, $cooldown - time()) : 0,

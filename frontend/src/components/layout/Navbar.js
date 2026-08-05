@@ -108,6 +108,13 @@ function RateLimitIndicator() {
   const expiringSoon = expiresIn !== null && expiresIn <= 3600;
   const color = noKey || isCooldown || isHot ? "var(--loss)" : pct > 40 ? "var(--gold)" : "var(--win)";
 
+  // Worker kota payı — barın neresinde durması gerektiğini gösterir.
+  const wq = data.workerQuota || null;
+  const workerSharePct = wq?.share ?? 0;
+  const workerSlots = wq?.slots ?? 0;
+  const workerUsed = wq?.used ?? 0;
+  const workerFull = workerSlots > 0 && workerUsed >= workerSlots;
+
   return (
     <div className="tb-rate relative" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {/* Kompakt XP gauge */}
@@ -128,12 +135,30 @@ function RateLimitIndicator() {
           </>
         ) : (
           <>
-            <div className="xp-bar">
+            <div className="xp-bar" style={{ position: "relative" }}>
               <div className="xp-fill" style={{ width: `${Math.max(pct, 3)}%`, background: color }} />
+              {/* Worker payının bittiği nokta. Bar buraya kadar HIZLI dolar (worker
+                  tam gaz tarar), sonra yavaşlar — kalan hareket ziyaretçi payıdır.
+                  İşaret olmadan bu yavaşlama "Riot bizi limitledi" gibi okunuyordu. */}
+              {workerSharePct > 0 && workerSharePct < 100 && (
+                <span
+                  title={`Worker payı burada biter (%${workerSharePct}) — sonrası ziyaretçilere ayrılmış`}
+                  style={{
+                    position: "absolute", top: -1, bottom: -1, left: `${workerSharePct}%`,
+                    width: 2, background: "var(--txt-3)", opacity: 0.85, borderRadius: 1,
+                  }}
+                />
+              )}
             </div>
             <span className="xp-meta">
               {longUsed}/{longLimit || "—"}
               {data.rateLimited > 0 && <b style={{ color: "var(--gold)", marginLeft: 6 }}>429×{data.rateLimited}</b>}
+              {/* Fren devrede: Riot hatası DEĞİL, bizim payımız doldu. Ayrı renk. */}
+              {data.quotaHeld > 0 && data.rateLimited === 0 && (
+                <b style={{ color: "var(--txt-3)", marginLeft: 6 }} title="Worker kendi payını doldurdu; ziyaretçi payına dokunmadı">
+                  ⏸{data.quotaHeld}
+                </b>
+              )}
             </span>
           </>
         )}
@@ -164,6 +189,27 @@ function RateLimitIndicator() {
               <span style={{ fontSize: 9, color: "var(--txt-3)" }}>{Math.max(longLimit - longUsed, 0)} kalan</span>
             </div>
           </div>
+
+          {/*
+            Kota paylaşımı — barın neden 50'de yavaşladığını AÇIKÇA söyler.
+            Yönetici bunu "Riot bizi limitledi" sanıyordu; oysa worker kendi
+            payını doldurup duruyor ve kalan pay ziyaretçiye ayrılmış bekliyor.
+          */}
+          {wq && (
+            <div className="pt-3 mt-3" style={{ borderTop: "1px solid var(--border)" }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span style={{ fontSize: 10, color: "var(--txt-3)" }}>Worker payı</span>
+                <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: workerFull ? "var(--gold)" : "var(--txt-2)" }}>
+                  {workerUsed} / {workerSlots}{workerFull ? " · dolu" : ""}
+                </span>
+              </div>
+              <p style={{ fontSize: 9, color: "var(--txt-3)", lineHeight: 1.5 }}>
+                {workerFull
+                  ? `Worker durdu, sırada bekliyor. Kalan ${Math.max(wq.windowLimit - workerSlots, 0)} istek ziyaretçilere ayrılmış.`
+                  : `Worker kotanın %${workerSharePct}'sini kullanabilir; kalan ${Math.max(wq.windowLimit - workerSlots, 0)} istek ziyaretçilere ayrılmış.`}
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-2 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
             <div className="text-center">
               <p style={{ fontSize: 14, fontWeight: 700, color: "var(--txt)" }}>{data.requests}</p>
@@ -173,9 +219,9 @@ function RateLimitIndicator() {
               <p style={{ fontSize: 14, fontWeight: 700, color: data.rateLimited > 0 ? "var(--loss)" : "var(--txt)" }}>{data.rateLimited}</p>
               <p style={{ fontSize: 9, color: "var(--txt-3)" }}>429 Hata</p>
             </div>
-            <div className="text-center">
-              <p style={{ fontSize: 14, fontWeight: 700, color: data.blocked > 0 ? "var(--gold)" : "var(--txt)" }}>{data.blocked}</p>
-              <p style={{ fontSize: 9, color: "var(--txt-3)" }}>Engellenen</p>
+            <div className="text-center" title="Worker kendi payını doldurduğu için bekletilen istek — Riot hatası DEĞİL">
+              <p style={{ fontSize: 14, fontWeight: 700, color: data.quotaHeld > 0 ? "var(--txt-2)" : "var(--txt)" }}>{data.quotaHeld ?? 0}</p>
+              <p style={{ fontSize: 9, color: "var(--txt-3)" }}>Frenlenen</p>
             </div>
           </div>
 
