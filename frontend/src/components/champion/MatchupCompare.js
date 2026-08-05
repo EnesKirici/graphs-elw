@@ -84,7 +84,9 @@ function buildRows(m, role) {
         ? `${us.kda.k}/${us.kda.d}/${us.kda.a} — ${them.kda.k}/${them.kda.d}/${them.kda.a}`
         : null,
     },
-    { label: "Katılım", a: us?.kp, b: them?.kp, fmt: (v) => `%${v}` },
+    // "Katılım" LoL'de kullanılan bir tabir değil; oyuncular buna kill katkısı
+    // (kill participation) diyor — etiket oyunun diline uydu.
+    { label: "Kill katkısı", a: us?.kp, b: them?.kp, fmt: (v) => `%${v}` },
     { label: "Şampiyon hasarı", a: us?.dmg, b: them?.dmg, fmt: k },
     { label: "Gold farkı @15", a: l?.gd15, b: ol?.gd15, full: 1000, fmt: sgn },
     { label: "Tecrübe farkı @15", a: l?.xpd15, b: ol?.xpd15, full: 1200, fmt: sgn },

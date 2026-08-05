@@ -65,6 +65,12 @@ export default function ChampionCounters({ champName, champImage, champId, count
   // Kıyas tablosunda gösterilen eşleşme. null = "varsayılanı kullan" (en zorlu rakip):
   // rol değişince seçim otomatik sıfırlansın diye id yerine null tutuluyor.
   const [pickedId, setPickedId] = useState(null);
+  /*
+    Şerit hangi yüzünde? State BURADA, MatchupStrip'in içinde değil: sol/sağ ray
+    "uyumlular" sekmesindeyken çıkmamalı (o sekmede kıyas paneli değişmiyor,
+    seçici anlamsız oluyor — kullanıcı bildirdi).
+  */
+  const [face, setFace] = useState("rakip");
   const data = counters?.byPosition?.[role];
 
   /*
@@ -103,8 +109,13 @@ export default function ChampionCounters({ champName, champImage, champId, count
       */
       const gorunen = Math.max(0, Math.min(s.bottom, window.innerHeight) - Math.max(s.top, 0));
       const oran = s.height > 0 ? gorunen / s.height : 0;
-      const show = oran < 0.5 && p.bottom > 340 && window.innerWidth >= 1440;
-      const left = Math.round(p.left - 76);
+      /*
+        Ray SAĞDA: tıklayınca değişen taraf panelin sağı (rakip). Seçiciyi
+        değiştirdiği şeyin yanına koymak göz hareketini yarıya indiriyor.
+        "Uyumlular" sekmesindeyken hiç çıkmaz — orada kıyas paneli değişmiyor.
+      */
+      const show = face === "rakip" && oran < 0.5 && p.bottom > 340 && window.innerWidth >= 1440;
+      const left = Math.round(p.right + 14);
       // Her scroll olayında setState ETME — yalnız değer değişince.
       if (show !== railSon.current.show || Math.abs(left - railSon.current.left) > 1) {
         railSon.current = { show, left };
@@ -118,7 +129,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
       window.removeEventListener("scroll", hesapla);
       window.removeEventListener("resize", hesapla);
     };
-  }, [role]);
+  }, [role, face]);
 
   // ⚠ Buradan SONRA erken return var; hook'ların hepsi YUKARIDA kalmalı
   //   (koşullu çağrılan hook React'te sıra bozar).
@@ -167,7 +178,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
           {positions.map((p) => (
             <button
               key={p.position}
-              onClick={() => { trackEvent("counter_rolu_degisti", { rol: p.position }); setRole(p.position); setPickedId(null); }}
+              onClick={() => { trackEvent("counter_rolu_degisti", { rol: p.position }); setRole(p.position); setPickedId(null); setFace("rakip"); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
               }`}
@@ -197,6 +208,8 @@ export default function ChampionCounters({ champName, champImage, champId, count
                    duos={duoList}
           mateLabel={role === "BOTTOM" ? "support" : "ADC"}
           version={version}
+          face={face}
+          setFace={setFace}
         />
       )}
       </div>
@@ -206,7 +219,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
       <div ref={panelRef}>
         <div
           className={`fixed top-24 z-30 w-[62px] flex flex-col gap-1.5 transition-all duration-300 ease-out ${
-            rail.show ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none"
+            rail.show ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 pointer-events-none"
           }`}
           style={{ left: rail.left }}
           aria-hidden={!rail.show}
@@ -272,9 +285,8 @@ export default function ChampionCounters({ champName, champImage, champId, count
   grid hücresinde durur (absolute konumlandırma değil) → dönerken zıplama olmaz.
 */
 function MatchupStrip({
-  good, bad, champName, pickedId, onPick, duos = [], mateLabel = "eş", version,
+  good, bad, champName, pickedId, onPick, duos = [], mateLabel = "eş", version, face, setFace,
 }) {
-  const [face, setFace] = useState("rakip");
   const hasDuos = duos.length > 0;
   const flipped = hasDuos && face === "uyum";
 

@@ -40,49 +40,53 @@ function HeroStats({ s }) {
   const dilim = s.rank && s.total ? Math.max(1, Math.round((s.rank / s.total) * 100)) : null;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/50 backdrop-blur-sm overflow-hidden">
-      <div className="flex items-stretch">
-        {/* 1) DERECE — tek harf, kendi rengiyle dolgulu kare. Şeridin çapası. */}
-        {s.grade && (
-          <div
-            className="flex flex-col items-center justify-center px-3.5 shrink-0 border-r border-white/10"
-            style={{ backgroundColor: `color-mix(in srgb, ${gCol} 16%, transparent)` }}
-          >
-            <span className="text-[32px] font-extrabold leading-none" style={{ color: gCol }}>{s.grade}</span>
-            <span className="text-[8px] text-gray-400 uppercase tracking-[0.12em] mt-1">derece</span>
-          </div>
-        )}
-
-        {/* 2) ASIL SAYILAR — kazanma oranı en büyük, altında rol sırası + dilim çubuğu. */}
-        <div className="flex-1 min-w-0 px-3.5 py-2 flex items-center gap-4">
-          <div className="shrink-0">
-            <div className={`text-xl font-extrabold leading-none tabular-nums ${wrCls(s.winRate)}`}>%{s.winRate}</div>
-            <div className="text-[9px] text-gray-400 uppercase tracking-wider mt-1">kazanma</div>
-          </div>
-
-          {s.rank && (
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-[15px] font-bold text-gray-100 tabular-nums">{s.rank}</span>
-                <span className="text-[11px] text-gray-500 tabular-nums">/ {s.total}</span>
-                <span className="text-[9px] text-gray-400 uppercase tracking-wider ml-0.5">{rol} sırası</span>
-              </div>
-              {/* Dilim çubuğu: "50/144" tek başına iyi mi kötü mü belli değil; dolu
-                  kısım ne kadar KISAysa o kadar üst sırada demek. */}
-              <div className="mt-1.5 h-1 rounded-full bg-white/10 overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${dilim}%`, backgroundColor: gCol }} />
-              </div>
-              <div className="text-[9px] text-gray-500 mt-1">rolünde ilk %{dilim}</div>
-            </div>
-          )}
+    /*
+      Dört sütun, aralarında ince ayraç. Önceki hâlde orta blok flex-1 idi ve
+      dilim çubuğu 400px'e yayılıyordu — şerit hem seyrek duruyor hem "rolünde
+      ilk %35" alt satıra düşüp kırpılıyordu. Artık her sütun içeriği kadar,
+      çubuk sabit 80px ve etiketi YANINDA.
+    */
+    <div className="inline-flex rounded-xl border border-white/10 bg-black/55 backdrop-blur-sm overflow-hidden divide-x divide-white/10">
+      {/* 1) DERECE — tek harf, kendi rengiyle dolgulu. Şeridin çapası. */}
+      {s.grade && (
+        <div
+          className="flex flex-col items-center justify-center px-4 py-2.5 shrink-0"
+          style={{ backgroundColor: `color-mix(in srgb, ${gCol} 18%, transparent)` }}
+        >
+          <span className="text-[30px] font-extrabold leading-none" style={{ color: gCol }}>{s.grade}</span>
+          <span className="text-[8px] text-gray-400 uppercase tracking-[0.14em] mt-1">derece</span>
         </div>
+      )}
 
-        {/* 3) POPÜLERLİK — ikincil üçlü, ayrı sütunda ve daha sönük. */}
-        <div className="shrink-0 px-3 py-2 border-l border-white/10 flex flex-col justify-center gap-1">
-          <MiniStat k="seçim" v={s.pickRate != null ? `%${s.pickRate}` : "—"} />
-          <MiniStat k="yasak" v={s.banRate != null ? `%${s.banRate}` : "—"} />
-          <MiniStat k="oyun" v={(s.games ?? 0).toLocaleString("tr-TR")} />
+      {/* 2) KAZANMA — şeridin en büyük sayısı. */}
+      <div className="px-4 py-2.5 flex flex-col justify-center shrink-0">
+        <span className={`text-[22px] font-extrabold leading-none tabular-nums ${wrCls(s.winRate)}`}>%{s.winRate}</span>
+        <span className="text-[9px] text-gray-400 uppercase tracking-wider mt-1.5">kazanma oranı</span>
+      </div>
+
+      {/* 3) ROL SIRASI + dilim çubuğu. "50/144" tek başına iyi mi kötü mü belli
+             değil; çubuğun dolu kısmı ne kadar KISAysa o kadar üsttesin. */}
+      {s.rank && (
+        <div className="px-4 py-2.5 flex flex-col justify-center shrink-0">
+          <span className="flex items-baseline gap-1">
+            <span className="text-[19px] font-bold text-gray-100 leading-none tabular-nums">{s.rank}</span>
+            <span className="text-xs text-gray-500 tabular-nums">/ {s.total}</span>
+            <span className="text-[9px] text-gray-400 uppercase tracking-wider ml-1">{rol} sırası</span>
+          </span>
+          <span className="flex items-center gap-2 mt-2">
+            <span className="h-1 w-20 rounded-full bg-white/10 overflow-hidden block">
+              <span className="h-full rounded-full block" style={{ width: `${dilim}%`, backgroundColor: gCol }} />
+            </span>
+            <span className="text-[9px] text-gray-400">ilk %{dilim}</span>
+          </span>
         </div>
+      )}
+
+      {/* 4) POPÜLERLİK — ikincil üçlü, daha sönük ve daha küçük. */}
+      <div className="px-3.5 py-2 flex flex-col justify-center gap-1 shrink-0">
+        <MiniStat k="seçim" v={s.pickRate != null ? `%${s.pickRate}` : "—"} />
+        <MiniStat k="yasak" v={s.banRate != null ? `%${s.banRate}` : "—"} />
+        <MiniStat k="oyun" v={(s.games ?? 0).toLocaleString("tr-TR")} />
       </div>
     </div>
   );
@@ -236,7 +240,7 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
         */}
         {/* İkisi de varsa ALT ALTA: özet metni sayfanın SEO gövdesi, silinmemeli. */}
         {(stats || summary) && (
-          <div className="w-full lg:w-auto lg:flex-1 lg:min-w-[340px] lg:max-w-2xl lg:ml-auto mb-1 space-y-2">
+          <div className="w-full lg:w-auto lg:ml-auto mb-1 space-y-2">
             {stats && <HeroStats s={stats} />}
             {summary && (
               <p className="text-[11px] md:text-xs leading-relaxed text-gray-200/95 rounded-lg border border-white/10 bg-black/40 backdrop-blur-sm px-3.5 py-2.5">
