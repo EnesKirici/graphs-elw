@@ -25,7 +25,7 @@ const COL_BAD = scoreColor(2);
 /* Kaybeden tarafin sayisi: ikincil ama OKUNUR. rgb(120,128,145) splash zemininde
    kayboluyordu — panelin arkasinda %16 opaklikta iki splash var, koyu gri onlara
    karisiyor. Ton acildi, ayrica sayilara golge veriliyor. */
-const NEUTRAL = "rgb(163,171,187)";
+const NEUTRAL = "rgb(186,193,207)";
 /* Splash zemini uzerindeki her sayi/etiket bu golgeyi tasir. */
 const SHADOW = "drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]";
 
@@ -82,7 +82,14 @@ function buildRows(m, baseline) {
       da Yuumi'nin bastığı kalkan da tabloya girmiyordu, ikisi de yalnız "az hasar
       vuran" olarak okunuyordu.
     */
-    { label: "Emilen hasar", a: us?.taken, b: them?.taken, ba: bs?.taken, bb: os?.taken, fmt: (v) => `${(v / 1000).toFixed(1)}k` },
+    /*
+      Emilen hasar TARAFSIZ çizilir (mavi/kırmızı DEĞİL). "Çok emmek iyidir" bu metrikte
+      TANIMSIZ: tank için işini yapmak, enchanter için kapılmak demek. Yuumi-Rell'de bar
+      Yuumi'ye doğru maviydi — oysa Yuumi'nin normalinden %14 fazla hasar yemesi onun
+      lehine bir şey değil. Yön yine bilgi taşır ("kendi normaline göre kim daha çok
+      emiyor"), ama hüküm vermez.
+    */
+    { label: "Emilen hasar", a: us?.taken, b: them?.taken, ba: bs?.taken, bb: os?.taken, neutral: true, fmt: (v) => `${(v / 1000).toFixed(1)}k` },
     { label: "İyileştirme + kalkan", a: us?.hs, b: them?.hs, ba: bs?.hs, bb: os?.hs, fmt: (v) => `${(v / 1000).toFixed(1)}k` },
     { label: "CC süresi", a: us?.cc, b: them?.cc, ba: bs?.cc, bb: os?.cc, fmt: (v) => `${v} sn` },
     { label: "Gold farkı @15", a: l?.gd15, b: ol?.gd15, ba: bl?.gd15, bb: olb?.gd15, full: 1000, fmt: sgn },
@@ -136,6 +143,14 @@ export default function MatchupCompare({ champId, champName, champImage, m, vers
             WebkitMaskImage: "linear-gradient(to left, black 0%, transparent 92%)",
           }}
         />
+        {/*
+          KARARTMA KATMANI. Splash'ler %16 opaklıkta bile sayıları yutuyordu: açık
+          saçlı/aydınlık bir splash'in (Rell) üstünde açık gri rakam okunmuyor, ve
+          hangi bölgenin aydınlık olduğu ŞAMPİYONA GÖRE değişiyor — yani metin rengini
+          ayarlamak çözmez, zemini sabitlemek gerekir. Gölge (drop-shadow) tek başına
+          yetmedi; kullanıcı iki turda da sayıların kaybolduğunu gördü.
+        */}
+        <div className="absolute inset-0 bg-black/45" />
       </div>
 
       <div className="relative">
@@ -267,7 +282,10 @@ function CompareRow({ r }) {
   }
 
   const pct = Math.abs(off) * 50;      // izin verilen en uzun bar = yarım genişlik
-  const col = off === 0 ? NEUTRAL : off > 0 ? COL_GOOD : COL_BAD;
+  // r.neutral: yönü göster, hüküm verme (bkz. "Emilen hasar" gerekçesi).
+  const col = r.neutral || off === 0 ? NEUTRAL : off > 0 ? COL_GOOD : COL_BAD;
+  const colA = r.neutral ? NEUTRAL : off > 0 ? COL_GOOD : NEUTRAL;
+  const colB = r.neutral ? NEUTRAL : off < 0 ? COL_BAD : NEUTRAL;
 
   return (
     <div>
@@ -275,7 +293,7 @@ function CompareRow({ r }) {
       <div className="flex items-center gap-3 sm:gap-4">
         <span
           className="w-16 sm:w-20 text-right shrink-0"
-          style={{ color: off > 0 ? COL_GOOD : NEUTRAL }}
+          style={{ color: colA }}
         >
           <span className={`block text-base sm:text-lg font-bold tabular-nums ${SHADOW}`}>{r.fmt(r.a)}</span>
           <NormNote dev={da} full={r.full} base={r.ba} value={r.a} fmt={r.fmt} />
@@ -296,7 +314,7 @@ function CompareRow({ r }) {
 
         <span
           className="w-16 sm:w-20 text-left shrink-0"
-          style={{ color: off < 0 ? COL_BAD : NEUTRAL }}
+          style={{ color: colB }}
         >
           <span className={`block text-base sm:text-lg font-bold tabular-nums ${SHADOW}`}>{r.fmt(r.b)}</span>
           <NormNote dev={db} full={r.full} base={r.bb} value={r.b} fmt={r.fmt} />
