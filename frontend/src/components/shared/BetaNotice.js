@@ -13,12 +13,12 @@ import { useEffect, useState } from "react";
   Neden (site) layout'una bağlı, root'a değil: /admin kendi layout ağacında.
   Panelde kendi duyurumuzu görmenin anlamı yok.
 
-  localStorage'a bayrak değil SÜRÜM yazılır. Metin değişip VERSION artınca
-  duyuru herkese yeniden gösterilir — eskiden kapatmış olanlar dahil.
+  localStorage'a bayrak değil SÜRÜM yazılır. Metin ya da tasarım değişip VERSION
+  artınca duyuru herkese yeniden gösterilir — eskiden kapatmış olanlar dahil.
 */
 
 const KEY = "elw-beta-notice";
-const VERSION = "1";
+const VERSION = "2"; // 2: kart büyütüldü + accent vurgu (1'i kapatanlar tekrar görsün)
 
 export default function BetaNotice() {
   // "yok" → hiç basılmaz | "acik" → görünür | "kapaniyor" → çıkış animasyonu
