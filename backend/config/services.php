@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    /*
+     * Google Search Console — service account ile sunucudan sorgu.
+     * credentials: JSON anahtar yolu (storage/app zaten .gitignore'da → depoya sızmaz).
+     * site_url: elwgraphs.com GSC'ye ALAN ADI mülkü olarak eklendi; bu yüzden
+     *           "https://..." değil "sc-domain:" biçimi şart, yoksa 403 gelir.
+     */
+    'gsc' => [
+        'credentials' => env('GSC_CREDENTIALS', storage_path('app/google/gsc.json')),
+        'site_url'    => env('GSC_SITE_URL', 'sc-domain:elwgraphs.com'),
+    ],
+
 ];
