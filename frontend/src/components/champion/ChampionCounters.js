@@ -291,6 +291,110 @@ function MatchupStrip({ good, bad, champName, pickedId, onPick }) {
 }
 
 /*
+  Şeritteki tek rakip kartı — splash + kazanma oranı, hover ile head-to-head özeti.
+*/
+function StripCard({ m, picked, onPick }) {
+  const col = wrColor(m.winRate);
+  const lane = laneTag(m);
+
+  return (
+    /*
+      LINK DEĞİL, DÜĞME. Eskiden karta tıklayınca rakibin counter sayfasına gidiliyordu;
+      tıklama anında sayfa geçişi başlarken kart hem yukarı kalkıyor hem saydamlaşıyor,
+      altındaki splash görseli sızıyordu ve bozuk duruyordu (kullanıcı bildirdi).
+      Artık tıklama SAYFADA KALIR: alttaki kıyas tablosunun konusunu seçer. Rakibin
+      sayfasına giden iç link kıyas tablosunun başlığında duruyor (SEO kaybı yok).
+
+      bg-black: kartın kendi yüzeyi OPAK olmalı. Panel `.glass` ve kullanıcı "saydam
+      kartlar" tercihini açtığında %52'ye kadar iniyor — yarı saydam bir kart yüzeyi
+      arkasındaki splash'i geçiriyordu.
+    */
+    <button
+      type="button"
+      onClick={() => onPick?.(m.id)}
+      aria-pressed={picked}
+      title={`${m.name} — ${m.games} maç · kıyas için seç`}
+      className={`group relative flex flex-col flex-1 min-w-[92px] max-w-[150px] shrink-0 rounded-lg overflow-hidden border bg-black text-left cursor-pointer transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-[var(--m)] hover:shadow-[0_10px_28px_-10px_var(--m)] ${
+        picked ? "border-[var(--m)] -translate-y-1 shadow-[0_8px_24px_-10px_var(--m)]" : "border-edge/60"
+      }`}
+      style={{ "--m": col }}
+    >
+      {/* Üstte durumu tek bakışta veren renk şeridi — hover'da kalınlaşır */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[3px] z-20 transition-all duration-300 group-hover:h-[5px]"
+        style={{ backgroundColor: col }}
+      />
+
+      {/* Yükseklik loading art'ın dikey oranına (308x560) yakın tutulur — yatay bir
+          kutuya sıkıştırılırsa karakterin yüzü kırpılıyor. */}
+      <div className="relative h-[186px] overflow-hidden bg-black">
+        <img
+          src={loadingArt(m.id)}
+          alt={`${m.name} — ${m.name} counter eşleşmesi`}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.12]"
+          onError={artFallback(m.id)}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-transparent" />
+
+        {/* İsim hover'da SÖNER — çünkü aynı isim aşağıdan gelen şeridin başlığında
+            zaten var. Eskiden sabit -52px yukarı kaydırılıyordu; şerit yüksekliği
+            satır sayısına göre değiştiği için (3 ya da 4 satır) isim şeridin
+            kenarlığının ÜSTÜNE biniyordu (kullanıcı bildirdi). */}
+        <span className="absolute bottom-1.5 inset-x-0 px-1.5 text-center text-[11px] font-semibold text-white/95 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-opacity duration-200 group-hover:opacity-0">
+          {m.name}
+        </span>
+
+        {/*
+          Head-to-head detayı (KDA / katılım / hasar / @15).
+
+          ESKİDEN: kartı TAMAMEN kaplayan siyah panel fade-in oluyordu — şampiyon
+          görseli kayboluyor, "kart arkaya dönüyor" hissi veriyordu (kullanıcı bu
+          davranışın kaldırılmasını istedi). ŞİMDİ: alttan yukarı kayan şerit,
+          BAŞLIĞINDA şampiyon adıyla. Görsel görünür kalır, bilgi de kaybolmaz.
+
+          Zemin ALT BÖLÜMLE AYNI (bg-black): eskiden şerit bg-black/88, alt bölüm
+          düz siyahtı → aralarında görünür bir dikiş çizgisi oluşuyor ve tam
+          kazanma oranının üstünden geçiyordu (kullanıcı bunu işaretledi).
+        */}
+        {m.stats && (
+          <div
+            className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out bg-black border-t px-1.5 pt-1 pb-1.5"
+            style={{ borderColor: col }}
+          >
+            <p className="text-[11px] font-semibold text-white text-center truncate mb-1">{m.name}</p>
+            <div className="space-y-0.5">
+              <StatLine k="KDA" v={`${m.stats.kda.k}/${m.stats.kda.d}/${m.stats.kda.a}`} />
+              <StatLine k="KP" v={`%${m.stats.kp}`} />
+              <StatLine k="Hasar" v={`${(m.stats.dmg / 1000).toFixed(1)}k`} />
+              {m.lane15 && (
+                <StatLine
+                  k="15. dk"
+                  v={`${m.lane15.gd15 >= 0 ? "+" : ""}${m.lane15.gd15}`}
+                  cls={m.lane15.gd15 >= 0 ? "text-blue-300" : "text-red-400"}
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Maç sayısı 9px/gray-500'de okunmuyordu (kullanıcı bildirdi) — örneklem
+          büyüklüğü oranın ne kadar güvenilir olduğunu söyleyen ASIL bilgi, dipnot değil.
+          flex-1 + justify-center: kartlar eşit boya gerildiği için (items-stretch) rozeti
+          olmayan kartın altında koca bir boşluk kalıyordu; içerik artık ortalanıyor. */}
+      <div className="flex-1 flex flex-col justify-center px-1.5 py-1.5 text-center bg-black">
+        <div className="text-sm font-bold tabular-nums leading-none" style={{ color: col }}>%{m.winRate}</div>
+        <div className="text-[11px] font-medium text-gray-300 tabular-nums mt-1">{m.games} maç</div>
+        {lane && (
+          <div className={`mt-1 mx-auto text-[10px] font-semibold rounded px-1 py-0.5 border ${lane.cls}`}>{lane.text}</div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+/*
   Sol raydaki tek seçim düğmesi — şerit ekrandan çıktığında kıyas panelinin
   solunda beliren dikey liste. Sadece ikon + oran: burası bir ÖZET değil,
   hızlı geçiş kumandası; ayrıntı zaten sağdaki panelde.
