@@ -81,7 +81,10 @@ export default function ChampionView({ id, champ, version, runesData, build, duo
             </button>
           ))}
           {!isClassic && (
-            <Link href={`/champions/${id}/counter`} className={`${CHAMP_TAB} ${CHAMP_TAB_INACTIVE}`}>Counter</Link>
+            <>
+              <Link href={`/champions/${id}/counter`} className={`${CHAMP_TAB} ${CHAMP_TAB_INACTIVE}`}>Counter</Link>
+              <Link href={`/champions/${id}/duos`} className={`${CHAMP_TAB} ${CHAMP_TAB_INACTIVE}`}>Uyumlular</Link>
+            </>
           )}
         </div>
       </div>

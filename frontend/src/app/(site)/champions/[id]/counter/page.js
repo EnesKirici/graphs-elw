@@ -269,6 +269,7 @@ export default async function ChampionCounterPage({ params }) {
             <Link href={`/champions/${id}`} className={`${CHAMP_TAB} ${CHAMP_TAB_INACTIVE}`}>Genel</Link>
             <Link href={`/champions/${id}?tab=detail`} className={`${CHAMP_TAB} ${CHAMP_TAB_INACTIVE}`}>Detay</Link>
             <span className={`${CHAMP_TAB} ${CHAMP_TAB_ACTIVE}`}>Counter</span>
+            <Link href={`/champions/${id}/duos`} className={`${CHAMP_TAB} ${CHAMP_TAB_INACTIVE}`}>Uyumlular</Link>
           </div>
         </div>
 

@@ -146,6 +146,90 @@ class BuildAggregationService
             $this->bumpLane15($patch, $a[0], $pos, $b[0], $a[1] - $b[1], $a[2] - $b[2], $a[3] - $b[3]);
             $this->bumpLane15($patch, $b[0], $pos, $a[0], $b[1] - $a[1], $b[2] - $a[2], $b[3] - $a[3]);
         }
+
+        $this->bumpDuoLane15($matchData, $timeline, $byPos);
+    }
+
+    /**
+     * Aynı takımın ADC+SUPPORT ikilisi için @15 farkları (champion_duo_stats).
+     *
+     * Rakiplik DEĞİL sinerji: "bu eşle koridorda daha iyi miyim?". İkilinin her iki
+     * üyesinin farkı AYRI saklanır (adc_* / sup_*) çünkü sayfa iki perspektiften de
+     * açılıyor. Öldürme farkı timeline'ın CHAMPION_KILL olaylarından 15. dk'ya kadar
+     * sayılır — maç özetindeki toplam öldürme DEĞİL.
+     *
+     * @param array $byPos processLane15'in kurduğu pozisyon×takım → [champId, gold, cs, xp]
+     */
+    private function bumpDuoLane15(array $matchData, array $timeline, array $byPos): void
+    {
+        $bots = $byPos['BOTTOM'] ?? [];
+        $sups = $byPos['UTILITY'] ?? [];
+        if (count($bots) !== 2 || count($sups) !== 2) {
+            return; // alt koridor verisi eksik/bozuk — güvenme
+        }
+
+        // 15. dakikaya kadar şampiyon başına öldürme (takım id'siyle değil, şampiyonla eşlenir).
+        $kills = $this->killsBefore15($matchData, $timeline);
+
+        $teamIds = array_keys($bots);
+        foreach ($teamIds as $tid) {
+            $rakip = $teamIds[0] === $tid ? ($teamIds[1] ?? null) : $teamIds[0];
+            if ($rakip === null || ! isset($bots[$rakip], $sups[$tid], $sups[$rakip])) {
+                continue;
+            }
+            [$adc, $aGold, $aCs, $aXp] = $bots[$tid];
+            [$rAdc, $rGold, $rCs, $rXp] = $bots[$rakip];
+            [$sup, $sGold, $sCs, $sXp] = $sups[$tid];
+            [$rSup, $rsGold, $rsCs, $rsXp] = $sups[$rakip];
+            if (! $adc || ! $sup) {
+                continue;
+            }
+
+            $keyCols = ['adc_champion' => $adc, 'support_champion' => $sup];
+            \App\Models\ChampionDuoStat::firstOrCreate($keyCols, ['games' => 0, 'wins' => 0]);
+            \App\Models\ChampionDuoStat::where($keyCols)->update([
+                'n15'        => DB::raw('n15 + 1'),
+                'adc_gd15'   => DB::raw('adc_gd15 + (' . (int) ($aGold - $rGold) . ')'),
+                'adc_xpd15'  => DB::raw('adc_xpd15 + (' . (int) ($aXp - $rXp) . ')'),
+                'adc_csd15'  => DB::raw('adc_csd15 + (' . (int) ($aCs - $rCs) . ')'),
+                'adc_kd15'   => DB::raw('adc_kd15 + (' . (int) (($kills[$adc] ?? 0) - ($kills[$rAdc] ?? 0)) . ')'),
+                'sup_gd15'   => DB::raw('sup_gd15 + (' . (int) ($sGold - $rsGold) . ')'),
+                'sup_xpd15'  => DB::raw('sup_xpd15 + (' . (int) ($sXp - $rsXp) . ')'),
+                'sup_csd15'  => DB::raw('sup_csd15 + (' . (int) ($sCs - $rsCs) . ')'),
+                'sup_kd15'   => DB::raw('sup_kd15 + (' . (int) (($kills[$sup] ?? 0) - ($kills[$rSup] ?? 0)) . ')'),
+            ]);
+        }
+    }
+
+    /**
+     * Şampiyon → 15. dakikaya kadar öldürme sayısı.
+     * Timeline'ın CHAMPION_KILL olaylarından; killerId participantId'dir, katılımcı
+     * dizisindeki indeks+1 ile eşlenir (participantId saklanan maç kopyasında YOK).
+     * @return array<string,int>
+     */
+    private function killsBefore15(array $matchData, array $timeline): array
+    {
+        $keyToId = $this->keyMap();
+        $pidToChamp = [];
+        foreach ($matchData['info']['participants'] ?? [] as $i => $p) {
+            $pid = (int) ($p['participantId'] ?? 0) ?: ($i + 1);
+            $pidToChamp[$pid] = $keyToId[(int) ($p['championId'] ?? 0)] ?? ($p['championName'] ?? null);
+        }
+
+        $out = [];
+        foreach ($timeline['info']['frames'] ?? [] as $frame) {
+            foreach ($frame['events'] ?? [] as $e) {
+                if (($e['type'] ?? '') !== 'CHAMPION_KILL' || (int) ($e['timestamp'] ?? 0) > 900000) {
+                    continue;
+                }
+                $c = $pidToChamp[(int) ($e['killerId'] ?? 0)] ?? null;
+                if ($c) {
+                    $out[$c] = ($out[$c] ?? 0) + 1;
+                }
+            }
+        }
+
+        return $out;
     }
 
     /**

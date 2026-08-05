@@ -28,7 +28,7 @@ export default async function sitemap() {
     const res = await fetch(`${API_BASE}/champions`, { next: { revalidate: 86400 } });
     if (res.ok) {
       const data = await res.json();
-      // Her şampiyon: detay sayfası + counter sayfası ("x counter"/"x ct" araması).
+      // Her şampiyon: detay + counter ("x counter"/"x ct") + uyumluluk ("x duo").
       // Classic (Jade_*) varyantlarının COUNTER sayfası hariç: dereceli maç verisi
       // olmadığı için içeriği boş, üstelik başlığı gerçek şampiyonunkiyle çakışıp
       // "ww ct" gibi aramalarda onun yerine çıkabiliyordu. Detay sayfaları kalır —
@@ -40,6 +40,7 @@ export default async function sitemap() {
         ];
         if (!c.isClassic) {
           urls.push({ url: `${BASE}/champions/${c.id}/counter`, changeFrequency: "weekly", priority: 0.6 });
+          urls.push({ url: `${BASE}/champions/${c.id}/duos`, changeFrequency: "weekly", priority: 0.5 });
         }
         return urls;
       });

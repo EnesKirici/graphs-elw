@@ -236,25 +236,35 @@ class ChampionStatsService
                 }
             });
 
-        DB::transaction(function () use ($acc) {
-            ChampionDuoStat::query()->delete();
-            $now = now();
-            $bulk = [];
-            foreach ($acc as $key => $v) {
-                [$adc, $sup] = explode('|', $key, 2);
-                $bulk[] = [
-                    'adc_champion'     => $adc,
-                    'support_champion' => $sup,
-                    'games'            => $v['games'],
-                    'wins'             => $v['wins'],
-                    'created_at'       => $now,
-                    'updated_at'       => $now,
-                ];
-            }
-            foreach (array_chunk($bulk, 400) as $chunk) {
-                ChampionDuoStat::insert($chunk);
-            }
-        });
+        /*
+          SİL-YENİDEN-KUR DEĞİL, UPSERT.
+
+          Tablo eskiden komple siliniyordu; bu, @15 sütunlarını (n15, adc_ ve sup_
+          önekli olanlar) da silerdi. Onlar timeline'dan İLERİYE DÖNÜK birikiyor ve saklanan
+          maçlardan yeniden hesaplanamıyor (timeline saklanmıyor) — bir rebuild
+          hepsini uçururdu. Artık games/wins yeniden yazılır, @15 toplamlarına
+          DOKUNULMAZ.
+
+          Sıfırlama: games/wins DEĞERİ ATANIR (increment değil), çünkü bu komut tüm
+          maçları baştan sayıyor. Artık var olmayan ikili (patch prune sonrası) eski
+          sayısıyla kalır — zararsız, bir sonraki turda da yeniden yazılır.
+        */
+        $now = now();
+        $bulk = [];
+        foreach ($acc as $key => $v) {
+            [$adc, $sup] = explode('|', $key, 2);
+            $bulk[] = [
+                'adc_champion'     => $adc,
+                'support_champion' => $sup,
+                'games'            => $v['games'],
+                'wins'             => $v['wins'],
+                'created_at'       => $now,
+                'updated_at'       => $now,
+            ];
+        }
+        foreach (array_chunk($bulk, 400) as $chunk) {
+            ChampionDuoStat::upsert($chunk, ['adc_champion', 'support_champion'], ['games', 'wins', 'updated_at']);
+        }
 
         return count($acc);
     }
@@ -285,13 +295,31 @@ class ChampionStatsService
                     continue;
                 }
                 $adj = Statistics::shrunkWinRate($r->wins, $r->games);
-                $out[] = [
+                /*
+                  @15 farkları SAYFANIN ŞAMPİYONU perspektifinden.
+                  $partnerCol 'support_champion' ise sayfanın şampiyonu ADC'dir → adc_*
+                  sütunları okunur; tersi durumda sup_*. n15 = 0 ise alan hiç eklenmez,
+                  frontend "—" basar (veri ileriye dönük birikiyor).
+                */
+                $ben = $partnerCol === 'support_champion' ? 'adc' : 'sup';
+                $row = [
                     'champion' => $r->{$partnerCol},
                     'name'     => $names[$r->{$partnerCol}] ?? $r->{$partnerCol},
                     'games'    => $r->games,
                     'winRate'  => round($r->wins / $r->games * 100, 1),
                     'adjWr'    => round($adj * 100, 1),
                 ];
+                if ((int) $r->n15 > 0) {
+                    $n15 = (int) $r->n15;
+                    $row['lane15'] = [
+                        'n'     => $n15,
+                        'gd15'  => (int) round($r->{$ben . '_gd15'} / $n15),
+                        'xpd15' => (int) round($r->{$ben . '_xpd15'} / $n15),
+                        'csd15' => round($r->{$ben . '_csd15'} / $n15, 1),
+                        'kd15'  => round($r->{$ben . '_kd15'} / $n15, 2),
+                    ];
+                }
+                $out[] = $row;
             }
             usort($out, fn ($a, $b) => $b['adjWr'] <=> $a['adjWr']);
 
