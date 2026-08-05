@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\ProcessMatchJob;
 use App\Services\BuildAggregationService;
 use App\Services\RiotApi\MatchDataService;
+use App\Services\WorkerControlService;
 use Illuminate\Contracts\Queue\Job as QueueJobContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -45,6 +46,15 @@ class ProcessMatchJobRateLimitTest extends TestCase
         return $queueJob;
     }
 
+    /** Worker anahtarı — testlerin çoğu "açık" varsayar, fren testi "kapalı" verir. */
+    private function worker(bool $enabled = true): WorkerControlService
+    {
+        $worker = Mockery::mock(WorkerControlService::class);
+        $worker->shouldReceive('isEnabled')->andReturn($enabled);
+
+        return $worker;
+    }
+
     public function test_cooldown_aktifken_riota_istek_atilmaz(): void
     {
         Cache::put('riot:rate_limit_cooldown', time() + 30, 60);
@@ -56,7 +66,7 @@ class ProcessMatchJobRateLimitTest extends TestCase
         $released = null;
         $job = new ProcessMatchJob('TR1_1234567890');
         $job->setJob($this->fakeQueueJob($released));
-        $job->handle($matchData, Mockery::mock(BuildAggregationService::class));
+        $job->handle($matchData, Mockery::mock(BuildAggregationService::class), $this->worker());
 
         $this->assertNotNull($released, 'cooldown açıkken iş geri bırakılmalıydı');
         // Alt sınır: kalan 1sn olsa bile job anında geri dönüp kuyruğu döndürmesin.
@@ -79,7 +89,7 @@ class ProcessMatchJobRateLimitTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('devam etti');
-        $job->handle($matchData, Mockery::mock(BuildAggregationService::class));
+        $job->handle($matchData, Mockery::mock(BuildAggregationService::class), $this->worker());
     }
 
     public function test_anahtar_gecersizken_de_istek_atilmaz(): void
@@ -92,8 +102,32 @@ class ProcessMatchJobRateLimitTest extends TestCase
         $released = null;
         $job = new ProcessMatchJob('TR1_1234567890');
         $job->setJob($this->fakeQueueJob($released));
-        $job->handle($matchData, Mockery::mock(BuildAggregationService::class));
+        $job->handle($matchData, Mockery::mock(BuildAggregationService::class), $this->worker());
 
         $this->assertSame(120, $released);
+    }
+
+    /**
+     * WORKER KAPALIYKEN de dokunulmamalı — 2026-08-05'te ölçülen kaçak.
+     *
+     * Panelden worker kapatıldığında yalnız TARAMA komutları duruyordu; kuyruktaki
+     * 6.082 iş işlenmeye devam ediyor, her biri 2 Riot isteği (maç + timeline)
+     * harcıyordu → saatte ~900 istek. Kullanıcı "durdur" demiş olmasına rağmen
+     * anahtar doluyordu. Zamanlayıcı artık queue:work'ü başlatmıyor; bu test elle
+     * başlatılan işçiye karşı iş içindeki yedek freni sabitler.
+     */
+    public function test_worker_kapaliyken_riota_istek_atilmaz(): void
+    {
+        $matchData = Mockery::mock(MatchDataService::class);
+        $matchData->shouldNotReceive('getMatchDetail');
+
+        $released = null;
+        $job = new ProcessMatchJob('TR1_1234567890');
+        $job->setJob($this->fakeQueueJob($released));
+        $job->handle($matchData, Mockery::mock(BuildAggregationService::class), $this->worker(false));
+
+        // Silinmemeli, geri bırakılmalı: iş kuyrukta kalsın, worker açılınca işlensin.
+        $this->assertSame(300, $released);
+        $this->assertDatabaseCount('processed_matches', 0);
     }
 }

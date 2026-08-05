@@ -52,8 +52,18 @@ class ProcessMatchJob implements ShouldQueue
         public ?string $tierBucket = null, // maçın bulunduğu havuz ligi (EMERALD..CHALLENGER)
     ) {}
 
-    public function handle(MatchDataService $matchData, BuildAggregationService $agg): void
+    public function handle(MatchDataService $matchData, BuildAggregationService $agg, \App\Services\WorkerControlService $worker): void
     {
+        // WORKER KAPALI: bu iş 2 Riot isteği harcar (maç detayı + timeline). Kullanıcı
+        // panelden "durdur" dediyse anahtarı tüketmemeli. Zamanlayıcı queue:work'ü zaten
+        // başlatmıyor (routes/console.php); burası elle başlatılan işçiye karşı yedek.
+        // SİLME, geri bırak — maç kaybolmasın; retryUntil (3 gün) bu beklemeyi affeder.
+        if (! $worker->isEnabled()) {
+            $this->release(300);
+
+            return;
+        }
+
         // Anahtar GEÇERSİZ (401/403): işlemeyi DENEME — boşa 401 atıp maçı 15 kez
         // deneyerek failed_jobs'a düşürmesin. İşi 2 dk gecikmeyle geri bırak; yeni key
         // panelden girilince (RiotKeyStore::put flag'i temizler) bekleyen işler işlenir.

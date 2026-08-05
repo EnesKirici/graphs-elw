@@ -76,7 +76,16 @@ Schedule::command('matches:collect')->everyMinute()->when($workerOn)->withoutOve
 // stok bitince turlar "bekleyen yok" ile anında biter (maliyetsiz).
 Schedule::command('timelines:backfill')->everyTenMinutes()->when($workerOn)->withoutOverlapping(15);
 // KUYRUK İŞÇİLERİ — İKİ AYRI SÜREÇ, TEK İŞÇİDE İKİ KUYRUK DEĞİL.
-// worker_enabled'dan BAĞIMSIZ; boş kuyrukta anında çıkarlar (maliyetsiz).
+//
+// worker_enabled'a BAĞLI (2026-08-05'te bağlandı). Eskiden bağımsızdı; gerekçe
+// "boş kuyrukta anında çıkarlar, maliyetsiz" idi. Ama kuyruk boş DEĞİLSE bedelsiz
+// değil: her ProcessMatchJob 2 Riot isteği harcar (maç detayı + timeline). Worker
+// panelden KAPATILDIĞI hâlde birikmiş 6.082 iş işlenmeye devam ediyordu → saatte
+// ~450 maç × 2 = ~900 istek, yani dev key'in yarısı. Kullanıcı "durdur" dedi ama
+// anahtar yine doluyordu (2026-08-05'te panelde görüldü, ölçüldü).
+// Bu dosyanın en üstündeki sözleşme zaten şuydu: "kapalıyken RIOT KEY kullanan
+// hiçbir iş koşmaz". İki iş sınıfının ikisi de Riot key kullanıyor → kapalıyken
+// süreç hiç başlamasın. İşler kuyrukta bekler, worker açılınca kaldığı yerden akar.
 //
 // Neden ayrıldı: profil build'i (KULLANICI bekletir) ile maç işleme (arka plan)
 // tek kuyrukta FIFO'ydu; build 21.144 maç işinin arkasına düşüyor, kendini round+1
@@ -94,6 +103,6 @@ Schedule::command('timelines:backfill')->everyTenMinutes()->when($workerOn)->wit
 // max-time < kilit süresi olmalı: süreç kilidini bırakmadan ölürse (deploy/kill)
 // bedel kilit süresi kadardır.
 Schedule::command('queue:work --queue=profiles --stop-when-empty --max-time=280 --tries=3')
-    ->everyMinute()->withoutOverlapping(10);
+    ->everyMinute()->when($workerOn)->withoutOverlapping(10);
 Schedule::command('queue:work --queue=default --stop-when-empty --max-time=480 --tries=3')
-    ->everyMinute()->withoutOverlapping(15);
+    ->everyMinute()->when($workerOn)->withoutOverlapping(15);
