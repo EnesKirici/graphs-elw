@@ -2,6 +2,7 @@ import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import MainContent from "@/components/layout/MainContent";
 import BackgroundFX from "@/components/dashboard/BackgroundFX";
+import BetaNotice from "@/components/shared/BetaNotice";
 
 export default function SiteLayout({ children }) {
   return (
@@ -33,6 +34,9 @@ export default function SiteLayout({ children }) {
           </div>
         </footer>
       </MainContent>
+      {/* Beta duyurusu — MainContent'in DIŞINDA: position:fixed bir öğe, akış
+          içindeki sarmalayıcıya bağlı kalmasın (yığılma bağlamı sürprizi yok). */}
+      <BetaNotice />
     </>
   );
 }

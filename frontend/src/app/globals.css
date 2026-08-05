@@ -912,3 +912,80 @@ html.light .dpm-scope .glass { box-shadow: none; }
   45% { transform: scale(1.18); } 60% { transform: scale(1); }
 }
 @media (prefers-reduced-motion: reduce) { .couple-tag-heart { animation: none; } }
+
+/* ── Beta duyurusu (BetaNotice) — sol altta, ilk ziyarette bir kez ──
+   Yüzey OPAK (var(--bg-1)): kart sayfa içeriğinin ÜSTÜNDE sabit duruyor;
+   yarı saydam bırakılırsa altındaki tablo/splash metnin içinden okunuyor.
+   z-index 90: navbar'ın (50) üstünde, rate-limit toast'ının (100) altında. */
+.beta-note {
+  position: fixed; left: 18px; bottom: 18px; z-index: 90;
+  width: min(340px, calc(100vw - 32px));
+  padding: 15px 17px 14px;
+  border-radius: 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .5);
+  animation: betaNoteIn .45s cubic-bezier(.16, 1, .3, 1) both;
+}
+/* Koyu tema gölgesi light modda kirli bir leke bırakıyor — yumuşatılır. */
+html.light .beta-note { box-shadow: 0 16px 38px rgba(15, 23, 42, .15); }
+.beta-note.is-out { animation: betaNoteOut .25s ease-in forwards; }
+
+@keyframes betaNoteIn  { from { opacity: 0; transform: translateY(16px) scale(.97); } }
+@keyframes betaNoteOut { to   { opacity: 0; transform: translateY(10px) scale(.97); } }
+
+.beta-note-head { display: flex; align-items: center; gap: 8px; }
+/* devpulse: hero'daki "Beta sürüm" rozetiyle AYNI nabız (dashboard-theme.css) */
+.beta-note-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex: none;
+  background: var(--accent); box-shadow: 0 0 7px var(--accent);
+  animation: devpulse 1.8s ease-in-out infinite;
+}
+.beta-note-title {
+  font-size: 12.5px; font-weight: 700; letter-spacing: .02em;
+  text-transform: uppercase; color: var(--txt);
+}
+.beta-note-close {
+  margin-left: auto; flex: none; width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px; font-size: 15px; line-height: 1;
+  color: var(--txt-3); cursor: pointer;
+  transition: color .15s, background .15s;
+}
+.beta-note-close:hover { color: var(--txt); background: var(--surface-2); }
+
+.beta-note-lead { margin-top: 9px; font-size: 12.5px; line-height: 1.55; color: var(--txt-2); }
+
+.beta-note-row { display: flex; gap: 9px; margin-top: 10px; }
+.beta-note-row p { font-size: 11.5px; line-height: 1.5; color: var(--txt-3); }
+.beta-note-row b { display: block; font-size: 11.5px; color: var(--txt); letter-spacing: .01em; }
+/* İki durum RENKLE ayrılmıyor: dolu daire = hazır, boş halka = sürüyor.
+   Renk körlüğünde de fark okunur (metin etiketi zaten var). */
+.beta-note-mark { flex: none; margin-top: 5px; width: 8px; height: 8px; border-radius: 50%; }
+.beta-note-mark.is-ok {
+  background: var(--win);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--win) 55%, transparent);
+}
+.beta-note-mark.is-wip { border: 2px solid var(--badge-gold-text); }
+
+.beta-note-btn {
+  width: 100%; margin-top: 14px; padding: 8px 0;
+  border-radius: 10px; border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--txt);
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: color .15s, background .15s, border-color .15s, transform .15s;
+}
+.beta-note-btn:hover {
+  background: var(--surface-2);
+  border-color: color-mix(in oklab, var(--txt-3) 45%, var(--border-strong));
+  transform: translateY(-1px);
+}
+
+/* Dar ekranda köşeye sıkışmasın — iki yandan eşit boşlukla tam genişlik. */
+@media (max-width: 640px) {
+  .beta-note { left: 12px; right: 12px; bottom: 12px; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .beta-note, .beta-note.is-out { animation-duration: .01ms; }
+  .beta-note-dot { animation: none; }
+}
