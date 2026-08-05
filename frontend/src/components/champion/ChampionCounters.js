@@ -216,6 +216,18 @@ export default function ChampionCounters({ champName, champImage, champId, count
 
       {/* 2) Seçili eşleşmenin kafa-kafaya kıyası — şeridin "ne kadar" sorusunun
              ardından "neden" sorusunu yanıtlar. */}
+      {/*
+        Sekmeye göre ALT BÖLÜM değişir.
+
+        Eskiden altta HER ZAMAN kıyas paneli duruyordu; "Uyumlular"a basınca üstte
+        eşler, altta hâlâ bir RAKİP kıyası kalıyordu (Yuumi vs Senna) — kullanıcı
+        "altındaki yer çok saçma kalıyor" dedi ve haklıydı: iki bölüm farklı
+        soruların cevabıydı. Sinerjinin karşılığı kafa-kafaya kıyas değil, sıralı
+        bir liste → tablo.
+      */}
+      {face === "uyum" ? (
+        <DuoTable duos={duoList} champName={champName} mateLabel={role === "BOTTOM" ? "support" : "ADC"} version={version} />
+      ) : (
       <div ref={panelRef}>
         <div
           className={`fixed top-24 z-30 w-[62px] flex flex-col gap-1.5 transition-all duration-300 ease-out ${
@@ -241,9 +253,10 @@ export default function ChampionCounters({ champName, champImage, champId, count
           champImage={champImage}
           m={picked}
           version={version}
-          guide={guide}
+          role={role}
         />
       </div>
+      )}
 
       {/*
         3) Rehber metinleri — kıyas panelinin SOL/SAĞ dilini sürdürür:
@@ -254,7 +267,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
            Yan yana koyunca "ben nasıl oynarım / ona karşı nasıl oynarım"
            karşılaştırması doğrudan okunuyor.
       */}
-      {(guide?.play || (picked && guide?.vs?.[picked.id])) && (
+      {face === "rakip" && (guide?.play || (picked && guide?.vs?.[picked.id])) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {guide?.play && (
             <GuideCard title={`${champName} nasıl oynanır?`} color={COL_GOOD} text={guide.play} />
@@ -332,7 +345,7 @@ function MatchupStrip({
           >
             <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-edge/50">
               <span className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_GOOD }}>
-                Rahat eşleşmeler
+                Rahat rakipler
               </span>
               <span className="text-[11px] text-gray-500 hidden sm:block">{champName} kazanma oranı</span>
               <span className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_BAD }}>
@@ -366,6 +379,86 @@ function MatchupStrip({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/*
+  UYUMLULAR TABLOSU — şeridin altındaki bölüm.
+
+  Sinerji sorusu ("kiminle iyi gidiyorum") sıralı bir listedir; kafa-kafaya kıyas
+  paneli buraya uymuyordu. Tablo sıralamayı, örneklemi ve oranı aynı anda okutur.
+
+  İKİ ORAN AYNI SATIRDA: gözlenen (ham) ve örneklem-duyarlı. 10 maçlık %52.7 ile
+  465 maçlık %52.7 aynı şey değil; sıralama İKİNCİSİNE göre yapılır ve çubuk da
+  onu çizer. Ham oran yanında küçük kalır ki "veriyi sakladık" izlenimi olmasın.
+*/
+function DuoTable({ duos, champName, mateLabel, version }) {
+  if (!duos?.length) return null;
+
+  return (
+    <div className="glass rounded-xl overflow-hidden">
+      <div className="flex items-baseline justify-between gap-3 px-5 py-3.5 border-b border-edge/50">
+        <h3 className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_GOOD }}>
+          {champName} ile en iyi {mateLabel} eşleri
+        </h3>
+        <span className="text-[11px] text-gray-500">{duos.length} eş · aynı takımda kazanma oranı</span>
+      </div>
+
+      {/* Uzun liste (50+) kartı sayfa boyu uzatmasın → kendi kaydırması. */}
+      <div className="max-h-[520px] overflow-y-auto">
+        <table className="w-full">
+          <thead className="sticky top-0 bg-black/80 backdrop-blur-sm z-10">
+            <tr className="text-[10px] uppercase tracking-wider text-gray-500">
+              <th className="text-left font-medium pl-4 pr-2 py-2 w-8">#</th>
+              <th className="text-left font-medium py-2">{mateLabel}</th>
+              <th className="text-right font-medium px-3 py-2 whitespace-nowrap">maç</th>
+              <th className="text-left font-medium px-3 py-2 w-[38%]">kazanma oranı</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-edge/25">
+            {duos.map((d, i) => {
+              const col = wrColor(d.adjWr);
+              // Çubuk %42-58 bandını tüm genişliğe yayar — WR'ler dar bir aralıkta
+              // toplandığı için 0-100 ölçeğinde hepsi aynı uzunlukta görünürdü.
+              const dolu = Math.max(4, Math.min(100, ((d.adjWr - 42) / 16) * 100));
+              return (
+                <tr key={d.champion} className="hover:bg-hover transition-colors">
+                  <td className="pl-4 pr-2 py-2 text-[11px] text-gray-500 tabular-nums">{i + 1}</td>
+                  <td className="py-2">
+                    <Link href={`/champions/${d.champion}`} className="flex items-center gap-2.5 group">
+                      <img
+                        src={champIcon(version, d.champion)}
+                        alt={d.name}
+                        width={28}
+                        height={28}
+                        className="rounded-md border border-edge/60 shrink-0"
+                        onError={hideOnError}
+                      />
+                      <span className="text-xs font-semibold text-gray-100 group-hover:text-white truncate">{d.name}</span>
+                    </Link>
+                  </td>
+                  <td className="px-3 py-2 text-right text-[11px] text-gray-400 tabular-nums whitespace-nowrap">{d.games}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex-1 h-1.5 rounded-full bg-white/[0.07] overflow-hidden min-w-[60px]">
+                        <div className="h-full rounded-full" style={{ width: `${dolu}%`, backgroundColor: col }} />
+                      </div>
+                      <span className="text-sm font-bold tabular-nums w-12 text-right" style={{ color: col }}>%{d.adjWr}</span>
+                      <span
+                        className="text-[10px] text-gray-500 tabular-nums w-10 text-right hidden sm:block"
+                        title={`Gözlenen oran %${d.winRate} · örneklem-duyarlı %${d.adjWr}`}
+                      >
+                        %{d.winRate}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

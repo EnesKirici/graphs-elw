@@ -7,7 +7,19 @@ const POS_TR = { TOP: "Üst Koridor", JUNGLE: "Orman", MIDDLE: "Orta Koridor", B
 
 // Neon değil — subtle/uniform chip'ler. Sınıf gri, pozisyon hafif mavi (rol vurgusu).
 const CLASS_CHIP = "text-xs font-medium px-2.5 py-1 rounded-md bg-black/35 text-gray-200 border border-white/10 backdrop-blur-sm";
-const POS_CHIP = "text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/15 text-blue-200 border border-blue-400/25 backdrop-blur-sm";
+/*
+  Pozisyon çipi RENGİNİ ŞAMPİYONUN DERECESİNDEN alır (sabit mavi değil).
+  Kullanıcı fikri: ikon çerçevesi zaten tier rengiyle parlıyor; çipin ondan bağımsız
+  mavi olması iki ayrı renk dili yaratıyordu. Aynı renk → hero tek parça okunuyor.
+  Derece yoksa (veri birikmemiş) eski mavi tona düşer.
+*/
+const POS_CHIP = "text-xs font-semibold px-2.5 py-1 rounded-md border backdrop-blur-sm";
+const POS_CHIP_FALLBACK = "bg-blue-500/15 text-blue-200 border-blue-400/25";
+const posChipStyle = (col) => (col ? {
+  backgroundColor: `color-mix(in srgb, ${col} 16%, transparent)`,
+  borderColor: `color-mix(in srgb, ${col} 45%, transparent)`,
+  color: col,
+} : undefined);
 
 /*
   Şampiyon sayfası kompakt kimlik başlığı — ikon + isim + title + tag/pozisyon.
@@ -197,7 +209,13 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
             {champ.positions?.map((pos) => {
               const rate = champ.positionRates?.[pos];
               return (
-                <span key={pos} className={POS_CHIP}>{POS_TR[pos] || pos}{rate != null && ` ${rate}%`}</span>
+                <span
+                  key={pos}
+                  className={`${POS_CHIP} ${gCol ? "" : POS_CHIP_FALLBACK}`}
+                  style={posChipStyle(gCol)}
+                >
+                  {POS_TR[pos] || pos}{rate != null && ` ${rate}%`}
+                </span>
               );
             })}
             {/* Sayfaya özel ek bağlam (ör. counter sayfasında patch + takma adlar).
