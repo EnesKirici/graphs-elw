@@ -2,6 +2,7 @@
 
 namespace App\Services\RiotApi;
 
+use App\Support\RiotId;
 use Illuminate\Support\Facades\Cache;
 
 class SummonerService
@@ -16,6 +17,12 @@ class SummonerService
      */
     public function searchByRiotId(string $gameName, string $tagLine): array
     {
+        // Yapıştırmadan gelen görünmez bidi karakterleri Riot'ta 404 üretir.
+        // Cache anahtarından ÖNCE temizlenir: kirli ve temiz sorgu aynı girdiyi
+        // paylaşsın, aynı oyuncu iki kez sorulmasın. Bkz App\Support\RiotId.
+        $gameName = RiotId::clean($gameName);
+        $tagLine = RiotId::clean($tagLine);
+
         $cacheKey = "summoner:riot_id:{$gameName}#{$tagLine}";
 
         return Cache::remember($cacheKey, config('riot.cache_ttl.summoner'), function () use ($gameName, $tagLine) {

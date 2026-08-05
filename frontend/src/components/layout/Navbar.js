@@ -10,6 +10,7 @@ import { useTheme } from "@/context/ThemeContext";
 import ThemePicker from "@/components/dashboard/ThemePicker";
 import BadgeGuideModal from "@/components/summoner/BadgeGuideModal";
 import WorkerChip from "@/components/layout/WorkerChip";
+import { parseRiotId, summonerPath } from "@/lib/riotId";
 
 // Site navigasyonu — eskiden sol sidebar'daydı, header'a taşındı.
 const NAV_ITEMS = [
@@ -252,7 +253,10 @@ export default function Navbar() {
       return;
     }
     const hasTag = value.includes("#");
-    const [namePart, tagPart] = hasTag ? value.split("#") : [value, ""];
+    // Yapıştırılan isimdeki görünmez bidi karakterleri burada temizlenmezse
+    // autocomplete sorgusu DB'de eşleşmez → öneri çıkmaz → kullanıcı doğrudan
+    // aramaya düşüp 404 alır (2026-08-05 canlı olay). Bkz lib/riotId.
+    const { name: namePart, tag: tagPart } = parseRiotId(value);
     const reqId = ++reqIdRef.current;
     debounceRef.current = setTimeout(async () => {
       try {
@@ -279,10 +283,10 @@ export default function Navbar() {
       return;
     }
     if (query.includes("#")) {
-      const [n, t] = query.split("#");
+      const { name: n, tag: t } = parseRiotId(query);
       if (n && t) {
         analytics?.trackSearch(`${n}#${t}`);
-        router.push(`/summoner/${encodeURIComponent(n)}/${encodeURIComponent(t)}`);
+        router.push(summonerPath(n, t));
         setQuery("");
         setShowDropdown(false);
       }
@@ -307,7 +311,7 @@ export default function Navbar() {
 
   function selectPlayer(p) {
     analytics?.trackSearch(`${p.gameName}#${p.tagLine}`);
-    router.push(`/summoner/${encodeURIComponent(p.gameName)}/${encodeURIComponent(p.tagLine)}`);
+    router.push(summonerPath(p.gameName, p.tagLine));
     setQuery("");
     setShowDropdown(false);
     setSuggestions([]);

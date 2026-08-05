@@ -14,6 +14,7 @@ use App\Services\RiotApi\MatchStatisticsService;
 use App\Services\RiotApi\MatchDataService;
 use App\Services\RiotApi\DataDragonService;
 use App\Services\LpTrackingService;
+use App\Support\RiotId;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -32,8 +33,10 @@ class SummonerController extends Controller
 
     public function search(Request $request): JsonResponse
     {
-        $name = $request->query('name');
-        $tag = $request->query('tag');
+        // Görünmez bidi karakterleri burada düşer; yalnız onlardan oluşan bir
+        // isim boşa iner ve aşağıdaki kontrol 404 yerine anlaşılır 400 verir.
+        $name = RiotId::clean($request->query('name'));
+        $tag = RiotId::clean($request->query('tag'));
 
         if (!$name || !$tag) {
             return response()->json([
@@ -519,8 +522,10 @@ class SummonerController extends Controller
      */
     public function autocomplete(Request $request): JsonResponse
     {
-        $q = $request->query('q', '');
-        $tag = $request->query('tag', '');
+        // Kirli sorgu DB'de HİÇBİR şeyle eşleşmiyordu → öneri çıkmıyor, kullanıcı
+        // doğrudan aramaya düşüp 404 alıyordu (2026-08-05). Bkz App\Support\RiotId.
+        $q = RiotId::clean($request->query('q', ''));
+        $tag = RiotId::clean($request->query('tag', ''));
 
         if (strlen($q) < 1) {
             return response()->json([]);

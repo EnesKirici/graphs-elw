@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { parseRiotId, summonerPath } from "@/lib/riotId";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -29,10 +30,9 @@ export default function SearchBar({ champions }) {
 
     debounceRef.current = setTimeout(async () => {
       try {
-        // # varsa name ve tag'e ayır
-        const hasHash = q.includes("#");
-        const name = hasHash ? q.split("#")[0] : q;
-        const tag = hasHash ? q.split("#")[1] : "";
+        // # varsa name ve tag'e ayır — parseRiotId ayrıca yapıştırmadan gelen
+        // görünmez bidi karakterlerini siler (kirli sorgu DB'de eşleşmiyordu).
+        const { name, tag } = parseRiotId(q);
         const url = `${API_BASE}/summoner/autocomplete?q=${encodeURIComponent(name)}${tag ? `&tag=${encodeURIComponent(tag)}` : ""}`;
         const res = await fetch(url);
         if (res.ok) {
@@ -56,11 +56,11 @@ export default function SearchBar({ champions }) {
     e.preventDefault();
 
     if (isPlayerSearch) {
-      const [name, tag] = query.split("#");
+      const { name, tag } = parseRiotId(query);
       if (name && tag) {
         setIsSearching(true);
         setIsOpen(false);
-        router.push(`/summoner/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
+        router.push(summonerPath(name, tag));
       }
     } else if (filteredChamps.length === 1) {
       router.push(`/champions/${filteredChamps[0].id}`);
@@ -79,7 +79,7 @@ export default function SearchBar({ champions }) {
     setIsSearching(true);
     setIsOpen(false);
     setQuery("");
-    router.push(`/summoner/${encodeURIComponent(player.gameName)}/${encodeURIComponent(player.tagLine)}`);
+    router.push(summonerPath(player.gameName, player.tagLine));
   }
 
   function handleChange(e) {

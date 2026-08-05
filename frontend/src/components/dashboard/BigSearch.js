@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAnalytics } from "@/context/AnalyticsContext";
+import { parseRiotId, summonerPath } from "@/lib/riotId";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -39,7 +40,10 @@ export default function BigSearch({ chips = [] }) {
       setOpen(false);
       return;
     }
-    const [namePart, tagPart] = value.includes("#") ? value.split("#") : [value, ""];
+    // Yapıştırılan isim görünmez bidi karakteri taşıyabilir → autocomplete
+    // sorgusu da kirli gider ve DB'de HİÇBİR şey eşleşmez (öneri çıkmaz,
+    // kullanıcı doğrudan aramaya düşer, oradan da 404 alır). Bkz lib/riotId.
+    const { name: namePart, tag: tagPart } = parseRiotId(value);
     const reqId = ++reqIdRef.current;
     debounce.current = setTimeout(async () => {
       try {
@@ -61,7 +65,7 @@ export default function BigSearch({ chips = [] }) {
 
   function selectPlayer(p) {
     analytics?.trackSearch?.(`${p.gameName}#${p.tagLine}`);
-    router.push(`/summoner/${encodeURIComponent(p.gameName)}/${encodeURIComponent(p.tagLine)}`);
+    router.push(summonerPath(p.gameName, p.tagLine));
     setQuery("");
     setOpen(false);
     setSuggestions([]);
@@ -85,10 +89,10 @@ export default function BigSearch({ chips = [] }) {
     if (e) e.preventDefault();
     if (sel >= 0 && sel < suggestions.length) return selectItem(suggestions[sel]);
     if (query.includes("#")) {
-      const [n, t] = query.split("#");
+      const { name: n, tag: t } = parseRiotId(query);
       if (n && t) {
         analytics?.trackSearch?.(`${n}#${t}`);
-        router.push(`/summoner/${encodeURIComponent(n)}/${encodeURIComponent(t)}`);
+        router.push(summonerPath(n, t));
         setQuery("");
         setOpen(false);
       }

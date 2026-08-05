@@ -1,13 +1,15 @@
 import { fetchApi } from "@/lib/api";
 import Link from "next/link";
+import { permanentRedirect } from "next/navigation";
+import { cleanRiotPart, needsCleaning, summonerPath } from "@/lib/riotId";
 import ProfileHeader from "@/components/summoner/ProfileHeader";
 import AllChampionsContent from "@/components/summoner/AllChampionsContent";
 import { regionLabel } from "@/lib/region";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
-  const dn = decodeURIComponent(name);
-  const dt = decodeURIComponent(tag);
+  const dn = cleanRiotPart(decodeURIComponent(name));
+  const dt = cleanRiotPart(decodeURIComponent(tag));
   return {
     title: `${dn}#${dt} — Şampiyonlar`,
     description: `${dn}#${dt} bu sezon oynadığı tüm şampiyon istatistikleri.`,
@@ -16,8 +18,16 @@ export async function generateMetadata({ params }) {
 
 export default async function ChampionsPage({ params }) {
   const { name, tag } = await params;
-  const dn = decodeURIComponent(name);
-  const dt = decodeURIComponent(tag);
+  const rawName = decodeURIComponent(name);
+  const rawTag = decodeURIComponent(tag);
+
+  // Yapıştırmadan gelen görünmez karakterler → temiz adrese yönlendir (bkz lib/riotId).
+  if (needsCleaning(rawName, rawTag)) {
+    permanentRedirect(summonerPath(rawName, rawTag, "/champions"));
+  }
+
+  const dn = rawName;
+  const dt = rawTag;
 
   let data = null;
   try {

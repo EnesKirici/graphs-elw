@@ -2,11 +2,12 @@ import Link from "next/link";
 import { getLiveGame } from "@/lib/api";
 import LiveGameBoard from "@/components/live/LiveGameBoard";
 import liveFixture from "@/lib/live-fixture.json";
+import { cleanRiotPart, summonerPath } from "@/lib/riotId";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
-  const dn = decodeURIComponent(name);
-  const dt = decodeURIComponent(tag);
+  const dn = cleanRiotPart(decodeURIComponent(name));
+  const dt = cleanRiotPart(decodeURIComponent(tag));
   const id = `${dn}#${dt}`;
   const description = `${id} oyuncusunun canlı maçı: takım ve rakip istatistikleri, oyuncu rozetleri, şampiyon performansı ve build ön-analizi.`;
   return {
@@ -55,9 +56,12 @@ function StateShell({ icon, title, children, profileHref, mockHref }) {
 export default async function LiveGamePage({ params, searchParams }) {
   const { name, tag } = await params;
   const sp = (await searchParams) || {};
-  const dn = decodeURIComponent(name);
-  const dt = decodeURIComponent(tag);
-  const profileHref = `/summoner/${encodeURIComponent(dn)}/${encodeURIComponent(dt)}`;
+  // Yapıştırmadan gelen görünmez bidi karakterleri temizlenir (bkz lib/riotId).
+  // Burada yönlendirme YOK: canlı maç sayfası paylaşılan/indekslenen bir adres
+  // değil, kısa ömürlü — sessizce düzeltmek yeterli.
+  const dn = cleanRiotPart(decodeURIComponent(name));
+  const dt = cleanRiotPart(decodeURIComponent(tag));
+  const profileHref = summonerPath(dn, dt);
   const mockHref = `/live-game/${encodeURIComponent(dn)}/${encodeURIComponent(dt)}?mock=1`;
 
   // ?mock=1 → API'ye gitmeden fixture ile çalış (tasarım/screenshot için)

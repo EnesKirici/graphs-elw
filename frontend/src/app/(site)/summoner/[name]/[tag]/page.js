@@ -1,6 +1,8 @@
 import { fetchApi, getPublicSettings } from "@/lib/api";
 import { regionLabel } from "@/lib/region";
 import Link from "next/link";
+import { permanentRedirect } from "next/navigation";
+import { cleanRiotPart, needsCleaning, summonerPath } from "@/lib/riotId";
 import ChampionPool from "@/components/summoner/ChampionPool";
 import RankCard from "@/components/summoner/RankCard";
 import StatsCard from "@/components/summoner/StatsCard";
@@ -16,8 +18,8 @@ import { getCoupleProfile } from "@/lib/coupleProfiles";
 
 export async function generateMetadata({ params }) {
   const { name, tag } = await params;
-  const dn = decodeURIComponent(name);
-  const dt = decodeURIComponent(tag);
+  const dn = cleanRiotPart(decodeURIComponent(name));
+  const dt = cleanRiotPart(decodeURIComponent(tag));
   const id = `${dn}#${dt}`;
   const description = `${id} League of Legends oyuncu profili: maç geçmişi, ELW Score performans puanı, LP grafiği, şampiyon istatistikleri, rol analizi ve duo partnerleri.`;
   return {
@@ -35,8 +37,21 @@ export async function generateMetadata({ params }) {
 
 export default async function SummonerPage({ params }) {
   const { name, tag } = await params;
-  const dn = decodeURIComponent(name);
-  const dt = decodeURIComponent(tag);
+  const rawName = decodeURIComponent(name);
+  const rawTag = decodeURIComponent(tag);
+
+  /*
+    Kopyala-yapıştır ile gelen adreslerde görünmez bidi karakterleri bulunur
+    ("Balçovalı<U+2069>" gibi) — Riot bu ismi tanımaz, sayfa "Oyuncu Bulunamadı"
+    verirdi. Sessizce temizlemek yerine TEMİZ ADRESE yönlendiriyoruz: paylaşılan
+    link düzelir ve aynı profil iki farklı URL'de indekslenmez.
+  */
+  if (needsCleaning(rawName, rawTag)) {
+    permanentRedirect(summonerPath(rawName, rawTag));
+  }
+
+  const dn = rawName;
+  const dt = rawTag;
 
   let data = null;
   try {
