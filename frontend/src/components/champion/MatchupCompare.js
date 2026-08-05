@@ -22,7 +22,12 @@ import { scoreColor } from "@/components/summoner/pro/scoreColor";
 
 const COL_GOOD = scoreColor(9);
 const COL_BAD = scoreColor(2);
-const NEUTRAL = "rgb(120,128,145)";
+/* Kaybeden tarafin sayisi: ikincil ama OKUNUR. rgb(120,128,145) splash zemininde
+   kayboluyordu — panelin arkasinda %16 opaklikta iki splash var, koyu gri onlara
+   karisiyor. Ton acildi, ayrica sayilara golge veriliyor. */
+const NEUTRAL = "rgb(163,171,187)";
+/* Splash zemini uzerindeki her sayi/etiket bu golgeyi tasir. */
+const SHADOW = "drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]";
 
 const splashUrl = (id) => `${DD_ASSETS}/cdn/img/champion/splash/${id}_0.jpg`;
 
@@ -69,13 +74,26 @@ function buildRows(m, baseline) {
       a: us?.dmg, b: them?.dmg, ba: bs?.dmg, bb: os?.dmg,
       fmt: (v) => `${(v / 1000).toFixed(1)}k`,
     },
+    /*
+      ROL EKSENLERİ — hasar vurmak tek iş değil.
+
+      Kullanıcı bildirdi: "Yuumi peeler, can/kalkan basar, tanklamaz; Rell tanklayan
+      bir karakter." Üstteki eksenlerin hiçbiri bunu görmüyordu: Rell'in emdiği hasar
+      da Yuumi'nin bastığı kalkan da tabloya girmiyordu, ikisi de yalnız "az hasar
+      vuran" olarak okunuyordu.
+    */
+    { label: "Emilen hasar", a: us?.taken, b: them?.taken, ba: bs?.taken, bb: os?.taken, fmt: (v) => `${(v / 1000).toFixed(1)}k` },
+    { label: "İyileştirme + kalkan", a: us?.hs, b: them?.hs, ba: bs?.hs, bb: os?.hs, fmt: (v) => `${(v / 1000).toFixed(1)}k` },
+    { label: "CC süresi", a: us?.cc, b: them?.cc, ba: bs?.cc, bb: os?.cc, fmt: (v) => `${v} sn` },
     { label: "Gold farkı @15", a: l?.gd15, b: ol?.gd15, ba: bl?.gd15, bb: olb?.gd15, full: 1000, fmt: sgn },
     { label: "Tecrübe farkı @15", a: l?.xpd15, b: ol?.xpd15, ba: bl?.xpd15, bb: olb?.xpd15, full: 1200, fmt: sgn },
     { label: "Minyon farkı @15", a: l?.csd15, b: ol?.csd15, ba: bl?.csd15, bb: olb?.csd15, full: 20, fmt: sgn },
   ];
 
   // İki tarafı da olmayan satır BASILMAZ — tek taraflı kıyas yanıltıcı olur.
-  return rows.filter((r) => r.a != null && r.b != null);
+  // İkisi de SIFIR olan satır da basılmaz: iki büyücünün "CC süresi 0 sn"si bilgi
+  // değil gürültüdür (işaretli @15 satırları hariç — orada 0 "denk" demektir).
+  return rows.filter((r) => r.a != null && r.b != null && (r.full || r.a !== 0 || r.b !== 0));
 }
 
 const sgn = (v) => (v > 0 ? `+${v}` : `${v}`);
@@ -130,7 +148,7 @@ export default function MatchupCompare({ champId, champName, champImage, m, vers
           <Side name={m.name} id={m.id} version={version} wr={oppWr} align="right" link />
         </div>
 
-        <p className="text-center text-[11px] text-gray-400 py-2.5 border-b border-edge/30">
+        <p className={`text-center text-[11px] text-gray-400 py-2.5 border-b border-edge/30 ${SHADOW}`}>
           {m.games} maçlık eşleşme
           {nStats > 0 && <> · KDA/hasar {nStats} maçtan</>}
           {n15 > 0 && <> · koridor farkları {n15} maçtan</>}
@@ -144,9 +162,9 @@ export default function MatchupCompare({ champId, champName, champImage, m, vers
               Açıklama olmadan bu "hata" gibi okunur.
             */}
             {relative && (
-              <p className="text-center text-[11px] text-gray-500 leading-relaxed -mt-1 mb-1">
+              <p className={`text-center text-[11px] text-gray-400 leading-relaxed -mt-1 mb-1 ${SHADOW}`}>
                 Barlar mutlak sayıyı değil, her şampiyonun{" "}
-                <span className="text-gray-300">kendi ortalamasından sapmasını</span> gösterir —
+                <span className="text-gray-100 font-medium">kendi ortalamasından sapmasını</span> gösterir —
                 minyon almayan bir destekle tanklayan bir destek aynı cetvelle ölçülemez.
               </p>
             )}
@@ -253,13 +271,13 @@ function CompareRow({ r }) {
 
   return (
     <div>
-      <p className="text-center text-xs sm:text-[13px] text-gray-300 font-medium mb-1.5">{r.label}</p>
+      <p className={`text-center text-xs sm:text-[13px] text-gray-200 font-medium mb-1.5 ${SHADOW}`}>{r.label}</p>
       <div className="flex items-center gap-3 sm:gap-4">
         <span
           className="w-16 sm:w-20 text-right shrink-0"
           style={{ color: off > 0 ? COL_GOOD : NEUTRAL }}
         >
-          <span className="block text-base sm:text-lg font-bold tabular-nums">{r.fmt(r.a)}</span>
+          <span className={`block text-base sm:text-lg font-bold tabular-nums ${SHADOW}`}>{r.fmt(r.a)}</span>
           <NormNote dev={da} full={r.full} base={r.ba} value={r.a} fmt={r.fmt} />
         </span>
 
@@ -280,11 +298,11 @@ function CompareRow({ r }) {
           className="w-16 sm:w-20 text-left shrink-0"
           style={{ color: off < 0 ? COL_BAD : NEUTRAL }}
         >
-          <span className="block text-base sm:text-lg font-bold tabular-nums">{r.fmt(r.b)}</span>
+          <span className={`block text-base sm:text-lg font-bold tabular-nums ${SHADOW}`}>{r.fmt(r.b)}</span>
           <NormNote dev={db} full={r.full} base={r.bb} value={r.b} fmt={r.fmt} />
         </span>
       </div>
-      {r.sub && <p className="text-center text-[10px] text-gray-500 tabular-nums mt-1">{r.sub}</p>}
+      {r.sub && <p className={`text-center text-[10px] text-gray-400 tabular-nums mt-1 ${SHADOW}`}>{r.sub}</p>}
     </div>
   );
 }
@@ -305,7 +323,7 @@ function NormNote({ dev, full, base, value, fmt }) {
 
   return (
     <span
-      className={`block text-[9px] leading-tight tabular-nums mt-0.5 ${dead ? "text-gray-600" : "text-gray-400"}`}
+      className={`block text-[10px] leading-tight tabular-nums mt-0.5 ${SHADOW} ${dead ? "text-gray-500" : "text-gray-300"}`}
       title={`Kendi ortalaması: ${fmt(base)} — bu eşleşmede ${text}`}
     >
       norm. {text}

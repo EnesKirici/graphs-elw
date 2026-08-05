@@ -198,7 +198,9 @@ class BuildAggregationService
             $teamKills[$tid] = ($teamKills[$tid] ?? 0) + (int) ($p['kills'] ?? 0);
         }
 
-        // pozisyon × takım → [champId, win, kills, deaths, assists, kp, dmg]
+        // pozisyon × takım → [champId, win, kills, deaths, assists, kp, dmg, taken, healShield, cc]
+        // Son üçü ROL metrikleri: bir şampiyonun hasar dışındaki işini ölçer (tank / enchanter /
+        // engage). Bkz. 2026_08_05_090000 migration'ının gerekçesi.
         $byPos = [];
         foreach ($participants as $p) {
             $pos = $p['teamPosition'] ?? '';
@@ -213,7 +215,15 @@ class BuildAggregationService
             $tk = $teamKills[$tid] ?? 0;
             $kp = $tk > 0 ? (int) round(($k + $a) / $tk * 100) : 0;
             $dmg = (int) ($p['totalDamageDealtToChampions'] ?? 0);
-            $byPos[$pos][$tid] = [$champId, ! empty($p['win']), $k, $d, $a, $kp, $dmg];
+            $taken = (int) ($p['totalDamageTaken'] ?? 0);
+            // effectiveHealAndShielding overheal'ı DIŞLADIĞI için tercih edilir; ELW #7
+            // (2026-06-30) öncesi maçlarda bu challenge yok → ham toplamlara düşülür.
+            $hs = (int) ($p['challenges']['effectiveHealAndShielding'] ?? 0);
+            if ($hs <= 0) {
+                $hs = (int) ($p['totalHealsOnTeammates'] ?? 0) + (int) ($p['totalDamageShieldedOnTeammates'] ?? 0);
+            }
+            $cc = (int) round((float) ($p['timeCCingOthers'] ?? 0));
+            $byPos[$pos][$tid] = [$champId, ! empty($p['win']), $k, $d, $a, $kp, $dmg, $taken, $hs, $cc];
         }
 
         $rows = [];
@@ -227,8 +237,8 @@ class BuildAggregationService
             if ($a[0] === $b[0]) {
                 continue; // aynı şampiyon (teorik) — anlamsız
             }
-            $rows[] = [$patch, $a[0], $pos, $b[0], $pos, $a[1], $a[2], $a[3], $a[4], $a[5], $a[6]];
-            $rows[] = [$patch, $b[0], $pos, $a[0], $pos, $b[1], $b[2], $b[3], $b[4], $b[5], $b[6]];
+            $rows[] = [$patch, $a[0], $pos, $b[0], $pos, $a[1], $a[2], $a[3], $a[4], $a[5], $a[6], $a[7], $a[8], $a[9]];
+            $rows[] = [$patch, $b[0], $pos, $a[0], $pos, $b[1], $b[2], $b[3], $b[4], $b[5], $b[6], $b[7], $b[8], $b[9]];
         }
 
         // 2) Bot lane çaprazı: ADC ↔ KARŞI support. Aynı takımdaki ADC+SUP eşleşmesi
@@ -242,8 +252,8 @@ class BuildAggregationService
                     if ($botTeam === $supTeam || $adc[0] === $sup[0]) {
                         continue; // aynı takım (sinerji) veya aynı şampiyon
                     }
-                    $rows[] = [$patch, $adc[0], 'BOTTOM', $sup[0], 'UTILITY', $adc[1], $adc[2], $adc[3], $adc[4], $adc[5], $adc[6]];
-                    $rows[] = [$patch, $sup[0], 'UTILITY', $adc[0], 'BOTTOM', $sup[1], $sup[2], $sup[3], $sup[4], $sup[5], $sup[6]];
+                    $rows[] = [$patch, $adc[0], 'BOTTOM', $sup[0], 'UTILITY', $adc[1], $adc[2], $adc[3], $adc[4], $adc[5], $adc[6], $adc[7], $adc[8], $adc[9]];
+                    $rows[] = [$patch, $sup[0], 'UTILITY', $adc[0], 'BOTTOM', $sup[1], $sup[2], $sup[3], $sup[4], $sup[5], $sup[6], $sup[7], $sup[8], $sup[9]];
                 }
             }
         }
@@ -328,22 +338,27 @@ class BuildAggregationService
         // 4) champion_matchups — karşı koridor eşleşmeleri (A-vs-B + B-vs-A) + KDA/hasar.
         //    Bot lane çapraz satırları (ADC↔karşı SUP) da buradan gelir; opponent_position
         //    ikisini ayırır ve unique index'in parçasıdır → anahtara dahil edilmeli.
-        foreach ($this->matchupRows($matchData) as [$mPatch, $champ, $pos, $opp, $oppPos, $win, $k, $d, $as, $kp, $dmg]) {
+        foreach ($this->matchupRows($matchData) as [$mPatch, $champ, $pos, $opp, $oppPos, $win, $k, $d, $as, $kp, $dmg, $taken, $hs, $cc]) {
             $keyCols = [
                 'patch' => $mPatch, 'champion_id' => $champ, 'position' => $pos,
                 'opponent_id' => $opp, 'opponent_position' => $oppPos,
             ];
             ChampionMatchup::firstOrCreate($keyCols, ['games' => 0, 'wins' => 0]);
-            // Tek update: games/wins (WR paydası) + KDA/hasar (n_stats ayrı payda).
+            // Tek update: games/wins (WR paydası) + KDA/hasar (n_stats ayrı payda)
+            // + rol metrikleri (n_role ayrı payda — eski maçlarda backfill dolduruyor).
             ChampionMatchup::where($keyCols)->update([
-                'games'       => DB::raw('games + 1'),
-                'wins'        => DB::raw('wins + ' . ($win ? 1 : 0)),
-                'n_stats'     => DB::raw('n_stats + 1'),
-                'sum_kills'   => DB::raw('sum_kills + ' . (int) $k),
-                'sum_deaths'  => DB::raw('sum_deaths + ' . (int) $d),
-                'sum_assists' => DB::raw('sum_assists + ' . (int) $as),
-                'sum_kp'      => DB::raw('sum_kp + ' . (int) $kp),
-                'sum_dmg'     => DB::raw('sum_dmg + ' . (int) $dmg),
+                'games'           => DB::raw('games + 1'),
+                'wins'            => DB::raw('wins + ' . ($win ? 1 : 0)),
+                'n_stats'         => DB::raw('n_stats + 1'),
+                'sum_kills'       => DB::raw('sum_kills + ' . (int) $k),
+                'sum_deaths'      => DB::raw('sum_deaths + ' . (int) $d),
+                'sum_assists'     => DB::raw('sum_assists + ' . (int) $as),
+                'sum_kp'          => DB::raw('sum_kp + ' . (int) $kp),
+                'sum_dmg'         => DB::raw('sum_dmg + ' . (int) $dmg),
+                'n_role'          => DB::raw('n_role + 1'),
+                'sum_taken'       => DB::raw('sum_taken + ' . (int) $taken),
+                'sum_heal_shield' => DB::raw('sum_heal_shield + ' . (int) $hs),
+                'sum_cc'          => DB::raw('sum_cc + ' . (int) $cc),
             ]);
         }
 

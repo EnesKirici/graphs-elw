@@ -128,6 +128,7 @@ class ProcessMatchJob implements ShouldQueue
                     'rune_k_done'        => true,
                     'matchup_done'       => true,
                     'matchup_stats_done' => true, // processMatch step 4 KDA/hasarı da işledi
+                    'matchup_role_done'  => true, // ... ve rol metriklerini (emilen hasar/şifa/CC)
                     'cross_done'         => true, // ... ve bot lane çapraz satırlarını
                     'timeline_done'      => $timelineDone,
                 ]);
