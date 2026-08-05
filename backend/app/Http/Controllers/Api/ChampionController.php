@@ -142,6 +142,20 @@ class ChampionController extends Controller
                 'positions' => $positionMap[$champion['id']] ?? [],
                 'image'     => $this->ddragon->championIconUrl($champion['id']),
                 'splash'    => $this->ddragon->splashArtUrl($champion['id']),
+                /*
+                  Yetenek ikonları (P/Q/W/E/R) — hero'nun Genel sekmesindekiyle AYNI olması
+                  için. Counter sayfasında bu alanlar gönderilmediği için hero'da yetenek
+                  şeridi hiç çizilmiyordu (kullanıcı "aynı standartta olmalı" dedi).
+                  Yalnız ikon + ad taşınır; tam açıklamalar Detay sekmesinin işi.
+                */
+                'passive'   => isset($champion['passive']) ? [
+                    'name'  => $champion['passive']['name'],
+                    'image' => config('riot.ddragon_assets_url') . "/cdn/{$version}/img/passive/{$champion['passive']['image']['full']}",
+                ] : null,
+                'spells'    => collect($champion['spells'] ?? [])->take(4)->map(fn ($sp) => [
+                    'name'  => $sp['name'],
+                    'image' => config('riot.ddragon_assets_url') . "/cdn/{$version}/img/spell/{$sp['image']['full']}",
+                ])->values()->all(),
                 // "Jade_*" varyantının dereceli maç verisi YOK → counter sayfası boş kalır.
                 // Frontend bu bayrakla sayfayı noindex yapar: başlığı gerçek şampiyonunkiyle
                 // birebir çakışıyordu ("Warwick Counter (Warwick CT)...") ve Google "ww ct"

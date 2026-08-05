@@ -95,8 +95,16 @@ export default function ChampionCounters({ champName, champImage, champId, count
       if (!strip || !panel) return;
       const s = strip.getBoundingClientRect();
       const p = panel.getBoundingClientRect();
-      const show = s.bottom < 8 && p.bottom > 340 && window.innerWidth >= 1440;
-      const left = Math.round(p.left - 64);
+      /*
+        ESKİDEN `s.bottom < 8` idi — yani şerit SON PİKSELİNE kadar çıkmadan ray
+        gelmiyordu. Kullanıcı "yeteri kadar scroll attığımı düşünüyorum, hâlâ
+        çıkmadı" dedi; ekran görüntüsünde şeridin alt ~165px'i hâlâ görünüyordu.
+        Artık ORAN'a bakılıyor: şeridin görünen kısmı yarıdan azsa ray gelir.
+      */
+      const gorunen = Math.max(0, Math.min(s.bottom, window.innerHeight) - Math.max(s.top, 0));
+      const oran = s.height > 0 ? gorunen / s.height : 0;
+      const show = oran < 0.5 && p.bottom > 340 && window.innerWidth >= 1440;
+      const left = Math.round(p.left - 76);
       // Her scroll olayında setState ETME — yalnız değer değişince.
       if (show !== railSon.current.show || Math.abs(left - railSon.current.left) > 1) {
         railSon.current = { show, left };
@@ -197,7 +205,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
              ardından "neden" sorusunu yanıtlar. */}
       <div ref={panelRef}>
         <div
-          className={`fixed top-24 z-30 w-[52px] flex flex-col gap-1.5 transition-all duration-300 ease-out ${
+          className={`fixed top-24 z-30 w-[62px] flex flex-col gap-1.5 transition-all duration-300 ease-out ${
             rail.show ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none"
           }`}
           style={{ left: rail.left }}
@@ -390,12 +398,12 @@ function RailPick({ m, version, picked, onPick }) {
       <img
         src={champIcon(version, m.id)}
         alt={m.name}
-        width={34}
-        height={34}
+        width={44}
+        height={44}
         className={`rounded-md transition-transform duration-200 group-hover:scale-105 ${picked ? "" : "opacity-75 group-hover:opacity-100"}`}
         onError={hideOnError}
       />
-      <span className="text-[9px] font-bold tabular-nums leading-none" style={{ color: col }}>%{Math.round(m.winRate)}</span>
+      <span className="text-[11px] font-bold tabular-nums leading-none" style={{ color: col }}>%{Math.round(m.winRate)}</span>
     </button>
   );
 }

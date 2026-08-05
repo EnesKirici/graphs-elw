@@ -150,7 +150,9 @@ export default function ChampionBuild({ champion, version, runesData = [], build
         */}
         <RoleSelector positions={positions} role={role} onRole={selectRole} lowSample={lowSample} />
 
-        <StatStrip pos={posInfo} roleLabel={ROLE_LABELS[role] || role} />
+        {/* Özet şeridi (derece · sıra · kazanma · seçim · yasaklanma · oyun) HERO'YA
+            TAŞINDI: Detay ve Counter sekmelerinde kayboluyordu ve hero'nun sağ yarısı
+            boş duruyordu (kullanıcı isteği). Burada tekrarlanmıyor. */}
 
         {/*
           Son 30 günün gidişatı AYNI KARTIN İÇİNDE: üstteki şerit "şu an %46.9",

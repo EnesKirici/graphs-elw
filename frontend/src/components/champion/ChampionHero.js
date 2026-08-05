@@ -15,7 +15,60 @@ const POS_CHIP = "text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/15 te
   Yalnız BİRİNCİL sınıf gösterilir (Riot'un ikincil tag'i kafa karıştırıyordu:
   MissFortune "Büyücü" gibi). activeCrumb → breadcrumb'a ek kırıntı (ör. "Counter").
 */
-export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, subtitle, grade, summary, extraChips }) {
+const POS_SHORT = { TOP: "Üst", JUNGLE: "Orman", MIDDLE: "Orta", BOTTOM: "ADC", UTILITY: "Destek", SUPPORT: "Destek" };
+
+/* Kazanma oranı rengi — Genel sekmesindeki şeritle aynı eşikler. */
+const wrCls = (v) => (v >= 52 ? "text-blue-300" : v >= 49 ? "text-gray-100" : "text-red-300");
+
+/*
+  Hero'nun sağındaki özet şeridi: derece · rol sırası · kazanma · seçim · yasaklanma · oyun.
+
+  Neden burada: bu sayılar yalnız Genel sekmesinin içeriğindeydi, Detay ve Counter'a
+  geçince kayboluyordu (kullanıcı "aynı standartta olmalı" dedi) — üstelik hero'nun sağ
+  yarısı boş duruyordu. Hero üç sekmede de ortak olduğu için tek yere koymak hem
+  tekrarı bitiriyor hem boşluğu dolduruyor.
+
+  Sayılar BİRİNCİL (en çok oynanan) rolündür. Hero sunucuda render ediliyor, alttaki
+  rol seçici ise istemci state'i — hero onu dinleyemez. Rol seçici zaten yalnız birden
+  çok koridoru olan şampiyonlarda çıkıyor; hangi rol olduğu etikette yazılı.
+*/
+function HeroStats({ s }) {
+  if (!s) return null;
+  const rol = POS_SHORT[s.position] || s.position || "Rol";
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/45 backdrop-blur-sm px-3 py-2.5">
+      <div className="flex items-center gap-3">
+        {s.grade && (
+          <div className="flex flex-col items-center shrink-0 pr-3 border-r border-white/10">
+            <span className="text-3xl font-extrabold leading-none" style={{ color: gradeColor(s.grade) || "#6b7280" }}>
+              {s.grade}
+            </span>
+            <span className="text-[9px] text-gray-400 uppercase tracking-wider mt-1">derece</span>
+          </div>
+        )}
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-2 gap-y-2 flex-1 min-w-0">
+          <HeroStat v={s.rank ? `${s.rank}/${s.total}` : "—"} k={`${rol} sırası`} />
+          <HeroStat v={`%${s.winRate}`} k="kazanma" cls={wrCls(s.winRate)} />
+          <HeroStat v={s.pickRate != null ? `%${s.pickRate}` : "—"} k="seçim" />
+          <HeroStat v={s.banRate != null ? `%${s.banRate}` : "—"} k="yasaklanma" />
+          <HeroStat v={(s.games ?? 0).toLocaleString("tr-TR")} k="oyun" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HeroStat({ v, k, cls = "text-gray-100" }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-w-0">
+      <span className={`text-[15px] font-bold leading-none tabular-nums ${cls}`}>{v}</span>
+      <span className="text-[9px] text-gray-400 mt-1 text-center leading-tight">{k}</span>
+    </div>
+  );
+}
+
+export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, subtitle, grade, summary, extraChips, stats }) {
   // Yetenekler: pasif + Q/W/E/R. DDragon spells sırası zaten Q,W,E,R.
   const keys = ["Q", "W", "E", "R"];
   const abilities = [
@@ -152,10 +205,16 @@ export default function ChampionHero({ champ, id, activeCrumb, headingSuffix, su
           boş duran alanı dolduruyor. Mobilde alt satıra düşer, gizlenmez —
           CSS ile saklanan metin mobile-first indekslemede zayıf sayılır.
         */}
-        {summary && (
-          <p className="w-full lg:w-auto lg:flex-1 lg:min-w-[280px] lg:max-w-xl lg:ml-auto mb-1 text-[11px] md:text-xs leading-relaxed text-gray-200/95 rounded-lg border border-white/10 bg-black/40 backdrop-blur-sm px-3.5 py-2.5">
-            {summary}
-          </p>
+        {/* İkisi de varsa ALT ALTA: özet metni sayfanın SEO gövdesi, silinmemeli. */}
+        {(stats || summary) && (
+          <div className="w-full lg:w-auto lg:flex-1 lg:min-w-[340px] lg:max-w-2xl lg:ml-auto mb-1 space-y-2">
+            {stats && <HeroStats s={stats} />}
+            {summary && (
+              <p className="text-[11px] md:text-xs leading-relaxed text-gray-200/95 rounded-lg border border-white/10 bg-black/40 backdrop-blur-sm px-3.5 py-2.5">
+                {summary}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>

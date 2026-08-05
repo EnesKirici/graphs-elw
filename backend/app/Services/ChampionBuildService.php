@@ -82,11 +82,13 @@ class ChampionBuildService
         //     eşleşmeyi ölçmek için; bkz. aggregateMatchups içindeki gerekçe.
         // v7: rol metrikleri (emilen hasar / şifa+kalkan / CC) — tanklamak ve iyileştirmek
         //     hiçbir eksende görünmüyordu.
+        // v9: pozisyon başına derece/sıra/seçim/yasaklanma + overview — counter ve detay
+        //     sayfalarının hero'su artık aynı özet şeridi gösteriyor (Genel'le tek standart).
         // v8: kendine iyileştirme + sabitleme sayısı. "effectiveHealAndShielding" ÖLÇÜLDÜ:
         //     yalnız müttefiğe olanı sayıyor → Swain/Aatrox'un kendini ayakta tutması
         //     ekranda 0.0k görünüyordu. timeCCingOthers de yavaşlatmayı sayıyor,
         //     sert CC ayrı alan (enemyChampionImmobilizations).
-        $key = 'champion:counters:v8:' . $championId . ':' . implode(',', $patches);
+        $key = 'champion:counters:v9:' . $championId . ':' . implode(',', $patches);
 
         // TTL için gerekçe: yukarıdaki getChampionBuild ile aynı (stats:rebuild günde 3).
         // Counter hesabı daha ağır (pozisyon başına aynı-koridor + çapraz eşleşme).
@@ -96,16 +98,35 @@ class ChampionBuildService
             $totalGames = (int) ChampionStat::where('champion_id', $championId)
                 ->whereIn('patch', $patches)->where('position', 'ALL')->sum('games');
 
-            // Oynanan koridorlar (build ile aynı eşik) — WR delta'nın temeli.
+            /*
+              Oynanan koridorlar (build ile aynı eşik) — WR delta'nın temeli.
+              Derece/sıra/seçim/yasaklanma alanları da BURADA üretiliyor: Genel sekmesindeki
+              özet şeridi (derece · rol sırası · WR · seçim · yasaklanma · oyun) counter ve
+              detay sekmelerinde kayboluyordu, kullanıcı "aynı standartta olmalı" dedi.
+              Aynı hesap compute()'ta da var; ikisi de ChampionStat + MetaService::roleRankings
+              okuduğu için değerler birebir tutar.
+            */
+            $totalMatches = (int) StatPatch::whereIn('patch', $patches)->sum('total_games');
+            $allBans = (int) ChampionStat::where('champion_id', $championId)
+                ->whereIn('patch', $patches)->where('position', 'ALL')->sum('bans');
+            $banRate = $totalMatches > 0 ? round($allBans / $totalMatches * 100, 1) : 0.0;
+            $rankings = $this->meta->roleRankings();
+
             $positions = [];
             foreach ($statRows->groupBy('position') as $pos => $rows) {
                 $g = (int) $rows->sum('games');
                 $w = (int) $rows->sum('wins');
+                $rk = $rankings[$pos][$championId] ?? null;
                 $positions[] = [
                     'position' => $pos,
                     'games'    => $g,
                     'winRate'  => $g > 0 ? round($w / $g * 100, 1) : 0.0,
                     'share'    => $totalGames > 0 ? round($g / $totalGames * 100, 1) : 0.0,
+                    'pickRate' => $totalMatches > 0 ? round($g / $totalMatches * 100, 1) : 0.0,
+                    'banRate'  => $banRate,
+                    'rank'     => $rk['rank'] ?? null,
+                    'total'    => $rk['total'] ?? null,
+                    'grade'    => $rk['grade'] ?? null,
                 ];
             }
             usort($positions, fn ($a, $b) => $b['games'] <=> $a['games']);

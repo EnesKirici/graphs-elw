@@ -258,6 +258,8 @@ export default async function ChampionCounterPage({ params }) {
           activeCrumb="Counter"
           headingSuffix="Counter"
           extraChips={heroChips}
+          grade={counters?.positions?.[0]?.grade}
+          stats={counters?.positions?.[0]}
         />
 
         {/* Alt-çizgi tab — ana sayfayla AYNI (Genel/Detay link, Counter aktif) */}

@@ -216,10 +216,11 @@ export default function ChampionTopPlayers({ players, version, championName }) {
           right="Ustalık puanı"
           tip={
             <>
-              <b className="text-amber-300">Bu tablo şu an tamamen örnek veridir.</b>{" "}
-              Ustalık puanları üretilmiştir;
-              üstelik oyuncu listesi de yalnız taradığımız maçlardan geldiği için TR&apos;nin gerçek ustalık
-              sıralaması değildir. Prod anahtarla gerçek veriye bağlanacak.
+              {/* Kullanıcıya dönük metin: "prod anahtar" bizim iç meselemiz, ziyaretçiye
+                  bir şey anlatmıyor. Uyarı dürüst kalsın ama teknik gerekçe olmasın. */}
+              <b className="text-amber-300">Bu tablo şu an örnek veridir.</b>{" "}
+              Ustalık puanları temsilîdir ve oyuncu listesi yalnız taradığımız maçlardan gelir,
+              yani TR&apos;nin gerçek ustalık sıralaması değildir. Gerçek veriyle yakında güncellenecek.
             </>
           }
         />
@@ -261,10 +262,9 @@ export default function ChampionTopPlayers({ players, version, championName }) {
           right={`${championName} ile`}
           tip={
             <>
-              <b className="text-amber-300">Bu tablo şu an tamamen örnek veridir.</b>{" "}
-              Lig dereceleri ve LP
-              üretilmiştir; oyuncu listesi de yalnız taradığımız maçlardan geldiği için TR sıralamasını
-              temsil etmez. Prod anahtarla gerçek veriye bağlanacak.
+              <b className="text-amber-300">Bu tablo şu an örnek veridir.</b>{" "}
+              Lig dereceleri ve LP temsilîdir; oyuncu listesi de yalnız taradığımız maçlardan
+              geldiği için TR sıralamasını temsil etmez. Gerçek veriyle yakında güncellenecek.
             </>
           }
         />
