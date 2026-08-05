@@ -149,9 +149,11 @@ class ChampionController extends Controller
                 'isClassic' => str_starts_with($champion['id'], 'Jade_'),
             ],
             'counters' => $this->build->getChampionCounters($id),
-            // ADC+Support sinerjisi (aynı takım) — çapraz eşleşmenin (karşı takım)
-            // tamamlayıcısı: "kiminle güçlü" ve "kime karşı zorlanır" yan yana okunur.
-            'duos' => $this->stats->getBestPartners($id),
+            // ADC+Support sinerjisi (aynı takım) — counter şeridinin ARKA YÜZÜ.
+            // Limit 5 DEĞİL 60: burası artık kaydırılabilir bir şerit, "en iyi 5" özeti
+            // değil (kullanıcı "tüm karakterleri gösterebilirsin, sağa scroll" dedi).
+            // En güçlüler yine solda — liste adjWr'ye göre sıralı geliyor.
+            'duos' => $this->stats->getBestPartners($id, 60),
             // Elle yazılan rehber metinleri (nasıl oynanır + eşleşmeye özel notlar).
             // Sayılar "ne oluyor"u söyler, bu metinler "ne yapmalısın"ı — veriden çıkmaz.
             'guide' => $this->guides->forChampion($id),

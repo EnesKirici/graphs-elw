@@ -240,15 +240,21 @@ function CompareRow({ r }) {
 
   const pct = Math.abs(off) * 50;      // izin verilen en uzun bar = yarım genişlik
   /*
-    RENK = TARAF, kazanan değil. Eskiden yalnız önde olan taraf renkliydi, diğeri
-    griydi; kullanıcı "KDA/katılımda sağ taraf neden beyaz?" diye sordu — gri sayı
-    "önemsiz" gibi okunuyor, oysa iki sayı da aynı derecede veri. Artık SOL hep mavi
-    (sayfanın şampiyonu), SAĞ hep kırmızı (rakip); kimin önde olduğunu BAR söylüyor.
-    Tek istisna `neutral` satırlar (Emilen hasar): orada "önde" diye bir şey yok.
+    RENK = KİM ÖNDE. Üç tur sürdü, sonuç bu:
+      1) yalnız kazanan renkli, kaybeden gri   → "sağ taraf neden beyaz?" (gri "önemsiz" okunuyor)
+      2) sol hep mavi / sağ hep kırmızı (taraf) → "hangi taraf önde, kafa karışıyor"
+      3) ÖNDE olan mavi, GERİDE olan kırmızı   ← burası
+    Tek istisna `neutral` satırlar (Emilen hasar): orada "önde" diye bir şey yok,
+    iki taraf da nötr kalır.
+
+    Bar rengi DEĞİŞMEDİ (kullanıcı "barlardan bahsetmiyorum" dedi): bar hâlâ sayfanın
+    şampiyonu önde ise mavi, rakip önde ise kırmızı. Yani rakibin önde olduğu bir
+    satırda bar kırmızı, rakibin sayısı mavi olur — ikisi farklı soruyu yanıtlıyor
+    ("bu eşleşme bana iyi mi" / "bu satırda kim yüksek").
   */
   const col = r.neutral || off === 0 ? NEUTRAL : off > 0 ? COL_GOOD : COL_BAD;
-  const colA = r.neutral ? NEUTRAL : COL_GOOD;
-  const colB = r.neutral ? NEUTRAL : COL_BAD;
+  const colA = r.neutral || off === 0 ? NEUTRAL : off > 0 ? COL_GOOD : COL_BAD;
+  const colB = r.neutral || off === 0 ? NEUTRAL : off < 0 ? COL_GOOD : COL_BAD;
 
   return (
     <div>

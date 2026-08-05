@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { champIcon } from "@/lib/buildData";
 import { DD_ASSETS, DD_CDN } from "@/lib/ddragon";
@@ -67,6 +67,27 @@ export default function ChampionCounters({ champName, champImage, champId, count
   const [pickedId, setPickedId] = useState(null);
   const data = counters?.byPosition?.[role];
 
+  /*
+    SOL RAY. Kullanıcı: "yukarıdan karakteri seçiyorum ama altındaki analitikler
+    çok altta kalıyor". Şerit ekrandan TAMAMEN çıkınca kıyas panelinin soluna
+    dikey bir seçici kayarak giriyor → aşağıdayken yukarı çıkmadan rakip değişir.
+    IntersectionObserver eşik 0: "tamamen çıktı" = isIntersecting false.
+    Sayfa konteyneri max-w-7xl (1280px); ray için iki yanda ~72px pay gerekiyor
+    → yalnız 1440px+ ekranlarda gösterilir, dar ekranda düzeni bozmaz.
+  */
+  const stripRef = useRef(null);
+  const [railOn, setRailOn] = useState(false);
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setRailOn(!e.isIntersecting), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [role]);
+
+  // ⚠ Buradan SONRA erken return var; hook'ların hepsi YUKARIDA kalmalı
+  //   (koşullu çağrılan hook React'te sıra bozar).
+
   if (!positions.length || !data) {
     return (
       <div className="glass rounded-xl p-8 text-center">
@@ -96,6 +117,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
   const duoList = (role === "BOTTOM" ? duos?.asAdc : duos?.asSupport) || [];
 
   const stripAll = [...stripGood, ...stripBad];
+
   const picked = stripAll.find((x) => x.id === pickedId)
     || (data.counters || [])[0]
     || stripAll[0]
@@ -123,6 +145,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
 
       {/* 1) Splash şeridi — tek bakışta özet. Kart TIKLANINCA altındaki kıyas
              tablosunu değiştirir (başka sayfaya GİTMEZ). */}
+      <div ref={stripRef}>
       {(stripGood.length > 0 || stripBad.length > 0) && (
         <MatchupStrip
           good={stripGood}
@@ -141,17 +164,44 @@ export default function ChampionCounters({ champName, champImage, champId, count
           version={version}
         />
       )}
+      </div>
 
       {/* 2) Seçili eşleşmenin kafa-kafaya kıyası — şeridin "ne kadar" sorusunun
              ardından "neden" sorusunu yanıtlar. */}
-      <MatchupCompare
-        champId={champId}
-        champName={champName}
-        champImage={champImage}
-        m={picked}
-        version={version}
-        guide={guide}
-      />
+      <div className="relative">
+        {/*
+          Ray, panelin SOLUNDA ve panel yüksekliği boyunca yapışkan. `absolute`
+          kapsayıcı + içeride `sticky`: absolute kutu panel kadar uzun olduğu için
+          sticky çocuk o aralık boyunca ekranda kalır.
+        */}
+        <div
+          className={`absolute inset-y-0 right-full mr-3 hidden min-[1440px]:block transition-all duration-300 ease-out ${
+            railOn ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none"
+          }`}
+          aria-hidden={!railOn}
+        >
+          <div className="sticky top-24 flex flex-col gap-1.5">
+            {stripAll.map((m) => (
+              <RailPick
+                key={m.id}
+                m={m}
+                version={version}
+                picked={m.id === picked?.id}
+                onPick={setPickedId}
+              />
+            ))}
+          </div>
+        </div>
+
+        <MatchupCompare
+          champId={champId}
+          champName={champName}
+          champImage={champImage}
+          m={picked}
+          version={version}
+          guide={guide}
+        />
+      </div>
 
       {/*
         3) Rehber metinleri — kıyas panelinin SOL/SAĞ dilini sürdürür:
@@ -201,14 +251,22 @@ function MatchupStrip({
 
   return (
     <div className="glass rounded-xl overflow-hidden">
+      {/*
+        SEKMELER — bitişik segment kontrolü. Eskiden iki ayrı düğme gibi duruyordu
+        ve etiketler uzundu ("{champName} ile en iyi uyumlular"); kullanıcı "yerleri
+        belli değil, çok uzun" dedi. Tek çerçeve içinde iki segment: hangisinin
+        seçili olduğu dolu zeminden okunuyor, isimler kısaldı.
+      */}
       {hasDuos && (
-        <div className="flex items-center gap-1.5 px-4 pt-3 pb-2.5 border-b border-edge/30">
-          <StripTab active={!flipped} color={COL_BAD} onClick={() => setFace("rakip")}>
-            Rakipler
-          </StripTab>
-          <StripTab active={flipped} color={COL_GOOD} onClick={() => setFace("uyum")}>
-            {champName} ile en iyi uyumlular
-          </StripTab>
+        <div className="px-4 pt-3 pb-2.5 border-b border-edge/30">
+          <div className="inline-flex rounded-lg border border-edge/70 bg-black/40 p-0.5">
+            <StripTab active={!flipped} color={COL_BAD} onClick={() => setFace("rakip")}>
+              Rakipler
+            </StripTab>
+            <StripTab active={flipped} color={COL_GOOD} onClick={() => setFace("uyum")}>
+              Uyumlular
+            </StripTab>
+          </div>
         </div>
       )}
 
@@ -272,12 +330,44 @@ function StripTab({ active, color, onClick, children }) {
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-        active ? "" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+      className={`px-4 py-1.5 rounded-[6px] text-xs font-bold tracking-wide transition-colors cursor-pointer ${
+        active ? "" : "text-gray-400 hover:text-gray-200"
       }`}
-      style={active ? { color, backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)` } : undefined}
+      style={active ? { color, backgroundColor: `color-mix(in srgb, ${color} 22%, transparent)` } : undefined}
     >
       {children}
+    </button>
+  );
+}
+
+/*
+  Sol raydaki tek seçim düğmesi — şerit ekrandan çıktığında kıyas panelinin
+  solunda beliren dikey liste. Sadece ikon + oran: burası bir ÖZET değil,
+  hızlı geçiş kumandası; ayrıntı zaten sağdaki panelde.
+*/
+function RailPick({ m, version, picked, onPick }) {
+  const col = wrColor(m.winRate);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onPick?.(m.id)}
+      aria-pressed={picked}
+      title={`${m.name} — %${m.winRate} · ${m.games} maç`}
+      className={`group relative flex flex-col items-center gap-0.5 rounded-lg border p-1 bg-black/60 backdrop-blur-sm cursor-pointer transition-all duration-200 hover:border-[var(--m)] ${
+        picked ? "border-[var(--m)] bg-black/85" : "border-edge/50"
+      }`}
+      style={{ "--m": col }}
+    >
+      <img
+        src={champIcon(version, m.id)}
+        alt={m.name}
+        width={34}
+        height={34}
+        className={`rounded-md transition-transform duration-200 group-hover:scale-105 ${picked ? "" : "opacity-75 group-hover:opacity-100"}`}
+        onError={hideOnError}
+      />
+      <span className="text-[9px] font-bold tabular-nums leading-none" style={{ color: col }}>%{Math.round(m.winRate)}</span>
     </button>
   );
 }
