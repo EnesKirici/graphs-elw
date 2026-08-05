@@ -70,19 +70,46 @@ export default function ChampionCounters({ champName, champImage, champId, count
   /*
     SOL RAY. Kullanıcı: "yukarıdan karakteri seçiyorum ama altındaki analitikler
     çok altta kalıyor". Şerit ekrandan TAMAMEN çıkınca kıyas panelinin soluna
-    dikey bir seçici kayarak giriyor → aşağıdayken yukarı çıkmadan rakip değişir.
-    IntersectionObserver eşik 0: "tamamen çıktı" = isIntersecting false.
-    Sayfa konteyneri max-w-7xl (1280px); ray için iki yanda ~72px pay gerekiyor
-    → yalnız 1440px+ ekranlarda gösterilir, dar ekranda düzeni bozmaz.
+    dikey bir seçici giriyor → aşağıdayken yukarı çıkmadan rakip değişir.
+
+    NEDEN `sticky` DEĞİL `fixed`: sayfanın ortak sarmalayıcısında
+    (`div.dpm-scope … overflow-hidden`) overflow gizli. `overflow: hidden` olan bir
+    ATA, position:sticky'yi öldürür — kutu kaydırma kabı olur ama kendisi kaymaz,
+    yapışkan çocuk sayfayla birlikte akıp gider. (Ölçüldü: sticky hesaplanıyordu
+    ama top −145 → −485 diye kayıyordu.) O sarmalayıcı bütün sayfalarda ortak,
+    dokunmak istemedim → ray `fixed`, yatay konumu panelin ölçülen sol kenarından.
+
+    Görünürlük koşulu: şerit tamamen yukarıda kalmış + kıyas paneli hâlâ ekranda
+    (yoksa ray SSS bölümünün üstünde asılı kalırdı) + ekran 1440px+ (konteyner
+    max-w-7xl = 1280px; ray için iki yanda pay gerekiyor).
   */
   const stripRef = useRef(null);
-  const [railOn, setRailOn] = useState(false);
+  const panelRef = useRef(null);
+  const [rail, setRail] = useState({ show: false, left: 0 });
+  const railSon = useRef({ show: false, left: 0 });
+
   useEffect(() => {
-    const el = stripRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(([e]) => setRailOn(!e.isIntersecting), { threshold: 0 });
-    io.observe(el);
-    return () => io.disconnect();
+    const hesapla = () => {
+      const strip = stripRef.current;
+      const panel = panelRef.current;
+      if (!strip || !panel) return;
+      const s = strip.getBoundingClientRect();
+      const p = panel.getBoundingClientRect();
+      const show = s.bottom < 8 && p.bottom > 240 && window.innerWidth >= 1440;
+      const left = Math.round(p.left - 64);
+      // Her scroll olayında setState ETME — yalnız değer değişince.
+      if (show !== railSon.current.show || Math.abs(left - railSon.current.left) > 1) {
+        railSon.current = { show, left };
+        setRail(railSon.current);
+      }
+    };
+    hesapla();
+    window.addEventListener("scroll", hesapla, { passive: true });
+    window.addEventListener("resize", hesapla);
+    return () => {
+      window.removeEventListener("scroll", hesapla);
+      window.removeEventListener("resize", hesapla);
+    };
   }, [role]);
 
   // ⚠ Buradan SONRA erken return var; hook'ların hepsi YUKARIDA kalmalı
@@ -168,29 +195,23 @@ export default function ChampionCounters({ champName, champImage, champId, count
 
       {/* 2) Seçili eşleşmenin kafa-kafaya kıyası — şeridin "ne kadar" sorusunun
              ardından "neden" sorusunu yanıtlar. */}
-      <div className="relative">
-        {/*
-          Ray, panelin SOLUNDA ve panel yüksekliği boyunca yapışkan. `absolute`
-          kapsayıcı + içeride `sticky`: absolute kutu panel kadar uzun olduğu için
-          sticky çocuk o aralık boyunca ekranda kalır.
-        */}
+      <div ref={panelRef}>
         <div
-          className={`absolute inset-y-0 right-full mr-3 hidden min-[1440px]:block transition-all duration-300 ease-out ${
-            railOn ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none"
+          className={`fixed top-24 z-30 w-[52px] flex flex-col gap-1.5 transition-all duration-300 ease-out ${
+            rail.show ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none"
           }`}
-          aria-hidden={!railOn}
+          style={{ left: rail.left }}
+          aria-hidden={!rail.show}
         >
-          <div className="sticky top-24 flex flex-col gap-1.5">
-            {stripAll.map((m) => (
-              <RailPick
-                key={m.id}
-                m={m}
-                version={version}
-                picked={m.id === picked?.id}
-                onPick={setPickedId}
-              />
-            ))}
-          </div>
+          {stripAll.map((m) => (
+            <RailPick
+              key={m.id}
+              m={m}
+              version={version}
+              picked={m.id === picked?.id}
+              onPick={setPickedId}
+            />
+          ))}
         </div>
 
         <MatchupCompare
