@@ -216,14 +216,24 @@ class BuildAggregationService
             $kp = $tk > 0 ? (int) round(($k + $a) / $tk * 100) : 0;
             $dmg = (int) ($p['totalDamageDealtToChampions'] ?? 0);
             $taken = (int) ($p['totalDamageTaken'] ?? 0);
-            // effectiveHealAndShielding overheal'ı DIŞLADIĞI için tercih edilir; ELW #7
-            // (2026-06-30) öncesi maçlarda bu challenge yok → ham toplamlara düşülür.
+            /*
+              MÜTTEFİĞE iyileştirme + kalkan. `effectiveHealAndShielding` adı genel
+              duruyor ama ÖLÇTÜK: yalnız müttefiğe yapılanı sayıyor (Swain 1.200 maçta
+              ortalama 12.817 totalHeal'e karşı effective = 6). ELW #7 (2026-06-30)
+              öncesi maçlarda challenge yok → ham müttefik toplamlarına düşülür.
+            */
             $hs = (int) ($p['challenges']['effectiveHealAndShielding'] ?? 0);
             if ($hs <= 0) {
                 $hs = (int) ($p['totalHealsOnTeammates'] ?? 0) + (int) ($p['totalDamageShieldedOnTeammates'] ?? 0);
             }
+            // KENDİNE iyileştirme — ayrı bir iş. Swain/Aatrox gibi kendini ayakta tutan
+            // şampiyonlar yukarıdaki alanda SIFIR görünüyordu; kıyasta yanlış bilgiydi.
+            $healSelf = max(0, (int) ($p['totalHeal'] ?? 0) - (int) ($p['totalHealsOnTeammates'] ?? 0));
+            // timeCCingOthers YAVAŞLATMAYI DA sayar (Yuumi 21 sn CC / 0 sabitleme).
+            // Sert CC ayrı alanda ve ADET cinsinden.
             $cc = (int) round((float) ($p['timeCCingOthers'] ?? 0));
-            $byPos[$pos][$tid] = [$champId, ! empty($p['win']), $k, $d, $a, $kp, $dmg, $taken, $hs, $cc];
+            $immob = (int) ($p['challenges']['enemyChampionImmobilizations'] ?? 0);
+            $byPos[$pos][$tid] = [$champId, ! empty($p['win']), $k, $d, $a, $kp, $dmg, $taken, $hs, $cc, $healSelf, $immob];
         }
 
         $rows = [];
@@ -237,8 +247,8 @@ class BuildAggregationService
             if ($a[0] === $b[0]) {
                 continue; // aynı şampiyon (teorik) — anlamsız
             }
-            $rows[] = [$patch, $a[0], $pos, $b[0], $pos, $a[1], $a[2], $a[3], $a[4], $a[5], $a[6], $a[7], $a[8], $a[9]];
-            $rows[] = [$patch, $b[0], $pos, $a[0], $pos, $b[1], $b[2], $b[3], $b[4], $b[5], $b[6], $b[7], $b[8], $b[9]];
+            $rows[] = [$patch, $a[0], $pos, $b[0], $pos, $a[1], $a[2], $a[3], $a[4], $a[5], $a[6], $a[7], $a[8], $a[9], $a[10], $a[11]];
+            $rows[] = [$patch, $b[0], $pos, $a[0], $pos, $b[1], $b[2], $b[3], $b[4], $b[5], $b[6], $b[7], $b[8], $b[9], $b[10], $b[11]];
         }
 
         // 2) Bot lane çaprazı: ADC ↔ KARŞI support. Aynı takımdaki ADC+SUP eşleşmesi
@@ -252,8 +262,8 @@ class BuildAggregationService
                     if ($botTeam === $supTeam || $adc[0] === $sup[0]) {
                         continue; // aynı takım (sinerji) veya aynı şampiyon
                     }
-                    $rows[] = [$patch, $adc[0], 'BOTTOM', $sup[0], 'UTILITY', $adc[1], $adc[2], $adc[3], $adc[4], $adc[5], $adc[6], $adc[7], $adc[8], $adc[9]];
-                    $rows[] = [$patch, $sup[0], 'UTILITY', $adc[0], 'BOTTOM', $sup[1], $sup[2], $sup[3], $sup[4], $sup[5], $sup[6], $sup[7], $sup[8], $sup[9]];
+                    $rows[] = [$patch, $adc[0], 'BOTTOM', $sup[0], 'UTILITY', $adc[1], $adc[2], $adc[3], $adc[4], $adc[5], $adc[6], $adc[7], $adc[8], $adc[9], $adc[10], $adc[11]];
+                    $rows[] = [$patch, $sup[0], 'UTILITY', $adc[0], 'BOTTOM', $sup[1], $sup[2], $sup[3], $sup[4], $sup[5], $sup[6], $sup[7], $sup[8], $sup[9], $sup[10], $sup[11]];
                 }
             }
         }
@@ -338,7 +348,7 @@ class BuildAggregationService
         // 4) champion_matchups — karşı koridor eşleşmeleri (A-vs-B + B-vs-A) + KDA/hasar.
         //    Bot lane çapraz satırları (ADC↔karşı SUP) da buradan gelir; opponent_position
         //    ikisini ayırır ve unique index'in parçasıdır → anahtara dahil edilmeli.
-        foreach ($this->matchupRows($matchData) as [$mPatch, $champ, $pos, $opp, $oppPos, $win, $k, $d, $as, $kp, $dmg, $taken, $hs, $cc]) {
+        foreach ($this->matchupRows($matchData) as [$mPatch, $champ, $pos, $opp, $oppPos, $win, $k, $d, $as, $kp, $dmg, $taken, $hs, $cc, $healSelf, $immob]) {
             $keyCols = [
                 'patch' => $mPatch, 'champion_id' => $champ, 'position' => $pos,
                 'opponent_id' => $opp, 'opponent_position' => $oppPos,
@@ -359,6 +369,8 @@ class BuildAggregationService
                 'sum_taken'       => DB::raw('sum_taken + ' . (int) $taken),
                 'sum_heal_shield' => DB::raw('sum_heal_shield + ' . (int) $hs),
                 'sum_cc'          => DB::raw('sum_cc + ' . (int) $cc),
+                'sum_heal_self'   => DB::raw('sum_heal_self + ' . (int) $healSelf),
+                'sum_immob'       => DB::raw('sum_immob + ' . (int) $immob),
             ]);
         }
 

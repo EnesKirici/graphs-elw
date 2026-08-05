@@ -133,7 +133,6 @@ export default function ChampionCounters({ champName, champImage, champId, count
         m={picked}
         version={version}
         guide={guide}
-        baseline={data.baseline}
       />
 
       {/*

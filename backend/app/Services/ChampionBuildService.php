@@ -82,7 +82,11 @@ class ChampionBuildService
         //     eşleşmeyi ölçmek için; bkz. aggregateMatchups içindeki gerekçe.
         // v7: rol metrikleri (emilen hasar / şifa+kalkan / CC) — tanklamak ve iyileştirmek
         //     hiçbir eksende görünmüyordu.
-        $key = 'champion:counters:v7:' . $championId . ':' . implode(',', $patches);
+        // v8: kendine iyileştirme + sabitleme sayısı. "effectiveHealAndShielding" ÖLÇÜLDÜ:
+        //     yalnız müttefiğe olanı sayıyor → Swain/Aatrox'un kendini ayakta tutması
+        //     ekranda 0.0k görünüyordu. timeCCingOthers de yavaşlatmayı sayıyor,
+        //     sert CC ayrı alan (enemyChampionImmobilizations).
+        $key = 'champion:counters:v8:' . $championId . ':' . implode(',', $patches);
 
         // TTL için gerekçe: yukarıdaki getChampionBuild ile aynı (stats:rebuild günde 3).
         // Counter hesabı daha ağır (pozisyon başına aynı-koridor + çapraz eşleşme).
@@ -523,6 +527,7 @@ class ChampionBuildService
                 'champion_id, SUM(n_stats) n_stats, SUM(sum_kills) sum_kills, SUM(sum_deaths) sum_deaths,'
                 . ' SUM(sum_assists) sum_assists, SUM(sum_kp) sum_kp, SUM(sum_dmg) sum_dmg,'
                 . ' SUM(n_role) n_role, SUM(sum_taken) sum_taken, SUM(sum_heal_shield) sum_heal_shield, SUM(sum_cc) sum_cc,'
+                . ' SUM(sum_heal_self) sum_heal_self, SUM(sum_immob) sum_immob,'
                 . ' SUM(n15) n15, SUM(sum_gd15) sum_gd15, SUM(sum_csd15) sum_csd15, SUM(sum_xpd15) sum_xpd15'
             )
             ->get()->keyBy('champion_id') : collect();
@@ -601,6 +606,7 @@ class ChampionBuildService
                 'SUM(n_stats) n_stats, SUM(sum_kills) sum_kills, SUM(sum_deaths) sum_deaths,'
                 . ' SUM(sum_assists) sum_assists, SUM(sum_kp) sum_kp, SUM(sum_dmg) sum_dmg,'
                 . ' SUM(n_role) n_role, SUM(sum_taken) sum_taken, SUM(sum_heal_shield) sum_heal_shield, SUM(sum_cc) sum_cc,'
+                . ' SUM(sum_heal_self) sum_heal_self, SUM(sum_immob) sum_immob,'
                 . ' SUM(n15) n15, SUM(sum_gd15) sum_gd15, SUM(sum_csd15) sum_csd15, SUM(sum_xpd15) sum_xpd15'
             )
             ->first();
@@ -646,10 +652,12 @@ class ChampionBuildService
         */
         $nRole = (int) $rws->sum('n_role');
         if ($nRole > 0) {
-            $out['nRole'] = $nRole;
-            $out['taken'] = (int) round($rws->sum('sum_taken') / $nRole);
-            $out['hs']    = (int) round($rws->sum('sum_heal_shield') / $nRole);
-            $out['cc']    = (int) round($rws->sum('sum_cc') / $nRole);
+            $out['nRole']    = $nRole;
+            $out['taken']    = (int) round($rws->sum('sum_taken') / $nRole);
+            $out['hs']       = (int) round($rws->sum('sum_heal_shield') / $nRole); // MÜTTEFİĞE
+            $out['healSelf'] = (int) round($rws->sum('sum_heal_self') / $nRole);   // KENDİNE
+            $out['cc']       = (int) round($rws->sum('sum_cc') / $nRole);          // saniye, yavaşlatma dâhil
+            $out['immob']    = round($rws->sum('sum_immob') / $nRole, 1);          // adet, sert CC
         }
 
         return $out;
