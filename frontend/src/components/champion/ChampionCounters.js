@@ -59,7 +59,7 @@ const artFallback = (id) => (e) => {
 
 const STRIP = 5; // şeritte her yönde kaç kart
 
-export default function ChampionCounters({ champName, champImage, champId, counters, version, duos, guide }) {
+export default function ChampionCounters({ champName, champImage, champId, counters, version, duos, guide, variant = "v1" }) {
   const positions = counters?.positions || [];
   const [role, setRole] = useState(counters?.primaryPosition || positions[0]?.position);
   // Kıyas tablosunda gösterilen eşleşme. null = "varsayılanı kullan" (en zorlu rakip):
@@ -83,6 +83,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
     (yoksa ray SSS bölümünün üstünde asılı kalırdı) + ekran 1440px+ (konteyner
     max-w-7xl = 1280px; ray için iki yanda pay gerekiyor).
   */
+  const [v2Face, setV2Face] = useState("rakip");
   const stripRef = useRef(null);
   const panelRef = useRef(null);
   const [rail, setRail] = useState({ show: false, left: 0 });
@@ -153,6 +154,9 @@ export default function ChampionCounters({ champName, champImage, champId, count
 
   const stripAll = [...stripGood, ...stripBad];
 
+  // v2 listesi: 10 kartlık şeritten farklı olarak TÜM eşleşmeler, en rahattan en zora.
+  const v2List = [...(data.strongInto || []), ...[...(data.counters || [])].reverse()];
+
   const picked = stripAll.find((x) => x.id === pickedId)
     || (data.counters || [])[0]
     || stripAll[0]
@@ -178,6 +182,72 @@ export default function ChampionCounters({ champName, champImage, champId, count
         </div>
       )}
 
+      {variant === "v2" ? (
+        /*
+          DENEME DÜZENİ (?v2=1) — solda eşleşme LİSTESİ, sağda kıyas.
+
+          Varsayılan düzenin sorunu: şerit yalnız 10 eşleşme gösteriyor ve kıyas
+          paneli hep onun ALTINDA kalıyor, aşağı inince seçici gözden kayboluyor
+          (sol ray tam da bunun yamasıydı). İki sütunda liste sağdaki panelin
+          yanında durur, yamaya gerek kalmaz ve 10 değil TÜM eşleşmeler sığar.
+
+          NOT: sol sütun `sticky` DEĞİL — sayfanın ortak sarmalayıcısında
+          overflow gizli, sticky orada çalışmıyor (bkz. sol ray gerekçesi).
+          Liste kendi içinde kaydırılıyor (max-h + overflow-y-auto).
+        */
+        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4 items-start">
+          <div className="glass rounded-xl overflow-hidden">
+            {duoList.length > 0 && (
+              <div className="px-3 pt-3 pb-2.5 border-b border-edge/30">
+                <div className="inline-flex rounded-lg border border-edge/70 bg-black/40 p-0.5">
+                  <StripTab active={v2Face === "rakip"} color={COL_BAD} onClick={() => setV2Face("rakip")}>
+                    Rakipler
+                  </StripTab>
+                  <StripTab active={v2Face === "uyum"} color={COL_GOOD} onClick={() => setV2Face("uyum")}>
+                    Uyumlular
+                  </StripTab>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-edge/40">
+              <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: v2Face === "uyum" ? COL_GOOD : COL_BAD }}>
+                {v2Face === "uyum" ? `En iyi ${role === "BOTTOM" ? "support" : "ADC"} eşleri` : "Tüm eşleşmeler"}
+              </span>
+              <span className="text-[10px] text-gray-500">
+                {v2Face === "uyum" ? "aynı takımda" : `${champName} kazanma oranı`}
+              </span>
+            </div>
+
+            <div className="max-h-[68vh] overflow-y-auto divide-y divide-edge/25">
+              {v2Face === "uyum"
+                ? duoList.map((d) => <ListRow key={d.champion} id={d.champion} name={d.name} wr={d.adjWr} games={d.games} version={version} href={`/champions/${d.champion}`} />)
+                : v2List.map((m) => (
+                    <ListRow
+                      key={m.id}
+                      id={m.id}
+                      name={m.name}
+                      wr={m.winRate}
+                      games={m.games}
+                      version={version}
+                      tag={laneTag(m, data.baseline)}
+                      picked={m.id === picked?.id}
+                      onPick={() => { trackEvent("counter_kiyasi_secildi", { rakip: m.id, rol: role }); setPickedId(m.id); }}
+                    />
+                  ))}
+            </div>
+          </div>
+
+          <MatchupCompare
+            champId={champId}
+            champName={champName}
+            champImage={champImage}
+            m={picked}
+            version={version}
+          />
+        </div>
+      ) : (
+      <>
       {/* 1) Splash şeridi — tek bakışta özet. Kart TIKLANINCA altındaki kıyas
              tablosunu değiştirir (başka sayfaya GİTMEZ). */}
       <div ref={stripRef}>
@@ -231,6 +301,9 @@ export default function ChampionCounters({ champName, champImage, champId, count
           guide={guide}
         />
       </div>
+
+      </>
+      )}
 
       {/*
         3) Rehber metinleri — kıyas panelinin SOL/SAĞ dilini sürdürür:
@@ -356,6 +429,52 @@ function MatchupStrip({
         </div>
       </div>
     </div>
+  );
+}
+
+/*
+  v2 düzeninin sol sütunundaki tek satır. Şerit kartının dikey karşılığı:
+  ikon + ad + oran + maç sayısı, solda durum rengiyle bir şerit. Rakip satırı
+  TIKLANABİLİR (sağdaki kıyası değiştirir), uyumlu satırı ise o şampiyonun
+  sayfasına gider — ikisi farklı eylem olduğu için biri button, diğeri link.
+*/
+function ListRow({ id, name, wr, games, version, tag, picked, onPick, href }) {
+  const col = wrColor(wr);
+
+  const govde = (
+    <>
+      <span className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: col }} />
+      <img
+        src={champIcon(version, id)}
+        alt={name}
+        width={34}
+        height={34}
+        className="rounded-md border border-edge/60 shrink-0"
+        onError={hideOnError}
+      />
+      <span className="flex-1 min-w-0">
+        <span className="block text-xs font-semibold text-gray-100 truncate">{name}</span>
+        <span className="block text-[10px] text-gray-500 tabular-nums">
+          {games} maç
+          {tag && <span className={`ml-1.5 rounded px-1 py-px border text-[9px] font-semibold ${tag.cls}`}>{tag.text}</span>}
+        </span>
+      </span>
+      <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: col }}>%{wr}</span>
+    </>
+  );
+
+  const cls = `relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2 text-left transition-colors ${
+    picked ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
+  }`;
+
+  if (href) {
+    return <Link href={href} className={cls} title={`${name} — %${wr} · ${games} maç`}>{govde}</Link>;
+  }
+
+  return (
+    <button type="button" onClick={onPick} aria-pressed={picked} className={`${cls} cursor-pointer`} title={`${name} — %${wr} · ${games} maç · kıyas için seç`}>
+      {govde}
+    </button>
   );
 }
 
