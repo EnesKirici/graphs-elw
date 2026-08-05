@@ -140,15 +140,44 @@ class RiotKeyStore
      */
     public static function verify(string $key): bool
     {
+        return self::verifyDetailed($key)['ok'];
+    }
+
+    /**
+     * verify()'ın SEBEBİ de söyleyen hâli.
+     *
+     * Gerekçe (2026-08-05): panel "Riot bu anahtarı kabul etmedi" diyordu ve
+     * neden olduğu anlaşılmıyordu — kota mı, ağ mı, gerçekten ölü anahtar mı?
+     * Aynı anahtar dakikalar sonra sunucudan sorunsuz doğrulandı (Riot portalda
+     * yeni üretilen anahtar hemen yayılmamış olabilir). Durum kodunu yutmak
+     * teşhisi imkânsız kılıyordu.
+     *
+     * @return array{ok: bool, status: int|null, reason: string}
+     *         reason: valid | invalid | quota | network
+     */
+    public static function verifyDetailed(string $key): array
+    {
         try {
             $response = Http::timeout(10)
                 ->withHeaders(['X-Riot-Token' => trim($key)])
                 ->get(config('riot.platform_url') . '/lol/status/v4/platform-data');
 
-            return $response->successful();
+            $status = $response->status();
+
+            if ($response->successful()) {
+                return ['ok' => true, 'status' => $status, 'reason' => 'valid'];
+            }
+
+            // 429 anahtarın geçersizliğini GÖSTERMEZ — yalnız o an kota dolu.
+            // Aynı kefeye koymak, sağlam bir anahtarı reddetmemize yol açardı.
+            return [
+                'ok'     => false,
+                'status' => $status,
+                'reason' => $status === 429 ? 'quota' : 'invalid',
+            ];
         } catch (\Throwable $e) {
             Log::warning('RiotKeyStore: doğrulama isteği başarısız.', ['error' => $e->getMessage()]);
-            return false;
+            return ['ok' => false, 'status' => null, 'reason' => 'network'];
         }
     }
 

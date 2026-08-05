@@ -179,9 +179,24 @@ class SettingsController extends Controller
             ], 422);
         }
 
-        if (! \App\Services\RiotApi\RiotKeyStore::verify($key)) {
+        // Reddin SEBEBİ yazılır: "kabul etmedi" tek başına teşhis ettirmiyordu —
+        // kota mı, ağ mı, gerçekten ölü anahtar mı ayırt edilemiyordu (2026-08-05).
+        $sonuc = \App\Services\RiotApi\RiotKeyStore::verifyDetailed($key);
+
+        if (! $sonuc['ok']) {
+            $mesaj = match ($sonuc['reason']) {
+                'quota'   => 'Riot şu anda kota sınırında (429), anahtar doğrulanamadı. '
+                           . 'Anahtar bozuk olmayabilir — birkaç dakika sonra tekrar deneyin.',
+                'network' => 'Riot\'a ulaşılamadı (ağ/zaman aşımı). Anahtar kaydedilmedi, tekrar deneyin.',
+                default   => "Riot bu anahtarı kabul etmedi (HTTP {$sonuc['status']}). "
+                           . 'Yeni ürettiyseniz birkaç saniye sonra tekrar deneyin; '
+                           . 'sorun sürerse anahtarın süresi dolmuş olabilir.',
+            };
+
             return response()->json([
-                'error' => 'Riot bu anahtarı kabul etmedi. Kaydedilmedi — eski anahtar duruyor.',
+                'error'  => $mesaj . ' Kaydedilmedi — eski anahtar duruyor.',
+                'status' => $sonuc['status'],
+                'reason' => $sonuc['reason'],
             ], 422);
         }
 
