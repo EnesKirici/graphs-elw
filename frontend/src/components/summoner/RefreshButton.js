@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import Tooltip from "@/components/shared/Tooltip";
+import { trackEvent } from "@/lib/analytics";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -33,6 +34,9 @@ export default function RefreshButton({ puuid }) {
   async function handleRefresh() {
     if (loading) return;
     setLoading(true);
+    // Yenileme her seferinde Riot kotası harcar — kaç kez basıldığını bilmek
+    // kota planlaması için doğrudan girdi.
+    trackEvent("profil_yenilendi");
 
     try {
       await fetch(`${API_BASE}/summoner/${puuid}/refresh`, { method: "POST" });

@@ -8,6 +8,7 @@ import RuneTip from "@/components/shared/RuneTip";
 import Tooltip from "@/components/shared/Tooltip";
 import { scoreColor } from "./scoreColor";
 import MatchDetailsTab from "./MatchDetailsTab";
+import { trackEvent } from "@/lib/analytics";
 
 const DETAIL_TABS = [
   { key: "general", label: "Genel", icon: LayoutGrid },
@@ -315,7 +316,12 @@ export default function MatchDetailPro({ matchId, puuid }) {
           return (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => {
+                // Hangi detay sekmesi gerçekten açılıyor: Koridor/Rünler'e hiç
+                // girilmiyorsa o panellere yatırım yapmanın anlamı yok.
+                trackEvent("mac_detay_sekmesi", { sekme: t.key });
+                setTab(t.key);
+              }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[12px] font-semibold transition-colors cursor-pointer ${
                 active ? "bg-soft text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-300"
               }`}

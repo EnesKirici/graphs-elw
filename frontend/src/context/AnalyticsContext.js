@@ -3,6 +3,7 @@
 import { createContext, useContext, useRef, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { postAnalytics, sendAnalyticsBeacon } from "@/lib/api";
+import { isAdminBrowser, trackEvent } from "@/lib/analytics";
 
 const AnalyticsContext = createContext(null);
 
@@ -11,16 +12,8 @@ const MAX_QUEUE_SIZE = 10;
 
 let memorySessionId = null; // sessionStorage engelliyse (gizlilik eklentisi vb.) bellek-içi yedek
 
-// Admin (site sahibi) hiç izlenmez — istatistikleri kendi gezintimizle kirletmeyelim.
-// localStorage'tan her seferinde okunur: context zamanlamasından bağımsız, cihaz başına
-// admin girişi yapıldığı andan itibaren geçerli.
-function isAdminBrowser() {
-  try {
-    return !!localStorage.getItem("admin_token");
-  } catch {
-    return false;
-  }
-}
+// isAdminBrowser lib/analytics'e taşındı: Rybbit olayları da aynı kuralı uygular
+// (site sahibi hiç izlenmez), iki yerde ayrı kopya tutmanın anlamı yoktu.
 
 function getSessionId() {
   if (typeof window === "undefined") return "";
@@ -104,8 +97,12 @@ export function AnalyticsProvider({ children }) {
     enqueue("page_view", page, null);
   }, [enqueue]);
 
-  const trackSearch = useCallback((query) => {
+  // Arama İKİ yere gider: kendi DB'mize (autocomplete popülerlik sıralaması
+  // buradan besleniyor — SummonerController::autocomplete) ve Rybbit'e (panelde
+  // aranan isimleri ve birazdan gelen "sonuçsuz" olayını yan yana görmek için).
+  const trackSearch = useCallback((query, kaynak) => {
     enqueue("search", null, { query });
+    trackEvent("arama", { sorgu: query, kaynak: kaynak || "bilinmiyor" });
   }, [enqueue]);
 
   const trackClick = useCallback((element, extra) => {

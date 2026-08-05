@@ -6,6 +6,7 @@ import FeaturedStrip from "./tier/FeaturedStrip";
 import TierBand from "./tier/TierBand";
 import TierTable from "./tier/TierTable";
 import { TIER_ORDER, TIER_OPEN_DEFAULT, championsInRole } from "@/lib/tierData";
+import { trackEvent } from "@/lib/analytics";
 
 const VIEW_KEY = "elw-tierlist-view";
 
@@ -43,12 +44,15 @@ export default function TierList({ data }) {
   }, []);
 
   function changeView(v) {
+    // Tahta mı tablo mu tercih ediliyor — hangisinin varsayılan olacağını belirler.
+    trackEvent("tierlist_gorunum", { gorunum: v });
     setView(v);
     try { localStorage.setItem(VIEW_KEY, v); } catch {}
   }
 
   // Koridor değişince derece seçimi sıfırlanır → yeni koridor tam listeyle açılır.
   function changeRole(r) {
+    trackEvent("tierlist_rol", { rol: r });
     setRole(r);
     setTierFilter([]);
   }

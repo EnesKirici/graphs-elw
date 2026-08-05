@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CHAMP_TABBAR_WRAP, CHAMP_TABBAR_INNER, CHAMP_TAB, CHAMP_TAB_ACTIVE, CHAMP_TAB_INACTIVE } from "@/components/champion/championTabStyles";
 import ChampionBuild from "@/components/champion/ChampionBuild";
 import ChampionDetail from "@/components/champion/ChampionDetail";
+import { trackEvent } from "@/lib/analytics";
 
 /*
   Şampiyon sayfası tab yöneticisi: Genel (tam build) · Detay + Counter (ayrı route).
@@ -49,11 +50,18 @@ export default function ChampionView({ id, champ, version, runesData, build, duo
   };
 
   const select = (key) => {
+    // Sekme URL'i history.replaceState ile değiştiriyor — yani YENİ sayfa
+    // görüntülemesi üretmiyor. Olay olmadan "Detay sekmesi kullanılıyor mu"
+    // sorusunun panelde hiçbir karşılığı yoktu.
+    trackEvent("sampiyon_sekmesi", { sekme: key, sampiyon: id });
     setTab(key);
     writeUrl(key, role);
   };
 
   const selectRole = (p) => {
+    // Çok rollü şampiyonlarda (Akshan mid/top) hangi rolün gerçekten
+    // istendiğini gösterir — varsayılan rol seçimini buna göre ayarlarız.
+    trackEvent("sampiyon_rolu_degisti", { rol: p, sampiyon: id });
     setRole(p);
     writeUrl(tab, p);
   };

@@ -11,6 +11,7 @@ import ThemePicker from "@/components/dashboard/ThemePicker";
 import BadgeGuideModal from "@/components/summoner/BadgeGuideModal";
 import WorkerChip from "@/components/layout/WorkerChip";
 import { parseRiotId, summonerPath } from "@/lib/riotId";
+import { trackEvent } from "@/lib/analytics";
 
 // Site navigasyonu — eskiden sol sidebar'daydı, header'a taşındı.
 const NAV_ITEMS = [
@@ -285,7 +286,11 @@ export default function Navbar() {
     if (query.includes("#")) {
       const { name: n, tag: t } = parseRiotId(query);
       if (n && t) {
-        analytics?.trackSearch(`${n}#${t}`);
+        // "elle" = öneri listesinden seçmeyip doğrudan Enter'a bastı. Öneri
+        // gelmediği için elle arayanların oranı, autocomplete'in ne kadar
+        // işe yaradığının doğrudan ölçüsü.
+        analytics?.trackSearch(`${n}#${t}`, "navbar");
+        trackEvent("arama_elle", { sorgu: `${n}#${t}`, kaynak: "navbar" });
         router.push(summonerPath(n, t));
         setQuery("");
         setShowDropdown(false);
@@ -310,7 +315,8 @@ export default function Navbar() {
   }
 
   function selectPlayer(p) {
-    analytics?.trackSearch(`${p.gameName}#${p.tagLine}`);
+    analytics?.trackSearch(`${p.gameName}#${p.tagLine}`, "navbar");
+    trackEvent("arama_oneri_secildi", { tur: "oyuncu", kaynak: "navbar" });
     router.push(summonerPath(p.gameName, p.tagLine));
     setQuery("");
     setShowDropdown(false);

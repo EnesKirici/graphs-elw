@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAnalytics } from "@/context/AnalyticsContext";
 import { parseRiotId, summonerPath } from "@/lib/riotId";
+import { trackEvent } from "@/lib/analytics";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -64,7 +65,8 @@ export default function BigSearch({ chips = [] }) {
   }
 
   function selectPlayer(p) {
-    analytics?.trackSearch?.(`${p.gameName}#${p.tagLine}`);
+    analytics?.trackSearch?.(`${p.gameName}#${p.tagLine}`, "anasayfa");
+    trackEvent("arama_oneri_secildi", { tur: "oyuncu", kaynak: "anasayfa" });
     router.push(summonerPath(p.gameName, p.tagLine));
     setQuery("");
     setOpen(false);
@@ -73,6 +75,7 @@ export default function BigSearch({ chips = [] }) {
   }
 
   function selectChamp(c) {
+    trackEvent("arama_oneri_secildi", { tur: "sampiyon", sampiyon: c.id, kaynak: "anasayfa" });
     router.push(`/champions/${c.id}`);
     setQuery("");
     setOpen(false);
@@ -91,7 +94,8 @@ export default function BigSearch({ chips = [] }) {
     if (query.includes("#")) {
       const { name: n, tag: t } = parseRiotId(query);
       if (n && t) {
-        analytics?.trackSearch?.(`${n}#${t}`);
+        analytics?.trackSearch?.(`${n}#${t}`, "anasayfa");
+        trackEvent("arama_elle", { sorgu: `${n}#${t}`, kaynak: "anasayfa" });
         router.push(summonerPath(n, t));
         setQuery("");
         setOpen(false);

@@ -6,6 +6,7 @@ import { champIcon } from "@/lib/buildData";
 import { DD_ASSETS, DD_CDN } from "@/lib/ddragon";
 import { scoreColor } from "@/components/summoner/pro/scoreColor";
 import MatchupCompare from "@/components/champion/MatchupCompare";
+import { trackEvent } from "@/lib/analytics";
 
 /*
   Counter sayfası — TEK okuma katmanı: splash şeritleri.
@@ -99,7 +100,7 @@ export default function ChampionCounters({ champName, champImage, champId, count
           {positions.map((p) => (
             <button
               key={p.position}
-              onClick={() => { setRole(p.position); setPickedId(null); }}
+              onClick={() => { trackEvent("counter_rolu_degisti", { rol: p.position }); setRole(p.position); setPickedId(null); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 role === p.position ? "bg-blue-500/15 text-blue-300" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
               }`}
@@ -119,7 +120,12 @@ export default function ChampionCounters({ champName, champImage, champId, count
           bad={stripBad}
           champName={champName}
           pickedId={picked?.id}
-          onPick={setPickedId}
+          onPick={(id) => {
+            // Kıyas tablosu bu sayfanın en pahalı parçası — gerçekten
+            // seçiliyor mu, yoksa kartlar salt görsel mi kalıyor?
+            if (id) trackEvent("counter_kiyasi_secildi", { rakip: id, rol: role });
+            setPickedId(id);
+          }}
           baseline={data.baseline}
         />
       )}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import MatchCardPro from "./MatchCardPro";
 import MatchDetailPro from "./MatchDetailPro";
+import { trackEvent } from "@/lib/analytics";
 
 const MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 
@@ -102,7 +103,16 @@ export default function MatchListPro({ initialMatches, puuid, onMatchesChange })
                   <div key={match.matchId}>
                     {/* Accordion YALNIZ kart içindeki ok (chevron) ile açılır — karta rastgele
                         tıklamak (eşya/skor tooltip'leri vb.) artık detayı açmıyor. */}
-                    <MatchCardPro match={match} expanded={isOpen} onToggle={() => setExpandedId(isOpen ? null : match.matchId)} />
+                    <MatchCardPro
+                      match={match}
+                      expanded={isOpen}
+                      onToggle={() => {
+                        // Yalnız AÇILIŞ sayılır: kapatma da olay göndersek
+                        // "detaya bakıldı" sayısı iki katına çıkardı.
+                        if (!isOpen) trackEvent("mac_detayi_acildi", { sonuc: match.win ? "galibiyet" : "maglubiyet" });
+                        setExpandedId(isOpen ? null : match.matchId);
+                      }}
+                    />
                     {/* Inline maç detayı (ayrı sekme yerine accordion) — Pro kompakt */}
                     {isOpen && (
                       <div className="border-t border-edge/40 bg-base/40 px-2 py-2.5">
