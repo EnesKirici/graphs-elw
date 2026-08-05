@@ -27,17 +27,50 @@ export function isAdminBrowser() {
   }
 }
 
+/*
+  Bekleyen olaylar. GEREKLİ, çünkü Rybbit script'i `defer` ile yükleniyor ama
+  React'in useEffect'i ondan ÖNCE çalışabiliyor: ilk sürümde olay o anda
+  sessizce düşüyordu ve canlıda ölçüldü — `arama_sonucsuz` HİÇ gelmedi, aynı
+  sayfada konsoldan elle gönderilen olay sorunsuz düştü (2026-08-05).
+  Sayfa açılır açılmaz tetiklenen olaylar (TrackEvent) tam bu yarışa giriyor.
+*/
+const kuyruk = [];
+let yoklayici = null;
+
+/** Script hazırsa kuyruğu boşaltır. Hazır değilse false döner. */
+function bosalt() {
+  if (!window.rybbit?.event) return false;
+  while (kuyruk.length) {
+    const [ad, props] = kuyruk.shift();
+    try {
+      window.rybbit.event(ad, props);
+    } catch {
+      // Analitik hiçbir koşulda kullanıcı akışını kırmamalı.
+    }
+  }
+  return true;
+}
+
 /**
  * Rybbit'e özel olay gönder.
- * Script `defer` ile yüklendiği ve reklam engelleyicilerle bloklanabildiği için
- * `window.rybbit` HER ZAMAN olmayabilir — sessizce geçilir, sayfa akışı bozulmaz.
+ * Script henüz yüklenmediyse olay kuyruğa alınır ve yükleninceye kadar beklenir.
+ * ~10 sn sonra hâlâ yoksa kuyruk BOŞALTILMADAN atılır: reklam engelleyici
+ * script'i kalıcı olarak bloklamış olabilir, sonsuza kadar biriktirmenin anlamı yok.
  */
 export function trackEvent(name, props) {
   if (typeof window === "undefined") return;
   if (isAdminBrowser()) return;
-  try {
-    window.rybbit?.event?.(name, props || undefined);
-  } catch {
-    // Analitik hiçbir koşulda kullanıcı akışını kırmamalı.
-  }
+
+  kuyruk.push([name, props || undefined]);
+  if (bosalt() || yoklayici) return;
+
+  let deneme = 0;
+  yoklayici = setInterval(() => {
+    deneme += 1;
+    if (bosalt() || deneme > 40) {
+      clearInterval(yoklayici);
+      yoklayici = null;
+      if (deneme > 40) kuyruk.length = 0; // script gelmeyecek → belleği bırak
+    }
+  }, 250);
 }
