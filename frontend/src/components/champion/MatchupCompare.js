@@ -295,7 +295,12 @@ function CompareRow({ r }) {
           className="w-16 sm:w-20 text-right shrink-0"
           style={{ color: colA }}
         >
-          <span className={`block text-base sm:text-lg font-bold tabular-nums ${SHADOW}`}>{r.fmt(r.a)}</span>
+          {/* text-base DEĞİL text-[1rem]: bu projede --color-base tanımlı olduğu için
+              "text-base" boyut değil RENK (sayfa zemini rgb(10,12,17)) uyguluyor.
+              Sınıf eskiden de buradaydı ama aynı elemandaki inline style onu eziyordu;
+              sayı + "norm." notu iki span'e ayrılınca renk açığa çıktı ve sayılar
+              zemine karışıp GÖRÜNMEZ oldu. Ölçümle bulundu (computed color). */}
+          <span className={`block text-[1rem] sm:text-lg font-bold tabular-nums ${SHADOW}`}>{r.fmt(r.a)}</span>
           <NormNote dev={da} full={r.full} base={r.ba} value={r.a} fmt={r.fmt} />
         </span>
 
@@ -316,7 +321,12 @@ function CompareRow({ r }) {
           className="w-16 sm:w-20 text-left shrink-0"
           style={{ color: colB }}
         >
-          <span className={`block text-base sm:text-lg font-bold tabular-nums ${SHADOW}`}>{r.fmt(r.b)}</span>
+          {/* text-base DEĞİL text-[1rem]: bu projede --color-base tanımlı olduğu için
+              "text-base" boyut değil RENK (sayfa zemini rgb(10,12,17)) uyguluyor.
+              Sınıf eskiden de buradaydı ama aynı elemandaki inline style onu eziyordu;
+              sayı + "norm." notu iki span'e ayrılınca renk açığa çıktı ve sayılar
+              zemine karışıp GÖRÜNMEZ oldu. Ölçümle bulundu (computed color). */}
+          <span className={`block text-[1rem] sm:text-lg font-bold tabular-nums ${SHADOW}`}>{r.fmt(r.b)}</span>
           <NormNote dev={db} full={r.full} base={r.bb} value={r.b} fmt={r.fmt} />
         </span>
       </div>
