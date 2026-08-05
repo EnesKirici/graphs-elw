@@ -270,7 +270,24 @@ function CompareRow({ r }) {
   const GAIN = 3;
   const da = deviation(r.a, r.ba, r.full);
   const db = deviation(r.b, r.bb, r.full);
-  const relative = da != null && db != null;
+
+  /*
+    SAPMA NE ZAMAN GEÇERSİZ: bir tarafın normali ~SIFIR olduğunda.
+
+    "İyileştirme + kalkan"da Yuumi'nin normali 16.4k, Rell'in 660. Oranla bakınca
+    Rell normalinin %2 altında, Yuumi %8 altında → bar 15.2k basan Yuumi'den 0.6k
+    basan Rell'e doğru gidiyordu. Matematik tutarlı ama bilgi yanlış: Rell bu
+    eksende zaten OYNAMIYOR, payda gürültü.
+
+    Kural: iki normal aynı büyüklük mertebesinde değilse (küçük olan, büyüğün
+    %15'inin altındaysa) göreli kıyas geçersizdir — orada dürüst olan MUTLAK
+    farktır, çünkü asıl bilgi "bunu biri yapıyor, diğeri yapmıyor".
+  */
+  const enBuyuk = Math.max(Math.abs(r.ba ?? 0), Math.abs(r.bb ?? 0));
+  const enKucuk = Math.min(Math.abs(r.ba ?? 0), Math.abs(r.bb ?? 0));
+  const kiyaslanabilir = r.full ? true : enBuyuk > 0 && enKucuk >= enBuyuk * 0.15;
+
+  const relative = da != null && db != null && kiyaslanabilir;
 
   let off;
   if (relative) {
