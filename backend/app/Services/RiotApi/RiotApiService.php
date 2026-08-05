@@ -33,6 +33,22 @@ class RiotApiService
         // (console) bir süre yol verir (WorkerControlService::shouldYield).
         if (! app()->runningInConsole()) {
             Cache::put(\App\Services\WorkerControlService::USER_ACTIVITY_KEY, time(), 60);
+        } else {
+            // KOTA PAYI FRENİ — worker kotanın tamamını yiyemez.
+            // shouldYield() reaktifti (kullanıcı isteği geldikten SONRA çekilir);
+            // ziyaretçi tam da kota dolmuşken gelirse yol verecek kota kalmıyordu.
+            // Burada worker kendi payını aşamaz, kalan pay ziyaretçiye ayrılmış bekler.
+            // 429 fırlatılır çünkü çağıranlar bunu zaten "bekle, sonra dene" olarak
+            // ele alıyor (ProcessMatchJob release eder, retryUntil affeder) —
+            // maç kaybolmaz, yalnızca ertelenir.
+            $worker = app(\App\Services\WorkerControlService::class);
+            if (! $worker->reserveQuotaSlot()) {
+                self::track('quota_held');
+                throw new \Exception(
+                    "Worker kota payı doldu (%{$worker->quotaSharePercent()}). Ziyaretçi payı korunuyor.",
+                    429,
+                );
+            }
         }
 
         $cooldownKey = 'riot:rate_limit_cooldown';

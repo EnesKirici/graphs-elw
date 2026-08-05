@@ -68,6 +68,7 @@ class SettingsController extends Controller
             'meta_insufficient_mode', 'labels_config', 'meta_keep_patches', 'slider_new_champion',
             'worker_enabled', 'worker_tiers', 'worker_collect_since', 'worker_scan_mode',
             'worker_match_budget', 'worker_players', 'worker_user_yield', 'worker_queue_ceiling',
+            'worker_quota_share',
             'seo_overrides', ChampionGuideService::SETTING_KEY,
         ];
 
@@ -96,6 +97,11 @@ class SettingsController extends Controller
             $request->validate(['value' => 'required|integer|min:1|max:200']);
         } elseif ($key === 'worker_user_yield') {
             $request->validate(['value' => 'required|integer|min:0|max:60']);
+        } elseif ($key === 'worker_quota_share') {
+            // Üst sınır 74: kalan %26 bir profil açılışının ÖLÇÜLMÜŞ maliyeti
+            // (sabit 11 + eksik maç başına 1, en fazla 26 istek / 100'lük pencere).
+            // Daha yükseğine izin vermek ziyaretçiyi doğrudan 429'a düşürürdü.
+            $request->validate(['value' => 'required|integer|min:5|max:74']);
         } elseif ($key === 'worker_queue_ceiling') {
             // 0 = sınırsız (tavan kapalı). Üst sınır bilinçli olarak geniş.
             $request->validate(['value' => 'required|integer|min:0|max:100000']);

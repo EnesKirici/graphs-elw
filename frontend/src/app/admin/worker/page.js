@@ -55,6 +55,8 @@ export default function WorkerPage() {
   const [players, setPlayers] = useState(15);
   const [userYield, setUserYield] = useState(8);
   const [queueCeiling, setQueueCeiling] = useState(1000);
+  const [quotaShare, setQuotaShare] = useState(50);
+  const [quotaInfo, setQuotaInfo] = useState(null); // sunucudan: pencere boyu/limiti, profil maliyeti
   const [tiers, setTiers] = useState([]);
   const [since, setSince] = useState("2026-07-16");
   const [metaKeep, setMetaKeep] = useState(2); // meta gösterim penceresi (kaç patch birleşik)
@@ -75,6 +77,8 @@ export default function WorkerPage() {
         setPlayers(s.playersPerRun ?? 15);
         setUserYield(s.userYield ?? 8);
         setQueueCeiling(s.queueCeiling ?? 1000);
+        setQuotaShare(s.quota?.share ?? 50);
+        setQuotaInfo(s.quota || null);
         setTiers(s.tiers || []);
         setSince(s.collectSince || "2026-07-16");
         setMetaKeep(s.metaKeepPatches ?? 2);
@@ -126,6 +130,7 @@ export default function WorkerPage() {
       await putAdmin("/settings/worker_players", { value: Number(players) });
       await putAdmin("/settings/worker_user_yield", { value: Number(userYield) });
       await putAdmin("/settings/worker_queue_ceiling", { value: Number(queueCeiling) });
+      await putAdmin("/settings/worker_quota_share", { value: Number(quotaShare) });
       await putAdmin("/settings/worker_tiers", { value: tiers });
       await putAdmin("/settings/worker_collect_since", { value: since });
       await putAdmin("/settings/meta_keep_patches", { value: Number(metaKeep) });
@@ -307,6 +312,77 @@ export default function WorkerPage() {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/*
+          Riot kota payı — TEK ayar, gerisi hesaplanıp gösterilir.
+
+          Neden ayrı ve en üstte: aşağıdaki "Performans" alanları TUR BAŞINA
+          bütçelerdir (kaç maç, kaç oyuncu) ve yöneticinin bunları Riot kotasına
+          kafadan çevirmesini bekler. Burası doğrudan kotayı böler: worker payını
+          aşamaz, kalan pay HER AN ziyaretçiye ayrılmış bekler. "Kullanıcıya yol
+          ver" ayarı bunun reaktif hâliydi — ziyaretçi tam da kota dolmuşken
+          gelirse yol verecek kota kalmıyordu.
+        */}
+        <div className="pt-4 mt-4 border-t border-edge/50">
+          <p className="text-sm font-medium text-gray-100 mb-1">Riot kota payı</p>
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed max-w-2xl">
+            Worker, Riot kotasının en fazla yüzde kaçını kullanabilir. Kalanı ziyaretçilere
+            <b className="text-gray-300"> ayrılmış olarak bekler</b> — worker kendi payını
+            bitirse bile profil açılışı sıraya girmez.
+          </p>
+
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="w-36">
+              <label className="text-xs text-gray-400 mb-1 block">Worker payı (%)</label>
+              <input
+                type="number"
+                min={5}
+                max={74}
+                value={quotaShare}
+                onChange={(e) => { dirtyRef.current = true; setQuotaShare(e.target.value); }}
+                className="w-full bg-soft border border-edge rounded-lg px-3 py-2 text-lg font-semibold text-gray-100 focus:outline-none focus:border-[#5b8def] [color-scheme:dark]"
+              />
+              <p className="text-[11px] text-gray-500 mt-1 leading-snug">En fazla %74</p>
+            </div>
+
+            {/* Yüzdenin ne demek olduğu — yönetici kafasında çevirmek zorunda kalmasın */}
+            {(() => {
+              const limit = quotaInfo?.windowLimit ?? 100;
+              const win = quotaInfo?.windowSeconds ?? 120;
+              const cost = quotaInfo?.profileCost ?? 26;
+              const pct = Math.max(5, Math.min(74, Number(quotaShare) || 0));
+              const workerSlots = Math.floor((limit * pct) / 100);
+              const visitorSlots = limit - workerSlots;
+              const profiles = Math.floor(visitorSlots / cost);
+
+              return (
+                <div className="flex-1 min-w-[300px] rounded-lg bg-soft border border-edge px-4 py-3">
+                  <p className="text-[11px] text-gray-400 mb-2">
+                    Riot her <b className="text-gray-200">{win} saniyede {limit} istek</b> veriyor. Bu ayarla:
+                  </p>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-400">Worker (veri toplama)</span>
+                      <span className="font-semibold text-gray-100 tabular-nums">{workerSlots} istek</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-400">Ziyaretçilere ayrılan</span>
+                      <span className="font-semibold text-emerald-300 tabular-nums">{visitorSlots} istek</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-2.5 pt-2.5 border-t border-edge/60 leading-relaxed">
+                    Bir profil açılışı en fazla <b className="text-gray-200">{cost} istek</b> harcıyor
+                    (ölçüldü) → aynı anda{" "}
+                    <b className={profiles >= 2 ? "text-emerald-300" : "text-amber-300"}>
+                      {profiles} ziyaretçi
+                    </b>{" "}
+                    profil açabilir, worker hiç durmasa bile.
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

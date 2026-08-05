@@ -96,6 +96,67 @@ class WorkerControlService
         return max(0, (int) AdminSetting::getValue('worker_user_yield', config('elwgraphs.worker.user_yield_seconds', 8)));
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Kota payı — worker kotanın en fazla yüzde kaçını kullanabilir
+    |--------------------------------------------------------------------------
+    |
+    | Neden gerekti: `shouldYield()` REAKTİF bir korumaydı — kullanıcı isteği
+    | GELDİKTEN sonra worker birkaç saniye çekiliyordu. Ziyaretçi tam da worker
+    | kotayı doldurmuşken gelirse yol verecek kota kalmıyor ve profil 429 alıyordu.
+    | Burası PROAKTİF: worker kendi payını aşamaz, kalan pay her an ziyaretçiye
+    | ayrılmış durumda bekler.
+    |
+    | Pencere Riot'un kendi penceresiyle hizalı (dev key: 100 istek / 2 dakika).
+    | Ölçüm: bir profil açılışı sabit 11 istek, eksik maçlarla en fazla 26.
+    | Yani ziyaretçiye en az %26 bırakılmalı; %50 iki eşzamanlı ziyaretçiyi taşır.
+    */
+
+    /** Riot dev key penceresi: 100 istek / 120 saniye. */
+    public const QUOTA_WINDOW_SECONDS = 120;
+    public const QUOTA_WINDOW_LIMIT = 100;
+
+    /** Bir profil açılışının ölçülmüş en yüksek maliyeti (istek). */
+    public const PROFILE_COST = 26;
+
+    /** Worker'ın kullanabileceği kota yüzdesi. */
+    public function quotaSharePercent(): int
+    {
+        $value = (int) AdminSetting::getValue('worker_quota_share', 50);
+
+        // Tavan %74: geri kalan %26 bir profil açılışının ölçülmüş maliyeti.
+        // Bunun üstüne çıkmak ziyaretçiyi 429'a düşürür — panelde de aynı sınır var.
+        return max(5, min(74, $value));
+    }
+
+    /** Worker'a bu pencerede ayrılan istek sayısı. */
+    public function quotaSlotsPerWindow(): int
+    {
+        return (int) floor(self::QUOTA_WINDOW_LIMIT * $this->quotaSharePercent() / 100);
+    }
+
+    /**
+     * Worker bu pencerede bir istek daha atabilir mi? Atabiliyorsa sayacı artırır.
+     *
+     * Sayaç Redis'te atomik artırılır: iki paralel `queue:work` süreci aynı payı
+     * iki kez harcayamaz (aynı yarış maç sayaçlarında veri kaybettirmişti).
+     */
+    public function reserveQuotaSlot(): bool
+    {
+        $key = 'riot:worker:quota:' . intdiv(time(), self::QUOTA_WINDOW_SECONDS);
+
+        // add() yalnız anahtar YOKSA yazar → pencerenin ilk isteği sayacı kurar.
+        Cache::add($key, 0, self::QUOTA_WINDOW_SECONDS * 2);
+
+        return Cache::increment($key) <= $this->quotaSlotsPerWindow();
+    }
+
+    /** Bu pencerede worker'ın şimdiye kadar harcadığı istek. */
+    public function quotaUsedThisWindow(): int
+    {
+        return (int) Cache::get('riot:worker:quota:' . intdiv(time(), self::QUOTA_WINDOW_SECONDS), 0);
+    }
+
     /** Bu epoch'tan (saniye) eski maçlar toplanmaz. Default: 16.14 patch dönemi başı. */
     public function collectSinceTimestamp(): int
     {
@@ -173,6 +234,17 @@ class WorkerControlService
             'playersPerRun' => $this->playersPerRun(),
             'userYield'     => $this->userYieldSeconds(),
             'queueCeiling'  => $this->queueCeiling(),
+            // Kota payı — panel bu değerlerle "ne anlama geliyor" hesabını gösterir,
+            // yönetici yüzdeyi kafasında istek sayısına çevirmek zorunda kalmasın.
+            'quota' => [
+                'share'          => $this->quotaSharePercent(),
+                'windowSeconds'  => self::QUOTA_WINDOW_SECONDS,
+                'windowLimit'    => self::QUOTA_WINDOW_LIMIT,
+                'workerSlots'    => $this->quotaSlotsPerWindow(),
+                'visitorSlots'   => self::QUOTA_WINDOW_LIMIT - $this->quotaSlotsPerWindow(),
+                'profileCost'    => self::PROFILE_COST,
+                'usedThisWindow' => $this->quotaUsedThisWindow(),
+            ],
             // Meta gösterim penceresi (kaç patch birleşik). PatchService::keptPatches ile aynı kaynak.
             'metaKeepPatches' => (int) AdminSetting::getValue('meta_keep_patches', config('elwgraphs.meta.keep_patches', 2)),
             // Slider "Yeni Şampiyon" seçimi (boş = kapalı, slider tamamen dinamik).
