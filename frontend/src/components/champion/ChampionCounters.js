@@ -86,6 +86,15 @@ export default function ChampionCounters({ champName, champImage, champId, count
 
   // Kıyas tablosunun konusu. Varsayılan = EN ZORLU rakip: sayfaya "X counter" diye
   // gelen ziyaretçinin ilk sorusu "beni kim yeniyor" — tablo o soruyla açılsın.
+  /*
+    Sinerji listesi (aynı takımdaki en iyi eş) — şeridin ARKA YÜZÜNDE.
+    Eskiden ayrı bir "Alt Koridor — Karşı ADC Etkisi" bölümünün dibinde küçük
+    pill'ler hâlinde duruyordu; kullanıcı o bölümü "saçma olmuş, anlaşılmıyor"
+    diye kaldırttı. Bilgi kaybolmasın diye buraya taşındı: aynı kartın arkasına
+    dönen bir sekme, aynı görsel dille (splash kartları).
+  */
+  const duoList = (role === "BOTTOM" ? duos?.asAdc : duos?.asSupport) || [];
+
   const stripAll = [...stripGood, ...stripBad];
   const picked = stripAll.find((x) => x.id === pickedId)
     || (data.counters || [])[0]
@@ -127,6 +136,9 @@ export default function ChampionCounters({ champName, champImage, champId, count
             setPickedId(id);
           }}
           baseline={data.baseline}
+          duos={duoList}
+          mateLabel={role === "BOTTOM" ? "support" : "ADC"}
+          version={version}
         />
       )}
 
@@ -165,133 +177,145 @@ export default function ChampionCounters({ champName, champImage, champId, count
         </div>
       )}
 
-      {/* 4) Alt koridor 2v2: karşı SUPPORT etkisi + aynı takım sinerjisi.
-             Aynı koridor düellosu (ADC↔ADC) hikâyenin yarısı; bir Nautilus/Blitzcrank
-             eşleşmesi karşı ADC kadar belirleyici olabiliyor. */}
-      <BotLaneSection
-        data={data}
-        duos={duos}
-        role={role}
-        champName={champName}
-        version={version}
-      />
-    </div>
-  );
-}
-
-/* Yatay splash şeridi: sol uç en rahat (mavi) → sağ uç en zorlu (kırmızı). */
-function MatchupStrip({
-  good, bad, champName, heading, subtitle, footer, pickedId, onPick, baseline,
-  goodLabel = "Rahat eşleşmeler", badLabel = "Zorlu rakipler",
-}) {
-  return (
-    <div className="glass rounded-xl overflow-hidden">
-      {heading && (
-        <div className="px-5 pt-3.5 pb-2.5">
-          <h3 className="text-sm font-semibold text-gray-100">{heading}</h3>
-          {subtitle && <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed max-w-2xl">{subtitle}</p>}
-        </div>
-      )}
-
-      {(good.length > 0 || bad.length > 0) && (
-        <>
-          {/* Şeridin iki ucunu adlandıran başlıklar. 11px'ken şeridin kendisinin yanında
-              kayboluyordu (kullanıcı bildirdi); bunlar okuma yönünü veren etiketler,
-              dipnot değil → gövde metninden büyük. */}
-          <div className={`flex items-center justify-between gap-3 px-5 py-3.5 border-b border-edge/50 ${heading ? "border-t border-edge/30" : ""}`}>
-            <span className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_GOOD }}>
-              {goodLabel}
-            </span>
-            <span className="text-[11px] text-gray-500 hidden sm:block">{champName} kazanma oranı</span>
-            <span className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_BAD }}>
-              {badLabel}
-            </span>
-          </div>
-
-          <div className="flex items-stretch gap-2 px-4 py-4 overflow-x-auto">
-            {good.map((m) => <StripCard key={`g-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} baseline={baseline} />)}
-            {good.length > 0 && bad.length > 0 && (
-              <div className="shrink-0 self-stretch w-px bg-edge/60 mx-1.5" aria-hidden />
-            )}
-            {bad.map((m) => <StripCard key={`b-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} baseline={baseline} />)}
-          </div>
-        </>
-      )}
-
-      {footer}
     </div>
   );
 }
 
 /*
-  Alt koridor 2v2 bölümü. İki farklı ilişkiyi TEK kartta birleştirir:
-   - KARŞI takımın support'u → rakiplik (champion_matchups çapraz satırları)
-   - AYNI takımın support'u  → sinerji (champion_duo_stats, shrinkage WR)
-  Bunlar karıştırılmamalı: biri "kime karşı zorlanır", diğeri "kiminle güçlü".
+  Yatay splash şeridi: sol uç en rahat (mavi) → sağ uç en zorlu (kırmızı).
+
+  İKİ YÜZLÜ. Ön yüz rakipler, arka yüz "en iyi uyumlular" (aynı takımdaki eş).
+  Sinerji eskiden ayrı bir "Alt Koridor — Karşı ADC Etkisi" bölümünün dibinde
+  küçük pill'ler hâlindeydi; kullanıcı o bölümü "saçma olmuş, anlaşılmıyor"
+  diye kaldırttı ve sinerjinin bu kartın arkasına dönmesini istedi.
+
+  Kartın yüksekliği iki yüzden UZUN olanına göre sabitlenir: ikisi de aynı
+  grid hücresinde durur (absolute konumlandırma değil) → dönerken zıplama olmaz.
 */
-function BotLaneSection({ data, duos, role, champName, version }) {
-  const isBot = role === "BOTTOM" || role === "UTILITY" || role === "SUPPORT";
-  if (!isBot) return null;
-
-  const crossPos = data?.crossPosition;
-  const oppLabel = crossPos === "BOTTOM" ? "ADC" : "support";
-  const mateLabel = role === "BOTTOM" ? "support" : "ADC";
-  const duoList = (role === "BOTTOM" ? duos?.asAdc : duos?.asSupport) || [];
-
-  const good = (data?.crossStrong || []).slice(0, STRIP);
-  const bad = (data?.crossCounters || []).slice(0, STRIP).reverse();
-
-  if (!good.length && !bad.length && !duoList.length) return null;
-
-  const footer = duoList.length ? (
-    <div className="border-t border-edge/40 px-4 py-3.5">
-      <p className="text-[11px] font-bold uppercase tracking-wide mb-2.5" style={{ color: COL_GOOD }}>
-        {champName} Best Duos
-        <span className="font-normal normal-case tracking-normal text-gray-400"> — aynı takımdaki en iyi {mateLabel} eşleri</span>
-      </p>
-      <div className="flex gap-2 overflow-x-auto">
-        {duoList.map((d) => <DuoCard key={d.champion} d={d} version={version} />)}
-      </div>
-    </div>
-  ) : null;
+function MatchupStrip({
+  good, bad, champName, pickedId, onPick, baseline, duos = [], mateLabel = "eş", version,
+}) {
+  const [face, setFace] = useState("rakip");
+  const hasDuos = duos.length > 0;
+  const flipped = hasDuos && face === "uyum";
 
   return (
-    <MatchupStrip
-      good={good}
-      bad={bad}
-      champName={champName}
-      heading={`Alt Koridor — ${crossPos === "BOTTOM" ? "Karşı ADC" : "Karşı Support"} Etkisi`}
-      subtitle={`Alt koridor 2v2 oynanır: karşı ${oppLabel} de doğrudan rakiptir ve eşleşmeyi karşı ADC kadar belirleyebilir. Oranlar ${champName} tarafının o ${oppLabel} karşısındaki kazanma yüzdesidir.`}
-      goodLabel={`Rahat karşı ${oppLabel}`}
-      badLabel={`Zorlu karşı ${oppLabel}`}
-      footer={footer}
-      baseline={data?.crossBaseline}
-    />
+    <div className="glass rounded-xl overflow-hidden">
+      {hasDuos && (
+        <div className="flex items-center gap-1.5 px-4 pt-3 pb-2.5 border-b border-edge/30">
+          <StripTab active={!flipped} color={COL_BAD} onClick={() => setFace("rakip")}>
+            Rakipler
+          </StripTab>
+          <StripTab active={flipped} color={COL_GOOD} onClick={() => setFace("uyum")}>
+            {champName} ile en iyi uyumlular
+          </StripTab>
+        </div>
+      )}
+
+      {/* perspective dışta, döndürme içte — iç kutu 3B uzayda çevrilir */}
+      <div className="[perspective:1600px]">
+        <div
+          className={`grid transition-transform duration-500 ease-out [transform-style:preserve-3d] ${
+            flipped ? "[transform:rotateY(180deg)]" : ""
+          }`}
+        >
+          {/* ÖN YÜZ — rakipler */}
+          <div
+            className={`col-start-1 row-start-1 [backface-visibility:hidden] ${flipped ? "invisible" : ""}`}
+            aria-hidden={flipped}
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-edge/50">
+              <span className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_GOOD }}>
+                Rahat eşleşmeler
+              </span>
+              <span className="text-[11px] text-gray-500 hidden sm:block">{champName} kazanma oranı</span>
+              <span className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_BAD }}>
+                Zorlu rakipler
+              </span>
+            </div>
+
+            <div className="flex items-stretch gap-2 px-4 py-4 overflow-x-auto">
+              {good.map((m) => <StripCard key={`g-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} baseline={baseline} />)}
+              {good.length > 0 && bad.length > 0 && (
+                <div className="shrink-0 self-stretch w-px bg-edge/60 mx-1.5" aria-hidden />
+              )}
+              {bad.map((m) => <StripCard key={`b-${m.id}`} m={m} picked={m.id === pickedId} onPick={onPick} baseline={baseline} />)}
+            </div>
+          </div>
+
+          {/* ARKA YÜZ — sinerji. Rakiplik DEĞİL: aynı takımdaki eş. */}
+          <div
+            className={`col-start-1 row-start-1 [backface-visibility:hidden] [transform:rotateY(180deg)] ${flipped ? "" : "invisible"}`}
+            aria-hidden={!flipped}
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-edge/50">
+              <span className="text-sm md:text-[1rem] font-bold tracking-wide uppercase" style={{ color: COL_GOOD }}>
+                En iyi {mateLabel} eşleri
+              </span>
+              <span className="text-[11px] text-gray-500 hidden sm:block">aynı takımda kazanma oranı</span>
+            </div>
+
+            <div className="flex items-stretch gap-2 px-4 py-4 overflow-x-auto">
+              {duos.map((d) => <DuoStripCard key={d.champion} d={d} version={version} />)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-/* Sinerji kartı — rakip değil, aynı takımdaki partner. */
-function DuoCard({ d, version }) {
+/* Şerit sekmesi — seçili olan kendi rengiyle dolu, diğeri sönük. */
+function StripTab({ active, color, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+        active ? "" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+      }`}
+      style={active ? { color, backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)` } : undefined}
+    >
+      {children}
+    </button>
+  );
+}
+
+/*
+  Sinerji kartı — rakip değil, AYNI takımdaki eş. Rakip kartlarıyla aynı görsel
+  dilde: iki yüz aynı yükseklikte olsun ve dönüş sırasında kart boyu değişmesin.
+  Oran örneklem-duyarlı (adjWr): 3 maçlık %100 en tepeye çıkmasın.
+*/
+function DuoStripCard({ d, version }) {
   const col = wrColor(d.adjWr);
+
   return (
     <Link
       href={`/champions/${d.champion}`}
       title={`${d.name} ile ${d.games} maç · gözlenen %${d.winRate} · örneklem-duyarlı %${d.adjWr}`}
-      className="flex items-center gap-2 shrink-0 rounded-lg border border-edge/60 bg-black/25 pl-1.5 pr-3 py-1.5 hover:border-white/25 transition-colors"
+      className="group relative flex flex-col flex-1 min-w-[92px] max-w-[150px] shrink-0 rounded-lg overflow-hidden border border-edge/60 bg-black transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-[var(--m)] hover:shadow-[0_10px_28px_-10px_var(--m)]"
+      style={{ "--m": col }}
     >
-      <img
-        src={champIcon(version, d.champion)}
-        alt={d.name}
-        width={30}
-        height={30}
-        className="rounded-md border border-edge"
-        onError={hideOnError}
-      />
-      <div className="min-w-0">
-        <div className="text-[11px] font-medium text-gray-200 truncate max-w-[100px]">{d.name}</div>
-        <div className="text-[10px] tabular-nums" style={{ color: col }}>
-          %{d.adjWr} <span className="text-gray-400">· {d.games} maç</span>
-        </div>
+      <div className="absolute top-0 left-0 right-0 h-[3px] z-20 transition-all duration-300 group-hover:h-[5px]" style={{ backgroundColor: col }} />
+
+      <div className="relative h-[186px] overflow-hidden bg-black">
+        <img
+          src={loadingArt(d.champion)}
+          alt={`${d.name} — ${d.name} ile uyum`}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.12]"
+          onError={artFallback(d.champion)}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-transparent" />
+        <span className="absolute bottom-1.5 inset-x-0 px-1.5 text-center text-[11px] font-semibold text-white/95 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+          {d.name}
+        </span>
+      </div>
+
+      <div className="flex-1 flex flex-col justify-center px-1.5 py-1.5 text-center bg-black">
+        <div className="text-sm font-bold tabular-nums leading-none" style={{ color: col }}>%{d.adjWr}</div>
+        <div className="text-[11px] font-medium text-gray-300 tabular-nums mt-1">{d.games} maç</div>
       </div>
     </Link>
   );

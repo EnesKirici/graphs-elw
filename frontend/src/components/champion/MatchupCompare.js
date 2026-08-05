@@ -84,11 +84,13 @@ function buildRows(m) {
     { label: "Müttefiğe iyileştirme + kalkan", a: us?.hs, b: them?.hs, fmt: k },
     { label: "Kendine iyileştirme", a: us?.healSelf, b: them?.healSelf, fmt: k },
     /*
-      CC de ikiye ayrıldı: `timeCCingOthers` YAVAŞLATMAYI DA sayıyor (Yuumi 21 sn CC ama
-      0 sabitleme — hepsi Q yavaşlatması). Sersemletme/kök/havaya kaldırma ayrı alan.
+      CC TEK SATIR. Bir ara "CC süresi" + "Sabitleme" diye ikiye ayrılmıştı; kullanıcı
+      birleştirilmesini istedi. Bilgi kaybı var ama kabul edildi: `timeCCingOthers`
+      yavaşlatmayı da sayar, sersemletme/kök ayrı sayılmaz.
+      Yavaşlatmanın sayıldığı KANITLI: Yuumi'nin sabitlemesi 0.0 olduğu hâlde CC
+      süresi 20 sn — o 20 saniyenin tamamı Q yavaşlatmasından geliyor.
     */
-    { label: "CC süresi", a: us?.cc, b: them?.cc, fmt: (v) => `${v} sn`, hint: "Yavaşlatma dâhil toplam etki süresi" },
-    { label: "Sabitleme", a: us?.immob, b: them?.immob, fmt: (v) => `${v}`, hint: "Sersemletme / kök / havaya kaldırma — maç başına adet" },
+    { label: "CC süresi", a: us?.cc, b: them?.cc, fmt: (v) => `${v} sn` },
     { label: "Gold farkı @15", a: l?.gd15, b: ol?.gd15, full: 1000, fmt: sgn },
     { label: "Tecrübe farkı @15", a: l?.xpd15, b: ol?.xpd15, full: 1200, fmt: sgn },
     { label: "Minyon farkı @15", a: l?.csd15, b: ol?.csd15, full: 20, fmt: sgn },
@@ -167,11 +169,6 @@ export default function MatchupCompare({ champId, champName, champImage, m, vers
 
         {rows.length > 0 ? (
           <div className="px-4 sm:px-8 py-5 space-y-4">
-            {/* Sayının ne olduğunu söyle: tek maç değil, eşleşmenin ortalaması. */}
-            <p className={`text-center text-[11px] text-gray-400 leading-relaxed -mt-1 mb-1 ${SHADOW}`}>
-              Sayılar bu eşleşmedeki <span className="text-gray-100 font-medium">maç başına ortalamalar</span>;
-              bar hangi tarafın daha yüksek olduğunu gösterir.
-            </p>
             {rows.map((r) => <CompareRow key={r.label} r={r} />)}
           </div>
         ) : (
@@ -242,17 +239,20 @@ function CompareRow({ r }) {
     : (r.a + r.b === 0 ? 0 : clamp(((r.a - r.b) / (r.a + r.b)) * GAIN, -1, 1));
 
   const pct = Math.abs(off) * 50;      // izin verilen en uzun bar = yarım genişlik
-  // r.neutral: yönü göster, hüküm verme (bkz. "Emilen hasar" gerekçesi).
+  /*
+    RENK = TARAF, kazanan değil. Eskiden yalnız önde olan taraf renkliydi, diğeri
+    griydi; kullanıcı "KDA/katılımda sağ taraf neden beyaz?" diye sordu — gri sayı
+    "önemsiz" gibi okunuyor, oysa iki sayı da aynı derecede veri. Artık SOL hep mavi
+    (sayfanın şampiyonu), SAĞ hep kırmızı (rakip); kimin önde olduğunu BAR söylüyor.
+    Tek istisna `neutral` satırlar (Emilen hasar): orada "önde" diye bir şey yok.
+  */
   const col = r.neutral || off === 0 ? NEUTRAL : off > 0 ? COL_GOOD : COL_BAD;
-  const colA = r.neutral ? NEUTRAL : off > 0 ? COL_GOOD : NEUTRAL;
-  const colB = r.neutral ? NEUTRAL : off < 0 ? COL_BAD : NEUTRAL;
+  const colA = r.neutral ? NEUTRAL : COL_GOOD;
+  const colB = r.neutral ? NEUTRAL : COL_BAD;
 
   return (
     <div>
-      <p className={`text-center text-xs sm:text-[13px] text-gray-200 font-medium mb-1.5 ${SHADOW}`}>
-        {r.label}
-        {r.hint && <span className="block text-[10px] font-normal text-gray-500 mt-0.5">{r.hint}</span>}
-      </p>
+      <p className={`text-center text-xs sm:text-[13px] text-gray-200 font-medium mb-1.5 ${SHADOW}`}>{r.label}</p>
       <div className="flex items-center gap-3 sm:gap-4">
         <span
           className="w-16 sm:w-20 text-right shrink-0"
