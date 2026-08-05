@@ -155,17 +155,19 @@ export default function MatchupCompare({ champId, champName, champImage, m, vers
         {/* Başlık: iki taraf karşılıklı */}
         <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-edge/50">
           <Side name={champName} id={champId} image={champImage} version={version} wr={m.winRate} />
-          <div className="shrink-0 w-10 h-10 rounded-full border border-edge bg-black/50 backdrop-blur-sm flex items-center justify-center text-[10px] font-bold text-gray-400">
+          {/*
+            Örneklem bilgisi (kaç maçtan) eskiden başlığın altında ayrı bir satırdı;
+            kullanıcı kaldırılmasını istedi. SİLMEK yerine VS rozetinin ipucuna
+            taşındı: gürültü yapmıyor ama az örneklemi merak eden bulabiliyor.
+          */}
+          <div
+            className="shrink-0 w-10 h-10 rounded-full border border-edge bg-black/50 backdrop-blur-sm flex items-center justify-center text-[10px] font-bold text-gray-400 cursor-help"
+            title={`${m.games} maçlık eşleşme${nStats > 0 ? ` · KDA/hasar ${nStats} maçtan` : ""}${n15 > 0 ? ` · koridor farkları ${n15} maçtan` : ""}`}
+          >
             VS
           </div>
           <Side name={m.name} id={m.id} version={version} wr={oppWr} align="right" link />
         </div>
-
-        <p className={`text-center text-[11px] text-gray-400 py-2.5 border-b border-edge/30 ${SHADOW}`}>
-          {m.games} maçlık eşleşme
-          {nStats > 0 && <> · KDA/hasar {nStats} maçtan</>}
-          {n15 > 0 && <> · koridor farkları {n15} maçtan</>}
-        </p>
 
         {rows.length > 0 ? (
           <div className="px-4 sm:px-8 py-5 space-y-4">

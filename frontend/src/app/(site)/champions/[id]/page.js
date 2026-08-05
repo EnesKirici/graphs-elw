@@ -113,7 +113,9 @@ export default async function ChampionDetailPage({ params }) {
   if (!data?.champion) notFound();
   const champ = data.champion;
   const runesData = runesResp?.runes || [];
-  const seoSummary = buildSeoSummary(champ, data.build);
+  // Hero'daki tanıtım metni kullanıcı isteğiyle KALDIRILDI ("ona gerek yok"):
+  // sayfanın üstünde artık özet ŞERİT var, aynı bilgiyi sayı olarak veriyor.
+  // buildSeoSummary duruyor — metin gerekirse sayfanın dibine alınabilir.
 
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -139,7 +141,6 @@ export default async function ChampionDetailPage({ params }) {
           id={id}
           grade={data?.build?.positions?.[0]?.grade}
           stats={data?.build?.positions?.[0]}
-          summary={seoSummary}
         />
         {/* Suspense: ChampionView useSearchParams kullanır (?tab= kalıcılığı) */}
         <Suspense fallback={null}>

@@ -35,35 +35,64 @@ const wrCls = (v) => (v >= 52 ? "text-blue-300" : v >= 49 ? "text-gray-100" : "t
 function HeroStats({ s }) {
   if (!s) return null;
   const rol = POS_SHORT[s.position] || s.position || "Rol";
+  const gCol = gradeColor(s.grade) || "#6b7280";
+  // Rol içindeki yüzdelik dilim: 144 şampiyonun 50.'si → ilk %35.
+  const dilim = s.rank && s.total ? Math.max(1, Math.round((s.rank / s.total) * 100)) : null;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-black/45 backdrop-blur-sm px-3 py-2.5">
-      <div className="flex items-center gap-3">
+    <div className="rounded-xl border border-white/10 bg-black/50 backdrop-blur-sm overflow-hidden">
+      <div className="flex items-stretch">
+        {/* 1) DERECE — tek harf, kendi rengiyle dolgulu kare. Şeridin çapası. */}
         {s.grade && (
-          <div className="flex flex-col items-center shrink-0 pr-3 border-r border-white/10">
-            <span className="text-3xl font-extrabold leading-none" style={{ color: gradeColor(s.grade) || "#6b7280" }}>
-              {s.grade}
-            </span>
-            <span className="text-[9px] text-gray-400 uppercase tracking-wider mt-1">derece</span>
+          <div
+            className="flex flex-col items-center justify-center px-3.5 shrink-0 border-r border-white/10"
+            style={{ backgroundColor: `color-mix(in srgb, ${gCol} 16%, transparent)` }}
+          >
+            <span className="text-[32px] font-extrabold leading-none" style={{ color: gCol }}>{s.grade}</span>
+            <span className="text-[8px] text-gray-400 uppercase tracking-[0.12em] mt-1">derece</span>
           </div>
         )}
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-2 gap-y-2 flex-1 min-w-0">
-          <HeroStat v={s.rank ? `${s.rank}/${s.total}` : "—"} k={`${rol} sırası`} />
-          <HeroStat v={`%${s.winRate}`} k="kazanma" cls={wrCls(s.winRate)} />
-          <HeroStat v={s.pickRate != null ? `%${s.pickRate}` : "—"} k="seçim" />
-          <HeroStat v={s.banRate != null ? `%${s.banRate}` : "—"} k="yasaklanma" />
-          <HeroStat v={(s.games ?? 0).toLocaleString("tr-TR")} k="oyun" />
+
+        {/* 2) ASIL SAYILAR — kazanma oranı en büyük, altında rol sırası + dilim çubuğu. */}
+        <div className="flex-1 min-w-0 px-3.5 py-2 flex items-center gap-4">
+          <div className="shrink-0">
+            <div className={`text-xl font-extrabold leading-none tabular-nums ${wrCls(s.winRate)}`}>%{s.winRate}</div>
+            <div className="text-[9px] text-gray-400 uppercase tracking-wider mt-1">kazanma</div>
+          </div>
+
+          {s.rank && (
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[15px] font-bold text-gray-100 tabular-nums">{s.rank}</span>
+                <span className="text-[11px] text-gray-500 tabular-nums">/ {s.total}</span>
+                <span className="text-[9px] text-gray-400 uppercase tracking-wider ml-0.5">{rol} sırası</span>
+              </div>
+              {/* Dilim çubuğu: "50/144" tek başına iyi mi kötü mü belli değil; dolu
+                  kısım ne kadar KISAysa o kadar üst sırada demek. */}
+              <div className="mt-1.5 h-1 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${dilim}%`, backgroundColor: gCol }} />
+              </div>
+              <div className="text-[9px] text-gray-500 mt-1">rolünde ilk %{dilim}</div>
+            </div>
+          )}
+        </div>
+
+        {/* 3) POPÜLERLİK — ikincil üçlü, ayrı sütunda ve daha sönük. */}
+        <div className="shrink-0 px-3 py-2 border-l border-white/10 flex flex-col justify-center gap-1">
+          <MiniStat k="seçim" v={s.pickRate != null ? `%${s.pickRate}` : "—"} />
+          <MiniStat k="yasak" v={s.banRate != null ? `%${s.banRate}` : "—"} />
+          <MiniStat k="oyun" v={(s.games ?? 0).toLocaleString("tr-TR")} />
         </div>
       </div>
     </div>
   );
 }
 
-function HeroStat({ v, k, cls = "text-gray-100" }) {
+function MiniStat({ k, v }) {
   return (
-    <div className="flex flex-col items-center justify-center min-w-0">
-      <span className={`text-[15px] font-bold leading-none tabular-nums ${cls}`}>{v}</span>
-      <span className="text-[9px] text-gray-400 mt-1 text-center leading-tight">{k}</span>
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-[9px] text-gray-500 uppercase tracking-wider">{k}</span>
+      <span className="text-[11px] font-bold text-gray-200 tabular-nums">{v}</span>
     </div>
   );
 }
