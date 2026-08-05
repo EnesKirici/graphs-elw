@@ -919,7 +919,7 @@ html.light .dpm-scope .glass { box-shadow: none; }
    z-index 90: navbar'ın (50) üstünde, rate-limit toast'ının (100) altında. */
 .beta-note {
   position: fixed; left: 22px; bottom: 22px; z-index: 90;
-  width: min(410px, calc(100vw - 32px));
+  width: min(430px, calc(100vw - 32px));
   padding: 20px 22px 18px;
   border-radius: 18px;
   background: var(--bg-1);
@@ -977,12 +977,21 @@ html.light .beta-note {
 
 .beta-note-lead { margin-top: 12px; font-size: 14px; line-height: 1.55; color: var(--txt-2); }
 
-.beta-note-row { display: flex; gap: 11px; margin-top: 13px; }
-.beta-note-row p { font-size: 13px; line-height: 1.5; color: var(--txt-3); }
-.beta-note-row b { display: block; font-size: 13.5px; color: var(--txt); letter-spacing: .01em; }
+.beta-note-row { display: flex; gap: 12px; margin-top: 15px; }
+/*
+  Bu iki satır kartın ASIL bilgisi (neyi kullanabilirim / neyi bekleyeceğim),
+  dipnot değil. Eskiden --txt-3 (#6b7282) ile 13px'ti; koyu zeminde soluk kalıp
+  "tam okunmuyordu" (kullanıcı bildirdi). Punto büyütüldü ve renk bir kademe
+  öne alındı (--txt-2) — giriş cümlesiyle aynı okunabilirlik seviyesi.
+*/
+.beta-note-row p { font-size: 14px; line-height: 1.55; color: var(--txt-2); }
+.beta-note-row b {
+  display: block; margin-bottom: 2px;
+  font-size: 14.5px; font-weight: 700; color: var(--txt); letter-spacing: .01em;
+}
 /* İki durum RENKLE ayrılmıyor: dolu daire = hazır, boş halka = sürüyor.
    Renk körlüğünde de fark okunur (metin etiketi zaten var). */
-.beta-note-mark { flex: none; margin-top: 6px; width: 9px; height: 9px; border-radius: 50%; }
+.beta-note-mark { flex: none; margin-top: 7px; width: 10px; height: 10px; border-radius: 50%; }
 .beta-note-mark.is-ok {
   background: var(--win);
   box-shadow: 0 0 7px color-mix(in oklab, var(--win) 55%, transparent);

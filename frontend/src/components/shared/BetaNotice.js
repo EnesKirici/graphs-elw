@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 */
 
 const KEY = "elw-beta-notice";
-const VERSION = "2"; // 2: kart büyütüldü + accent vurgu (1'i kapatanlar tekrar görsün)
+const VERSION = "3"; // 3: alt iki satır büyüdü + rengi öne alındı (soluk okunuyordu)
 
 export default function BetaNotice() {
   // "yok" → hiç basılmaz | "acik" → görünür | "kapaniyor" → çıkış animasyonu
