@@ -161,8 +161,12 @@ class PlayerIdentityResolver
      */
     public function needsRiot(?array $identity, string $puuid, bool $wantChampions = false): bool
     {
+        // Podyumda "şampiyon var" yetmez, USTALIK SEVİYESİ de aranır: profil
+        // tarafının yazdığı zengin şemada level alanı yok, o veriyle podyum kartı
+        // rozetsiz kalıyor (tasarımın parçası olan "M32" pili). Mastery yalnız
+        // 3 satır için, bir kez çekilir ve DB'ye yazılır.
         $missing = empty($identity['name']['gameName'])
-            || ($wantChampions && empty($identity['topChamps']));
+            || ($wantChampions && ! $this->hasMasteryLevels($identity['topChamps'] ?? null));
 
         // Erken çıkış SQL tasarrufu: CACHE_STORE=database olduğu için "denendi mi"
         // sorusu bir SELECT'tir; gerçekten Riot'a gidecekken sormak yeterli.
@@ -222,7 +226,9 @@ class PlayerIdentityResolver
         }
 
         try {
-            if (empty($topChamps)) {
+            // Seviyesiz liste "dolu" sayılmaz: zengin şemadan gelen kayıtta level
+            // yok ve podyum rozeti onsuz basılamıyor.
+            if (! $this->hasMasteryLevels($topChamps)) {
                 $masteries = $this->mastery->getTopMasteries($puuid, 5);   // champion-mastery-v4
                 $topChamps = array_map(fn ($m) => [
                     'name'   => $m['championName'],
@@ -264,6 +270,22 @@ class PlayerIdentityResolver
             'topChamps'   => $topChamps,
             'topRoles'    => $topRoles,
         ];
+    }
+
+    /** Şampiyon listesinde ustalık seviyesi var mı (zengin şemada bu alan yok). */
+    private function hasMasteryLevels(?array $champs): bool
+    {
+        if (empty($champs)) {
+            return false;
+        }
+
+        foreach ($champs as $c) {
+            if (! empty($c['level'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Sayaçları sıfırla — her build turunun başında çağrılır. */
