@@ -148,7 +148,19 @@ class WorkerControlService
         // add() yalnız anahtar YOKSA yazar → pencerenin ilk isteği sayacı kurar.
         Cache::add($key, 0, self::QUOTA_WINDOW_SECONDS * 2);
 
-        return Cache::increment($key) <= $this->quotaSlotsPerWindow();
+        $used = Cache::increment($key);
+
+        // Rezervasyon VERİLMEDİYSE sayacı geri al. Eskiden artırılmış hâlde
+        // bırakılıyordu: reddedilen her deneme de sayacı şişiriyor, panel "72/50 —
+        // pay aşıldı" gösteriyordu. Worker aslında 50'de duruyordu; aşan sayı
+        // harcama değil REDDEDİLEN DENEME sayısıydı, yani gösterge yalan söylüyordu.
+        // (Frenlenen denemeler zaten ayrı sayaçta: riot:stats:quota_held.)
+        if ($used > $this->quotaSlotsPerWindow()) {
+            Cache::decrement($key);
+            return false;
+        }
+
+        return true;
     }
 
     /** Bu pencerede worker'ın şimdiye kadar harcadığı istek. */

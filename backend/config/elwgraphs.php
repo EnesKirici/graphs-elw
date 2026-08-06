@@ -212,6 +212,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Leaderboard (apex sıralama) tazeleme
+    |--------------------------------------------------------------------------
+    | Riot tarafı CANLIDIR (LP her maçta değişir), sıralamayı biz kuruyoruz.
+    | Sürekli taramaya gerek yok: ziyaretçiye 4 saatlik bir tazelik yeter ve
+    | sayfada "sonraki güncelleme" geri sayımıyla bu şeffaf gösterilir.
+    |
+    | TEK KAYNAK: hem schedule (routes/console.php) hem de yanıttaki nextUpdateAt
+    | bu cron ifadesini okur — ikisi ayrı yerde tanımlanırsa geri sayım yalan söyler.
+    */
+    'leaderboard' => [
+        // Prewarm takvimi (UTC — config/app.php timezone=UTC). 4 saatte bir.
+        'refresh_cron' => '0 */4 * * *',
+        // Cache ömrü, tazeleme aralığından UZUN olmalı: prewarm turları arasında
+        // cache ölürse ziyaretçi soğuk yola düşer ve Riot'u beklemeye başlar.
+        'ttl' => 5 * 3600,
+        // Bir prewarm turunda, KOMBİNASYON BAŞINA Riot'tan kimliği çekilecek en
+        // fazla oyuncu (her biri 3 istek: account + summoner + mastery).
+        // Tur maliyeti = 6 kombinasyon × (1 lig + 3×bütçe) istek. 5 ⇒ ~96 istek.
+        // DİKKAT: dev key 2 dakikada 100 istek — bunu yükseltmek turun kendini
+        // 429'a sokmasına yol açar (ölçüldü: 15'te tur ikinci kombinasyonda düştü).
+        // Birikimlidir: çekilen oyuncu cached_players'a yazılır, sonraki turlarda
+        // bedava gelir, yani doluluk turdan tura artar.
+        'warm_budget' => 5,
+        // Ziyaretçi soğuk cache'e denk gelirse Riot'a gidilecek en fazla oyuncu.
+        // Düşük: sayfa açılışı Riot'u beklemesin, eksik satırı prewarm tamamlasın.
+        'web_budget' => 2,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Kule plakası (turret plate) — rol-bazlı normalizasyon
     |--------------------------------------------------------------------------
     | Plaka YALNIZ 3 dış kulede (top/mid/bot outer) ve maçın ilk 14 dakikasında var;

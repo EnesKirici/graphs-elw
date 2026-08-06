@@ -66,6 +66,22 @@ Schedule::command('stats:rebuild')->cron('10 0,6,12 * * *')->withoutOverlapping(
 Schedule::command('assets:sync')->hourly()->withoutOverlapping(50);
 // Ladder havuzunu günde bir tazele (off-peak, TR gece).
 Schedule::command('ladder:crawl')->dailyAt('04:15')->when($workerOn)->withoutOverlapping(120);
+// Leaderboard cache'ini önden doldur → ziyaretçi Riot'u BEKLEMESİN. Sayfa eskiden
+// tembeldi: cache soğukken (ya da bir lig sekmesi ilk kez açıldığında) o ziyaretçi
+// Riot yanıtını inline bekliyordu, ilk 10 oyuncu yeniyse üstüne 30 kimlik isteği
+// biniyordu → sekme geçişi saniyelerce takılıyordu. Maliyet: 6 kombinasyon × 1 lig
+// isteği (+ cached_players'ta olmayan üst sıralar için sınırlı kimlik isteği; havuz
+// dolduktan sonra 0). Riot key kullanır → worker'a bağlı.
+//
+// SIKLIK config'ten (elwgraphs.leaderboard.refresh_cron, 4 saatte bir) okunur —
+// sayfadaki "sonraki güncelleme" geri sayımı AYNI ifadeyi kullanıyor; burada
+// elle bir cron yazılırsa geri sayım yalan söyler. Sürekli taramaya gerek yok:
+// ziyaretçi için 4 saatlik tazelik yeterli ve sayfada şeffaf gösteriliyor.
+// Kilit 60 dk: komut dakikalar sürebilir (ilk turlarda kimlik doldurma), 4 saatte bir koşar.
+Schedule::command('leaderboard:warm')
+    ->cron(config('elwgraphs.leaderboard.refresh_cron', '0 */4 * * *'))
+    ->when($workerOn)
+    ->withoutOverlapping(60);
 // Havuzdan bütçeli maç toplama (tur başına ~40 maç; user-yield ile kullanıcıya yol verir).
 // Sürekli döner (everyMinute + withoutOverlapping → önceki tur bitmeden yenisi başlamaz).
 // HIZ artık PANELDEN kontrol ediliyor: tur başına maç/oyuncu (match_budget/players) ve

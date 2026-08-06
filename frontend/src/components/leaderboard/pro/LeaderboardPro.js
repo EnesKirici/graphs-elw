@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Flame, Zap, Shield } from "lucide-react";
 import Tooltip from "@/components/shared/Tooltip";
+import useLeaderboard from "@/hooks/useLeaderboard";
+import RefreshCountdown from "@/components/leaderboard/RefreshCountdown";
 import { rankBadgeUrl, miniCrestUrl } from "@/components/summoner/pro/rankUtils";
 
 /* 2026-07-31 tamamen yeniden yazıldı, sonra dört tur genişletildi — tier list /
@@ -67,7 +69,9 @@ const ROLE_ICONS = {
 
 const MEDALS = ["#e6b968", "#c7cdd8", "#c98a4b"];
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+// Önden çekilecek ligler — yalnız açık olanlar; modül sabiti olmalı (hook'un
+// effect'i diziye referansla bakıyor, her render'da yenisi verilirse boşuna koşar).
+const PREFETCH_TIERS = TIERS.filter((t) => t.enabled).map((t) => t.key);
 
 // Kazanma rengi — SİTENİN PROFİL KONVANSİYONU (ChampPerfListPro/Last30Panel ile
 // birebir aynı eşikler): leaderboard tek oyuncu verisi, tier list'in agrega
@@ -219,20 +223,12 @@ function PodiumCard({ entry, tierInfo, medal }) {
 export default function LeaderboardPro() {
   const [tier, setTier] = useState("challenger");
   const [queue, setQueue] = useState("RANKED_SOLO_5x5");
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`${API_BASE}/leaderboard?tier=${tier}&queue=${queue}`)
-      .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [tier, queue]);
+  const { data, loading } = useLeaderboard(tier, queue, PREFETCH_TIERS);
 
   const tierInfo = TIERS.find((t) => t.key === tier);
   const podium = data?.entries?.slice(0, 3) || [];
   const rest = data?.entries?.slice(3) || [];
+  const shown = data?.entries?.length || 0;
 
   return (
     <div className="dpm-scope soft-scope min-h-screen">
@@ -242,7 +238,13 @@ export default function LeaderboardPro() {
             <img src={rankBadgeUrl(tier)} alt={tier} width={44} height={44} className="drop-shadow-[0_4px_14px_rgba(0,0,0,0.5)]" />
             <div>
               <h1 className="text-2xl font-extrabold text-white">Sıralama</h1>
-              <p className="text-sm text-gray-500 mt-1">TR1 — {tierInfo?.label} — {data?.total || 0} oyuncu</p>
+              {/* Gösterilen satır sayısı ile ligin TOPLAM nüfusu ayrı şeyler:
+                  eskiden yalnız toplam yazıyordu ("200 oyuncu") ama tabloda 50 satır
+                  var — okuyan listenin eksik olduğunu sanıyordu. */}
+              <p className="text-sm text-gray-500 mt-1">
+                TR1 — {tierInfo?.label} — ilk {shown}
+                {data?.total ? ` (ligde ${data.total.toLocaleString("tr-TR")} oyuncu)` : ""}
+              </p>
             </div>
           </div>
         </div>
@@ -281,6 +283,8 @@ export default function LeaderboardPro() {
                 </button>
               ))}
             </div>
+
+            <RefreshCountdown nextUpdateAt={data?.nextUpdateAt} updatedAt={data?.updatedAt} />
           </div>
 
           {loading && (

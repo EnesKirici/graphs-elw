@@ -30,9 +30,15 @@ class DataDragonService
      * Güncel patch versiyonunu getir.
      * Örnek: "15.6.1"
      */
+    /** Aynı istek içinde sürümü tekrar tekrar cache'ten okumamak için. */
+    private ?string $versionMemo = null;
+
     public function getCurrentVersion(): string
     {
-        return Cache::remember('ddragon:version', 3600, function () {
+        // CACHE_STORE=database olduğu için her Cache::get bir SELECT'tir; sürüm ise
+        // istek boyunca sabittir. Memo olmadan 50 satırlık leaderboard listesi
+        // 50 gereksiz sorgu açıyordu (ikon URL'i satır başına sürümü soruyor).
+        return $this->versionMemo ??= Cache::remember('ddragon:version', 3600, function () {
             $versions = $this->fetchJson('/api/versions.json', 'versions');
             return $versions[0]; // İlk eleman = en güncel versiyon
         });

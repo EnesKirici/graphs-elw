@@ -1,14 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Flame, Sparkles, Star, Shield, Award, Zap } from "lucide-react";
+import useLeaderboard from "@/hooks/useLeaderboard";
+import RefreshCountdown from "@/components/leaderboard/RefreshCountdown";
 
 const TIERS = [
   { key: "challenger", label: "Challenger", color: "text-yellow-300", badge: "/ranks/badges/challenger.webp" },
   { key: "grandmaster", label: "Grandmaster", color: "text-red-400", badge: "/ranks/badges/grandmaster.webp" },
   { key: "master", label: "Master", color: "text-purple-400", badge: "/ranks/badges/master.webp" },
 ];
+
+// Önden çekilecek ligler — modül sabiti (hook'un effect'i referansa bakıyor).
+const PREFETCH_TIERS = TIERS.map((t) => t.key);
 
 const QUEUES = [
   { key: "RANKED_SOLO_5x5", label: "Solo/Duo" },
@@ -19,8 +24,6 @@ const ROLE_ICONS = {
   Top: "/roles/top.webp", Mid: "/roles/mid.webp", Jungle: "/roles/jungle.webp",
   ADC: "/roles/bot.webp", Support: "/roles/support.webp",
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 // Rozet bilgileri — hover tooltip için
 const BADGES = {
@@ -51,16 +54,7 @@ function BadgeIcon({ type, active }) {
 export default function LeaderboardClassic() {
   const [tier, setTier] = useState("challenger");
   const [queue, setQueue] = useState("RANKED_SOLO_5x5");
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`${API_BASE}/leaderboard?tier=${tier}&queue=${queue}`)
-      .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [tier, queue]);
+  const { data, loading } = useLeaderboard(tier, queue, PREFETCH_TIERS);
 
   const tierInfo = TIERS.find((t) => t.key === tier);
 
@@ -90,7 +84,11 @@ export default function LeaderboardClassic() {
           <img src={tierInfo?.badge} alt={tier} width={56} height={56} />
           <div>
             <h1 className="text-2xl font-bold text-white">Sıralama</h1>
-            <p className="text-sm text-gray-500">TR1 — {tierInfo?.label} — {data?.total || 0} oyuncu</p>
+            {/* Gösterilen satır ≠ ligin toplam nüfusu — ikisi ayrı yazılır. */}
+            <p className="text-sm text-gray-500">
+              TR1 — {tierInfo?.label} — ilk {data?.entries?.length || 0}
+              {data?.total ? ` (ligde ${data.total.toLocaleString("tr-TR")} oyuncu)` : ""}
+            </p>
           </div>
         </div>
 
@@ -116,6 +114,8 @@ export default function LeaderboardClassic() {
               </button>
             ))}
           </div>
+
+          <RefreshCountdown nextUpdateAt={data?.nextUpdateAt} updatedAt={data?.updatedAt} />
         </div>
       </div>
 

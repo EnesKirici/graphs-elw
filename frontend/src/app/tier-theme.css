@@ -671,7 +671,17 @@ html.glass-cards .dpm-scope.soft-scope .glass {
    dekorasyon değil, gerçek bilgi) eklendi.
    5. tur: madalya renginde DIŞ GLOW kaldırıldı ("gereksiz animasyon" — statikti
    ama öyle okunuyordu); cam parlaması + scrim + ustalık rozeti (beğenildi) kaldı. */
-.lb-pod-champs { display: flex; align-items: center; gap: 7px; }
+/* Şampiyon şeridi kartın gövdesi: mastery gelmediğinde şerit tamamen çöküyor ve
+   podyum kartı tablo satırına benziyordu (Grandmaster'da görüldü). Veri artık
+   podyum için öncelikli çekiliyor, ama gelmediği anda da kart formunu korusun —
+   üç kart aynı yükseklikte kalır, sıralama okunaklı durur. */
+.lb-pod-champs { display: flex; align-items: center; gap: 7px; min-height: 96px; }
+.lb-pod-champs:has(> .lb-champs-empty) {
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .02);
+  box-shadow: inset 0 0 0 1px var(--c-edge);
+}
 .lb-pod-champ {
   position: relative; flex: 1 1 0; min-width: 0; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, .55), inset 0 0 0 1.5px rgba(255, 255, 255, .1);
@@ -698,6 +708,17 @@ html.glass-cards .dpm-scope.soft-scope .glass {
   transform: translateY(-4px) scale(1.03);
   box-shadow: 0 8px 20px rgba(0, 0, 0, .6), inset 0 0 0 1.5px rgba(255, 255, 255, .2);
 }
+
+/* Tazeleme sayacı — sıralama 4 saatte bir güncelleniyor, bu onu görünür kılar.
+   Sessiz bir bilgi çipi: araç çubuğunda filtrelerin yanında durur, dikkat çekmez. */
+.lb-refresh {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, .03); border: 1px solid var(--c-edge);
+  color: #6f7787; font-size: 11.5px; line-height: 1; white-space: nowrap;
+}
+.lb-refresh strong { color: #aeb6c4; font-weight: 600; }
+.lb-refresh svg { opacity: .6; flex: none; }
 
 .lb-loading { padding: 70px 0; text-align: center; color: #6f7787; }
 .lb-spin { width: 24px; height: 24px; margin: 0 auto 12px; border-radius: 50%; border: 2px solid rgba(91,141,239,.25); border-top-color: #5b8def; animation: lbSpin .8s linear infinite; }
