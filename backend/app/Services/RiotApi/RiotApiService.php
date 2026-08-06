@@ -13,6 +13,34 @@ class RiotApiService
     /** Anahtarın Riot tarafından reddedildiğini işaretleyen bayrak. */
     private const KEY_INVALID_KEY = 'riot:key_invalid';
 
+    /** Kota payı freninin geçici olarak devre dışı olduğu blok — bkz. withoutWorkerQuota(). */
+    private static bool $bypassWorkerQuota = false;
+
+    /**
+     * Verilen bloğu worker kota payı freninden MUAF çalıştırır.
+     *
+     * Neden gerekli: pay freni maç toplama gibi SÜREKLİ dönen işler için yazıldı.
+     * Ama leaderboard prewarm günde 6 kez, turu ~100 istek olan küçük bir iş;
+     * worker payı sürekli dolu olduğu için ona hiç sıra kalmıyordu (canlıda
+     * ölçüldü: ilk kombinasyonda "kota payı doldu" ile düştü). Sıra bulamayan
+     * prewarm demek, ziyaretçinin soğuk cache'e düşüp Riot'u beklemesi demek —
+     * yani frenin korumaya çalıştığı şeyin tam tersi.
+     *
+     * Riot'un GERÇEK limiti hâlâ geçerli: cooldown kontrolü ve 429 yönetimi bu
+     * bloğun içinde de çalışır. Muafiyet yalnız BİZİM kendi payımızı bölüştürme
+     * kuralımızı atlar, Riot'un limitini değil.
+     */
+    public static function withoutWorkerQuota(callable $callback): mixed
+    {
+        self::$bypassWorkerQuota = true;
+
+        try {
+            return $callback();
+        } finally {
+            self::$bypassWorkerQuota = false;   // istisna çıksa da bayrak sızmasın
+        }
+    }
+
     public function platformRequest(string $endpoint, array $query = []): mixed
     {
         return $this->request(config('riot.platform_url') . $endpoint, $query);
@@ -42,7 +70,7 @@ class RiotApiService
             // ele alıyor (ProcessMatchJob release eder, retryUntil affeder) —
             // maç kaybolmaz, yalnızca ertelenir.
             $worker = app(\App\Services\WorkerControlService::class);
-            if (! $worker->reserveQuotaSlot()) {
+            if (! self::$bypassWorkerQuota && ! $worker->reserveQuotaSlot()) {
                 self::track('quota_held');
                 throw new \Exception(
                     "Worker kota payı doldu (%{$worker->quotaSharePercent()}). Ziyaretçi payı korunuyor.",

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Leaderboard\LeaderboardService;
+use App\Services\RiotApi\RiotApiService;
 use App\Services\WorkerControlService;
 use Illuminate\Console\Command;
 
@@ -19,6 +20,9 @@ use Illuminate\Console\Command;
  */
 class WarmLeaderboard extends Command
 {
+    /** Kombinasyonlar arası bekleme — tur Riot'un 2 dk'lık penceresine yayılsın. */
+    private const PACE_SECONDS = 20;
+
     protected $signature = 'leaderboard:warm
         {--tier=* : Tazelenecek ligler (varsayılan: hepsi)}
         {--queue=* : Tazelenecek kuyruklar (varsayılan: hepsi)}
@@ -37,6 +41,8 @@ class WarmLeaderboard extends Command
         $tiers = $this->option('tier') ?: LeaderboardService::TIERS;
         $queues = $this->option('queue') ?: LeaderboardService::QUEUES;
 
+        $first = true;
+
         foreach ($tiers as $tier) {
             foreach ($queues as $queue) {
                 if (! in_array($tier, LeaderboardService::TIERS, true)
@@ -45,8 +51,22 @@ class WarmLeaderboard extends Command
                     continue;
                 }
 
+                // Turu Riot'un 2 dakikalık penceresine YAY. Peş peşe gitmek ~100
+                // isteği tek pencereye sıkıştırıp turu kendi kendine 429'a
+                // sokuyordu. Konsolda kimse beklemiyor; yavaş olması bedava.
+                if (! $first) {
+                    sleep(self::PACE_SECONDS);
+                }
+                $first = false;
+
                 try {
-                    $data = $leaderboard->warm($tier, $queue);
+                    // Kota payı freninden muaf: bu iş günde 6 kez koşan küçük bir
+                    // tur, worker payı sürekli dolu olduğu için ona hiç sıra
+                    // kalmıyordu (canlıda ilk kombinasyonda düştü). Riot'un gerçek
+                    // limiti ve cooldown yönetimi bu blokta da geçerli.
+                    $data = RiotApiService::withoutWorkerQuota(
+                        fn () => $leaderboard->warm($tier, $queue)
+                    );
                     $named = collect($data['entries'])->whereNotNull('name.gameName')->count();
                     $stats = $leaderboard->lastFetchStats();
 
