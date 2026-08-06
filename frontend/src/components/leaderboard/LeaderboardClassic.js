@@ -186,9 +186,12 @@ export default function LeaderboardClassic() {
             {/* Koridor */}
             <div className="hidden md:flex items-center justify-center gap-1.5">
               {entry.topRoles ? (
+                /* İkonu olmayan rol için img HİÇ basılmaz: src="" kırık görsel üretiyor. */
                 entry.topRoles.map((r, ri) => (
-                  <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role}
-                    width={22} height={22} title={r.role} />
+                  ROLE_ICONS[r.role]
+                    ? <img key={ri} src={ROLE_ICONS[r.role]} alt={r.role}
+                        width={22} height={22} title={r.role} />
+                    : null
                 ))
               ) : (
                 <span className="text-[10px] text-gray-600">—</span>

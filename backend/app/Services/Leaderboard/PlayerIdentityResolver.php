@@ -69,10 +69,83 @@ class PlayerIdentityResolver
                 'profileIcon' => $p->profile_icon_id
                     ? $this->ddragon->profileIconUrl((int) $p->profile_icon_id)
                     : null,
-                'topChamps' => $p->top_champions ?: null,
-                'topRoles'  => $p->top_roles ?: $this->guessRoles($p->top_champions),
+                'topChamps' => $this->normalizeChampions($p->top_champions),
+                'topRoles'  => $this->normalizeRoles($p->top_roles)
+                    ?: $this->guessRoles($this->normalizeChampions($p->top_champions)),
             ]])
             ->all();
+    }
+
+    /*
+     | cached_players'taki top_champions / top_roles TEK BİR ŞEMAYA sahip değil:
+     | tabloyu birden çok üretici dolduruyor. Profil tarafı zengin şema yazıyor
+     | ({role:'MIDDLE', label:'Mid', icon:'/roles/mid.webp', games:5, winRate:60}),
+     | leaderboard ise sade şema ({role:'Mid', count:5}). Frontend sade şemayı
+     | bekliyor: ham veriyi geçirmek canlıda kırık rol ikonu ("MIDDLE" ROLE_ICONS'ta
+     | yok) ve seviyesiz ustalık rozeti ("M32" yerine "M") üretti.
+     |
+     | Aşağısı iki şemayı da tek bir çıktıya indirger — okuma tarafında normalize
+     | etmek, tabloyu yazan diğer servisleri değiştirmekten güvenli.
+     */
+
+    /** @return array<int, array{role:string, count:int}>|null */
+    private function normalizeRoles(?array $roles): ?array
+    {
+        if (empty($roles)) {
+            return null;
+        }
+
+        $out = [];
+
+        foreach ($roles as $r) {
+            if (! is_array($r)) {
+                continue;
+            }
+
+            // label ('Mid') insan-okunur ve ROLE_ICONS anahtarlarıyla eşleşen ad;
+            // role ('MIDDLE') Riot'un ham teamPosition'ı. Önce label denenir.
+            $name = $r['label'] ?? $r['role'] ?? null;
+
+            // Riot teamPosition'ı boş bırakabiliyor → 'Invalid' satırı gösterilmez.
+            if (! $name || $name === 'Invalid') {
+                continue;
+            }
+
+            $out[] = [
+                'role'  => $name,
+                'count' => (int) ($r['count'] ?? $r['games'] ?? 0),
+            ];
+        }
+
+        // Frontend iki koridor gösteriyor; zengin şema 5 satıra kadar çıkabiliyor.
+        return array_slice($out, 0, 2) ?: null;
+    }
+
+    /** @return array<int, array{name:string, image:?string, splash:?string, level:?int}>|null */
+    private function normalizeChampions(?array $champs): ?array
+    {
+        if (empty($champs)) {
+            return null;
+        }
+
+        $out = [];
+
+        foreach ($champs as $c) {
+            if (! is_array($c) || empty($c['name'])) {
+                continue;
+            }
+
+            $out[] = [
+                'name'   => $c['name'],
+                'image'  => $c['image'] ?? null,
+                // Zengin şemada splash/level yok — null geçilir, frontend ikisini de
+                // opsiyonel ele alır (splash yoksa portre, level yoksa rozet basılmaz).
+                'splash' => $c['splash'] ?? null,
+                'level'  => isset($c['level']) ? (int) $c['level'] : null,
+            ];
+        }
+
+        return $out ?: null;
     }
 
     /**

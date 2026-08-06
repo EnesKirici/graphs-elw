@@ -168,7 +168,7 @@ function PodiumCard({ entry, tierInfo, medal }) {
         {/* LP'nin eski yeri — artık koridor ikonları (küçük, etiketsiz) */}
         <div className="lb-pod-head-roles">
           {entry.topRoles ? entry.topRoles.map((r, ri) => (
-            <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role} title={r.role} />
+            ROLE_ICONS[r.role] ? <img key={ri} src={ROLE_ICONS[r.role]} alt={r.role} title={r.role} /> : null
           )) : null}
         </div>
       </div>
@@ -188,7 +188,7 @@ function PodiumCard({ entry, tierInfo, medal }) {
           <span className="lb-pod-meta-label">Koridor</span>
           <div className="lb-roles">
             {entry.topRoles ? entry.topRoles.map((r, ri) => (
-              <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role} title={r.role} />
+              ROLE_ICONS[r.role] ? <img key={ri} src={ROLE_ICONS[r.role]} alt={r.role} title={r.role} /> : null
             )) : <span className="lb-empty-cell">—</span>}
           </div>
         </div>
@@ -212,7 +212,10 @@ function PodiumCard({ entry, tierInfo, medal }) {
         {entry.topChamps ? entry.topChamps.slice(0, 4).map((c, ci) => (
           <span key={ci} className="lb-pod-champ" title={`${c.name} · Ustalık ${c.level}`}>
             <img src={c.splash || c.image} alt={c.name} loading="lazy" />
-            <em className="lb-pod-champ-lvl">M{c.level}</em>
+            {/* Ustalık seviyesi her kayıtta yok (DB'yi dolduran iki ayrı şema var,
+                birinde level alanı bulunmuyor) — yoksa rozet hiç basılmaz, yoksa
+                içi boş bir "M" görünüyordu. */}
+            {c.level ? <em className="lb-pod-champ-lvl">M{c.level}</em> : null}
           </span>
         )) : <span className="lb-champs-empty">Şampiyon verisi yok</span>}
       </div>
@@ -347,7 +350,7 @@ export default function LeaderboardPro() {
 
               <div className="lb-roles lb-col-roles">
                 {entry.topRoles ? entry.topRoles.map((r, ri) => (
-                  <img key={ri} src={ROLE_ICONS[r.role] || ""} alt={r.role} title={r.role} />
+                  ROLE_ICONS[r.role] ? <img key={ri} src={ROLE_ICONS[r.role]} alt={r.role} title={r.role} /> : null
                 )) : <span className="lb-empty-cell">—</span>}
               </div>
 
