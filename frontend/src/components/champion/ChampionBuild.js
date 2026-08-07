@@ -44,6 +44,12 @@ function Section({ title, extra, children, className = "", bodyClassName = "" })
   );
 }
 
+/* Renkli bold yüzde bu sayfada her zaman WR — ama etiketini taşımıyordu; köşedeki
+   "WR · Seçim" notunu kimse okumuyor ve iki yüzde yan yana gelince hangisinin
+   kazanma hangisinin seçim oranı olduğu anlaşılmıyordu (kullanıcı geri bildirimi).
+   Değerin hemen yanına minik sabit "WR" eki — her kartta aynı. */
+const WrMark = () => <span className="text-[9px] font-semibold text-gray-500 ml-1">WR</span>;
+
 /*
   "Şu karardan hangisi?" grubu — çizme ve destek eşyası aynı kalıpta: her ikisi de
   herkesin aldığı, ama hangisini aldığı maça göre değişen tekil bir seçim.
@@ -67,8 +73,9 @@ function ItemChoiceGroup({ title, items, names = {}, divider }) {
               <div className="min-w-0 flex-1">
                 {name && <div className="text-[10px] text-gray-300 leading-tight truncate">{name}</div>}
                 <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <span className={`text-sm font-bold leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</span>
-                  <span className="text-[10px] text-gray-400 leading-none">{it.pickRate}%</span>
+                  <span className={`text-sm font-bold leading-none whitespace-nowrap ${wrCls(it.winRate)}`}>{it.winRate}%<WrMark /></span>
+                  {/* nowrap: dar kutuda "29.4% / seçim" diye ikiye kırılıyordu */}
+                  <span className="text-[10px] text-gray-400 leading-none whitespace-nowrap">{it.pickRate}% seçim</span>
                 </div>
               </div>
             </div>
@@ -194,7 +201,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
             extra={
             activeKeystone && (
               <span className="text-[10px] text-gray-400">
-                {safeIdx === 0 ? "En popüler" : `${safeIdx + 1}. seçenek`} · {activeKeystone.pickRate}% pick · <b className={wrCls(activeKeystone.winRate)}>{activeKeystone.winRate}% WR</b>
+                {safeIdx === 0 ? "En popüler" : `${safeIdx + 1}. seçenek`} · {activeKeystone.pickRate}% seçim · <b className={wrCls(activeKeystone.winRate)}>{activeKeystone.winRate}% WR</b>
               </span>
             )
           }>
@@ -218,8 +225,10 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                         <img src={runeIconById(runesData, Number(k.key))} alt="" width={26} height={26}
                           className={`rounded-full transition-transform duration-200 ${i === safeIdx ? "scale-105" : "opacity-60"}`}
                           onError={hideOnError} />
-                        <span className="text-gray-500 font-normal">{k.pickRate}%</span>
-                        <span className={`font-bold ${wrCls(k.winRate)}`}>{k.winRate}%</span>
+                        {/* İki çıplak yüzde yan yana "hangisi hangisi" sorusu doğuruyordu —
+                            ikisi de kendi mini etiketini taşır. */}
+                        <span className="text-gray-500 font-normal">{k.pickRate}%<span className="text-[9px] ml-0.5">seçim</span></span>
+                        <span className={`font-bold ${wrCls(k.winRate)}`}>{k.winRate}%<WrMark /></span>
                       </button>
                     ))}
                   </div>
@@ -289,7 +298,7 @@ export default function ChampionBuild({ champion, version, runesData = [], build
                         ))}
                       </div>
                       <div>
-                        <div className={`text-sm font-bold leading-none ${wrCls(sp.winRate)}`}>{sp.winRate}%</div>
+                        <div className={`text-sm font-bold leading-none ${wrCls(sp.winRate)}`}>{sp.winRate}%<WrMark /></div>
                         <div className="text-[10px] text-gray-500 mt-1 leading-none">{sp.pickRate}% seçim</div>
                       </div>
                     </div>
@@ -472,7 +481,7 @@ function ItemPrimary({ it, version, names = {} }) {
       {name && (
         <div className="text-[10px] text-gray-300 mt-1.5 leading-tight line-clamp-2 min-h-[24px]">{name}</div>
       )}
-      <div className={`text-base font-bold mt-1.5 leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</div>
+      <div className={`text-base font-bold mt-1.5 leading-none ${wrCls(it.winRate)}`}>{it.winRate}%<WrMark /></div>
       <div className="text-[10px] text-gray-500 mt-1.5 leading-none">
         {it.pickRate}% seçim
       </div>
@@ -502,7 +511,7 @@ function ItemAlt({ it, version, names = {} }) {
         onError={hideOnError}
       />
       <span className="text-[10px] text-gray-400 truncate min-w-0 flex-1">{name || "—"}</span>
-      <span className={`text-xs font-bold shrink-0 ${wrCls(it.winRate)}`}>{it.winRate}%</span>
+      <span className={`text-xs font-bold shrink-0 ${wrCls(it.winRate)}`}>{it.winRate}%<WrMark /></span>
     </div>
   );
 }
@@ -570,7 +579,7 @@ function SkillOrderRow({ o, champion, big }) {
         ))}
       </div>
       <div className="text-right shrink-0">
-        <div className={`text-sm font-bold leading-none ${wrCls(o.winRate)}`}>{o.winRate}%</div>
+        <div className={`text-sm font-bold leading-none ${wrCls(o.winRate)}`}>{o.winRate}%<WrMark /></div>
         <div className="text-[10px] text-gray-500 mt-1 leading-none">{o.pickRate}% seçim</div>
       </div>
     </div>
@@ -593,7 +602,7 @@ function StarterRow({ s, version }) {
         ))}
       </div>
       <div className="text-right shrink-0">
-        <div className={`text-sm font-bold leading-none ${wrCls(s.winRate)}`}>{s.winRate}%</div>
+        <div className={`text-sm font-bold leading-none ${wrCls(s.winRate)}`}>{s.winRate}%<WrMark /></div>
         <div className="text-[10px] text-gray-500 mt-1 leading-none">{s.pickRate}% seçim</div>
       </div>
     </div>
@@ -619,8 +628,8 @@ function ItemCardRow({ items }) {
           <div className="min-w-0">
             <div className="text-[10px] text-gray-300 leading-tight line-clamp-2">{it.name || "—"}</div>
             <div className="flex items-baseline gap-1.5 mt-1">
-              <span className={`text-xs font-bold leading-none ${wrCls(it.winRate)}`}>{it.winRate}%</span>
-              <span className="text-[10px] text-gray-500 leading-none">{it.pickRate}%</span>
+              <span className={`text-xs font-bold leading-none ${wrCls(it.winRate)}`}>{it.winRate}%<WrMark /></span>
+              <span className="text-[10px] text-gray-500 leading-none">{it.pickRate}% seçim</span>
             </div>
           </div>
         </div>
